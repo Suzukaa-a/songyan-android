@@ -5,7 +5,7 @@ import java.io.InputStream
 
 /**
  * Up to [limit] bytes of the stream. A caller that reads one byte more than its budget learns the
- * input is oversize without ever holding the rest of it. (`readNBytes` needs API 33; minSdk is 26.)
+ * input is oversize without ever holding the rest of it. (`readNBytes` needs API 33.)
  */
 fun InputStream.readAtMost(limit: Int): ByteArray {
     val out = ByteArrayOutputStream(minOf(limit, BUFFER))

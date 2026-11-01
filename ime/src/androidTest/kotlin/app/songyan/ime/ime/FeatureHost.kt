@@ -337,14 +337,8 @@ internal class FeatureHost(
 
     private var shellIdentityAdopted = false
 
-    /** Empties the clipboard; `clearPrimaryClip` only exists from Android 9. */
     fun clearClipboard() {
-        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            clipboard.clearPrimaryClip()
-        } else {
-            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
-        }
+        context.getSystemService(android.content.ClipboardManager::class.java).clearPrimaryClip()
     }
 
     fun start(

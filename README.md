@@ -27,7 +27,7 @@ schemes and data formats, with a keyboard and settings app designed for Android.
 
 ## Requirements
 
-- Android 8.0 (API 26) or later to run.
+- Android 10 (API 29) or later to run.
 - To build: JDK 17 or later (CI uses 21), Android SDK 37 (`platforms;android-37.0`,
   `build-tools;37.0.0`), NDK 30.0.16248370 and CMake 3.31.6. Exact versions are pinned in
   [gradle/libs.versions.toml](gradle/libs.versions.toml) and

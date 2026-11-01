@@ -16,7 +16,7 @@
 
 ## 环境要求
 
-- 运行：Android 8.0（API 26）及以上。
+- 运行：Android 10（API 29）及以上。
 - 构建：JDK 17 或更高版本（CI 用 21）、Android SDK 37（`platforms;android-37.0`、`build-tools;37.0.0`）、NDK 30.0.16248370、CMake 3.31.6。确切版本钉在 [gradle/libs.versions.toml](gradle/libs.versions.toml) 与 [core/rime/build.gradle.kts](core/rime/build.gradle.kts)。用不入库的 `local.properties`（`sdk.dir=...`）或 `ANDROID_HOME` 告诉 Gradle SDK 的位置。
 
 ## 构建与安装

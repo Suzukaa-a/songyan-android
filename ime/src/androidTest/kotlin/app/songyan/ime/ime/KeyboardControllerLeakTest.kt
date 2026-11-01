@@ -59,12 +59,30 @@ class KeyboardControllerLeakTest {
         return controller
     }
 
-    private fun gc() {
+    @Volatile
+    private var sink: ByteArray? = null
+
+    /**
+     * Collects until every reference in [retired] but the newest [TOLERATED] is cleared, or the
+     * allocation budget is spent. Some emulator images (x86_64 on CI) ignore System.gc(), so the
+     * collector is also driven by allocating and dropping memory.
+     */
+    private fun collect(retired: List<WeakReference<KeyboardController>>) {
+        fun settled() = retired.indices.all { retired[it].get() == null || it >= retired.size - TOLERATED }
         repeat(5) {
             System.gc()
             Runtime.getRuntime().runFinalization()
             Thread.sleep(50)
         }
+        var allocated = 0
+        while (!settled() && allocated < CHURN_LIMIT) {
+            repeat(50) {
+                sink = ByteArray(CHURN_CHUNK)
+                allocated++
+            }
+            Runtime.getRuntime().runFinalization()
+        }
+        sink = null
     }
 
     @After
@@ -99,17 +117,19 @@ class KeyboardControllerLeakTest {
 
         instrumentation.runOnMainSync { live.retire() }
         instrumentation.waitForIdleSync()
-        gc()
+        collect(retired)
         // The newest retired controller or two can still be held by transient framework state (a
         // pending view callback); what must not happen is that they pile up, one per change.
         val alive = retired.indices.filter { retired[it].get() != null }
-        android.util.Log.w("LEAKDIAG", "alive=$alive")
         assertTrue(
             "retired controllers pile up: still reachable $alive of ${retired.size}",
-            alive.all {
-                it >=
-                    retired.size - 2
-            },
+            alive.all { it >= retired.size - TOLERATED },
         )
+    }
+
+    private companion object {
+        const val TOLERATED = 2
+        const val CHURN_CHUNK = 1024 * 1024
+        const val CHURN_LIMIT = 3000
     }
 }

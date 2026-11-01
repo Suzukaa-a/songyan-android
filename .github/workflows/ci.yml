@@ -131,7 +131,8 @@ jobs:
           disable-animations: true
           # One module per call: modules listed together run in parallel on the same device and disturb each other.
           script: |
-            ./gradlew --console=plain -Psongyan.abis=x86_64 :ime:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.songyan.ime.ime.LeakProbeTmpTest
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :core:rime:connectedDebugAndroidTest
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :ime:connectedDebugAndroidTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:

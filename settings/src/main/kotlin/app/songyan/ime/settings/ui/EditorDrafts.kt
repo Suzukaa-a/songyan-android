@@ -62,7 +62,11 @@ data class LayoutDraft(
 
     /** The split arrangement of every layout row, the control row included: the saved one, else the rows cut. */
     private val splitArrangement: List<LayoutSplitRow>
-        get() = (layout.split ?: LayoutSplitConfiguration()).arrangement(layout.rows)
+        get() = splitBase.arrangement(layout.rows)
+
+    /** The split the keyboard draws: the hand cuts of a 26- or 18-key layout without saved cuts, else the saved one. */
+    private val splitBase: LayoutSplitConfiguration
+        get() = BuiltinLayouts.handSplit(layout) ?: layout.split ?: LayoutSplitConfiguration()
 
     private val letterIndices: List<Int>
         get() =
@@ -175,7 +179,7 @@ data class LayoutDraft(
         val cut = cuts[row] + delta
         if (size < 2 || cut < 1 || cut >= size) return this
         if (hasExplicitSplit) return withSplitRows(rows, cuts.toMutableList().also { it[row] = cut })
-        val split = layout.split ?: LayoutSplitConfiguration()
+        val split = splitBase
         val breaks =
             layout.rows.indices
                 .map { split.breakIndex(it, layout.rows[it].keys.size) }
@@ -201,8 +205,7 @@ data class LayoutDraft(
         for ((n, index) in letterIndices.withIndex()) {
             full[index] = LayoutSplitRow(rows[n].keys.take(cuts[n]), rows[n].keys.drop(cuts[n]))
         }
-        val split = layout.split ?: LayoutSplitConfiguration()
-        return copy(layout = layout.withSplit(split.copy(halves = full)))
+        return copy(layout = layout.withSplit(splitBase.copy(halves = full)))
     }
 
     fun withSplit(split: LayoutSplitConfiguration?): LayoutDraft =

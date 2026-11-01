@@ -30,9 +30,27 @@ class SplitArrangementDraftTest {
     @Test
     fun theSplitViewShowsTheRowsCutAtTheirBreaksUntilTheFirstEdit() {
         assertEquals(text(start.letterRows), text(start.splitLetterRows))
-        assertEquals(listOf(5, 5, 4), start.splitCuts)
+        assertEquals(listOf(5, 5, 5), start.splitCuts)
         assertFalse(start.hasExplicitSplit)
         assertFalse(start.hasChanges)
+    }
+
+    @Test
+    fun aCopyOfTheBundledLayoutShowsAndStepsFromTheSameHandCuts() {
+        val copy = LayoutDraft(BuiltinLayouts.qwerty26.copyWithId("mine", "我的")).withSplitView(true)
+        assertEquals(listOf(5, 5, 5), copy.splitCuts)
+        assertEquals(text(start.splitLetterRows), text(copy.splitLetterRows))
+        val moved = copy.moveSplitCut(2, -1)
+        assertEquals(listOf(5, 5, 4), moved.splitCuts)
+        assertEquals(
+            listOf(5, 5, 4),
+            moved.layout.split!!
+                .rowBreaks
+                .take(3),
+        )
+        // Materialising halves starts from the hand cuts too.
+        val explicit = start.add(0, 0, 'y')
+        assertEquals(listOf(5, 5), explicit.splitCuts.drop(1))
     }
 
     @Test
@@ -91,7 +109,7 @@ class SplitArrangementDraftTest {
         val explicit = start.add(0, 0, 'y')
         val restored = explicit.restoreAutomaticSplit()
         assertNull(restored.layout.split!!.halves)
-        assertEquals(listOf(5, 5, 4), restored.splitCuts)
+        assertEquals(listOf(5, 5, 5), restored.splitCuts)
     }
 
     @Test

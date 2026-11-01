@@ -185,6 +185,40 @@ object BuiltinLayouts {
             LayoutInput.Builtin.PHONE9 -> phone9
         }
 
+    /**
+     * Where the 26- and 18-key layouts split when nothing saved says otherwise: each hand keeps its
+     * letters from a physical keyboard, QWERT ASDFG ZXCVB on the left (on 18 keys three, three and
+     * four keys, the BN pair following its B). The cuts count letter keys; the keyboard draws Shift
+     * outside the rows. A copy counts as the bundled layout (id, name, note and split are ignored),
+     * so the cuts do not depend on what the layout is called. Null for any other layout, for one
+     * whose keys or settings differ from the bundled one, and for a split with saved cuts.
+     */
+    fun handSplit(definition: LayoutDefinition): LayoutSplitConfiguration? {
+        val layout = definition.input.builtinLayout
+        val breaks =
+            when (layout) {
+                LayoutInput.Builtin.QWERTY26 -> STANDARD_LETTER_ROW_BREAKS
+                LayoutInput.Builtin.MERGED18 -> MERGED18_ROW_BREAKS
+                else -> return null
+            }
+        val bundled = preset(layout)
+        val comparable =
+            definition.copy(id = bundled.id, name = bundled.name, note = bundled.note, split = bundled.split)
+        if (comparable != bundled || definition.split?.rowBreaks?.isNotEmpty() == true) return null
+        val base = definition.split ?: LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF)
+        return base.copy(rowBreaks = breaks)
+    }
+
+    /**
+     * The definition with the hand cuts it is drawn with written into its split, for a copy: the
+     * copy keeps those cuts whatever it is later called or edited into.
+     */
+    fun persistingHandCuts(definition: LayoutDefinition): LayoutDefinition =
+        handSplit(definition)?.let { definition.withSplit(it) } ?: definition
+
+    private val STANDARD_LETTER_ROW_BREAKS = listOf(5, 5, 5)
+    private val MERGED18_ROW_BREAKS = listOf(3, 3, 4)
+
     // MARK: - 9-key quick symbols
 
     /**

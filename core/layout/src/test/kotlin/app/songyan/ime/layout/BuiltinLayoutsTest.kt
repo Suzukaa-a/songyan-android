@@ -352,4 +352,61 @@ class BuiltinLayoutsTest {
         for (builtin in BuiltinLayouts.all) assertEquals(builtin.id, builtin, BuiltinLayouts.byId(builtin.id))
         assertNull(BuiltinLayouts.byId("missing"))
     }
+
+    @Test
+    fun handCutsApplyToTheBundled26And18KeyLayouts() {
+        val qwerty = BuiltinLayouts.handSplit(BuiltinLayouts.qwerty26)!!
+        assertEquals(LayoutSplitConfiguration.Activation.OFF, qwerty.activation)
+        assertEquals(listOf(5, 5, 5), qwerty.rowBreaks)
+        val merged = BuiltinLayouts.handSplit(BuiltinLayouts.merged18)!!
+        assertEquals(BuiltinLayouts.merged18.split!!.activation, merged.activation)
+        assertEquals(listOf(3, 3, 4), merged.rowBreaks)
+        assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.merged14))
+        assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.phone9))
+    }
+
+    @Test
+    fun aRenamedCopyOrOneWithAnotherNoteKeepsTheHandCuts() {
+        val copy = BuiltinLayouts.qwerty26.copyWithId("mine", "我的 26 键")
+        assertEquals(listOf(5, 5, 5), BuiltinLayouts.handSplit(copy)?.rowBreaks)
+        assertEquals(listOf(5, 5, 5), BuiltinLayouts.handSplit(copy.copy(note = "另一句说明"))?.rowBreaks)
+        assertEquals(
+            listOf(3, 3, 4),
+            BuiltinLayouts.handSplit(BuiltinLayouts.merged18.copyWithId("m", "我的"))?.rowBreaks,
+        )
+    }
+
+    @Test
+    fun editedRowsAndSavedBreaksGetNoHandCuts() {
+        val edited = BuiltinLayouts.qwerty26.let { it.copy(rows = it.rows.dropLast(1)) }
+        assertNull(BuiltinLayouts.handSplit(edited))
+        val saved =
+            LayoutSplitConfiguration(
+                activation = LayoutSplitConfiguration.Activation.ALWAYS,
+                rowBreaks = listOf(4, 4, 4),
+            )
+        assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.qwerty26.withSplit(saved)))
+    }
+
+    @Test
+    fun aSavedSplitWithoutCutsKeepsItsOwnSettings() {
+        val always = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.ALWAYS)
+        val kept = BuiltinLayouts.handSplit(BuiltinLayouts.qwerty26.withSplit(always))!!
+        assertEquals(LayoutSplitConfiguration.Activation.ALWAYS, kept.activation)
+        assertEquals(listOf(5, 5, 5), kept.rowBreaks)
+    }
+
+    @Test
+    fun persistingHandCutsWritesThemIntoACopyAndLeavesOthersAlone() {
+        for ((layout, cuts) in listOf(
+            BuiltinLayouts.qwerty26 to listOf(5, 5, 5),
+            BuiltinLayouts.merged18 to listOf(3, 3, 4),
+        )) {
+            val copy = BuiltinLayouts.persistingHandCuts(layout).copyWithId("mine", "我的")
+            assertEquals(cuts, copy.split?.rowBreaks)
+            assertNull("the copy now has saved cuts", BuiltinLayouts.handSplit(copy))
+            copy.validate()
+        }
+        assertEquals(BuiltinLayouts.phone9, BuiltinLayouts.persistingHandCuts(BuiltinLayouts.phone9))
+    }
 }

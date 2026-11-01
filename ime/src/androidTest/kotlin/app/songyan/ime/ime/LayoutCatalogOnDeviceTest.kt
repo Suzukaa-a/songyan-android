@@ -155,6 +155,22 @@ class LayoutCatalogOnDeviceTest {
     }
 
     @Test
+    fun aCopiedLayoutWithSplitOnDrawsTheHandCutsSoBIsOnTheLeftHalf() {
+        start()
+        install(null, LayoutSplitConfiguration.of(LayoutSplitConfiguration.Activation.ALWAYS))
+        layoutKeyboard(1080)
+        var bounds = emptyList<KeyBounds>()
+        instrumentation.runOnMainSync { bounds = controller.keyboard.bounds }
+        // Last letter row: Shift, z, x, c, v, b | n, m, Delete after the 10 + 9 keys above it.
+        val gutter = bounds[25].left - bounds[24].right
+        val ordinaryGap = bounds[1].left - bounds[0].right
+        assertTrue("gutter $gutter must follow b, not v", gutter > ordinaryGap * 5)
+        val box = bounds[24]
+        tap((box.left + box.right) / 2, (box.top + box.bottom) / 2)
+        assertEquals(listOf("b"), backend.keys)
+    }
+
+    @Test
     fun theBundledLayoutDoesNotSplitOnAPhone() {
         start()
         layoutKeyboard(1080)

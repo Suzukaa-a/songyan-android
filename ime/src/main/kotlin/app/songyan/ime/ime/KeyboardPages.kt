@@ -36,7 +36,6 @@ import app.songyan.ime.layout.PhoneKeypadRailPolicy
  */
 internal object KeyboardPages {
     private const val DIGIT_COLUMNS = 10
-    private val HAND_CUTS = mapOf("qwerty26" to listOf(5, 5, 5), "merged18" to listOf(3, 3, 4))
 
     /** What the key area needs to know about the running keyboard and editor. */
     data class Config(
@@ -540,9 +539,8 @@ internal object KeyboardPages {
         rows: List<LayoutRow>,
         digitRows: Int,
     ): LayoutSplitConfiguration? {
-        val letters = HAND_CUTS[main.id] ?: return null
-        if (main != BuiltinLayouts.byId(main.id)) return null
-        if (main.split?.rowBreaks?.isNotEmpty() == true) return null
+        val handSplit = BuiltinLayouts.handSplit(main) ?: return null
+        val letters = handSplit.rowBreaks
         val letterRows = main.rows.filter { row -> row.keys.none { it.action.type == LayoutActionKind.SPACE } }
         val cuts =
             rows.mapIndexed { index, row ->
@@ -555,8 +553,7 @@ internal object KeyboardPages {
                         ?.action
                 cut + row.keys.indexOfFirst { it.action == first }.coerceAtLeast(0)
             }
-        val base = main.split ?: LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF)
-        return base.copy(rowBreaks = List(digitRows) { (DIGIT_COLUMNS + 1) / 2 } + cuts)
+        return handSplit.copy(rowBreaks = List(digitRows) { (DIGIT_COLUMNS + 1) / 2 } + cuts)
     }
 
     private fun digitRow(): LayoutRow =

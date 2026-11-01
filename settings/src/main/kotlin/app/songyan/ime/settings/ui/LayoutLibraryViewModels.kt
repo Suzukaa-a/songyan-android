@@ -70,7 +70,7 @@ class LayoutLibraryViewModel(
         name: String,
     ) = edit { registry ->
         val original = registry.resolvedLayout(id) ?: throw LayoutException.UnknownId(id)
-        registry.copy(original, newId(), name).first
+        registry.copy(BuiltinLayouts.persistingHandCuts(original), newId(), name).first
     }
 
     fun deleteLayout(id: String) = edit { it.remove(id) }
@@ -198,7 +198,7 @@ class LayoutEditorViewModel(
     /** Stores the draft as a new layout named [name] and leaves the original as it was. */
     fun saveAsCopy(name: String) {
         val current = mutableDraft.value ?: return
-        saveWith { registry -> registry.copy(current.layout, newId(), name).first }
+        saveWith { registry -> registry.copy(BuiltinLayouts.persistingHandCuts(current.layout), newId(), name).first }
     }
 
     private fun saveWith(change: (LayoutRegistry) -> LayoutRegistry) {

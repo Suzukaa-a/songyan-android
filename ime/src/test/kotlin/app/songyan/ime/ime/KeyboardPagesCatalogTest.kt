@@ -8,6 +8,7 @@ import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutPageJump
@@ -453,6 +454,29 @@ class KeyboardPagesCatalogTest {
         assertEquals(key.action.asciiValue, key.face(true))
         // A title the user typed by hand wins.
         assertEquals("甲", key.withLabel("甲").face(true))
+    }
+
+    @Test
+    fun aRenamedCopyOfQwerty26SplitsLikeTheBundledLayout() {
+        fun leftHalves(page: LayoutDefinition): List<String> {
+            val (cut, breaks) = splitColumns(page.rows.map { it.keys }, page.split!!)
+            return cut.zip(breaks).take(3).map { (keys, at) ->
+                keys
+                    .take(at)
+                    .filter { it.action.type == LayoutActionKind.CODE }
+                    .joinToString("") { it.label }
+            }
+        }
+        val on = LayoutSplitConfiguration.of(LayoutSplitConfiguration.Activation.ALWAYS)
+        val mine = BuiltinLayouts.qwerty26.copyWithId("mine", "我的").withSplit(on)
+        KeyboardLayoutCatalog.install(LayoutRegistry.create().install(mine.encoded()))
+        val copy = KeyboardPages.definition(null, config(KeyboardComposition(mainLayoutID = "mine")))
+        KeyboardLayoutCatalog.install(
+            LayoutRegistry.create().replace(BuiltinLayouts.qwerty26.withSplit(on)),
+        )
+        val bundled = KeyboardPages.definition(null, config(KeyboardComposition(mainLayoutID = "qwerty26")))
+        assertEquals(listOf("qwert", "asdfg", "zxcvb"), leftHalves(bundled))
+        assertEquals(leftHalves(bundled), leftHalves(copy))
     }
 
     @Test

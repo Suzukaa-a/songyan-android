@@ -115,6 +115,7 @@ class IosInteropTest {
         val layout = LayoutJson.decode(File(directory, "layout-custom-split-keys.json").readText())
         assertEquals(BuiltinLayouts.qwerty26.rows, layout.rows)
         val halves = layout.split!!.halves!!
+
         fun text(keys: List<LayoutKey>) = keys.joinToString("") { it.label }
         assertEquals(listOf("qwerty", "yuiop"), listOf(text(halves[0].left), text(halves[0].right)))
         assertEquals(listOf("asdfg", "ghjkl"), listOf(text(halves[1].left), text(halves[1].right)))

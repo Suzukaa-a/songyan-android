@@ -65,6 +65,11 @@ object ImePerf {
         if (logging) Log.d(TAG, "ready")
     }
 
+    /** Asks for the key boxes to be logged again (the keyboard moved). */
+    fun rearmKeyBounds() {
+        keyBoundsPending = logging
+    }
+
     /**
      * True once per show while the adb driver still needs this layout's key hit boxes. Only key
      * geometry that the driver cannot guess from uiautomator is dumped, so it is one-shot.

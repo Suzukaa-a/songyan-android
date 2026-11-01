@@ -89,11 +89,28 @@ object ImeJourney {
             if (keys != null && lines.any { it.endsWith(": ready") || " show_us=" in it || ": show_us=" in it }) {
                 // The first injected tap can land before the window accepts touches.
                 SystemClock.sleep(TOUCH_SETTLE_MS)
-                return Keyboard(keys)
+                return Keyboard(settledKeys(keys))
             }
             SystemClock.sleep(100)
         }
         error("the keyboard did not become ready; check that the engine deployed")
+    }
+
+    /**
+     * The key boxes are logged again whenever the keyboard window moves (insets, resize), so the
+     * newest lines win; waits until two reads agree.
+     */
+    private fun MacrobenchmarkScope.settledKeys(first: Map<String, Point>): Map<String, Point> {
+        var current = first
+        val deadline = SystemClock.uptimeMillis() + UI_TIMEOUT_MS
+        while (SystemClock.uptimeMillis() < deadline) {
+            SystemClock.sleep(TOUCH_SETTLE_MS)
+            val latest = parseKeys(perfLines()).takeIf { it.isNotEmpty() } ?: return current
+            if (latest == current) break
+            current = latest
+        }
+        lastKeys = current
+        return current
     }
 
     /** Hides the keyboard with Back and lets the window animation finish. */

@@ -243,6 +243,9 @@ class KeyboardView(
     /** Non-null while the 9-key shell draws instead of the row-based pages. */
     internal var shell: ShellModel? = null
 
+    /** Screen position the key boxes were last logged at; see [logKeyBoundsIfMoved]. */
+    internal var loggedBoundsAt = Long.MIN_VALUE
+
     /**
      * Rows added on top of the usual four: a password field's digit row gets room of its own
      * instead of squeezing the letter rows. Every page of that field keeps the taller height, so
@@ -489,6 +492,7 @@ class KeyboardView(
     }
 
     override fun onDraw(canvas: Canvas) {
+        if (ImePerf.isLogging) logKeyBoundsIfMoved()
         canvas.drawColor(palette.background)
         notice?.let {
             drawNotice(canvas, it)

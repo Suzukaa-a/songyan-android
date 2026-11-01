@@ -233,6 +233,20 @@ internal fun KeyboardView.logKeyBoundsOnce() {
     }
 }
 
+/**
+ * The window can still be settling (insets, resize) when the first boxes are logged, so the driver would
+ * tap where the keys were. Logs them again once the view is drawn somewhere else.
+ */
+internal fun KeyboardView.logKeyBoundsIfMoved() {
+    val location = IntArray(2)
+    getLocationOnScreen(location)
+    val at = (location[0].toLong() shl 40) xor (location[1].toLong() shl 20) xor width.toLong()
+    if (at == loggedBoundsAt) return
+    loggedBoundsAt = at
+    ImePerf.rearmKeyBounds()
+    logKeyBoundsOnce()
+}
+
 internal fun KeyboardView.rebuild() {
     val model = shell
     if (model != null) {

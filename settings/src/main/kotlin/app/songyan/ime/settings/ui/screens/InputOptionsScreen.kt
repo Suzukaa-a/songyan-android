@@ -73,6 +73,7 @@ fun InputOptionsScreen(
     onDoubleSpacePeriodChanged: (Boolean) -> Unit = {},
     onReleaseHapticChanged: (Boolean) -> Unit,
     onWidePositionChanged: (String) -> Unit = {},
+    onWidePositionCustomChanged: (Int) -> Unit = {},
     onSplitModeChanged: (String) -> Unit = {},
     onReadingPlacementChanged: (String) -> Unit = {},
     candidateTextSize: CandidateTextSize,
@@ -110,6 +111,7 @@ fun InputOptionsScreen(
                 onDoubleSpacePeriod = onDoubleSpacePeriodChanged,
                 onReleaseHaptic = onReleaseHapticChanged,
                 onWidePosition = onWidePositionChanged,
+                onWidePositionCustom = onWidePositionCustomChanged,
                 onSplitMode = onSplitModeChanged,
             )
             SettingsRow(

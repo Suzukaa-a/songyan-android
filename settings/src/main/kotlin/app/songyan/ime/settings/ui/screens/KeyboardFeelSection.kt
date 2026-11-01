@@ -2,8 +2,10 @@ package app.songyan.ime.settings.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -11,10 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.SettingsPreferences
@@ -36,6 +42,7 @@ data class KeyboardFeelState(
     val releaseHaptic: Boolean = false,
     val oneHand: String = "off",
     val widePosition: String = "center",
+    val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
@@ -53,6 +60,7 @@ fun KeyboardFeelSection(
     onDoubleSpacePeriod: (Boolean) -> Unit = {},
     onReleaseHaptic: (Boolean) -> Unit,
     onWidePosition: (String) -> Unit = {},
+    onWidePositionCustom: (Int) -> Unit = {},
     onSplitMode: (String) -> Unit = {},
 ) {
     var bottomGapOpen by rememberSaveable { mutableStateOf(false) }
@@ -141,12 +149,22 @@ fun KeyboardFeelSection(
                         when (position) {
                             "left" -> R.string.options_wide_position_left
                             "right" -> R.string.options_wide_position_right
+                            "custom" -> R.string.options_wide_position_custom
                             else -> R.string.options_wide_position_center
                         },
                     ),
+                subtitle =
+                    if (position == "custom") {
+                        stringResource(R.string.options_wide_position_value, state.widePositionCustom)
+                    } else {
+                        null
+                    },
                 selected = state.widePosition == position,
                 onClick = { onWidePosition(position) },
             )
+        }
+        if (state.widePosition == "custom") {
+            WidePositionCustomControls(percent = state.widePositionCustom, onChange = onWidePositionCustom)
         }
 
         SectionHeader(stringResource(R.string.options_split_section))
@@ -258,3 +276,61 @@ private fun ValueSliderDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
+
+/**
+ * The custom large-screen position under the "custom" choice: a slider with a live readout and a
+ * number field. The keyboard follows when a drag ends or a valid number is typed, so a half-dragged
+ * value is never stored. The number stays stored while left / center / right is in use.
+ */
+@Composable
+internal fun WidePositionCustomControls(
+    percent: Int,
+    onChange: (Int) -> Unit,
+) {
+    var dragging by remember { mutableStateOf<Int?>(null) }
+    val shown = dragging ?: percent
+    var text by remember(percent) { mutableStateOf(percent.toString()) }
+    val parsed = parseWidePosition(text)
+    val description =
+        stringResource(R.string.options_wide_position_custom) + " " +
+            stringResource(R.string.options_wide_position_value, shown)
+    Column(modifier = Modifier.padding(start = 56.dp, end = 16.dp)) {
+        Text(
+            text = stringResource(R.string.options_wide_position_value, shown),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Slider(
+            value = shown.toFloat(),
+            onValueChange = { dragging = Math.round(it) },
+            onValueChangeFinished = {
+                dragging?.let(onChange)
+                dragging = null
+            },
+            valueRange =
+                SettingsPreferences.WIDE_POSITION_MIN.toFloat()..SettingsPreferences.WIDE_POSITION_MAX.toFloat(),
+            modifier = Modifier.semantics { contentDescription = description },
+        )
+        OutlinedTextField(
+            value = text,
+            onValueChange = {
+                text = it.take(3)
+                parseWidePosition(text)?.let(onChange)
+            },
+            label = { Text(stringResource(R.string.options_wide_position_field)) },
+            suffix = { Text("%") },
+            isError = parsed == null,
+            supportingText = {
+                if (parsed == null) Text(stringResource(R.string.options_wide_position_invalid))
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+    }
+}
+
+/** The number typed into the position field, or null when it is not a whole number from 0 to 100. */
+internal fun parseWidePosition(text: String): Int? =
+    text
+        .trim()
+        .toIntOrNull()
+        ?.takeIf { it in SettingsPreferences.WIDE_POSITION_MIN..SettingsPreferences.WIDE_POSITION_MAX }

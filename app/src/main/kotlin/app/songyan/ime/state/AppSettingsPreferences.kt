@@ -32,6 +32,7 @@ class AppSettingsPreferences(
     override val oneHand: Flow<String> = preferences.oneHand
 
     override val widePosition: Flow<String> = preferences.widePosition
+    override val widePositionCustom: Flow<Int> = preferences.widePositionCustom
     override val splitMode: Flow<String> = preferences.splitMode
 
     override val readingPlacement: Flow<String> = preferences.readingPlacement
@@ -55,6 +56,8 @@ class AppSettingsPreferences(
     override suspend fun setReadingPlacement(value: String) = preferences.setReadingPlacement(value)
 
     override suspend fun setWidePosition(value: String) = preferences.setWidePosition(value)
+
+    override suspend fun setWidePositionCustom(percent: Int) = preferences.setWidePositionCustom(percent)
 
     override suspend fun setSplitMode(value: String) = preferences.setSplitMode(value)
 

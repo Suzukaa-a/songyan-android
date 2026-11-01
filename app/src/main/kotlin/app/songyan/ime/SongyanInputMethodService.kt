@@ -107,7 +107,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val hideIdleToolbar = store.hideIdleToolbar
             override val releaseHaptic = store.releaseHaptic
             override val oneHand = store.oneHand
-            override val widePosition = store.widePosition
+            override val widePosition = store.widePositionPercent
             override val splitMode = store.splitMode
             override val readingPlacement = store.readingPlacement
             override val shuangpinHints = store.shuangpinHints

@@ -53,8 +53,11 @@ interface SettingsPreferences {
     /** One-handed mode: off, left or right. */
     val oneHand: Flow<String>
 
-    /** Where the key area sits on a wide surface: left, center or right. */
+    /** Where the key area sits on a wide surface: left, center, right or custom (the number in [widePositionCustom]). */
     val widePosition: Flow<String>
+
+    /** The custom position, percent 0..100 of the free space before the key area; kept while another choice is in use. */
+    val widePositionCustom: Flow<Int>
 
     /** Whether layouts split into two halves on a wide surface: layout (each layout decides), on or off. */
     val splitMode: Flow<String>
@@ -87,6 +90,8 @@ interface SettingsPreferences {
     suspend fun setMenuHiddenLayouts(ids: Set<String>)
 
     suspend fun setWidePosition(value: String)
+
+    suspend fun setWidePositionCustom(percent: Int)
 
     suspend fun setSplitMode(value: String)
 
@@ -144,7 +149,26 @@ interface SettingsPreferences {
         const val LONG_PRESS_STEP_MS = 50
 
         val ONE_HAND_MODES = listOf("off", "left", "right")
-        val WIDE_POSITIONS = listOf("left", "center", "right")
+        val WIDE_POSITIONS = listOf("left", "center", "right", "custom")
+        const val WIDE_POSITION_MIN = 0
+        const val WIDE_POSITION_MAX = 100
+        const val WIDE_POSITION_CENTER = 50
+
+        /** Snaps a typed or stored number to the 0..100 range. */
+        fun clampWidePosition(percent: Int): Int = percent.coerceIn(WIDE_POSITION_MIN, WIDE_POSITION_MAX)
+
+        /** The share of free space before the key area for a stored choice; unknown or missing means centred. */
+        fun widePositionPercent(
+            choice: String?,
+            custom: Int?,
+        ): Int =
+            when (choice) {
+                "left" -> WIDE_POSITION_MIN
+                "right" -> WIDE_POSITION_MAX
+                "custom" -> clampWidePosition(custom ?: WIDE_POSITION_CENTER)
+                else -> WIDE_POSITION_CENTER
+            }
+
         val SPLIT_MODES = listOf("layout", "on", "off")
         val READING_PLACEMENTS = listOf("row", "inline")
         const val DEFAULT_READING_PLACEMENT = "row"
@@ -177,6 +201,7 @@ class InMemorySettingsPreferences(
     private val hand = MutableStateFlow("off")
 
     private val wide = MutableStateFlow("center")
+    private val wideCustom = MutableStateFlow(SettingsPreferences.WIDE_POSITION_CENTER)
     private val split = MutableStateFlow("layout")
     private val placement = MutableStateFlow(SettingsPreferences.DEFAULT_READING_PLACEMENT)
 
@@ -218,7 +243,12 @@ class InMemorySettingsPreferences(
     }
 
     override val widePosition: Flow<String> = wide.asStateFlow()
+    override val widePositionCustom: Flow<Int> = wideCustom.asStateFlow()
     override val splitMode: Flow<String> = split.asStateFlow()
+
+    override suspend fun setWidePositionCustom(percent: Int) {
+        wideCustom.value = SettingsPreferences.clampWidePosition(percent)
+    }
 
     override suspend fun setWidePosition(value: String) {
         require(value in SettingsPreferences.WIDE_POSITIONS) { "unknown wide position: $value" }

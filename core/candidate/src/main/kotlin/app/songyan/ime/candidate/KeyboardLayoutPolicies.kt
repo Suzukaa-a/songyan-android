@@ -103,18 +103,24 @@ object KeyboardOneHandLayoutPolicy {
     }
 }
 
-/** Where a width-capped keyboard content sits on a surface wider than its cap. */
-enum class KeyboardContentDock(
-    val wire: String,
+/**
+ * Where a width-capped keyboard content sits on a surface wider than its cap, as the share of the
+ * free space that lies before it: 0 is flush left, 50 centred, 100 flush right.
+ */
+@JvmInline
+value class KeyboardContentDock private constructor(
+    val percent: Int,
 ) {
-    LEFT("left"),
-    CENTER("center"),
-    RIGHT("right"), ;
-
     companion object {
-        /** Unknown or missing stored values fall back to [CENTER], the neutral default. */
-        fun resolve(storedValue: String?): KeyboardContentDock =
-            entries.firstOrNull { it.wire == storedValue } ?: CENTER
+        const val MINIMUM_PERCENT = 0
+        const val MAXIMUM_PERCENT = 100
+        val LEFT = KeyboardContentDock(MINIMUM_PERCENT)
+        val CENTER = KeyboardContentDock(50)
+        val RIGHT = KeyboardContentDock(MAXIMUM_PERCENT)
+
+        /** Out-of-range values clamp to the nearest edge. */
+        fun of(percent: Int): KeyboardContentDock =
+            KeyboardContentDock(percent.coerceIn(MINIMUM_PERCENT, MAXIMUM_PERCENT))
     }
 }
 
@@ -147,7 +153,7 @@ data class KeyboardWideContentPlan(
 
 /**
  * Keeps wide layouts from stretching: above a phone-sized surface the content is capped and docked
- * left, centre or right. The policy only does geometry - layout identity, split, height, preferences
+ * anywhere from flush left to flush right. The policy only does geometry - layout identity, split, height, preferences
  * and system gestures stay with their owners.
  */
 object KeyboardWideContentPolicy {
@@ -182,22 +188,8 @@ object KeyboardWideContentPolicy {
             return KeyboardWideContentPlan.inactive(width)
         }
         val remaining = width - maximumContentWidth
-        val leading: Double
-        val trailing: Double
-        when (dock) {
-            KeyboardContentDock.LEFT -> {
-                leading = 0.0
-                trailing = remaining
-            }
-            KeyboardContentDock.CENTER -> {
-                leading = remaining / 2
-                trailing = remaining - leading
-            }
-            KeyboardContentDock.RIGHT -> {
-                leading = remaining
-                trailing = 0.0
-            }
-        }
+        val leading = remaining * dock.percent / KeyboardContentDock.MAXIMUM_PERCENT
+        val trailing = remaining - leading
         return KeyboardWideContentPlan(
             active = true,
             contentWidth = maximumContentWidth,

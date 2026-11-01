@@ -169,6 +169,9 @@ class SettingsViewModel(
         collectPreference(preferences.releaseHaptic) { copy(keyboardFeel = keyboardFeel.copy(releaseHaptic = it)) }
         collectPreference(preferences.oneHand) { copy(keyboardFeel = keyboardFeel.copy(oneHand = it)) }
         collectPreference(preferences.widePosition) { copy(keyboardFeel = keyboardFeel.copy(widePosition = it)) }
+        collectPreference(preferences.widePositionCustom) {
+            copy(keyboardFeel = keyboardFeel.copy(widePositionCustom = it))
+        }
         collectPreference(preferences.splitMode) { copy(keyboardFeel = keyboardFeel.copy(splitMode = it)) }
         collectPreference(preferences.readingPlacement) {
             copy(keyboardFeel = keyboardFeel.copy(readingPlacement = it))
@@ -279,6 +282,14 @@ class SettingsViewModel(
     fun setWidePosition(value: String) {
         if (value !in SettingsPreferences.WIDE_POSITIONS) return
         viewModelScope.launch { preferences.setWidePosition(value) }
+    }
+
+    /** A number typed or dragged for the custom position also makes the custom position the one in use. */
+    fun setWidePositionCustom(percent: Int) {
+        viewModelScope.launch {
+            preferences.setWidePositionCustom(SettingsPreferences.clampWidePosition(percent))
+            preferences.setWidePosition("custom")
+        }
     }
 
     fun setReadingPlacement(value: String) {

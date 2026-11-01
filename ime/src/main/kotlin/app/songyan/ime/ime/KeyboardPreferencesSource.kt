@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
@@ -50,8 +51,8 @@ interface KeyboardPreferencesSource {
     /** The user's key sound and vibration choices; unset fields follow the system. */
     val keyFeedback: Flow<KeyFeedbackSettings> get() = flowOf(KeyFeedbackSettings())
 
-    /** [KeyboardDock.wire]: where the key area sits on a surface wider than 600 dp. */
-    val widePosition: Flow<String> get() = flowOf(KeyboardDock.CENTER.wire)
+    /** Percent 0..100 of the free space before the key area on a surface wider than 600 dp; 50 is centred. */
+    val widePosition: Flow<Int> get() = flowOf(KeyboardContentDock.CENTER.percent)
 
     /** [SplitMode.wire]: whether layouts split into two halves on a wide surface. */
     val splitMode: Flow<String> get() = flowOf(SplitMode.LAYOUT.wire)

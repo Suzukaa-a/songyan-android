@@ -5,22 +5,6 @@ import app.songyan.ime.candidate.KeyboardWideContentPlan
 import app.songyan.ime.candidate.KeyboardWideContentPolicy
 import app.songyan.ime.layout.LayoutSplitConfiguration
 
-/** Where the key area sits on a surface wider than [WideSurface.PHONE_MAXIMUM_DP]. */
-enum class KeyboardDock(
-    val wire: String,
-    internal val policy: KeyboardContentDock,
-) {
-    LEFT("left", KeyboardContentDock.LEFT),
-    CENTER("center", KeyboardContentDock.CENTER),
-    RIGHT("right", KeyboardContentDock.RIGHT),
-    ;
-
-    companion object {
-        /** Unknown or missing stored values resolve to the centre. */
-        fun resolve(stored: String?): KeyboardDock = entries.firstOrNull { it.wire == stored } ?: CENTER
-    }
-}
-
 /**
  * Whether the keyboard splits into two halves on a wide surface. A layout carries its own split
  * (the merged pads split automatically); this setting can switch splitting on for every layout or off
@@ -79,10 +63,10 @@ internal object WideSurface {
     fun plan(
         surfaceDp: Double,
         split: LayoutSplitConfiguration?,
-        dock: KeyboardDock,
+        dock: KeyboardContentDock,
         capDp: Double = CONTENT_MAXIMUM_DP,
     ): KeyboardWideContentPlan {
         if (split?.isActive(surfaceDp) == true) return KeyboardWideContentPlan.inactive(surfaceDp)
-        return KeyboardWideContentPolicy.plan(surfaceDp, capDp, dock.policy)
+        return KeyboardWideContentPolicy.plan(surfaceDp, capDp, dock)
     }
 }

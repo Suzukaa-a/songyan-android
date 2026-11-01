@@ -15,6 +15,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -66,7 +67,7 @@ class KeyboardView(
     internal var rails: KeyboardPages.PageRails? = null
 
     /** Where the key area sits on a surface wider than a phone. */
-    var dock: KeyboardDock = KeyboardDock.CENTER
+    var dock: KeyboardContentDock = KeyboardContentDock.CENTER
         set(value) {
             if (field == value) return
             field = value

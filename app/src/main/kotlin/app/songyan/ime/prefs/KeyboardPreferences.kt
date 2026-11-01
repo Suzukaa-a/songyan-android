@@ -16,6 +16,7 @@ import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
 import app.songyan.ime.layout.T9QuickSymbolStore
+import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.storage.AppStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -91,11 +92,28 @@ class KeyboardPreferences(
             .map { it[KEY_ONE_HAND] ?: ONE_HAND_OFF }
             .distinctUntilChanged()
 
-    /** "left" / "center" / "right": where the key area sits on a surface wider than 600 dp. */
+    /** "left" / "center" / "right" / "custom": where the key area sits on a surface wider than 600 dp. */
     val widePosition: Flow<String> =
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
             .map { it[KEY_WIDE_POSITION] ?: DEFAULT_WIDE_POSITION }
+            .distinctUntilChanged()
+
+    /** The custom position, percent 0..100; stays stored while another choice is in use. */
+    val widePositionCustom: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map {
+                SettingsPreferences.clampWidePosition(
+                    it[KEY_WIDE_POSITION_CUSTOM] ?: SettingsPreferences.WIDE_POSITION_CENTER,
+                )
+            }.distinctUntilChanged()
+
+    /** What the keyboard applies: the share of free space before the key area, from the choice and the custom number. */
+    val widePositionPercent: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { SettingsPreferences.widePositionPercent(it[KEY_WIDE_POSITION], it[KEY_WIDE_POSITION_CUSTOM]) }
             .distinctUntilChanged()
 
     /** Engine ids of the input methods the user took out of the keyboard menu. */
@@ -195,6 +213,12 @@ class KeyboardPreferences(
     suspend fun setWidePosition(value: String) {
         require(value in WIDE_POSITIONS) { "unknown wide position: $value" }
         appContext.keyboardDataStore.edit { it[KEY_WIDE_POSITION] = value }
+    }
+
+    suspend fun setWidePositionCustom(percent: Int) {
+        appContext.keyboardDataStore.edit {
+            it[KEY_WIDE_POSITION_CUSTOM] = SettingsPreferences.clampWidePosition(percent)
+        }
     }
 
     suspend fun setSplitMode(value: String) {
@@ -426,11 +450,12 @@ class KeyboardPreferences(
         const val DEFAULT_SPLIT_MODE = "layout"
         const val DEFAULT_READING_PLACEMENT = "row"
         private val READING_PLACEMENTS = setOf("row", "inline")
-        private val WIDE_POSITIONS = setOf("left", "center", "right")
         private val SPLIT_MODES = setOf("layout", "on", "off")
+        private val WIDE_POSITIONS = setOf("left", "center", "right", "custom")
         private val KEY_HEIGHTS = setOf("compact", "standard", "tall")
 
         private val KEY_WIDE_POSITION = stringPreferencesKey("wide_position")
+        private val KEY_WIDE_POSITION_CUSTOM = intPreferencesKey("wide_position_custom")
         private val KEY_SPLIT_MODE = stringPreferencesKey("split_mode")
         private val KEY_SHUANGPIN_HINTS = stringPreferencesKey("shuangpin_hints")
         private val KEY_T9_QUICK_SYMBOLS = stringPreferencesKey("t9_quick_symbols")

@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
@@ -113,7 +114,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch {
         source.keyFeedback.collect { value -> feedback.settings = value }
     }
-    scope.launch { source.widePosition.collect { keyboard.dock = KeyboardDock.resolve(it) } }
+    scope.launch { source.widePosition.collect { keyboard.dock = KeyboardContentDock.of(it) } }
     scope.launch { source.splitMode.collect { keyboard.splitMode = SplitMode.resolve(it) } }
     scope.launch { source.readingPlacement.collect { applyReadingPlacement(it) } }
     scope.launch {
@@ -184,7 +185,7 @@ internal suspend fun KeyboardController.readPreferences() {
         oneHandMode = KeyboardOneHandMode.resolve(it)
         applyOneHand()
     }
-    runCatching { source.widePosition.first() }.getOrNull()?.let { keyboard.dock = KeyboardDock.resolve(it) }
+    runCatching { source.widePosition.first() }.getOrNull()?.let { keyboard.dock = KeyboardContentDock.of(it) }
     runCatching { source.splitMode.first() }.getOrNull()?.let { keyboard.splitMode = SplitMode.resolve(it) }
     runCatching { source.readingPlacement.first() }.getOrNull()?.let { readingPlacement = ReadingPlacement.resolve(it) }
     runCatching { source.shuangpinHints.first() }.getOrNull()?.let { shuangpinHints = it }

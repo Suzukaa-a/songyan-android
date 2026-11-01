@@ -177,24 +177,10 @@ class KeyboardLayoutPoliciesTest {
     }
 
     @Test
-    fun dockResolvesMissingAndUnknownToCenter() {
-        assertEquals(KeyboardContentDock.CENTER, KeyboardContentDock.resolve(null))
-        assertEquals(KeyboardContentDock.CENTER, KeyboardContentDock.resolve(""))
-        assertEquals(KeyboardContentDock.CENTER, KeyboardContentDock.resolve("Center"))
-        assertEquals(KeyboardContentDock.CENTER, KeyboardContentDock.resolve("LEFT"))
-        assertEquals(KeyboardContentDock.LEFT, KeyboardContentDock.resolve("left"))
-        assertEquals(KeyboardContentDock.RIGHT, KeyboardContentDock.resolve("right"))
-        assertEquals(
-            listOf(KeyboardContentDock.LEFT, KeyboardContentDock.CENTER, KeyboardContentDock.RIGHT),
-            KeyboardContentDock.entries,
-        )
-    }
-
-    @Test
     fun phoneSizedSurfacesStayFullWidthForEveryDockAndCap() {
         for (width in listOf(0.0, 1.0, 320.0, 375.0, 600.0)) {
             for (cap in listOf(null, 444.0, 520.0)) {
-                for (dock in KeyboardContentDock.entries) {
+                for (dock in listOf(KeyboardContentDock.LEFT, KeyboardContentDock.CENTER, KeyboardContentDock.RIGHT)) {
                     val plan =
                         KeyboardWideContentPolicy.plan(
                             panelWidth = width,
@@ -215,7 +201,7 @@ class KeyboardLayoutPoliciesTest {
     fun surfaceAboveTheThresholdActivatesAtTheCap() {
         for (width in listOf(600.1, 744.0, 834.0, 1024.0, 1366.0)) {
             for (cap in listOf(444.0, 520.0)) {
-                for (dock in KeyboardContentDock.entries) {
+                for (dock in listOf(KeyboardContentDock.LEFT, KeyboardContentDock.CENTER, KeyboardContentDock.RIGHT)) {
                     val plan =
                         KeyboardWideContentPolicy.plan(
                             panelWidth = width,
@@ -273,6 +259,16 @@ class KeyboardLayoutPoliciesTest {
         assertEquals(444.0, odd.contentWidth, 0.001)
         assertTrue(kotlin.math.abs(odd.leadingInset - odd.trailingInset) <= 0.5)
         assertEquals(833.0, odd.contentWidth + odd.leadingInset + odd.trailingInset, 0.001)
+    }
+
+    @Test
+    fun aPercentPlacesTheContentThatShareOfTheFreeSpaceFromTheLeft() {
+        val plan = KeyboardWideContentPolicy.plan(1000.0, 600.0, KeyboardContentDock.of(25))
+        assertEquals(100.0, plan.leadingInset, 1e-9)
+        assertEquals(300.0, plan.trailingInset, 1e-9)
+        assertEquals(KeyboardContentDock.CENTER, KeyboardContentDock.of(50))
+        assertEquals(0, KeyboardContentDock.of(-5).percent)
+        assertEquals(100, KeyboardContentDock.of(250).percent)
     }
 
     @Test

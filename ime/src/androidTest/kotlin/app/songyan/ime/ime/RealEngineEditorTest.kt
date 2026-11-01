@@ -1977,6 +1977,33 @@ class RealEngineEditorTest {
         }
     }
 
+    @Test
+    fun theKeyAreaOnAWideSurfaceSitsAtThePercentOfTheFreeSpaceAndFollowsTheSettingLive() {
+        withHost(smallestWidthDp = 800) { host ->
+            host.preferences.widePosition.value = 25
+            host.start(width = 2400)
+            val density = host.density
+            val freePx = 2400f - WideSurface.CONTENT_MAXIMUM_DP.toFloat() * density
+
+            fun keyAreaLeft(): Float =
+                host.main2 {
+                    val view = host.find(KeyboardView::class.java)
+                    view.contentFrame(null).left
+                }
+
+            assertEquals(freePx * 0.25f, keyAreaLeft(), 1.5f)
+            // The first key of the top row starts at the key area's edge, not at the screen edge.
+            assertEquals(keyAreaLeft(), host.keyRect("q").left.toFloat(), 16f * density)
+
+            host.main2 { host.preferences.widePosition.value = 100 }
+            host.awaitIdle()
+            assertEquals(freePx, keyAreaLeft(), 1.5f)
+            host.main2 { host.preferences.widePosition.value = 0 }
+            host.awaitIdle()
+            assertEquals(0f, keyAreaLeft(), 1.5f)
+        }
+    }
+
     // ---- harness -------------------------------------------------------------------------------
 
     private fun <T> withHost(
@@ -1985,6 +2012,7 @@ class RealEngineEditorTest {
         smallPages: Boolean = false,
         schema: String = "",
         readingPlacement: String = "row",
+        smallestWidthDp: Int? = null,
         block: (Host) -> T,
     ): T {
         val user = File(root, "user-" + SystemClock.uptimeMillis())
@@ -1994,7 +2022,7 @@ class RealEngineEditorTest {
             runBlocking {
                 RimeEngineBackend.create(engineSource, user, engineCompiled, RimeEngine.DEFAULT_APP_NAME, "test")
             }
-        val host = Host(backend, layout, fontScale, schema, readingPlacement)
+        val host = Host(backend, layout, fontScale, schema, readingPlacement, smallestWidthDp)
         try {
             return block(host)
         } finally {
@@ -2013,15 +2041,20 @@ class RealEngineEditorTest {
         private val fontScale: Float = 1f,
         schema: String = "",
         readingPlacement: String = "row",
+        smallestWidthDp: Int? = null,
     ) {
         private val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context: Context =
             instrumentation.targetContext.let { base ->
-                if (fontScale == 1f) {
+                if (fontScale == 1f && smallestWidthDp == null) {
                     base
                 } else {
                     base.createConfigurationContext(
-                        Configuration(base.resources.configuration).apply { this.fontScale = this@Host.fontScale },
+                        Configuration(base.resources.configuration).apply {
+                            this.fontScale = this@Host.fontScale
+                            // A tablet-class window: only these get the capped, docked key area.
+                            smallestWidthDp?.let { smallestScreenWidthDp = it }
+                        },
                     )
                 }
             }
@@ -2811,6 +2844,7 @@ class RealEngineEditorTest {
         override val readingPlacement = MutableStateFlow("row")
         override val shuangpinHints = MutableStateFlow<Map<Char, String>>(emptyMap())
         override val menuHiddenSchemas = MutableStateFlow<Set<String>>(emptySet())
+        override val widePosition = MutableStateFlow(50)
 
         override suspend fun setLayoutId(id: String) {
             layoutId.value = id

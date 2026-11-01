@@ -465,6 +465,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onDoubleSpacePeriodChanged = viewModel::setDoubleSpacePeriod,
                 onReleaseHapticChanged = viewModel::setReleaseHaptic,
                 onWidePositionChanged = viewModel::setWidePosition,
+                onWidePositionCustomChanged = viewModel::setWidePositionCustom,
                 onSplitModeChanged = viewModel::setSplitMode,
                 onReadingPlacementChanged = viewModel::setReadingPlacement,
                 onBack = topBack(navController),

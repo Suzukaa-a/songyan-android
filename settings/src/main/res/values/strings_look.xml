@@ -36,10 +36,14 @@
     <string name="appearance_import_version">This file was made by a version the keyboard does not support.</string>
     <string name="appearance_import_storage">Could not save the appearance. Try again later.</string>
     <string name="options_wide_position_section">Keyboard position on large screens</string>
-    <string name="options_wide_note">Applies on screens wider than 600 dp, such as tablets and unfolded phones.</string>
+    <string name="options_wide_note">Applies on screens wider than 600 dp, such as tablets and unfolded phones. With Custom, 0% is flush left, 50% centered, 100% flush right.</string>
+    <string name="options_wide_position_value">%1$d%%</string>
+    <string name="options_wide_position_field">Position percent (0 to 100)</string>
+    <string name="options_wide_position_invalid">Enter a whole number from 0 to 100.</string>
     <string name="options_wide_position_left">Left</string>
     <string name="options_wide_position_center">Center</string>
     <string name="options_wide_position_right">Right</string>
+    <string name="options_wide_position_custom">Custom</string>
     <string name="options_split_section">Split keyboard</string>
     <string name="options_split_layout">Follow the layout</string>
     <string name="options_split_layout_body">The 14-key and 18-key layouts split on large screens; other layouts can be set in the layout editor.</string>

@@ -36,10 +36,14 @@
     <string name="appearance_import_version">这个文件来自键盘不支持的版本。</string>
     <string name="appearance_import_storage">没能保存外观，请稍后再试。</string>
     <string name="options_wide_position_section">大屏键盘位置</string>
-    <string name="options_wide_note">在宽度超过 600 dp 的屏幕上生效，例如平板和展开的折叠屏。</string>
+    <string name="options_wide_note">在宽度超过 600 dp 的屏幕上生效，例如平板和展开的折叠屏。自定义时，0% 靠最左，50% 居中，100% 靠最右。</string>
+    <string name="options_wide_position_value">%1$d%%</string>
+    <string name="options_wide_position_field">位置百分比（0 到 100）</string>
+    <string name="options_wide_position_invalid">请输入 0 到 100 的整数。</string>
     <string name="options_wide_position_left">靠左</string>
     <string name="options_wide_position_center">居中</string>
     <string name="options_wide_position_right">靠右</string>
+    <string name="options_wide_position_custom">自定义</string>
     <string name="options_split_section">拆分键盘</string>
     <string name="options_split_layout">跟随键盘布局</string>
     <string name="options_split_layout_body">14 键和 18 键在大屏上自动拆分，其他布局可在布局编辑器里设置。</string>

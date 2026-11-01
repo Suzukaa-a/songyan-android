@@ -109,6 +109,33 @@ class SettingsPreferencesTest {
             InMemorySettingsPreferences().setWidePosition("top")
         }
 
+    @Test
+    fun `the custom wide position is kept while another choice is in use and snaps to 0 to 100`() =
+        runTest {
+            val preferences = InMemorySettingsPreferences()
+            assertEquals(50, preferences.widePositionCustom.first())
+            preferences.setWidePositionCustom(25)
+            preferences.setWidePosition("custom")
+            preferences.setWidePosition("left")
+            assertEquals(25, preferences.widePositionCustom.first())
+            preferences.setWidePositionCustom(130)
+            assertEquals(100, preferences.widePositionCustom.first())
+            preferences.setWidePositionCustom(-4)
+            assertEquals(0, preferences.widePositionCustom.first())
+        }
+
+    @Test
+    fun `a stored wide choice maps to its percent so old stores need no migration`() {
+        assertEquals(0, SettingsPreferences.widePositionPercent("left", 70))
+        assertEquals(50, SettingsPreferences.widePositionPercent("center", 70))
+        assertEquals(100, SettingsPreferences.widePositionPercent("right", 70))
+        assertEquals(70, SettingsPreferences.widePositionPercent("custom", 70))
+        assertEquals(50, SettingsPreferences.widePositionPercent("custom", null))
+        assertEquals(100, SettingsPreferences.widePositionPercent("custom", 900))
+        assertEquals(50, SettingsPreferences.widePositionPercent(null, 70))
+        assertEquals(50, SettingsPreferences.widePositionPercent("top", 70))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun rejectsAnUnknownSplitMode() =
         runTest {

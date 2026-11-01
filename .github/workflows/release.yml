@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag vX.Y.Z (or vX.Y.Z-suffix, e.g. v0.2.0-dev.1, for a pre-release) on a commit of main
-# runs CI, then builds the signed release APK and AAB and publishes a GitHub Release. A tag with a
+# waits for that commit's CI run on main to pass (it is not run a second time), then builds the
+# signed release APK and AAB and publishes a GitHub Release. A tag with a
 # suffix is marked as a pre-release: that is the dev channel.
 #
 # Repository secrets: SONGYAN_KEYSTORE_BASE64 (the keystore file, base64), SONGYAN_KEYSTORE_PASSWORD,
@@ -62,9 +63,40 @@ jobs:
           fi
 
   checks:
-    name: Checks
+    name: Wait for CI
     needs: validate
-    uses: ./.github/workflows/ci.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for the CI run of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        # A manual run (workflow_dispatch) counts too, for a commit whose push did not run CI.
+        run: |
+          while :; do
+            run="$(gh run list -R "${REPO}" --workflow ci.yml --commit "${SHA}" --limit 20 \
+              --json status,conclusion,event,url \
+              --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0] // empty')"
+            if [[ -z "${run}" ]]; then
+              echo "::error::no CI run on main for ${SHA}; run the CI workflow on main, then push the tag again"
+              exit 1
+            fi
+            status="$(jq -r .status <<<"${run}")"
+            conclusion="$(jq -r .conclusion <<<"${run}")"
+            url="$(jq -r .url <<<"${run}")"
+            if [[ "${status}" == completed ]]; then
+              [[ "${conclusion}" == success ]] \
+                || { echo "::error::CI for ${SHA} ended ${conclusion}: ${url}"; exit 1; }
+              echo "CI passed: ${url}"
+              exit 0
+            fi
+            echo "CI ${status}: ${url}"
+            sleep 60
+          done
 
   publish:
     name: Publish

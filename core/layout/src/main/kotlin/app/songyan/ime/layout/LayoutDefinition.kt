@@ -35,6 +35,15 @@ enum class LayoutInvalidCode {
     LONG_PRESS_REQUIRES_LABEL,
     SPLIT_GAP_FRACTION_OUT_OF_RANGE,
     SPLIT_BREAK_OUT_OF_RANGE,
+
+    /** The explicit split arrangement does not have one entry for every row of the layout. */
+    SPLIT_HALVES_ROW_COUNT_MISMATCH,
+
+    /** A row of the explicit split arrangement has no key in one of its halves. */
+    SPLIT_HALF_EMPTY,
+
+    /** Only a main layout carries its own split arrangement; pages follow the layout's split. */
+    SPLIT_HALVES_ONLY_ON_LAYOUT,
     RESOURCE_BUDGET_EXCEEDED,
     MALFORMED_JSON,
 
@@ -487,7 +496,11 @@ data class LayoutDefinition(
 
     val sendsEngineCode: Boolean
         get() {
-            val keys = rows.flatMap { it.keys } + (auxiliaryAreas ?: emptyList()).flatMap { it.keys }
+            // The union of both arrangements: a key that only the split halves carry still sends codes.
+            val keys =
+                rows.flatMap { it.keys } +
+                    (split?.halves ?: emptyList()).flatMap { it.keys } +
+                    (auxiliaryAreas ?: emptyList()).flatMap { it.keys }
             return keys.any { key ->
                 key.action.type == LayoutActionKind.CODE ||
                     (key.longPress ?: emptyList()).any { it.action.type == LayoutActionKind.CODE }
@@ -557,7 +570,7 @@ data class LayoutDefinition(
     @Throws(LayoutException::class)
     fun validate() {
         LayoutResourceBudget.validate(this)
-        split?.validate(rows.map { it.keys.size })
+        split?.validate(rows.map { it.keys.size }, allowsHalves = true)
         val delay = effectiveLongPressDelay
         if (delay.isNaN() || delay.isInfinite() || delay <= 0.0) {
             throw LayoutException.Invalid(LayoutInvalidCode.LONG_PRESS_DELAY_MUST_BE_POSITIVE_FINITE)
@@ -592,7 +605,8 @@ data class LayoutDefinition(
                 )
             }
         }
-        for (key in rows.flatMap { it.keys } + (auxiliaryAreas ?: emptyList()).flatMap { it.keys }) {
+        val halfKeys = (split?.halves ?: emptyList()).flatMap { it.keys }
+        for (key in rows.flatMap { it.keys } + halfKeys + (auxiliaryAreas ?: emptyList()).flatMap { it.keys }) {
             if (key.label.isEmpty() || !key.widthWeight.isFinite() || key.widthWeight <= 0.0) {
                 throw LayoutException.Invalid(
                     LayoutInvalidCode.KEY_REQUIRES_LABEL_AND_POSITIVE_FINITE_WIDTH,

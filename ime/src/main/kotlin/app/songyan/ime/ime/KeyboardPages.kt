@@ -23,6 +23,7 @@ import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.LayoutSplitRow
 import app.songyan.ime.layout.LetterGroupLayout
 import app.songyan.ime.layout.PhoneKeypadRailPolicy
 
@@ -454,12 +455,13 @@ internal object KeyboardPages {
                     authoredEnglish.chrome?.bottom?.filter { jumpDrawn(it, config) } ?: lettersFooter(config)
                 else -> lettersFooter(config)
             }
-        val split =
+        val cuts =
             if (authoredEnglish != null) {
                 LayoutSplitConfiguration.resolving(authoredEnglish.split, main.split)
             } else {
                 handCuts(main, rows, digitRows.size) ?: main.split
             }
+        val split = cuts?.let { pageSplit(it, main, config, authoredEnglish != null, digitRows, footer) }
         val definition =
             LayoutDefinition(
                 id = if (authoredEnglish != null) authoredEnglish.id else "page.letters." + main.id,
@@ -470,6 +472,60 @@ internal object KeyboardPages {
             )
         val rails = railsOf(authoredEnglish?.chrome, digitRows.size + rows.size, footer.isNotEmpty(), config)
         return BuiltPage(definition, rails)
+    }
+
+    /**
+     * The split of the letters page with the layout's explicit halves carried over: the same page
+     * transformation (marks, Shift, Delete, the digit row, the footer) applied to each half. Only the
+     * Chinese letters of the layout use them; an English or authored page follows the row cuts.
+     */
+    private fun pageSplit(
+        split: LayoutSplitConfiguration,
+        main: LayoutDefinition,
+        config: Config,
+        authoredEnglish: Boolean,
+        digitRows: List<LayoutRow>,
+        footer: List<LayoutKey>,
+    ): LayoutSplitConfiguration {
+        val halves = main.split?.halves
+        if (halves == null || authoredEnglish || config.englishDirectInput) return split.copy(halves = null)
+        val letters = chineseHalves(config.layout, main, halves) ?: return split.copy(halves = null)
+        val digits = digitRows.map { LayoutSplitRow(it.keys.take(DIGIT_COLUMNS / 2), it.keys.drop(DIGIT_COLUMNS / 2)) }
+        val footerHalves =
+            if (footer.isEmpty()) emptyList() else listOf(split.copy(rowBreaks = emptyList()).cut(0, footer))
+        return split.copy(halves = digits + letters + footerHalves)
+    }
+
+    private fun chineseHalves(
+        layout: KeyboardLayoutKind,
+        base: LayoutDefinition,
+        halves: List<LayoutSplitRow>,
+    ): List<LayoutSplitRow>? {
+        if (halves.size != base.rows.size) return null
+
+        fun face(row: LayoutSplitRow) =
+            LayoutSplitRow(row.left.map { mergedFace(it) }, row.right.map { mergedFace(it) })
+        if (layout == KeyboardLayoutKind.PHONE9) {
+            val control = PhoneKeypadRailPolicy.controlRowKeys(base) != null
+            return (if (control) halves.dropLast(1) else halves).map(::face)
+        }
+        val letters =
+            halves
+                .filterIndexed { index, _ -> base.rows[index].keys.none { it.action.type == LayoutActionKind.SPACE } }
+                .map { row ->
+                    val shown = face(row)
+                    LayoutSplitRow(shown.left.map(::chineseLetterKey), shown.right.map(::chineseLetterKey))
+                }.toMutableList()
+        if (letters.isEmpty()) return letters
+        val last = letters.last()
+        val hasShift = last.keys.any { it.action.type == LayoutActionKind.SHIFT }
+        val hasDelete = last.keys.any { it.action.type == LayoutActionKind.BACKSPACE }
+        letters[letters.lastIndex] =
+            LayoutSplitRow(
+                (if (hasShift) emptyList() else listOf(SHIFT)) + last.left,
+                last.right + if (hasDelete) emptyList() else listOf(DELETE),
+            )
+        return letters
     }
 
     /**

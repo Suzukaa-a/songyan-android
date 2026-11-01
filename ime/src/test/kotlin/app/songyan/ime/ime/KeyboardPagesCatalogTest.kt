@@ -454,4 +454,77 @@ class KeyboardPagesCatalogTest {
         // A title the user typed by hand wins.
         assertEquals("甲", key.withLabel("甲").face(true))
     }
+
+    @Test
+    fun aLayoutsOwnSplitArrangementReachesTheLettersPageWithShiftDeleteAndFooter() {
+        fun letter(c: Char) = LayoutKey(c.toString(), action = LayoutAction.code(c.toString()))
+        val base = BuiltinLayouts.qwerty26
+        val split = LayoutSplitConfiguration.of(LayoutSplitConfiguration.Activation.ALWAYS)
+        val halves = split.derivedArrangement(base.rows).toMutableList()
+        halves[0] = halves[0].copy(left = halves[0].left + letter('y'))
+        halves[1] = halves[1].copy(right = listOf(letter('g')) + halves[1].right)
+        halves[2] = halves[2].copy(right = listOf(letter('v')) + halves[2].right)
+        val mine = base.copyWithId("mine", "我的").withSplit(split.copy(halves = halves))
+        KeyboardLayoutCatalog.install(LayoutRegistry.create().install(mine.encoded()))
+        val page = KeyboardPages.definition(null, config(KeyboardComposition(mainLayoutID = "mine")))
+        // The whole rows are the stock ones.
+        assertEquals(
+            base.rows.dropLast(1).map { row -> row.keys.map { it.label } },
+            page.rows.dropLast(1).map { row ->
+                row.keys.filter { it.action.type == LayoutActionKind.CODE }.map { it.label }
+            },
+        )
+        val arranged = page.split!!.halves!!
+        assertEquals(page.rows.size, arranged.size)
+
+        fun codes(keys: List<LayoutKey>) =
+            keys.filter { it.action.type == LayoutActionKind.CODE }.joinToString("") { it.label }
+        assertEquals(listOf("qwerty", "yuiop"), listOf(codes(arranged[0].left), codes(arranged[0].right)))
+        assertEquals(listOf("asdfg", "ghjkl"), listOf(codes(arranged[1].left), codes(arranged[1].right)))
+        assertEquals(listOf("zxcv", "vbnm"), listOf(codes(arranged[2].left), codes(arranged[2].right)))
+        // Shift opens the left half of the last letter row and Delete closes the right one.
+        assertEquals(
+            LayoutActionKind.SHIFT,
+            arranged[2]
+                .left
+                .first()
+                .action.type,
+        )
+        assertEquals(
+            LayoutActionKind.BACKSPACE,
+            arranged[2]
+                .right
+                .last()
+                .action.type,
+        )
+        // The footer's space bar is one half under each thumb.
+        assertEquals(
+            LayoutActionKind.SPACE,
+            arranged
+                .last()
+                .left
+                .last()
+                .action.type,
+        )
+        assertEquals(
+            LayoutActionKind.SPACE,
+            arranged
+                .last()
+                .right
+                .first()
+                .action.type,
+        )
+        // The arrangement is what the view cuts the page by, and the English page ignores it.
+        val (cut, breaks) = splitColumns(page.rows.map { it.keys }, page.split!!)
+        assertEquals(arranged.map { it.left.size }, breaks)
+        assertEquals(arranged.map { it.keys.size }, cut.map { it.size })
+        assertNull(
+            KeyboardPages
+                .definition(
+                    null,
+                    config(KeyboardComposition(mainLayoutID = "mine"), english = true),
+                ).split
+                ?.halves,
+        )
+    }
 }

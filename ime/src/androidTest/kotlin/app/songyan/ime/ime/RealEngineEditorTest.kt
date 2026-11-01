@@ -32,7 +32,11 @@ import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.LayoutSplitConfiguration
 import app.songyan.ime.layout.ShuangpinHintPresets
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
@@ -1938,6 +1942,41 @@ class RealEngineEditorTest {
             assertFalse("iang/uang stays on one line", wrapped)
         }
 
+    @Test
+    fun aKeyOnlyTheSplitArrangementHasTypesItsLetterWhenSplitAndIsAbsentWhenWhole() {
+        fun letter(c: Char) = LayoutKey(c.toString(), action = LayoutAction.code(c.toString()))
+        val base = BuiltinLayouts.qwerty26
+        val split = LayoutSplitConfiguration.of(LayoutSplitConfiguration.Activation.AUTOMATIC)
+        val halves = split.derivedArrangement(base.rows).toMutableList()
+        halves[0] = halves[0].copy(left = halves[0].left + letter('y'))
+        halves[1] = halves[1].copy(right = listOf(letter('g')) + halves[1].right)
+        halves[2] = halves[2].copy(right = listOf(letter('v')) + halves[2].right)
+        val layout = base.withSplit(split.copy(halves = halves))
+        instrumentation.runOnMainSync { KeyboardLayoutCatalog.install(LayoutRegistry.create().replace(layout)) }
+        try {
+            withHost { host ->
+                host.start(width = 1080)
+                val duplicated = listOf("y", "g", "v")
+                // A phone-wide keyboard is whole: the split-only keys have no slot at all.
+                for (letter in duplicated) assertEquals(letter, 1, host.keyLabels().count { it.equals(letter, true) })
+                host.resize(2400)
+                for (letter in duplicated) {
+                    assertEquals(letter, 2, host.keyLabels().count { it.equals(letter, true) })
+                    for (nth in 0..1) {
+                        host.tapNth(letter, nth)
+                        host.awaitField(letter)
+                        host.tap(host.string(R.string.ime_delete))
+                        host.awaitField("")
+                    }
+                }
+                host.resize(1080)
+                for (letter in duplicated) assertEquals(letter, 1, host.keyLabels().count { it.equals(letter, true) })
+            }
+        } finally {
+            instrumentation.runOnMainSync { KeyboardLayoutCatalog.install(LayoutRegistry.create()) }
+        }
+    }
+
     // ---- harness -------------------------------------------------------------------------------
 
     private fun <T> withHost(
@@ -2041,6 +2080,33 @@ class RealEngineEditorTest {
             )
 
         private var hostWidth = 0
+
+        /** The host window changes width (a rotation or a window resize); the keyboard re-solves its rows. */
+        fun resize(width: Int) {
+            hostWidth = width
+            main { relayout() }
+            awaitIdle()
+        }
+
+        /** Clicks the [nth] key (0-based, in reading order) whose spoken label is [label]. */
+        fun tapNth(
+            label: String,
+            nth: Int,
+        ) {
+            main {
+                val view = find(KeyboardView::class.java)
+                val indices = labels(view).withIndex().filter { matches(it.value, label) }.map { it.index }
+                assertTrue("no key #$nth '$label'", nth in indices.indices)
+                assertTrue(
+                    view.accessibilityNodeProvider.performAction(
+                        indices[nth],
+                        AccessibilityNodeInfo.ACTION_CLICK,
+                        null,
+                    ),
+                )
+            }
+            awaitIdle()
+        }
 
         /** The host window's layout pass: the bar swaps with the toolbar and expands between frames. */
         fun relayout() {

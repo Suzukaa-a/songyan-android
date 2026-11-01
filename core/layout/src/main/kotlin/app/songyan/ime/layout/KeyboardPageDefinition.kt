@@ -224,6 +224,7 @@ data class KeyboardPageDefinition(
 
     @Throws(LayoutException::class)
     fun validate() {
+        if (split?.halves != null) throw LayoutException.Invalid(LayoutInvalidCode.SPLIT_HALVES_ONLY_ON_LAYOUT)
         val numeric = numericPresentation
         if (numeric != null && kind != KeyboardPageKind.NUMERIC) {
             throw LayoutException.Invalid(LayoutInvalidCode.PAGE_NUMERIC_PRESENTATION_ONLY_ON_NUMERIC_PAGE)

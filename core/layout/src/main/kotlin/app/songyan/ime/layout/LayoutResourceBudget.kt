@@ -108,6 +108,12 @@ object LayoutResourceBudget {
         }
 
         for (row in layout.rows) region(row.keys, rowKeyLimit)
+        val halves = layout.split?.halves ?: emptyList()
+        checkBudget(halves.size <= ROWS) { "splitRows" }
+        for (row in halves) {
+            region(row.left, rowKeyLimit)
+            region(row.right, rowKeyLimit)
+        }
         for (area in layout.auxiliaryAreas ?: emptyList()) region(area.keys, KEYS_PER_REGION)
         checkBudget(usage.keys <= keyLimit) { "keys" }
         checkBudget(usage.alternates <= alternatesLimit) { "alternates" }

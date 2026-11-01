@@ -195,20 +195,27 @@ internal fun KeyboardView.activeSplit(): LayoutSplitConfiguration? =
 internal fun splitColumns(
     columns: List<List<LayoutKey>>,
     split: LayoutSplitConfiguration,
+    showsGlobe: Boolean = true,
 ): Pair<List<List<LayoutKey>>, List<Int>> {
+    val halves = split.halves
+    if (halves != null && halves.size == columns.size) {
+        // The layout's own split arrangement: each half is already the keys to draw.
+        val rows = ArrayList<List<LayoutKey>>(halves.size)
+        val breaks = ArrayList<Int>(halves.size)
+        for (row in halves) {
+            val left = if (showsGlobe) row.left else row.left.filterNot { it.action.type == LayoutActionKind.GLOBE }
+            val right = if (showsGlobe) row.right else row.right.filterNot { it.action.type == LayoutActionKind.GLOBE }
+            rows += left + right
+            breaks += left.size
+        }
+        return rows to breaks
+    }
     val rows = ArrayList<List<LayoutKey>>(columns.size)
     val breaks = ArrayList<Int>(columns.size)
     for ((index, row) in columns.withIndex()) {
-        val spaceAt = row.indexOfFirst { it.action.type == LayoutActionKind.SPACE }
-        if (spaceAt < 0) {
-            rows += row
-            breaks += split.breakIndex(index, row.size)
-            continue
-        }
-        val space = row[spaceAt]
-        val half = space.copy(width = space.widthWeight / 2)
-        rows += row.take(spaceAt) + half + half + row.drop(spaceAt + 1)
-        breaks += spaceAt + 1
+        val cut = split.cut(index, row)
+        rows += cut.keys
+        breaks += cut.left.size
     }
     return rows to breaks
 }
@@ -274,8 +281,10 @@ internal fun KeyboardView.rebuild() {
     var rowSplit: KeyRowSolver.RowSplit? = null
     if (split != null) {
         // Every character row shares one gutter, solved for the widest of them, so the halves line up.
+        // The split arrangement can carry more keys than the whole rows, so the cut rows decide.
+        val (cut, breaks) = splitColumns(columns, split, showsGlobe)
         val widest =
-            columns
+            cut
                 .filter { row ->
                     row.none { it.action.type == LayoutActionKind.SPACE }
                 }.maxOfOrNull { it.size }
@@ -287,7 +296,6 @@ internal fun KeyboardView.rebuild() {
                 spacing = gap / density.toDouble(),
             )
         if (plan.gutter > 0.0) {
-            val (cut, breaks) = splitColumns(columns, split)
             columns = cut
             rowSplit = KeyRowSolver.RowSplit(plan.gutter.toFloat() * density, breaks)
             left += plan.inset.toFloat() * density
@@ -350,8 +358,9 @@ internal fun KeyboardView.rebuildWithRails(
     var columns = KeyRowSolver.columns(rows, showsGlobe)
     var rowSplit: KeyRowSolver.RowSplit? = null
     if (split != null) {
+        val (cut, breaks) = splitColumns(columns, split, showsGlobe)
         val widest =
-            columns
+            cut
                 .take(rails.contentRows)
                 .filter { row -> row.none { it.action.type == LayoutActionKind.SPACE } }
                 .maxOfOrNull { it.size }
@@ -363,7 +372,6 @@ internal fun KeyboardView.rebuildWithRails(
                 spacing = gap / density.toDouble(),
             )
         if (plan.gutter > 0.0) {
-            val (cut, breaks) = splitColumns(columns, split)
             columns = cut
             rowSplit = KeyRowSolver.RowSplit(plan.gutter.toFloat() * density, breaks)
             val inset = plan.inset.toFloat() * density

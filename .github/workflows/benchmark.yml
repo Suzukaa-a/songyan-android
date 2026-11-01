@@ -55,5 +55,8 @@ jobs:
         if: always()
         with:
           name: benchmark-results
-          path: benchmark/build/outputs/connected_android_test_additional_output/**
+          path: |
+            benchmark/build/outputs/connected_android_test_additional_output/**
+            benchmark/build/reports/androidTests/**
+            benchmark/build/outputs/androidTest-results/**
           retention-days: 7

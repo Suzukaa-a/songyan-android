@@ -6,14 +6,27 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
-// Release signing comes from a git-ignored file so no secret is ever committed. Without it
-// the release build is produced unsigned (CI and fresh checkouts still build and shrink).
-// Keys: storeFile, storePassword, keyAlias, keyPassword.
-val signingProperties =
+// Release signing comes from SONGYAN_KEYSTORE_FILE / SONGYAN_KEYSTORE_PASSWORD / SONGYAN_KEY_ALIAS /
+// SONGYAN_KEY_PASSWORD (the release workflow) or from the git-ignored .local/release-signing.properties
+// (keys: storeFile, storePassword, keyAlias, keyPassword), so no secret is ever committed. The
+// environment wins. Without either the release build is produced unsigned (CI and fresh checkouts
+// still build and shrink).
+val signingFile =
     Properties().apply {
         val file = rootDir.resolve(".local/release-signing.properties")
         if (file.isFile) file.inputStream().use { load(it) }
     }
+
+fun signingValue(
+    envName: String,
+    propertyName: String,
+): String? = System.getenv(envName)?.takeIf { it.isNotEmpty() } ?: signingFile.getProperty(propertyName)
+
+val releaseStoreFile = signingValue("SONGYAN_KEYSTORE_FILE", "storeFile")
+val releaseStorePassword = signingValue("SONGYAN_KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = signingValue("SONGYAN_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = signingValue("SONGYAN_KEY_PASSWORD", "keyPassword")
+val hasReleaseKey = releaseStoreFile != null
 
 val rimeDataHash =
     providers.of(ContentHashValueSource::class.java) {
@@ -35,12 +48,13 @@ android {
     // without this it finds no strip tool and ships the unstripped engine.
     ndkVersion = "30.0.16248370"
     signingConfigs {
-        if (signingProperties.containsKey("storeFile")) {
+        if (hasReleaseKey) {
             create("release") {
-                storeFile = rootDir.resolve(signingProperties.getProperty("storeFile"))
-                storePassword = signingProperties.getProperty("storePassword")
-                keyAlias = signingProperties.getProperty("keyAlias")
-                keyPassword = signingProperties.getProperty("keyPassword")
+                // A relative path is taken from the repository root; an absolute one stays as is.
+                storeFile = rootDir.resolve(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -95,13 +109,13 @@ android {
 androidComponents {
     onVariants(selector().withBuildType("benchmarkRelease")) { variant ->
         variant.applicationId.set("app.songyan.ime.benchmark")
-        if (!signingProperties.containsKey("storeFile")) {
+        if (!hasReleaseKey) {
             variant.signingConfig.setConfig(android.signingConfigs.getByName("debug"))
         }
     }
     onVariants(selector().withBuildType("nonMinifiedRelease")) { variant ->
         variant.applicationId.set("app.songyan.ime.benchmark")
-        if (!signingProperties.containsKey("storeFile")) {
+        if (!hasReleaseKey) {
             variant.signingConfig.setConfig(android.signingConfigs.getByName("debug"))
         }
     }

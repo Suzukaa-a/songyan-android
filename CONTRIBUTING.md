@@ -5,7 +5,7 @@ Thanks for helping. Songyan (松烟) for Android is an input method built on the
 ## Prerequisites
 
 - JDK 17 or later (CI uses 21), Android SDK 37 (`platforms;android-37.0`, `build-tools;37.0.0`), NDK 30.0.16248370 and CMake 3.31.6. Create a git-ignored `local.properties` with `sdk.dir=...`, or set `ANDROID_HOME`.
-- Local-only files live in `.local/` and `.scratch/`; both are git-ignored and must not be committed. Release signing, if you need it, is read from `.local/release-signing.properties` (see [README.md](README.md)). Never commit keystores or passwords.
+- Local-only files live in `.local/` and `.scratch/`; both are git-ignored and must not be committed. Release signing, if you need it, is read from the `SONGYAN_KEYSTORE_FILE`, `SONGYAN_KEYSTORE_PASSWORD`, `SONGYAN_KEY_ALIAS` and `SONGYAN_KEY_PASSWORD` environment variables or from `.local/release-signing.properties` (see [README.md](README.md)). Never commit keystores or passwords.
 - For local debug builds, `-Psongyan.abis=arm64-v8a` (or the ABI of your emulator) builds only one ABI and is much faster. Do not use it for release builds.
 - A device or emulator is needed only for the instrumented tests and the benchmarks.
 

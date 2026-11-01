@@ -113,7 +113,7 @@ class PageJumpDeviceTest {
                 host.awaitIdle()
                 assertEquals(KeyboardPageKind.NUMERIC, host.main2 { host.controller.page })
                 // 符 on the visited 9-key 123 page opens the user's own symbol page, which has the jump key again.
-                host.tap(host.string(R.string.ime_open_symbols_page))
+                host.hold(host.string(R.string.ime_open_symbols_page), 30L) {}
                 assertTrue(
                     "round $round",
                     host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.QWERTY26 },
@@ -121,6 +121,9 @@ class PageJumpDeviceTest {
                 host.awaitIdle()
                 assertEquals(KeyboardPageKind.SYMBOLS, host.main2 { host.controller.page })
                 assertTrue(jumpName(host) in host.labelsOf(KeyboardView::class.java))
+                // The key now in 符's slot (# on this page) does not light up.
+                val fading = host.main2 { host.find(KeyboardView::class.java).releases.count { it != 0L } }
+                assertEquals("round $round", 0, fading)
             }
         }
 

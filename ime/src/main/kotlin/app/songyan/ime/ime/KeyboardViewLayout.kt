@@ -694,7 +694,7 @@ internal fun KeyboardView.fitSize(
 
 /**
  * A page or layout switch replaces the physical key set, so held fingers can no longer be
- * routed and are cancelled; a relabel (shift, composition, rail choices) keeps them and only
+ * routed and are cancelled, and release fades are dropped; a relabel (shift, composition, rail choices) keeps them and only
  * re-resolves their slot.
  */
 internal fun KeyboardView.settleKeySet(signature: KeySetSignature) {
@@ -704,6 +704,8 @@ internal fun KeyboardView.settleKeySet(signature: KeySetSignature) {
     }
     keySet = signature
     if (pointers.size() > 0) cancelTouches()
+    // Fades are per slot: the key that sat under the finger on the new page must not light up.
+    java.util.Arrays.fill(releases, 0L)
 }
 
 internal fun KeyboardView.rebasePresses() {

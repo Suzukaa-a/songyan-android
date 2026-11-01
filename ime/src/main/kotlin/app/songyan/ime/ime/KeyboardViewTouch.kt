@@ -169,7 +169,7 @@ internal fun KeyboardView.rollOver() {
         if (press.held || press.moved || press.tracker?.choice != null) continue
         if (popupKey >= 0 && popupOwner == press.pointerId) continue
         press.task?.let { timers.removeCallbacks(it) }
-        if (press.key in releases.indices) releases[press.key] = SystemClock.uptimeMillis()
+        fadeOut(press, SystemClock.uptimeMillis())
         pointers.removeAt(i)
         invalidateKey(press.key)
         if (press.snapshot.isBackspace) {
@@ -663,7 +663,7 @@ internal fun KeyboardView.handleUp(
                 }
             }
         }
-        if (press.key in releases.indices) releases[press.key] = now
+        fadeOut(press, now)
         if (press.snapshot.isSpace) setCursorDragging(false)
         if (press.held || !press.moved || press.tracker?.choice != null) onReleaseFeedback()
         pointers.remove(pointerId)
@@ -729,7 +729,7 @@ internal fun KeyboardView.cancelTouches() {
     for (i in 0 until pointers.size()) {
         val press = pointers.valueAt(i)
         press.task?.let { timers.removeCallbacks(it) }
-        if (press.key in releases.indices) releases[press.key] = now
+        fadeOut(press, now)
         if (press.snapshot.isBackspace) BackspaceTrace.record(BackspaceTrace.Event.TOUCH_CANCELLED)
     }
     pointers.clear()
@@ -739,4 +739,17 @@ internal fun KeyboardView.cancelTouches() {
     setCursorDragging(false)
     stopAccessibilityRepeat()
     invalidate()
+}
+
+/**
+ * Starts the release fade of [press]'s key. A page key switches the page as it fires, before this
+ * runs: its slot then holds a key of the new page, which must not light up.
+ */
+internal fun KeyboardView.fadeOut(
+    press: KeyboardView.Press,
+    at: Long,
+) {
+    if (press.key in releases.indices && identities.getOrNull(press.key) == press.snapshot.identity) {
+        releases[press.key] = at
+    }
 }

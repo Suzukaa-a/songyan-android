@@ -1,0 +1,58 @@
+name: Benchmark
+
+# The latency gate runs nightly and on demand rather than on every push: emulator timings are noisy,
+# and an x86_64 emulator says little about arm64 phones, so it only catches large regressions.
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The keyboard's show, key and commit times on a release-like build must stay within the budgets
+  # in scripts/check-perf-budget.py.
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the retired `tools` package, which sdkmanager no longer finds.
+          packages: platform-tools
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .local/native-cache
+            .local/cmake-deps
+          key: native-benchmark-${{ runner.os }}-ndk30.0.16248370-${{ hashFiles('native/*.env', 'native/patches/**', 'native/scripts/**', 'native/src/*.h', 'native/levers/include/**', 'native/android/engine/**') }}
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :benchmark:connectedBenchmarkReleaseAndroidTest
+            python3 scripts/check-perf-budget.py benchmark/build/outputs/connected_android_test_additional_output/benchmarkRelease/connected/*/*benchmarkData.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: benchmark/build/outputs/connected_android_test_additional_output/**
+          retention-days: 7

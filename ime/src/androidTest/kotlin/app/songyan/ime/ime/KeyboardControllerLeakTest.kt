@@ -103,6 +103,7 @@ class KeyboardControllerLeakTest {
         // The newest retired controller or two can still be held by transient framework state (a
         // pending view callback); what must not happen is that they pile up, one per change.
         val alive = retired.indices.filter { retired[it].get() != null }
+        android.util.Log.w("LEAKDIAG", "alive=$alive")
         assertTrue(
             "retired controllers pile up: still reachable $alive of ${retired.size}",
             alive.all {

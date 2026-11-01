@@ -28,12 +28,22 @@ sealed interface RimeConfigMessage {
     ) : RimeConfigMessage
 }
 
+/** [firstTime]: the user has not yet been told what a script can do. */
+data class ScriptConfirmation(
+    val scripts: List<String>,
+    val firstTime: Boolean,
+)
+
 data class RimeConfigUiState(
     val available: Boolean = false,
     /** Null until the folder was read once. */
     val info: RimeConfigInfo? = null,
     val applying: Boolean = false,
     val message: RimeConfigMessage? = null,
+    /** Files the user has just applied that replace the scheme's own, told once; null when there is nothing to tell. */
+    val overrideNotice: List<String>? = null,
+    /** Scripts waiting for the user's yes before anything is applied; null when none. */
+    val scriptConfirmation: ScriptConfirmation? = null,
 ) {
     /** Applying does something: there are changes, or the last attempt or deployment left them out. */
     val canApply: Boolean
@@ -63,19 +73,58 @@ class RimeConfigViewModel(
 
     fun noFilesApp() = mutable.update { it.copy(message = RimeConfigMessage.NoFilesApp) }
 
-    fun apply() {
+    /** Gives up the user's version of [path]; the scheme's own file is used again after the next apply. */
+    fun restore(path: String) {
+        viewModelScope.launch {
+            gateway.restore(path)
+            refresh()
+        }
+    }
+
+    /** The user has read the notice about files that replace the scheme's own. */
+    fun dismissOverrideNotice() {
+        val paths = mutable.value.overrideNotice ?: return
+        mutable.update { it.copy(overrideNotice = null) }
+        viewModelScope.launch {
+            gateway.acknowledge(paths)
+            refresh()
+        }
+    }
+
+    fun apply() = applyWith(confirmScripts = false)
+
+    /** The user agreed to use the scripts [RimeConfigUiState.scriptConfirmation] listed: apply for real. */
+    fun confirmScripts() {
+        mutable.update { it.copy(scriptConfirmation = null) }
+        applyWith(confirmScripts = true)
+    }
+
+    /** The user declined: nothing is applied and the files stay as they are. */
+    fun cancelScripts() = mutable.update { it.copy(scriptConfirmation = null) }
+
+    private fun applyWith(confirmScripts: Boolean) {
         if (!mutable.value.canApply) return
         mutable.update { it.copy(applying = true, message = null) }
         viewModelScope.launch {
-            val result = gateway.apply()
+            val result = gateway.apply(confirmScripts)
+            if (result is RimeConfigApplyResult.NeedsConfirmation) {
+                mutable.update {
+                    it.copy(applying = false, scriptConfirmation = ScriptConfirmation(result.scripts, result.firstTime))
+                }
+                return@launch
+            }
             val info = gateway.info()
             mutable.update {
                 it.copy(
                     applying = false,
                     info = info,
+                    overrideNotice =
+                        info.unacknowledged
+                            .takeIf { result == RimeConfigApplyResult.Applied && it.isNotEmpty() },
                     message =
                         when (result) {
                             RimeConfigApplyResult.Applied -> RimeConfigMessage.Applied
+                            is RimeConfigApplyResult.NeedsConfirmation -> null
                             // A refused file is shown on the row for as long as it stands.
                             is RimeConfigApplyResult.Failure ->
                                 if (info.failure != null) null else RimeConfigMessage.Failure(result.message)

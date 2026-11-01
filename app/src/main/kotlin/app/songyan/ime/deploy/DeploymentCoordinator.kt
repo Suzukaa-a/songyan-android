@@ -23,7 +23,9 @@ import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.storage.SourceScheme
 import app.songyan.ime.userconfig.UserConfigException
 import app.songyan.ime.userconfig.UserConfigFiles
+import app.songyan.ime.userconfig.UserConfigProblem
 import app.songyan.ime.userconfig.UserConfigStatus
+import app.songyan.ime.userconfig.UserScripts
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -295,6 +297,16 @@ class DeploymentCoordinator(
                 configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
                 throw e
             }
+            // The settings screen asked for the user's yes to each script before this request; the files
+            // may have changed since, so what is about to be applied is checked again.
+            val unconfirmed =
+                UserScripts(storage).unconfirmed(staging, publisher.readActive()?.sourceId?.let(storage::sourceDir))
+            if (unconfirmed.isNotEmpty()) {
+                staging.deleteRecursively()
+                val refusal = UserConfigException(unconfirmed.first().id, UserConfigProblem.UNCONFIRMED_SCRIPT)
+                configStatus.write(UserConfigStatus.failed(refusal.file, refusal.problem.name))
+                throw refusal
+            }
             val applied = storage.appliedConfigDir
             // Its presence marks the application as unfinished until the new generation is published.
             if (applied.exists()) moveDirectory(applied, previous) else previous.mkdirs()
@@ -520,11 +532,10 @@ class DeploymentCoordinator(
             // (custom_phrase.txt), and the generation shows what it was built from.
             val configured =
                 config
-                    ?.let(
-                        UserConfigFiles::files,
-                    ).orEmpty()
-                    .map { File(workDir, it.name) }
-                    .filter { it.isFile }
+                    ?.let { dir -> UserConfigFiles.files(dir).map { UserConfigFiles.relativePath(dir, it) } }
+                    .orEmpty()
+                    .associateWith { File(workDir, it) }
+                    .filterValues { it.isFile }
             val revision = effectiveRevision(manifest, features.settings, config)
             requireIdentifier("revision", revision, REVISION_PATTERN)
             val companionSchemas =
@@ -587,7 +598,7 @@ class DeploymentCoordinator(
                         revision = revision,
                         schemaIds = schemaIds,
                         stamp = stamp,
-                        extraResources = features.files + configured,
+                        extraResources = features.files.associateBy { it.name } + configured,
                         companionsPending = companionsPending,
                     )
                 }

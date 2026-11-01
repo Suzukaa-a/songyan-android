@@ -148,14 +148,25 @@
     <string name="rime_config_folder_sources">全部输入方案</string>
     <string name="rime_config_error_yaml">「%1$s」格式有误，改动没有应用，键盘仍用原来的设置。改好或删掉这个文件后再试。</string>
     <string name="rime_config_error_text">「%1$s」不是 UTF-8 文本，改动没有应用，键盘仍用原来的设置。</string>
+    <string name="rime_config_error_reference">「%1$s」里有指向别处文件的写法，改动没有应用，键盘仍用原来的设置。</string>
+    <string name="rime_config_error_script">扩展脚本在你确认之后又有改动，改动没有应用。再点一次「应用更改」。</string>
+    <string name="rime_editor_unsafe_reference">这个文件里有指向别处文件的写法，没有保存。</string>
     <string name="rime_config_error_large">「%1$s」太大，改动没有应用。每个文件不超过 4 MB，全部加起来不超过 8 MB。</string>
     <string name="rime_config_error_many">文件太多，改动没有应用。最多放 100 个文件。</string>
     <string name="rime_config_error_deploy">改动没能生效，键盘仍用原来的设置。检查最近改过的文件后再试。</string>
     <string name="rime_config_error_unavailable">现在没法应用更改，请稍后再试。</string>
     <string name="rime_config_skipped">你的配置不适用于正在使用的输入方案，这个方案现在按原样使用。</string>
     <string name="rime_config_refused_read_only">这个文件夹只能查看。把文件放进「我的配置」，再到松烟设置里点「应用更改」。</string>
-    <string name="rime_config_refused_folder">「我的配置」里不能放文件夹，把文件直接放进去。</string>
+    <string name="rime_config_refused_folder">「我的配置」里只能放一个 lua 文件夹，用来放扩展脚本。其余文件直接放进去。</string>
     <string name="rime_config_refused_type">「%1$s」放不进来。「我的配置」只收 .yaml 和 .txt 文件。</string>
+    <string name="rime_config_refused_script_type">「%1$s」放不进来。这个文件夹只收 .lua 文件。</string>
+    <string name="rime_config_refused_large">「%1$s」太大，没法在这里修改。每个文件不超过 4 MB。</string>
+    <!-- 新建配置文件开头的注释行，是文件内容，不是界面文案。 -->
+    <string name="rime_config_template_hint">在 patch 下写要改的项，改完回到松烟点「应用更改」。</string>
+    <string name="rime_config_template_example">例：每页显示 7 个候选</string>
+    <string name="rime_config_grammar_example_new">语法模型参数示例（去掉行首的 # 后生效）：</string>
+    <string name="rime_config_grammar_example_under">语法模型参数示例（去掉行首的 # 后生效，这些行要放在上面的 patch: 下面）：</string>
+    <string name="rime_config_grammar_example_empty">语法模型参数示例（先把上面的 patch: {} 改成 patch:，再去掉行首的 # 后生效）：</string>
     <string name="package_learning_failed">方案包已导入，但用词记录没有并入。你已学到的词没有改动。</string>
     <string name="package_learning_not_in_use">没能切换到这个输入方案，用词记录没有并入。</string>
     <string name="package_learning_nothing">方案包里的用词记录与它的词库对不上，没有并入。</string>

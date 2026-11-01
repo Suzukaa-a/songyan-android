@@ -13,12 +13,20 @@ import app.songyan.ime.deploy.DeployRequest
 import app.songyan.ime.deploy.DeploymentCoordinator
 import app.songyan.ime.deploy.RequestState
 import app.songyan.ime.settings.state.RimeConfigApplyResult
+import app.songyan.ime.settings.state.RimeConfigEditResult
+import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigGateway
 import app.songyan.ime.settings.state.RimeConfigInfo
+import app.songyan.ime.settings.state.RimeConfigSaveResult
+import app.songyan.ime.settings.state.RimeEditTarget
+import app.songyan.ime.settings.state.RimeOverrideFile
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.SourceCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 
 /**
  * The settings side of the user's Rime configuration: the folder's state, read off the main
@@ -31,6 +39,9 @@ internal class RimeConfigGatewayImpl(
 ) : RimeConfigGateway {
     private val appContext = context.applicationContext
     private val statusStore = UserConfigStatus.Store(storage)
+    private val overrides = UserOverrides(storage)
+    private val editor = UserConfigEditor(storage, overrides)
+    private val scripts = UserScripts(storage)
 
     override val available: Boolean = true
 
@@ -55,7 +66,16 @@ internal class RimeConfigGatewayImpl(
             val applied = UserConfigFiles.digest(storage.appliedConfigDir)
             val status = statusStore.read()
             val active = GenerationPublisher(storage).readActive()?.sourceId
+            val sourceDir = active?.let(storage::sourceDir)?.takeIf { it.isDirectory }
             RimeConfigInfo(
+                overrides = overrides.entries(sourceDir).map { RimeOverrideFile(it.path, it.updated) },
+                unacknowledged = overrides.unacknowledged(sourceDir),
+                editTargets =
+                    active
+                        ?.let { SourceCatalog(storage).read(it) }
+                        ?.schemes
+                        ?.map { RimeEditTarget(it.schemaId, it.name) }
+                        .orEmpty(),
                 fileCount = files.size,
                 pending = edited != applied,
                 // A failure only matters while the files that caused it are still the edited ones.
@@ -70,8 +90,18 @@ internal class RimeConfigGatewayImpl(
             )
         }
 
-    override suspend fun apply(): RimeConfigApplyResult =
+    override suspend fun apply(confirmScripts: Boolean): RimeConfigApplyResult =
         client.detached {
+            val unconfirmed =
+                withContext(Dispatchers.IO) { scripts.unconfirmed(storage.userConfigDir, activeSourceDir()) }
+            if (unconfirmed.isNotEmpty()) {
+                if (!confirmScripts) {
+                    val firstTime = withContext(Dispatchers.IO) { !scripts.riskAccepted() }
+                    return@detached RimeConfigApplyResult.NeedsConfirmation(unconfirmed.map { it.id }, firstTime)
+                }
+                // The deployment checks the files it applies against this record, so a change after now is refused.
+                withContext(Dispatchers.IO) { scripts.accept(unconfirmed) }
+            }
             val request = DeployRequest(DeployContract.newRequestId(), DeployMode.APPLY_USER_CONFIG)
             when (val outcome = client.await(request)) {
                 is DeployWait.Finished ->
@@ -84,6 +114,115 @@ internal class RimeConfigGatewayImpl(
                 DeployWait.TimedOut, DeployWait.Unavailable ->
                     RimeConfigApplyResult.Failure(appContext.getString(R.string.rime_config_error_unavailable))
             }
+        }
+
+    override suspend fun restore(path: String) {
+        withContext(Dispatchers.IO) { overrides.restore(path) }
+    }
+
+    override suspend fun acknowledge(paths: List<String>) {
+        withContext(Dispatchers.IO) { overrides.acknowledge(paths) }
+    }
+
+    override suspend fun loadFile(
+        key: String,
+        grammarExample: Boolean,
+    ): RimeConfigFileResult =
+        withContext(Dispatchers.IO) {
+            val name = editor.fileName(key) ?: return@withContext RimeConfigFileResult.Failure(null)
+            try {
+                val loaded = editor.load(name, activeSourceDir(), ::template)
+                val text =
+                    if (grammarExample) {
+                        GrammarParameterExample.appendedTo(loaded) { appContext.getString(grammarHeading(it)) }
+                    } else {
+                        loaded
+                    }
+                RimeConfigFileResult.Loaded(titleOf(key), name, text)
+            } catch (e: UserConfigException) {
+                RimeConfigFileResult.Failure(failureText(e))
+            } catch (_: IOException) {
+                RimeConfigFileResult.Failure(null)
+            }
+        }
+
+    override suspend fun saveFile(
+        key: String,
+        text: String,
+    ): RimeConfigSaveResult =
+        withContext(Dispatchers.IO) {
+            val name = editor.fileName(key) ?: return@withContext RimeConfigSaveResult.Failure(null)
+            try {
+                val refusal = editor.save(name, text)
+                when {
+                    refusal == null -> RimeConfigSaveResult.Saved
+                    refusal.problem == UserConfigProblem.INVALID_YAML -> RimeConfigSaveResult.Invalid(refusal.line)
+                    else -> RimeConfigSaveResult.Failure(failureText(refusal))
+                }
+            } catch (_: IOException) {
+                RimeConfigSaveResult.Failure(null)
+            }
+        }
+
+    override suspend fun externalEditIntents(key: String): RimeConfigEditResult =
+        withContext(Dispatchers.IO) {
+            val name = editor.fileName(key) ?: return@withContext RimeConfigEditResult.Failure(null)
+            try {
+                editor.load(name, activeSourceDir(), ::template)
+            } catch (e: UserConfigException) {
+                return@withContext RimeConfigEditResult.Failure(failureText(e))
+            } catch (_: IOException) {
+                return@withContext RimeConfigEditResult.Failure(null)
+            }
+            val uri = DocumentsContract.buildDocumentUri(RimeConfigProvider.authority(appContext), "edit/$name")
+            RimeConfigEditResult.Ready(
+                listOf(Intent.ACTION_EDIT, Intent.ACTION_VIEW).map {
+                    Intent(it)
+                        .setDataAndType(uri, "text/plain")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                },
+            )
+        }
+
+    private fun activeSourceDir(): File? =
+        GenerationPublisher(storage)
+            .readActive()
+            ?.sourceId
+            ?.let(storage::sourceDir)
+            ?.takeIf { it.isDirectory }
+
+    private fun titleOf(key: String): String? =
+        if (key == RimeEditTarget.GLOBAL_KEY) {
+            null
+        } else {
+            GenerationPublisher(storage)
+                .readActive()
+                ?.sourceId
+                ?.let { SourceCatalog(storage).read(it) }
+                ?.schemes
+                ?.firstOrNull { it.schemaId == key }
+                ?.name
+        }
+
+    /** A new file that patches nothing yet, with a hint on how to. */
+    private fun template(): String =
+        CustomPatchTemplate.text(
+            appContext.getString(R.string.rime_config_template_hint),
+            appContext.getString(R.string.rime_config_template_example),
+        )
+
+    private fun grammarHeading(heading: GrammarParameterExample.Heading): Int =
+        when (heading) {
+            GrammarParameterExample.Heading.NEW_PATCH -> R.string.rime_config_grammar_example_new
+            GrammarParameterExample.Heading.UNDER_PATCH -> R.string.rime_config_grammar_example_under
+            GrammarParameterExample.Heading.EMPTY_PATCH -> R.string.rime_config_grammar_example_empty
+        }
+
+    private fun failureText(e: UserConfigException): String =
+        when (e.problem) {
+            UserConfigProblem.TOO_LARGE -> appContext.getString(R.string.rime_config_refused_large, e.file.orEmpty())
+            UserConfigProblem.UNSAFE_REFERENCE -> appContext.getString(R.string.rime_editor_unsafe_reference)
+            else -> message(e.problem.name, e.file)
         }
 
     private fun message(status: UserConfigStatus): String = message(status.problem, status.file)
@@ -109,6 +248,9 @@ internal class RimeConfigGatewayImpl(
                     R.string.rime_config_error_large,
                     file,
                 )
+            kind == UserConfigProblem.UNCONFIRMED_SCRIPT -> appContext.getString(R.string.rime_config_error_script)
+            kind == UserConfigProblem.UNSAFE_REFERENCE && file != null ->
+                appContext.getString(R.string.rime_config_error_reference, file)
             kind == UserConfigProblem.TOO_MANY -> appContext.getString(R.string.rime_config_error_many)
             problem == DeploymentCoordinator.DEPLOY_PROBLEM || kind != null ->
                 appContext.getString(

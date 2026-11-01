@@ -146,14 +146,25 @@
     <string name="rime_config_folder_sources">All input schemes</string>
     <string name="rime_config_error_yaml">“%1$s” has a formatting error, so nothing was applied. The keyboard keeps its previous settings. Fix or delete the file, then try again.</string>
     <string name="rime_config_error_text">“%1$s” isn\'t UTF-8 text, so nothing was applied. The keyboard keeps its previous settings.</string>
+    <string name="rime_config_error_reference">“%1$s” points at files outside the configuration, so nothing was applied. The keyboard keeps its previous settings.</string>
+    <string name="rime_config_error_script">A script changed after you confirmed it, so nothing was applied. Tap Apply changes again.</string>
+    <string name="rime_editor_unsafe_reference">This file points at files outside the configuration, so nothing was saved.</string>
     <string name="rime_config_error_large">“%1$s” is too large, so nothing was applied. Each file can be up to 4 MB, and all of them together up to 8 MB.</string>
     <string name="rime_config_error_many">There are too many files, so nothing was applied. The folder can hold up to 100.</string>
     <string name="rime_config_error_deploy">The changes didn\'t work, so the keyboard keeps its previous settings. Check the files you changed last, then try again.</string>
     <string name="rime_config_error_unavailable">Couldn\'t apply the changes right now. Try again later.</string>
     <string name="rime_config_skipped">Your configuration doesn\'t work with the input scheme in use, so the scheme is used as it comes.</string>
     <string name="rime_config_refused_read_only">This folder is read-only. Put your files in “My configuration”, then tap Apply changes in Songyan settings.</string>
-    <string name="rime_config_refused_folder">“My configuration” can\'t hold folders. Put the files in it directly.</string>
+    <string name="rime_config_refused_folder">“My configuration” only holds a “lua” folder, for scripts. Put the other files in it directly.</string>
     <string name="rime_config_refused_type">“%1$s” can\'t go here. “My configuration” takes .yaml and .txt files.</string>
+    <string name="rime_config_refused_script_type">“%1$s” can\'t go here. This folder takes .lua files.</string>
+    <string name="rime_config_refused_large">“%1$s” is too large to edit here. Each file can be up to 4 MB.</string>
+    <!-- Comment lines at the top of a new configuration file; file content, not interface text. -->
+    <string name="rime_config_template_hint">Write what you want to change under patch, then tap “Apply changes” in Songyan.</string>
+    <string name="rime_config_template_example">Example: show 7 candidates per page</string>
+    <string name="rime_config_grammar_example_new">Grammar model parameters, as an example (remove the leading # to use them):</string>
+    <string name="rime_config_grammar_example_under">Grammar model parameters, as an example (remove the leading # and keep these lines under the patch: above):</string>
+    <string name="rime_config_grammar_example_empty">Grammar model parameters, as an example (change the patch: {} above to patch:, then remove the leading #):</string>
     <string name="package_learning_failed">The package was imported, but its learned words did not merge. Your learning data is unchanged.</string>
     <string name="package_learning_not_in_use">Could not switch to this input scheme, so its learned words were not merged.</string>
     <string name="package_learning_nothing">The learned words in this package do not match its dictionaries. Nothing was merged.</string>

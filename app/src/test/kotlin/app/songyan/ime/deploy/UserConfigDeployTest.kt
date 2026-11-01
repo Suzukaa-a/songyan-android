@@ -4,6 +4,7 @@ import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.userconfig.UserConfigFiles
 import app.songyan.ime.userconfig.UserConfigStatus
+import app.songyan.ime.userconfig.UserScripts
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,6 +62,72 @@ class UserConfigDeployTest {
             assertTrue(File(storage.generationDir(after.generation), "resources/custom_phrase.txt").isFile)
             assertTrue(publisher.isComplete(after))
             assertEquals(UserConfigStatus.State.APPLIED, status.read()!!.state)
+        }
+
+    @Test
+    fun aCopyOfAFileInAFolderReplacesThePackagesFileInTheDeploymentAndTheGeneration() =
+        runTest {
+            val id = importPackage()
+            val own = "---\nname: cn_dicts/base\n...\n我的\two de\t1\n"
+            File(storage.userConfigDir, "cn_dicts").mkdirs()
+            File(storage.userConfigDir, "cn_dicts/base.dict.yaml").writeText(own)
+
+            val applied = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(applied.problem, RequestState.SUCCEEDED, applied.state)
+            assertEquals(own, runner.overlays.last()["cn_dicts/base.dict.yaml"])
+            val generation = storage.generationDir(publisher.readActive()!!.generation)
+            assertEquals(own, File(generation, "resources/cn_dicts/base.dict.yaml").readText())
+            assertTrue(
+                "the package's other files are still the package's",
+                File(generation, "resources/rime_ice.schema.yaml").isFile,
+            )
+            assertTrue(
+                "the stored package is untouched",
+                File(storage.sourceDir(id), "cn_dicts/base.dict.yaml").readText().contains("世界"),
+            )
+        }
+
+    @Test
+    fun aScriptThatIsNotConfirmedIsRefusedByNameAndOnceConfirmedApplies() =
+        runTest {
+            importPackage()
+            File(storage.userConfigDir, "lua").mkdirs()
+            File(storage.userConfigDir, "lua/date.lua").writeText("return 1\n")
+            val calls = runner.calls
+
+            val refused = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(RequestState.FAILED, refused.state)
+            assertEquals(DeployPipeline.CONFIG_PREFIX + "UNCONFIRMED_SCRIPT", refused.problem)
+            assertEquals(listOf("lua/date.lua"), refused.paths)
+            assertEquals("nothing was deployed", calls, runner.calls)
+            assertFalse(File(storage.appliedConfigDir, "lua/date.lua").exists())
+
+            val scripts = UserScripts(storage)
+            scripts.accept(scripts.unconfirmed(storage.userConfigDir, null))
+            val applied = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(applied.problem, RequestState.SUCCEEDED, applied.state)
+            assertEquals("return 1\n", runner.overlays.last()["lua/date.lua"])
+
+            // A script that changes after it was confirmed is asked about again.
+            File(storage.userConfigDir, "lua/date.lua").writeText("return 2\n")
+            assertEquals(DeployPipeline.CONFIG_PREFIX + "UNCONFIRMED_SCRIPT", run(DeployMode.APPLY_USER_CONFIG).problem)
+        }
+
+    @Test
+    fun aFileThatNamesAFileOutsideTheFoldersIsRefusedBeforeDeploying() =
+        runTest {
+            importPackage()
+            edit("x.custom.yaml", "patch:\n  translator/dictionary: ../../../secret\n")
+            val calls = runner.calls
+
+            val refused = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(DeployPipeline.CONFIG_PREFIX + "UNSAFE_REFERENCE", refused.problem)
+            assertEquals(listOf("x.custom.yaml"), refused.paths)
+            assertEquals(calls, runner.calls)
         }
 
     @Test

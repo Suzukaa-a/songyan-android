@@ -82,6 +82,12 @@ class AppStorage(
     val userConfigDir: File = File(configRoot, "edit")
     val appliedConfigDir: File = File(configRoot, "applied")
 
+    /** Which edited files replace a file of the source and what the user was told about them ([app.songyan.ime.userconfig.UserOverrides]). */
+    val overrideMarksFile: File = File(configRoot, "overrides.json")
+
+    /** The scripts the user confirmed using ([app.songyan.ime.userconfig.UserScripts]); not part of any backup. */
+    val scriptsConfirmedFile: File = File(configRoot, "scripts-confirmed.json")
+
     /** How the last application of the configuration ended, for the settings screen. */
     val configStatusFile: File = File(configRoot, "status.json")
 

@@ -121,6 +121,11 @@ fun SchemesScreen(
     onRimeConfigNoFilesApp: () -> Unit = {},
     onApplyRimeConfig: () -> Unit = {},
     onDismissRimeConfigMessage: () -> Unit = {},
+    onOpenRimeEditor: (key: String) -> Unit = {},
+    onRestoreRimeFile: (String) -> Unit = {},
+    onDismissRimeOverrideNotice: () -> Unit = {},
+    onUseRimeScripts: () -> Unit = {},
+    onCancelRimeScripts: () -> Unit = {},
     /** The grammar-model download and import the card after a package import drives; the card is left out without it. */
     grammarModel: GrammarModelCardInput? = null,
 ) {
@@ -195,6 +200,7 @@ fun SchemesScreen(
             is RimeConfigMessage.Failure -> message.text ?: stringResource(R.string.rime_config_failed)
             null -> null
         }
+    var showRimeEditPicker by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(configMessage) {
         if (configMessage != null) {
             snackbarHostState.showSnackbar(configMessage)
@@ -424,10 +430,25 @@ fun SchemesScreen(
                         if (!opened) onRimeConfigNoFilesApp()
                     },
                     onApply = onApplyRimeConfig,
+                    onEdit = { showRimeEditPicker = true },
+                    onRestore = onRestoreRimeFile,
                 )
             }
         }
     }
+
+    if (showRimeEditPicker) {
+        RimeEditPickerDialog(
+            targets = rimeConfig.info?.editTargets.orEmpty(),
+            onPick = {
+                showRimeEditPicker = false
+                onOpenRimeEditor(it.key)
+            },
+            onDismiss = { showRimeEditPicker = false },
+        )
+    }
+    rimeConfig.scriptConfirmation?.let { RimeScriptConfirmDialog(it, onUseRimeScripts, onCancelRimeScripts) }
+    rimeConfig.overrideNotice?.let { RimeOverrideNoticeDialog(it, onDismissRimeOverrideNotice) }
 
     if (showSchemeLinkDialog) {
         SchemeLinkDialog(

@@ -13,6 +13,7 @@
         <include domain="file" path="rime/options" />
         <include domain="file" path="rime/config/edit" />
         <include domain="file" path="rime/config/applied" />
+        <include domain="file" path="rime/config/overrides.json" />
         <include domain="file" path="content" />
         <include domain="file" path="layouts" />
         <include domain="file" path="appearance" />
@@ -29,6 +30,7 @@
         <include domain="file" path="rime/options" />
         <include domain="file" path="rime/config/edit" />
         <include domain="file" path="rime/config/applied" />
+        <include domain="file" path="rime/config/overrides.json" />
         <include domain="file" path="rime/learning-snapshots" />
         <include domain="file" path="content" />
         <include domain="file" path="layouts" />

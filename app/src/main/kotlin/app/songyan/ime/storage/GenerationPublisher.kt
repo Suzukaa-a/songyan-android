@@ -45,8 +45,8 @@ class GenerationPublisher(
      * Copies [resourcesDir] and [compiledDir] into a fresh generation directory
      * and makes it active. Returns the new record. Callers hold the deploy lock.
      *
-     * [extraResources] join the resources by file name, in place of a source file of the same
-     * name; they are hard-linked when possible, since they can be large and never change in place.
+     * [extraResources] join the resources by relative path (`lua/foo.lua`), in place of a source
+     * file of the same path; they are hard-linked when possible, since they can be large and never change in place.
      */
     fun publish(
         resourcesDir: File,
@@ -56,7 +56,7 @@ class GenerationPublisher(
         revision: String,
         schemaIds: List<String> = listOf(schemaId),
         stamp: BuildStamp? = null,
-        extraResources: List<File> = emptyList(),
+        extraResources: Map<String, File> = emptyMap(),
         companionsPending: Boolean = false,
     ): PublicationRecord {
         require(resourcesDir.isDirectory) { "resources directory missing: $resourcesDir" }
@@ -68,12 +68,20 @@ class GenerationPublisher(
         temp.deleteRecursively()
         try {
             val files = ArrayList<Pair<String, Long>>()
-            val extraNames = extraResources.map { it.name }.toSet()
-            copyTree(resourcesDir, File(temp, RESOURCES), RESOURCES, files, skipNames = setOf("build") + extraNames)
-            for (extra in extraResources) {
-                val destination = File(File(temp, RESOURCES), extra.name)
+            val skipPaths = extraResources.keys.map { "$RESOURCES/$it" }.toSet()
+            copyTree(
+                resourcesDir,
+                File(temp, RESOURCES),
+                RESOURCES,
+                files,
+                skipNames = setOf("build"),
+                skipPaths = skipPaths,
+            )
+            for ((path, extra) in extraResources) {
+                val destination = File(File(temp, RESOURCES), path)
+                destination.parentFile?.mkdirs()
                 linkOrCopy(extra, destination)
-                files += (RESOURCES + "/" + extra.name) to destination.length()
+                files += (RESOURCES + "/" + path) to destination.length()
             }
             if (extraResources.isNotEmpty()) syncDirectory(File(temp, RESOURCES))
             copyTree(compiledDir, File(temp, BUILD), BUILD, files)
@@ -272,14 +280,16 @@ class GenerationPublisher(
         prefix: String,
         files: MutableList<Pair<String, Long>>,
         skipNames: Set<String> = emptySet(),
+        skipPaths: Set<String> = emptySet(),
     ) {
         target.mkdirs()
         for (child in source.listFiles().orEmpty().sortedBy { it.name }) {
             if (child.name in skipNames) continue
             val destination = File(target, child.name)
             val path = prefix + "/" + child.name
+            if (path in skipPaths) continue
             if (child.isDirectory) {
-                copyTree(child, destination, path, files)
+                copyTree(child, destination, path, files, skipPaths = skipPaths)
             } else {
                 child.inputStream().use { input ->
                     FileOutputStream(destination).use { output ->

@@ -87,6 +87,7 @@ import app.songyan.ime.settings.ui.screens.OnboardingScreen
 import app.songyan.ime.settings.ui.screens.PageEditorScreen
 import app.songyan.ime.settings.ui.screens.PagesScreen
 import app.songyan.ime.settings.ui.screens.QuickContentScreen
+import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
 import app.songyan.ime.settings.ui.screens.SchemeDetailScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
@@ -118,6 +119,7 @@ object SettingsRoutes {
     const val TRY_OUT = "tryOut"
     const val LEARNING = "learning"
     const val ABOUT = "about"
+    const val RIME_FILE = "rimeFile/{key}?grammar={grammar}"
     const val LICENSES = "licenses"
     const val LICENSE_DETAIL = "licenses/{index}"
 
@@ -137,6 +139,12 @@ object SettingsRoutes {
     fun licenseDetail(index: Int): String = "licenses/$index"
 
     fun schemeDetail(sourceId: String): String = "schemes/" + Uri.encode(sourceId)
+
+    /** The in-app editor for the user's file of an input method; [grammar] adds the commented grammar example. */
+    fun rimeFile(
+        key: String,
+        grammar: Boolean = false,
+    ): String = "rimeFile/" + android.net.Uri.encode(key) + "?grammar=" + grammar
 
     /** Ids may hold any character (an imported layout names its own), so they travel URL-encoded. */
     fun layoutEditor(id: String): String = "layouts/edit/" + android.net.Uri.encode(id)
@@ -280,6 +288,11 @@ private fun NavGraphBuilder.settingsGraph(
             onRimeConfigNoFilesApp = rimeConfigModel::noFilesApp,
             onApplyRimeConfig = rimeConfigModel::apply,
             onDismissRimeConfigMessage = rimeConfigModel::dismissMessage,
+            onOpenRimeEditor = { key -> navController.navigate(SettingsRoutes.rimeFile(key)) },
+            onRestoreRimeFile = rimeConfigModel::restore,
+            onDismissRimeOverrideNotice = rimeConfigModel::dismissOverrideNotice,
+            onUseRimeScripts = rimeConfigModel::confirmScripts,
+            onCancelRimeScripts = rimeConfigModel::cancelScripts,
             grammarModel =
                 GrammarModelCardInput(
                     state = features.value,
@@ -358,6 +371,33 @@ private fun NavGraphBuilder.settingsGraph(
         LayoutEditorScreen(
             layoutId = entry.arguments?.getString("id").orEmpty(),
             onClose = { navController.popBackStack() },
+        )
+    }
+
+    composable(
+        route = SettingsRoutes.RIME_FILE,
+        arguments =
+            listOf(
+                navArgument("key") { type = NavType.StringType },
+                navArgument("grammar") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+            ),
+    ) { entry ->
+        // The apply runs in the activity-owned model, so it carries on after this page closes.
+        val owner = LocalActivity.current as? ComponentActivity
+        val rimeConfigModel: RimeConfigViewModel =
+            if (owner != null) {
+                viewModel(viewModelStoreOwner = owner, factory = RimeConfigViewModel.Factory())
+            } else {
+                viewModel(factory = RimeConfigViewModel.Factory())
+            }
+        RimeFileEditorScreen(
+            key = entry.arguments?.getString("key").orEmpty(),
+            grammarExample = entry.arguments?.getBoolean("grammar") ?: false,
+            onClose = { navController.popBackStack() },
+            onApply = rimeConfigModel::apply,
         )
     }
 
@@ -481,6 +521,7 @@ private fun NavGraphBuilder.settingsGraph(
         EngineFeaturesScreen(
             schemaId = state.value.inUseSchemeId,
             schemaName = state.value.inUseScheme?.name,
+            onOpenGrammarParameters = { id -> navController.navigate(SettingsRoutes.rimeFile(id, grammar = true)) },
             onBack = { navController.popBackStack() },
             viewModel =
                 if (owner != null) {

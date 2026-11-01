@@ -2,6 +2,7 @@ package app.songyan.ime.userconfig
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,7 +12,11 @@ import app.songyan.ime.content.SettingsInForeground
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeKey
 import app.songyan.ime.settings.state.RimeConfigApplyResult
+import app.songyan.ime.settings.state.RimeConfigEditResult
+import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigHolder
+import app.songyan.ime.settings.state.RimeConfigSaveResult
+import app.songyan.ime.settings.state.RimeEditTarget
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
 import app.songyan.ime.settings.state.StoredSourcesHolder
@@ -67,7 +72,9 @@ class RimeConfigDeviceTest {
     }
 
     private fun clearEdits() {
-        storage.userConfigDir.listFiles()?.forEach { it.delete() }
+        storage.userConfigDir.listFiles()?.forEach { it.deleteRecursively() }
+        storage.overrideMarksFile.delete()
+        storage.scriptsConfirmedFile.delete()
     }
 
     private fun create(
@@ -136,7 +143,7 @@ class RimeConfigDeviceTest {
         assertTrue(DocumentsContract.deleteDocument(resolver, renamed))
         assertEquals(listOf("rime_ice.custom.yaml"), children(RimeConfigProvider.EDIT))
 
-        // The source in use can be read, not written.
+        // The source in use can be read; its text files take writes through the user's copy.
         val sources = children(RimeConfigProvider.ACTIVE)
         assertTrue(sources.toString(), "default.yaml" in sources)
         assertFalse("the app's own files stay hidden", "songyan-source.json" in sources)
@@ -146,7 +153,292 @@ class RimeConfigDeviceTest {
                 RimeConfigProvider.ACTIVE + "/songyan_quanpin.schema.yaml",
             )
         assertTrue(read(schema).contains("songyan_quanpin"))
-        assertFailsToOpen { resolver.openOutputStream(schema, "wt")?.also { it.close() } }
+        // Anything that is not a text configuration stays read-only.
+        val binary =
+            storage
+                .sourceDir(SourceIds.BUILTIN)
+                .walkTopDown()
+                .firstOrNull { it.isFile && it.extension !in setOf("yaml", "txt", "lua") && !it.name.startsWith(".") }
+        assumeTrue("the built-in source has no non-text file", binary != null)
+        val path = requireNotNull(binary).relativeTo(storage.sourceDir(SourceIds.BUILTIN)).invariantSeparatorsPath
+        val other = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/" + path)
+        assertFailsToOpen { resolver.openOutputStream(other, "wt")?.also { it.close() } }
+    }
+
+    @Test
+    fun writingAPackageFileMakesTheUsersCopyAndAppliesWhileThePackageStaysAsItWas() {
+        val sourceDir = storage.sourceDir(SourceIds.BUILTIN)
+        val packaged = File(sourceDir, "default.yaml")
+        val original = packaged.readText()
+        assertTrue(original.contains("page_size: 5"))
+        val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/default.yaml")
+        val mine = original.replace("page_size: 5", "page_size: 3")
+
+        requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write(mine.toByteArray()) }
+        val copy = File(storage.userConfigDir, "default.yaml")
+        waitFor { copy.isFile && copy.readText() == mine }
+
+        assertEquals("the package is never modified", original, packaged.readText())
+        assertEquals("reading shows the file in effect", mine, read(doc))
+        assertTrue("default.yaml" in children(RimeConfigProvider.EDIT))
+        val info = runBlocking { RimeConfigHolder.current.info() }
+        assertEquals(listOf("default.yaml"), info.overrides.map { it.path })
+        assertEquals(listOf("default.yaml"), info.unacknowledged)
+
+        val before = requireNotNull(publisher.readActive())
+        assertEquals(RimeConfigApplyResult.Applied, apply())
+        val after = requireNotNull(publisher.readActive())
+        assertEquals(3, candidates(after, "songyan_quanpin", "ni").size)
+        assertTrue(before.generation != after.generation)
+
+        runBlocking { RimeConfigHolder.current.acknowledge(listOf("default.yaml")) }
+        assertTrue(runBlocking { RimeConfigHolder.current.info() }.unacknowledged.isEmpty())
+
+        runBlocking { RimeConfigHolder.current.restore("default.yaml") }
+        assertFalse(copy.exists())
+        assertEquals("the package's own file is read again", original, read(doc))
+        assertEquals(RimeConfigApplyResult.Applied, apply())
+        assertEquals(5, candidates(requireNotNull(publisher.readActive()), "songyan_quanpin", "ni").size)
+    }
+
+    @Test
+    fun aPackageFileInAFolderGetsTheSameFolderInTheUsersFolder() {
+        val sourceDir = storage.sourceDir(SourceIds.BUILTIN)
+        val probe = File(sourceDir, "lua/probe.lua").also { it.parentFile?.mkdirs() }
+        probe.writeText("return 'package'\n")
+        val big = File(sourceDir, "probe-big.txt")
+        big.writeBytes(ByteArray((UserConfigFiles.MAX_FILE_BYTES + 1).toInt()) { 'a'.code.toByte() })
+        try {
+            val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/lua/probe.lua")
+            requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write("return 'mine'\n".toByteArray()) }
+            waitFor { File(storage.userConfigDir, "lua/probe.lua").isFile }
+
+            assertEquals("return 'mine'\n", read(doc))
+            assertEquals("return 'package'\n", probe.readText())
+            assertTrue("lua" in children(RimeConfigProvider.EDIT))
+            assertEquals(listOf("probe.lua"), children(RimeConfigProvider.EDIT + "/lua"))
+            assertTrue(
+                runBlocking { RimeConfigHolder.current.info() }.overrides.any { it.path == "lua/probe.lua" },
+            )
+
+            // A file over the limit is refused with the size message, and nothing is created.
+            val tooBig = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/probe-big.txt")
+            val error =
+                try {
+                    resolver.openOutputStream(tooBig, "wt")?.close()
+                    null
+                } catch (e: IllegalStateException) {
+                    e.message
+                } catch (e: SecurityException) {
+                    e.message
+                }
+            assertEquals(context.getString(R.string.rime_config_refused_large, "probe-big.txt"), error)
+            assertFalse(File(storage.userConfigDir, "probe-big.txt").exists())
+
+            val own = DocumentsContract.buildDocumentUri(authority, "edit/lua/probe.lua")
+            assertTrue(DocumentsContract.deleteDocument(resolver, own))
+            assertFalse("the emptied folder goes too", File(storage.userConfigDir, "lua").exists())
+            assertEquals("return 'package'\n", read(doc))
+        } finally {
+            probe.parentFile?.deleteRecursively()
+            big.delete()
+        }
+    }
+
+    @Test
+    fun theInAppEditorLoadsSavesAndRefusesThroughTheRealStorage() {
+        val gateway = RimeConfigHolder.current
+        val targets = runBlocking { gateway.info() }.editTargets
+        assertEquals("songyan_quanpin", targets.first().key)
+
+        val loaded = runBlocking { gateway.loadFile("songyan_quanpin") } as RimeConfigFileResult.Loaded
+        val file = File(storage.userConfigDir, "songyan_quanpin.custom.yaml")
+        assertEquals("songyan_quanpin.custom.yaml", loaded.fileName)
+        assertTrue(loaded.text.endsWith("patch: {}\n"))
+        assertEquals(loaded.text, file.readText())
+
+        val broken = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  menu/page_size: [3\n") }
+        assertTrue(broken is RimeConfigSaveResult.Invalid)
+        assertEquals("a refused save leaves the file as it was", loaded.text, file.readText())
+        val outside = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  translator/dictionary: ../../x\n") }
+        assertTrue(outside is RimeConfigSaveResult.Failure)
+        assertEquals(loaded.text, file.readText())
+
+        assertEquals(RimeConfigSaveResult.Saved, runBlocking { gateway.saveFile("songyan_quanpin", PAGE_SIZE_PATCH) })
+        assertEquals(PAGE_SIZE_PATCH, file.readText())
+        assertEquals(
+            PAGE_SIZE_PATCH,
+            (runBlocking { gateway.loadFile("songyan_quanpin") } as RimeConfigFileResult.Loaded).text,
+        )
+        assertEquals(RimeConfigApplyResult.Applied, apply())
+        assertEquals(3, candidates(requireNotNull(publisher.readActive()), "songyan_quanpin", "ni").size)
+
+        // The grammar entry adds commented-out parameters and writes nothing.
+        val grammar =
+            runBlocking {
+                gateway.loadFile(
+                    "songyan_quanpin",
+                    grammarExample = true,
+                )
+            } as RimeConfigFileResult.Loaded
+        assertTrue(grammar.text.contains("#   grammar/collocation_max_length: 6"))
+        assertEquals(PAGE_SIZE_PATCH, file.readText())
+        runBlocking { gateway.loadFile(RimeEditTarget.GLOBAL_KEY) }
+        assertTrue(File(storage.userConfigDir, "default.custom.yaml").isFile)
+    }
+
+    @Test
+    fun theFileOpensInAnotherAppThroughAWritableDocumentAddress() {
+        val ready =
+            runBlocking {
+                RimeConfigHolder.current.externalEditIntents(
+                    "songyan_quanpin",
+                )
+            } as RimeConfigEditResult.Ready
+        val file = File(storage.userConfigDir, "songyan_quanpin.custom.yaml")
+        val intent = ready.intents.first()
+        assertEquals(Intent.ACTION_EDIT, intent.action)
+        assertEquals("text/plain", intent.type)
+        assertTrue(intent.flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0)
+        assertEquals(Intent.ACTION_VIEW, ready.intents.last().action)
+        assertEquals(file.readText(), read(requireNotNull(intent.data)))
+
+        write(requireNotNull(intent.data), PAGE_SIZE_PATCH)
+        assertEquals(PAGE_SIZE_PATCH, file.readText())
+        assertEquals(RimeConfigApplyResult.Applied, apply())
+        assertEquals(3, candidates(requireNotNull(publisher.readActive()), "songyan_quanpin", "ni").size)
+    }
+
+    @Test
+    fun aScriptWaitsForTheUsersYesBeforeAnythingIsApplied() {
+        val sourceDir = storage.sourceDir(SourceIds.BUILTIN)
+        val probe = File(sourceDir, "lua/probe.lua").also { it.parentFile?.mkdirs() }
+        probe.writeText("return 'package'\n")
+        try {
+            val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/lua/probe.lua")
+            requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write("return 'mine'\n".toByteArray()) }
+            waitFor { File(storage.userConfigDir, "lua/probe.lua").isFile }
+            val before = requireNotNull(publisher.readActive())
+
+            val first = apply()
+            assertEquals(RimeConfigApplyResult.NeedsConfirmation(listOf("lua/probe.lua"), firstTime = true), first)
+            assertEquals("nothing was applied", before.generation, publisher.readActive()!!.generation)
+
+            val confirmed = runBlocking { RimeConfigHolder.current.apply(confirmScripts = true) }
+            assertEquals(RimeConfigApplyResult.Applied, confirmed)
+            val after = requireNotNull(publisher.readActive())
+            assertEquals(
+                "return 'mine'\n",
+                File(storage.generationDir(after.generation), "resources/lua/probe.lua").readText(),
+            )
+            assertEquals("the same script is not asked about again", RimeConfigApplyResult.Applied, apply())
+        } finally {
+            probe.parentFile?.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun traversalEncodedTraversalAndNulIdsAreRefusedForReadingAndWriting() {
+        for (id in listOf(
+            "edit/../applied/x.yaml",
+            "edit/%2e%2e/x.yaml",
+            "edit/lua/..%2fx.yaml",
+            "edit/a\u0000.yaml",
+            "active/../../shared_prefs/x.xml",
+            "active/%2e%2e/%2e%2e/shared_prefs/x.xml",
+            "active/default.yaml\u0000.txt",
+            "sources/../../databases/x",
+            "sources/%2e%2e/x.yaml",
+        )) {
+            val uri = DocumentsContract.buildDocumentUri(authority, id)
+            assertFailsToOpen { resolver.openInputStream(uri)?.also { it.close() } }
+            assertFailsToOpen { resolver.openOutputStream(uri, "wt")?.also { it.close() } }
+        }
+        assertEquals("nothing was made", emptyList<String>(), children(RimeConfigProvider.EDIT))
+    }
+
+    @Test
+    fun aFileManagerMakesTheLuaFolderAndScriptsInItButNothingElse() {
+        // A script of the user's own goes in `lua/` (or is `rime.lua`); nowhere else, and no other folders.
+        assertFailsToOpen { DocumentsContract.createDocument(resolver, editFolder, "text/plain", "date.lua") }
+        assertFailsToOpen {
+            DocumentsContract.createDocument(resolver, editFolder, DocumentsContract.Document.MIME_TYPE_DIR, "other")
+        }
+        val lua =
+            requireNotNull(
+                DocumentsContract.createDocument(resolver, editFolder, DocumentsContract.Document.MIME_TYPE_DIR, "lua"),
+            )
+        assertEquals("edit/lua", DocumentsContract.getDocumentId(lua))
+        assertTrue("an empty lua folder shows, so scripts can be put in it", "lua" in children(RimeConfigProvider.EDIT))
+        assertFailsToOpen { DocumentsContract.createDocument(resolver, lua, "text/plain", "notes.txt") }
+        val script =
+            requireNotNull(DocumentsContract.createDocument(resolver, lua, "application/octet-stream", "date.lua"))
+        assertEquals("edit/lua/date.lua", DocumentsContract.getDocumentId(script))
+        val twin =
+            requireNotNull(DocumentsContract.createDocument(resolver, lua, "application/octet-stream", "Date.lua"))
+        assertEquals("edit/lua/Date-2.lua", DocumentsContract.getDocumentId(twin))
+        val renamed = requireNotNull(DocumentsContract.renameDocument(resolver, script, "day.lua"))
+        assertEquals("edit/lua/day.lua", DocumentsContract.getDocumentId(renamed))
+        assertFailsToOpen { DocumentsContract.renameDocument(resolver, renamed, "day.yaml")?.also { error("renamed") } }
+        assertEquals(setOf("day.lua", "Date-2.lua"), children("edit/lua").toSet())
+        val rime = requireNotNull(DocumentsContract.createDocument(resolver, editFolder, "text/plain", "rime.lua"))
+        assertEquals("edit/rime.lua", DocumentsContract.getDocumentId(rime))
+        assertFailsToOpen { DocumentsContract.createDocument(resolver, editFolder, "text/plain", "rime.lua") }
+
+        // Plain files stay flat, and a name that differs only in case is made unique.
+        val first = create("custom_phrase.txt", "x\n")
+        val phrase =
+            requireNotNull(DocumentsContract.createDocument(resolver, editFolder, "text/plain", "Custom_Phrase.txt"))
+        assertEquals("edit/Custom_Phrase-2.txt", DocumentsContract.getDocumentId(phrase))
+        assertTrue(DocumentsContract.deleteDocument(resolver, first))
+    }
+
+    @Test
+    fun aUsersScriptNamedInAPatchRunsOnlyAfterTheUserAcceptedTheRisk() {
+        val lua =
+            requireNotNull(
+                DocumentsContract.createDocument(resolver, editFolder, DocumentsContract.Document.MIME_TYPE_DIR, "lua"),
+            )
+        val script =
+            requireNotNull(
+                DocumentsContract.createDocument(resolver, lua, "application/octet-stream", "probe_filter.lua"),
+            )
+        write(script, PROBE_FILTER)
+        create(
+            "songyan_quanpin.custom.yaml",
+            "patch:\n  engine/filters/+:\n    - lua_filter@*probe_filter\n",
+        )
+        val before = requireNotNull(publisher.readActive())
+
+        val first = apply() as RimeConfigApplyResult.NeedsConfirmation
+        assertTrue("the first time explains the risk", first.firstTime)
+        assertEquals(
+            listOf("lua/probe_filter.lua", "songyan_quanpin.custom.yaml: lua_filter@*probe_filter"),
+            first.scripts,
+        )
+        assertEquals("nothing was applied", before.generation, publisher.readActive()!!.generation)
+        assertFalse("declining sets nothing", storage.scriptsConfirmedFile.exists())
+        assertTrue("it asks again", apply() is RimeConfigApplyResult.NeedsConfirmation)
+
+        assertEquals(
+            RimeConfigApplyResult.Applied,
+            runBlocking { RimeConfigHolder.current.apply(confirmScripts = true) },
+        )
+        val after = requireNotNull(publisher.readActive())
+        assertTrue(candidates(after, "songyan_quanpin", "ni").contains("LUAPROBE"))
+        assertEquals("nothing new to ask about", RimeConfigApplyResult.Applied, apply())
+
+        // A later change is asked about again, without the long explanation.
+        write(script, PROBE_FILTER + "-- changed\n")
+        val later = apply() as RimeConfigApplyResult.NeedsConfirmation
+        assertFalse(later.firstTime)
+        assertEquals(listOf("lua/probe_filter.lua"), later.scripts)
+    }
+
+    private fun waitFor(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!condition() && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertTrue("timed out waiting for the provider", condition())
     }
 
     @Test
@@ -310,5 +602,11 @@ class RimeConfigDeviceTest {
 
     private companion object {
         const val PAGE_SIZE_PATCH = "patch:\n  menu/page_size: 3\n"
+
+        /** A filter that puts one extra candidate first, so a script that ran is visible in the candidates. */
+        const val PROBE_FILTER =
+            "return {\n  func = function(input, env)\n" +
+                "    yield(Candidate('probe', 0, 2, 'LUAPROBE', ''))\n" +
+                "    for cand in input:iter() do yield(cand) end\n  end,\n}\n"
     }
 }

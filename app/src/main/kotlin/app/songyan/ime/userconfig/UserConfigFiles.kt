@@ -2,6 +2,7 @@ package app.songyan.ime.userconfig
 
 import app.songyan.ime.deploy.CompiledReuse
 import app.songyan.ime.packages.BoundedYaml
+import app.songyan.ime.packages.UserConfigSafety
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -13,7 +14,7 @@ import java.security.MessageDigest
 
 /** Why a file of the user's Rime configuration cannot be used. */
 enum class UserConfigProblem {
-    /** Not a plain `.yaml` / `.txt` name this folder holds. */
+    /** Not a `.yaml` / `.txt` / `.lua` path this folder holds. */
     NAME,
 
     /** Larger than one file may be, or the folder as a whole is. */
@@ -27,13 +28,20 @@ enum class UserConfigProblem {
 
     /** A `.yaml` file the YAML reader rejects. */
     INVALID_YAML,
+
+    /** A `.yaml` file that names a file outside the data folders (an include, a dictionary, a database). */
+    UNSAFE_REFERENCE,
+
+    /** A script the user has not agreed to use (see [UserScripts]); [UserConfigException.file] names it. */
+    UNCONFIRMED_SCRIPT,
 }
 
-/** [file] is the name of the file at fault, when one is. */
+/** [file] is the name of the file at fault, when one is; [line] the 1-based line the YAML reader stopped at, when it says. */
 class UserConfigException(
     val file: String?,
     val problem: UserConfigProblem,
     detail: String? = null,
+    val line: Int? = null,
 ) : IOException("user configuration " + (file ?: "folder") + ": " + problem + (detail?.let { " ($it)" } ?: ""))
 
 /**
@@ -41,7 +49,8 @@ class UserConfigException(
  * (`*.custom.yaml` patches, `custom_phrase.txt`, their own `.dict.yaml`), edited through the
  * system Files app ([RimeConfigProvider]).
  *
- * The folder is flat and holds plain UTF-8 text only. Deployments never read what the user is
+ * The folder mirrors the source's own layout (`lua/foo.lua` overrides the source's `lua/foo.lua`)
+ * and holds plain UTF-8 text only. Deployments never read what the user is
  * editing: applying copies it, checked, into the applied folder, and every deployment layers the
  * applied copy over the source as librime's user data directory, so `xxx.custom.yaml` patches
  * `xxx.schema.yaml` the standard Rime way.
@@ -55,11 +64,20 @@ object UserConfigFiles {
     const val MAX_FILES: Int = 100
 
     private val NAME = Regex("^[A-Za-z0-9_][A-Za-z0-9_.+-]{0,119}$")
-    private val EXTENSIONS = listOf(".yaml", ".txt")
+    private val EXTENSIONS = listOf(".yaml", ".txt", ".lua")
+
+    /** Folders below the root; a source's own layout is one or two deep. */
+    private const val MAX_DEPTH = 4
+
+    /** librime's compiled output folder in the user data directory: files there would be taken for build products. */
+    private const val BUILD_DIR = "build"
+    private const val RIME_LUA = "rime.lua"
+    private const val LUA_DIR = "lua"
 
     /** Written by the deployment itself (a dictionary stacked onto a package); a user file cannot take its place. */
     private val RESERVED = setOf("songyan_imported.dict.yaml")
     private const val BUFFER_BYTES = 64 * 1024
+    private const val MAX_DETAIL = 80
     private const val DICTIONARY_SUFFIX = ".dict.yaml"
 
     fun isAllowedName(name: String): Boolean =
@@ -68,13 +86,70 @@ object UserConfigFiles {
             EXTENSIONS.any { name.endsWith(it) && name.length > it.length } &&
             name !in RESERVED
 
-    /** The usable files of [dir] by name; anything else there is ignored. */
-    fun files(dir: File): List<File> =
-        dir
-            .listFiles()
-            .orEmpty()
-            .filter { isAllowedName(it.name) && it.isFile && !Files.isSymbolicLink(it.toPath()) }
-            .sortedBy { it.name }
+    /** A name a new file may be made with: the Files app creates `.yaml` / `.txt` here, never a script. */
+    fun isCreatableName(name: String): Boolean = isAllowedName(name) && !name.endsWith(".lua")
+
+    private fun isAllowedFolder(name: String): Boolean = NAME.matches(name) && !name.contains("..") && name != BUILD_DIR
+
+    /**
+     * Whether [path] (`/`-separated, relative to the folder) is a file this folder holds. A script
+     * (`.lua`) belongs where Rime looks for one: `rime.lua`, or below `lua/`.
+     */
+    fun isAllowedPath(path: String): Boolean {
+        val parts = path.split('/')
+        if (parts.size > MAX_DEPTH + 1) return false
+        if (!isAllowedName(parts.last())) return false
+        if (parts.last().endsWith(".lua") && path != RIME_LUA && !(parts.size > 1 && parts.first() == LUA_DIR)) {
+            return false
+        }
+        return parts.dropLast(1).all(::isAllowedFolder)
+    }
+
+    /** Whether [path] is a script of the user's own: `rime.lua` or a `.lua` file below `lua/`. */
+    fun isScriptPath(path: String): Boolean = path.endsWith(".lua") && isAllowedPath(path)
+
+    /** Whether the folder at [path] is `lua/` or inside it: where the user may keep new scripts. */
+    fun isScriptFolder(path: String): Boolean = path == LUA_DIR || path.startsWith("$LUA_DIR/")
+
+    /** Whether [path] names a folder this folder may hold. */
+    fun isAllowedFolderPath(path: String): Boolean {
+        val parts = path.split('/')
+        return parts.size <= MAX_DEPTH && parts.all(::isAllowedFolder)
+    }
+
+    /** The `/`-separated path of [file] below [dir]. */
+    fun relativePath(
+        dir: File,
+        file: File,
+    ): String {
+        val plain = file.relativeTo(dir).path
+        // A file resolved through links (the app's data folder has two paths on Android) is relative to the real folder.
+        val path = if (plain.startsWith("..")) file.canonicalFile.relativeTo(dir.canonicalFile).path else plain
+        return path.replace(File.separatorChar, '/')
+    }
+
+    /** The usable files of [dir] and its folders, sorted by path; anything else there is ignored. */
+    fun files(dir: File): List<File> {
+        val found = ArrayList<File>()
+        collect(dir, "", 0, found)
+        return found.sortedBy { relativePath(dir, it) }
+    }
+
+    private fun collect(
+        dir: File,
+        prefix: String,
+        depth: Int,
+        into: MutableList<File>,
+    ) {
+        for (child in dir.listFiles().orEmpty()) {
+            if (Files.isSymbolicLink(child.toPath())) continue
+            if (child.isFile) {
+                if (isAllowedPath(prefix + child.name)) into += child
+            } else if (child.isDirectory && depth < MAX_DEPTH && isAllowedFolder(child.name)) {
+                collect(child, prefix + child.name + "/", depth + 1, into)
+            }
+        }
+    }
 
     /** Whether [dir] holds any usable file. */
     fun hasFiles(dir: File): Boolean = files(dir).isNotEmpty()
@@ -82,27 +157,39 @@ object UserConfigFiles {
     /** Whether the files patch or replace the list of input methods. */
     fun changesSchemaList(dir: File): Boolean =
         files(dir).any {
-            it.name == "default.custom.yaml" ||
-                it.name == "default.yaml"
+            val path = relativePath(dir, it)
+            path == "default.custom.yaml" || path == "default.yaml"
         }
 
-    /** The problem with [name] holding [bytes], or null when the file can be used. */
+    /** The problem with the file at [name] (a relative path) holding [bytes], or null when it can be used. */
     fun check(
         name: String,
         bytes: ByteArray,
     ): UserConfigException? {
-        if (!isAllowedName(name)) return UserConfigException(name, UserConfigProblem.NAME)
+        if (!isAllowedPath(name)) return UserConfigException(name, UserConfigProblem.NAME)
         if (bytes.size > MAX_FILE_BYTES) return UserConfigException(name, UserConfigProblem.TOO_LARGE)
         val text = decode(bytes) ?: return UserConfigException(name, UserConfigProblem.NOT_TEXT)
         if (name.endsWith(".yaml")) {
-            try {
-                BoundedYaml.load(yamlPart(name, text.removePrefix("\uFEFF")))
-            } catch (e: Exception) {
-                return UserConfigException(
-                    name,
-                    UserConfigProblem.INVALID_YAML,
-                    e.message?.lineSequence()?.firstOrNull(),
-                )
+            val yaml = yamlPart(name, text.removePrefix("\uFEFF"))
+            // The parser and librime's own both recurse on nesting: refuse it before either runs.
+            if (UserConfigSafety.tooDeep(yaml)) {
+                return UserConfigException(name, UserConfigProblem.INVALID_YAML, "nested too deeply")
+            }
+            val parsed =
+                try {
+                    BoundedYaml.load(yaml)
+                } catch (e: Exception) {
+                    return UserConfigException(
+                        name,
+                        UserConfigProblem.INVALID_YAML,
+                        e.message?.lineSequence()?.firstOrNull(),
+                        BoundedYaml.errorLine(e),
+                    )
+                } catch (_: StackOverflowError) {
+                    return UserConfigException(name, UserConfigProblem.INVALID_YAML, "nested too deeply")
+                }
+            UserConfigSafety.unsafeReference(parsed)?.let {
+                return UserConfigException(name, UserConfigProblem.UNSAFE_REFERENCE, it.take(MAX_DETAIL))
             }
         }
         return null
@@ -137,7 +224,7 @@ object UserConfigFiles {
 
     /**
      * Copies the files of [edit] into the empty directory [target], checking each one; throws
-     * [UserConfigException] naming the first file that cannot be used. Files with other names are
+     * [UserConfigException] naming (by relative path) the first file that cannot be used. Files with other names are
      * left out, as librime would not read them.
      */
     fun snapshot(
@@ -150,12 +237,14 @@ object UserConfigFiles {
         if (files.size > MAX_FILES) throw UserConfigException(null, UserConfigProblem.TOO_MANY)
         var total = 0L
         for (file in files) {
-            if (file.length() > MAX_FILE_BYTES) throw UserConfigException(file.name, UserConfigProblem.TOO_LARGE)
+            val name = relativePath(edit, file)
+            if (file.length() > MAX_FILE_BYTES) throw UserConfigException(name, UserConfigProblem.TOO_LARGE)
             val bytes = file.readBytes()
             total += bytes.size
-            if (total > MAX_TOTAL_BYTES) throw UserConfigException(file.name, UserConfigProblem.TOO_LARGE)
-            check(file.name, bytes)?.let { throw it }
-            File(target, file.name).writeBytes(bytes)
+            if (total > MAX_TOTAL_BYTES) throw UserConfigException(name, UserConfigProblem.TOO_LARGE)
+            val path = relativePath(edit, file)
+            check(path, bytes)?.let { throw it }
+            File(target, path).also { it.parentFile?.mkdirs() }.writeBytes(bytes)
         }
     }
 
@@ -170,7 +259,8 @@ object UserConfigFiles {
     ): List<File> {
         workDir.mkdirs()
         return files(dir).map { file ->
-            File(workDir, file.name).also {
+            File(workDir, relativePath(dir, file)).also {
+                it.parentFile?.mkdirs()
                 Files.copy(file.toPath(), it.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 // Same content, same time: an unchanged patch keeps the compiled files reusable.
                 CompiledReuse.stampConfigTime(it)
@@ -185,7 +275,7 @@ object UserConfigFiles {
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(BUFFER_BYTES)
         for (file in files) {
-            digest.update(file.name.toByteArray(Charsets.UTF_8))
+            digest.update(relativePath(dir, file).toByteArray(Charsets.UTF_8))
             digest.update(0)
             file.inputStream().use { input ->
                 while (true) {

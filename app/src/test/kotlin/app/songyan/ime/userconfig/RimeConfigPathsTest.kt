@@ -23,6 +23,14 @@ class RimeConfigPathsTest {
     }
 
     @Test
+    fun theUsersFolderMirrorsTheSourcesLayout() {
+        assertEquals(listOf("lua", "date.lua"), RimeConfigPaths.parse("edit/lua/date.lua")?.segments)
+        assertEquals(listOf("lua"), RimeConfigPaths.parse("edit/lua")?.segments)
+        assertNull("a script is never made by a file manager", RimeConfigPaths.newFileName("date.lua", "text/plain"))
+        assertNull(RimeConfigPaths.newFileName("date", "application/x-lua"))
+    }
+
+    @Test
     fun traversalAndOddSegmentsAreRefused() {
         for (id in listOf(
             "",
@@ -36,8 +44,10 @@ class RimeConfigPathsTest {
             "edit/",
             "elsewhere/x.yaml",
             "/edit/x.yaml",
-            "edit/x.yaml/y.yaml",
-            "edit/notes.md",
+            "edit/build/x.yaml",
+            "edit/lua/../x.yaml",
+            "edit/lua/.hidden.lua",
+            "edit/a/b/c/d/e/x.yaml",
             "edit/.hidden.yaml",
             "a".repeat(2000),
         )) {
@@ -85,5 +95,44 @@ class RimeConfigPathsTest {
         assertEquals("rime_ice.custom-3.yaml", RimeConfigPaths.unique("rime_ice.custom.yaml") { it in taken })
         assertEquals("a.txt", RimeConfigPaths.unique("a.txt") { false })
         assertNull(RimeConfigPaths.unique("a.txt") { true })
+    }
+
+    @Test
+    fun encodedAndNulIdsNeverResolveOutsideTheirFolder() {
+        val base = Files.createTempDirectory("tree").toFile()
+        File(base, "a.yaml").writeText("x: 1\n")
+        val outside = File(base.parentFile, "outside-" + System.nanoTime()).also { it.writeText("secret") }
+        for (id in listOf(
+            "active/%2e%2e/%2e%2e/x",
+            "active/..%2f..%2fx",
+            "active/%2e%2e%5c%2e%2e",
+            "active/a.yaml%00.txt",
+            "active/a.yaml\u0000",
+            "edit/%2e%2e/x.yaml",
+            "edit/lua/..%2fx.yaml",
+            "edit/a\u0000.yaml",
+            "sources/%2e%2e",
+        )) {
+            val path = RimeConfigPaths.parse(id)
+            val resolved = path?.let { RimeConfigPaths.inside(base, it.segments) }
+            assertTrue(id, resolved == null || resolved.canonicalPath.startsWith(base.canonicalPath + File.separator))
+            assertFalse(id, resolved?.canonicalPath == outside.canonicalPath)
+        }
+    }
+
+    @Test
+    fun aLinkInsideATreeIsNeverFollowed() {
+        val base = Files.createTempDirectory("tree").toFile()
+        val inside = File(base, "real.yaml").also { it.writeText("x: 1\n") }
+        val outside = File(base.parentFile, "outside-" + System.nanoTime()).also { it.writeText("secret") }
+        Files.createSymbolicLink(File(base, "link.yaml").toPath(), outside.toPath())
+        Files.createSymbolicLink(File(base, "inner.yaml").toPath(), inside.toPath())
+        File(base, "dir").mkdirs()
+        Files.createSymbolicLink(File(base, "dir-link").toPath(), base.parentFile.toPath())
+
+        assertNull(RimeConfigPaths.inside(base, listOf("link.yaml")))
+        assertNull("not even a link that stays inside", RimeConfigPaths.inside(base, listOf("inner.yaml")))
+        assertNull(RimeConfigPaths.inside(base, listOf("dir-link", outside.name)))
+        assertNotNull(RimeConfigPaths.inside(base, listOf("real.yaml")))
     }
 }

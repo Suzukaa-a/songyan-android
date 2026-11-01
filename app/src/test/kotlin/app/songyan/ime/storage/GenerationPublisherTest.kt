@@ -49,6 +49,39 @@ class GenerationPublisherTest {
     }
 
     @Test
+    fun extraResourcesReplaceSourceFilesByRelativePathAndKeepTheirFolders() {
+        val storage = newStorage()
+        val source = sourceTree(Files.createTempDirectory("source").toFile())
+        File(source, "lua").mkdirs()
+        File(source, "lua/date.lua").writeText("return 'package'\n")
+        File(source, "lua/other.lua").writeText("return 'other'\n")
+        val own = Files.createTempDirectory("own").toFile()
+        File(own, "lua").mkdirs()
+        File(own, "lua/date.lua").writeText("return 'mine'\n")
+        File(own, "opencc.txt").writeText("extra\n")
+
+        val record =
+            GenerationPublisher(storage).publish(
+                resourcesDir = source,
+                compiledDir = File(source, "build"),
+                sourceId = "songyan-builtin",
+                schemaId = "songyan_quanpin",
+                revision = "0.1.0/1",
+                extraResources =
+                    mapOf(
+                        "lua/date.lua" to File(own, "lua/date.lua"),
+                        "opencc.txt" to File(own, "opencc.txt"),
+                    ),
+            )
+
+        val resources = File(storage.generationDir(record.generation), "resources")
+        assertEquals("return 'mine'\n", File(resources, "lua/date.lua").readText())
+        assertEquals("return 'other'\n", File(resources, "lua/other.lua").readText())
+        assertEquals("extra\n", File(resources, "opencc.txt").readText())
+        assertTrue(GenerationPublisher(storage).isComplete(record))
+    }
+
+    @Test
     fun readActiveReturnsNullWhenMissingOrCorrupt() {
         val storage = newStorage()
         val publisher = GenerationPublisher(storage)

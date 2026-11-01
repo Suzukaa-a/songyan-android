@@ -2,12 +2,13 @@ package app.songyan.ime.userconfig
 
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 
 /**
  * Document ids of [RimeConfigProvider] and the checks that keep every id inside its folder.
  *
- * Ids are paths: `root`; `edit` and `edit/<name>` (the user's files, flat); `active/...` (the
- * source in use); `sources/<sourceId>/...` (each stored source). A caller can send any string, so
+ * Ids are paths: `root`; `edit` and `edit/<path>` (the user's files, in folders that mirror the
+ * source's layout); `active/...` (the source in use); `sources/<sourceId>/...` (each stored source). A caller can send any string, so
  * nothing here trusts one: empty, `.` and `..` segments, backslashes and NUL are refused, and a
  * resolved file must still be inside its folder once symbolic links are followed.
  */
@@ -44,7 +45,10 @@ object RimeConfigPaths {
             }
         val segments = parts.drop(1)
         if (segments.any { !isSafeSegment(it) }) return null
-        if (area == Area.EDIT && (segments.size > 1 || segments.any { !UserConfigFiles.isAllowedName(it) })) return null
+        if (area == Area.EDIT && segments.isNotEmpty()) {
+            val path = segments.joinToString("/")
+            if (!UserConfigFiles.isAllowedPath(path) && !UserConfigFiles.isAllowedFolderPath(path)) return null
+        }
         return Path(area, segments)
     }
 
@@ -65,6 +69,12 @@ object RimeConfigPaths {
     ): File? {
         if (segments.isEmpty() || segments.any { !isSafeSegment(it) || hidden(it) }) return null
         val file = segments.fold(base) { dir, segment -> File(dir, segment) }
+        // A link is never followed, whatever it points at: the trees are the app's own and hold none.
+        var step = base
+        for (segment in segments) {
+            step = File(step, segment)
+            if (Files.isSymbolicLink(step.toPath())) return null
+        }
         return try {
             val root = base.canonicalFile
             val resolved = file.canonicalFile
@@ -92,30 +102,31 @@ object RimeConfigPaths {
         mimeType: String,
     ): String? {
         val name = displayName.trim()
-        if (UserConfigFiles.isAllowedName(name)) return name
+        if (UserConfigFiles.isCreatableName(name)) return name
         // Already a configuration file name, just not one this folder takes.
-        if (name.endsWith(".yaml") || name.endsWith(".txt")) return null
+        if (name.endsWith(".yaml") || name.endsWith(".txt") || name.endsWith(".lua")) return null
         val extension =
             when (mimeType.lowercase()) {
                 "text/plain" -> ".txt"
                 "application/yaml", "application/x-yaml", "text/yaml", "text/x-yaml" -> ".yaml"
                 else -> return null
             }
-        return (name + extension).takeIf(UserConfigFiles::isAllowedName)
+        return (name + extension).takeIf(UserConfigFiles::isCreatableName)
     }
 
     /** [name], or `stem-2.ext`, `stem-3.ext`… when it is [taken]; null when all are. */
     fun unique(
         name: String,
+        allowed: (String) -> Boolean = UserConfigFiles::isCreatableName,
         taken: (String) -> Boolean,
     ): String? {
         if (!taken(name)) return name
-        val extension = if (name.endsWith(".yaml")) ".yaml" else ".txt"
+        val extension = listOf(".yaml", ".lua").firstOrNull { name.endsWith(it) } ?: ".txt"
         val stem = name.removeSuffix(extension)
         // `rime_ice.custom.yaml` becomes `rime_ice.custom-2.yaml`: still a configuration name.
         return (2..MAX_NAME_ATTEMPTS)
             .asSequence()
             .map { "$stem-$it$extension" }
-            .firstOrNull { UserConfigFiles.isAllowedName(it) && !taken(it) }
+            .firstOrNull { allowed(it) && !taken(it) }
     }
 }

@@ -29,19 +29,23 @@ import java.nio.file.StandardCopyOption
 /**
  * The Rime configuration folder in the system Files app and document picker
  * (https://developer.android.com/guide/topics/providers/create-document-provider): one root,
- * 「松烟 Rime 配置」, with the user's own files ([UserConfigFiles], writable) and read-only views
- * of the source in use and of every stored source, so the user can read the schema they patch.
+ * 「松烟 Rime 配置」, with the user's own files ([UserConfigFiles], writable) and views of the source
+ * in use and of every stored source, so the user can read the schema they patch. A text file of
+ * a source is writable too, but the package is never changed: a write lands in the user's copy of
+ * that file ([UserOverrides]), which is what the file shows from then on.
  *
  * Only the system's document UI talks to a documents provider directly (the manifest guards it
  * with `MANAGE_DOCUMENTS`); other apps get single documents or the tree through grants the user
  * makes in the picker. Every path a document id names is checked to stay inside its folder, and
- * the writable folder takes only flat `.yaml` / `.txt` names. A write goes to a temporary file
+ * the writable folder takes only `.yaml` / `.txt` / `.lua` names, in folders that mirror a source's.
+ * A write goes to a temporary file
  * that replaces the document when the writer closes it, and only within the size limits, so a
  * runaway writer never leaves a half-written or oversized configuration behind. Nothing here
  * reaches the running keyboard: the settings screen applies the changes.
  */
 class RimeConfigProvider : DocumentsProvider() {
     private val storage: AppStorage by lazy { AppStorage(requireNotNull(context).filesDir) }
+    private val overrides: UserOverrides by lazy { UserOverrides(storage) }
     private val closeHandler: Handler by lazy {
         Handler(HandlerThread("rime-config-writes").apply { start() }.looper)
     }
@@ -100,8 +104,19 @@ class RimeConfigProvider : DocumentsProvider() {
         if (flags and ParcelFileDescriptor.MODE_WRITE_ONLY == 0) {
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         }
-        if (!node.writable) throw SecurityException("read-only: $documentId")
-        return openForWriting(documentId, file, flags)
+        if (node.writable) return openForWriting(documentId, file, flags)
+        val packageFile = node.packageFile
+        val path = node.overridePath
+        if (packageFile == null || path == null) {
+            throw SecurityException(message(R.string.rime_config_refused_read_only))
+        }
+        val target =
+            try {
+                overrides.target(packageFile, path)
+            } catch (e: UserConfigException) {
+                throw refusal(e)
+            }
+        return openForWriting(documentId, target, flags, packageFile, path)
     }
 
     override fun createDocument(
@@ -110,27 +125,60 @@ class RimeConfigProvider : DocumentsProvider() {
         displayName: String,
     ): String {
         // File managers that ignore the folder flags offer to paste anywhere and show this message as is.
-        if (parentDocumentId !=
-            EDIT
-        ) {
+        val parent = RimeConfigPaths.parse(parentDocumentId)
+        if (parent?.area != RimeConfigPaths.Area.EDIT) {
             throw UnsupportedOperationException(message(R.string.rime_config_refused_read_only))
         }
+        val parentPath = parent.segments.joinToString("/")
+        val inScripts = parentPath.isNotEmpty() && UserConfigFiles.isScriptFolder(parentPath)
+        val dir =
+            if (parent.segments.isEmpty()) {
+                storage.userConfigDir.also { it.mkdirs() }
+            } else {
+                RimeConfigPaths.inside(storage.userConfigDir, parent.segments)?.takeIf { it.isDirectory }
+                    ?: throw FileNotFoundException("no document $parentDocumentId")
+            }
+        val names = dir.list().orEmpty()
+
+        // A name that differs only in letter case counts as taken: Files apps on other systems merge them.
+        fun taken(name: String) = names.any { it.equals(name, ignoreCase = true) }
         if (mimeType == Document.MIME_TYPE_DIR) {
-            throw UnsupportedOperationException(message(R.string.rime_config_refused_folder))
-        }
-        val name =
-            RimeConfigPaths.newFileName(displayName, mimeType)
-                ?: throw IllegalArgumentException(message(R.string.rime_config_refused_type, displayName))
-        val dir = storage.userConfigDir.also { it.mkdirs() }
-        if (UserConfigFiles.files(dir).size >= UserConfigFiles.MAX_FILES) {
-            throw IllegalStateException(message(R.string.rime_config_error_many))
+            // Folders exist for scripts only: `lua/`, and folders inside it.
+            val name = displayName.trim()
+            val path = if (parentPath.isEmpty()) name else "$parentPath/$name"
+            if (!(parentPath.isEmpty() && name == "lua") && !(inScripts && UserConfigFiles.isAllowedFolderPath(path))) {
+                throw UnsupportedOperationException(message(R.string.rime_config_refused_folder))
+            }
+            if (taken(name)) return "$parentDocumentId/" + names.first { it.equals(name, ignoreCase = true) }
+            if (!File(dir, name).mkdir()) throw IOException("cannot create $name")
+            notifyEdited(parentDocumentId)
+            return "$parentDocumentId/$name"
         }
         val unique =
-            RimeConfigPaths.unique(name) { File(dir, it).exists() }
-                ?: throw IllegalStateException("no free name for $name")
+            if (inScripts) {
+                val name = displayName.trim()
+                if (!UserConfigFiles.isAllowedName(name) || !name.endsWith(".lua")) {
+                    throw IllegalArgumentException(message(R.string.rime_config_refused_script_type, displayName))
+                }
+                RimeConfigPaths.unique(name, UserConfigFiles::isAllowedName, ::taken)
+            } else if (parent.segments.isEmpty() && displayName.trim() == "rime.lua") {
+                // The one script Rime reads from the top: a second one has no other name to take.
+                if (taken("rime.lua")) throw IllegalStateException("rime.lua exists")
+                "rime.lua"
+            } else if (parent.segments.isEmpty()) {
+                val name =
+                    RimeConfigPaths.newFileName(displayName, mimeType)
+                        ?: throw IllegalArgumentException(message(R.string.rime_config_refused_type, displayName))
+                RimeConfigPaths.unique(name, taken = ::taken)
+            } else {
+                throw UnsupportedOperationException(message(R.string.rime_config_refused_folder))
+            } ?: throw IllegalStateException("no free name for $displayName")
+        if (UserConfigFiles.files(storage.userConfigDir.also { it.mkdirs() }).size >= UserConfigFiles.MAX_FILES) {
+            throw IllegalStateException(message(R.string.rime_config_error_many))
+        }
         if (!File(dir, unique).createNewFile()) throw IOException("cannot create $unique")
-        notifyEdited()
-        return EDIT + "/" + unique
+        notifyEdited(parentDocumentId)
+        return "$parentDocumentId/$unique"
     }
 
     override fun renameDocument(
@@ -144,18 +192,36 @@ class RimeConfigProvider : DocumentsProvider() {
         ) {
             throw UnsupportedOperationException(message(R.string.rime_config_refused_read_only))
         }
-        if (!UserConfigFiles.isAllowedName(
-                displayName,
-            )
-        ) {
-            throw IllegalArgumentException(message(R.string.rime_config_refused_type, displayName))
-        }
+        // Only a flat file a person made, or a script they keep in `lua/`, can be renamed; a copy of a
+        // source's file is named by its source.
+        val parentPath = file.parentFile?.let { UserConfigFiles.relativePath(storage.userConfigDir, it) }.orEmpty()
+        val flat = file.parentFile?.canonicalFile == storage.userConfigDir.canonicalFile
+        val script = parentPath.isNotEmpty() && UserConfigFiles.isScriptFolder(parentPath)
+        val allowed =
+            when {
+                flat -> UserConfigFiles.isCreatableName(file.name) && UserConfigFiles.isCreatableName(displayName)
+                script ->
+                    file.name.endsWith(".lua") &&
+                        UserConfigFiles.isAllowedName(displayName) &&
+                        displayName.endsWith(".lua")
+                else -> false
+            }
+        if (!flat && !script) throw UnsupportedOperationException(message(R.string.rime_config_refused_read_only))
+        if (!allowed) throw IllegalArgumentException(message(R.string.rime_config_refused_type, displayName))
         if (displayName == file.name) return documentId
         val target = File(file.parentFile, displayName)
-        if (target.exists()) throw IllegalStateException("$displayName exists")
+        if (file.parentFile
+                ?.list()
+                .orEmpty()
+                .any { it != file.name && it.equals(displayName, ignoreCase = true) }
+        ) {
+            throw IllegalStateException("$displayName exists")
+        }
+        val old = UserConfigFiles.relativePath(storage.userConfigDir, file)
         if (!file.renameTo(target)) throw IOException("cannot rename $documentId")
+        overrides.forget(old)
         notifyEdited()
-        return EDIT + "/" + displayName
+        return documentId.substringBeforeLast('/') + "/" + displayName
     }
 
     override fun deleteDocument(documentId: String) {
@@ -166,7 +232,9 @@ class RimeConfigProvider : DocumentsProvider() {
         ) {
             throw UnsupportedOperationException(message(R.string.rime_config_refused_read_only))
         }
-        if (!file.delete() && file.exists()) throw IOException("cannot delete $documentId")
+        if (!overrides.restore(UserConfigFiles.relativePath(storage.userConfigDir, file))) {
+            throw IOException("cannot delete $documentId")
+        }
         notifyEdited()
     }
 
@@ -174,6 +242,17 @@ class RimeConfigProvider : DocumentsProvider() {
         id: Int,
         vararg args: Any,
     ): String = requireNotNull(context).getString(id, *args)
+
+    /** The exception a client sees for a file that cannot be the user's copy of a source file. */
+    private fun refusal(e: UserConfigException): Exception =
+        when (e.problem) {
+            UserConfigProblem.TOO_LARGE ->
+                IllegalStateException(
+                    message(R.string.rime_config_refused_large, e.file.orEmpty()),
+                )
+            UserConfigProblem.TOO_MANY -> IllegalStateException(message(R.string.rime_config_error_many))
+            else -> SecurityException(message(R.string.rime_config_refused_read_only))
+        }
 
     override fun isChildDocument(
         parentDocumentId: String,
@@ -191,23 +270,33 @@ class RimeConfigProvider : DocumentsProvider() {
         documentId: String,
         target: File,
         flags: Int,
+        packageFile: File? = null,
+        packagePath: String? = null,
     ): ParcelFileDescriptor {
         val temp = File(storage.configRoot, WRITE_PREFIX + System.nanoTime())
         temp.parentFile?.mkdirs()
-        if (flags and ParcelFileDescriptor.MODE_TRUNCATE == 0 && target.isFile) {
-            Files.copy(target.toPath(), temp.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        // Without a user's copy yet, a writer that keeps the content starts from the package's file.
+        val seed = target.takeIf { it.isFile } ?: packageFile
+        if (flags and ParcelFileDescriptor.MODE_TRUNCATE == 0 && seed != null) {
+            Files.copy(seed.toPath(), temp.toPath(), StandardCopyOption.REPLACE_EXISTING)
         } else {
             temp.writeBytes(ByteArray(0))
         }
         return ParcelFileDescriptor.open(temp, flags or ParcelFileDescriptor.MODE_CREATE, closeHandler) { error ->
             try {
+                if (error == null && packageFile != null && !target.isFile && sameContent(temp, packageFile)) {
+                    // Opened for writing, closed without a change: no copy of the package's file is worth keeping.
+                    return@open
+                }
                 if (error == null && withinLimits(target, temp.length())) {
+                    target.parentFile?.mkdirs()
                     Files.move(
                         temp.toPath(),
                         target.toPath(),
                         StandardCopyOption.REPLACE_EXISTING,
                         StandardCopyOption.ATOMIC_MOVE,
                     )
+                    if (packageFile != null && packagePath != null) overrides.recordBase(packagePath, packageFile)
                     notifyEdited()
                 } else {
                     Log.w(TAG, "discarded a write to $documentId: " + (error?.message ?: "over the size limit"))
@@ -220,23 +309,36 @@ class RimeConfigProvider : DocumentsProvider() {
         }
     }
 
+    private fun sameContent(
+        a: File,
+        b: File,
+    ): Boolean = a.length() == b.length() && a.readBytes().contentEquals(b.readBytes())
+
     private fun withinLimits(
         target: File,
         size: Long,
     ): Boolean {
         if (size > UserConfigFiles.MAX_FILE_BYTES) return false
-        val others =
-            UserConfigFiles
-                .files(
-                    storage.userConfigDir,
-                ).filter { it.name != target.name }
-                .sumOf { it.length() }
-        return others + size <= UserConfigFiles.MAX_TOTAL_BYTES
+        val dir = storage.userConfigDir
+        val files = UserConfigFiles.files(dir)
+        val own = UserConfigFiles.relativePath(dir, target)
+        val others = files.filter { UserConfigFiles.relativePath(dir, it) != own }
+        if (others.size >= UserConfigFiles.MAX_FILES) return false
+        return others.sumOf { it.length() } + size <= UserConfigFiles.MAX_TOTAL_BYTES
     }
 
-    private fun notifyEdited() {
+    private fun notifyEdited(parentId: String = EDIT) {
         val context = context ?: return
-        context.contentResolver.notifyChange(DocumentsContract.buildChildDocumentsUri(authority(context), EDIT), null)
+        context.contentResolver.notifyChange(
+            DocumentsContract.buildChildDocumentsUri(authority(context), parentId),
+            null,
+        )
+        if (parentId != EDIT) {
+            context.contentResolver.notifyChange(
+                DocumentsContract.buildChildDocumentsUri(authority(context), EDIT),
+                null,
+            )
+        }
     }
 
     /** One document: a virtual folder ([file] null), or a file or folder on disk. */
@@ -247,6 +349,9 @@ class RimeConfigProvider : DocumentsProvider() {
         val directory: Boolean,
         val writable: Boolean = false,
         val creatable: Boolean = false,
+        /** A text file of a source: writes go to the user's copy of [packageFile], known as [overridePath]. */
+        val packageFile: File? = null,
+        val overridePath: String? = null,
     ) {
         val mimeType: String get() = if (directory) Document.MIME_TYPE_DIR else mimeTypeOf(displayName)
     }
@@ -260,6 +365,8 @@ class RimeConfigProvider : DocumentsProvider() {
             flags =
                 flags or Document.FLAG_SUPPORTS_WRITE or Document.FLAG_SUPPORTS_DELETE or Document.FLAG_SUPPORTS_RENAME
         }
+        // A source's text file: writable through the user's copy, but neither deleted nor renamed.
+        if (node.overridePath != null) flags = flags or Document.FLAG_SUPPORTS_WRITE
         if (node.creatable) flags = flags or Document.FLAG_DIR_SUPPORTS_CREATE
         cursor.newRow().apply {
             add(Document.COLUMN_DOCUMENT_ID, node.id)
@@ -292,10 +399,22 @@ class RimeConfigProvider : DocumentsProvider() {
                         creatable = true,
                     )
                 } else {
-                    val name = path.segments.single()
-                    val file = File(storage.userConfigDir, name)
-                    if (!file.isFile) throw FileNotFoundException("no document $documentId")
-                    Node(documentId, name, file, false, writable = true)
+                    val file =
+                        RimeConfigPaths.inside(storage.userConfigDir, path.segments)
+                            ?: throw FileNotFoundException("no document $documentId")
+                    when {
+                        file.isDirectory ->
+                            Node(
+                                documentId,
+                                file.name,
+                                file,
+                                true,
+                                creatable = UserConfigFiles.isScriptFolder(path.segments.joinToString("/")),
+                            )
+                        file.isFile && UserConfigFiles.isAllowedName(file.name) ->
+                            Node(documentId, file.name, file, false, writable = true)
+                        else -> throw FileNotFoundException("no document $documentId")
+                    }
                 }
             RimeConfigPaths.Area.ACTIVE -> {
                 val sourceId = activeSourceId()
@@ -322,7 +441,10 @@ class RimeConfigProvider : DocumentsProvider() {
         }
     }
 
-    /** A file or folder inside a read-only source tree; never outside it. */
+    /**
+     * A file or folder inside a source tree; never outside it. [segments] are relative to [base].
+     * A text file shows the user's copy when there is one, and takes writes through it.
+     */
     private fun fileNode(
         documentId: String,
         base: File?,
@@ -335,7 +457,57 @@ class RimeConfigProvider : DocumentsProvider() {
         ) {
             throw FileNotFoundException("no document $documentId")
         }
-        return Node(documentId, file.name, file, file.isDirectory)
+        return packageNode(documentId, file, segments)
+    }
+
+    private fun packageNode(
+        documentId: String,
+        file: File,
+        segments: List<String>,
+    ): Node {
+        if (file.isDirectory) return Node(documentId, file.name, file, true)
+        val path = segments.joinToString("/")
+        if (!UserConfigFiles.isAllowedPath(path)) return Node(documentId, file.name, file, false)
+        return Node(
+            documentId,
+            file.name,
+            overrides.overrideFile(path) ?: file,
+            false,
+            packageFile = file,
+            overridePath = path,
+        )
+    }
+
+    /** The files and the folders with files of the user's folder [dir] (`lua/` is shown empty: that is where scripts go). */
+    private fun editChildren(
+        parentId: String,
+        dir: File?,
+    ): List<Node> {
+        val parentPath = parentId.removePrefix(EDIT).removePrefix("/")
+
+        fun pathOf(child: File) = if (parentPath.isEmpty()) child.name else "$parentPath/${child.name}"
+        return dir
+            ?.listFiles()
+            .orEmpty()
+            .filter { !RimeConfigPaths.hidden(it.name) && !Files.isSymbolicLink(it.toPath()) }
+            .filter {
+                if (it.isDirectory) {
+                    UserConfigFiles.isAllowedFolderPath(pathOf(it)) &&
+                        (UserConfigFiles.hasFiles(it) || UserConfigFiles.isScriptFolder(pathOf(it)))
+                } else {
+                    UserConfigFiles.isAllowedPath(pathOf(it))
+                }
+            }.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name })
+            .map {
+                Node(
+                    "$parentId/${it.name}",
+                    it.name,
+                    it,
+                    it.isDirectory,
+                    writable = it.isFile,
+                    creatable = it.isDirectory && UserConfigFiles.isScriptFolder(pathOf(it)),
+                )
+            }
     }
 
     private fun children(parent: Node): List<Node> {
@@ -347,22 +519,22 @@ class RimeConfigProvider : DocumentsProvider() {
                     Node(ACTIVE, activeTitle(activeSourceId()), null, true),
                     Node(SOURCES, context.getString(R.string.rime_config_folder_sources), null, true),
                 )
-            EDIT ->
-                UserConfigFiles.files(storage.userConfigDir).map {
-                    Node(EDIT + "/" + it.name, it.name, it, false, writable = true)
-                }
+            EDIT -> editChildren(EDIT, storage.userConfigDir)
             SOURCES ->
                 SourceCatalog(storage).list().map {
                     Node(SOURCES + "/" + it.sourceId, sourceName(it.sourceId), storage.sourceDir(it.sourceId), true)
                 }
             else -> {
                 val dir = parent.file?.takeIf { it.isDirectory } ?: return emptyList()
+                if (parent.id.startsWith("$EDIT/")) return editChildren(parent.id, dir)
+                // The path of a child within its source: below `active/`, or below `sources/<id>/`.
+                val inSource = parent.id.split('/').drop(if (parent.id.startsWith("$SOURCES/")) 2 else 1)
                 dir
                     .listFiles()
                     .orEmpty()
                     .filter { !RimeConfigPaths.hidden(it.name) && !Files.isSymbolicLink(it.toPath()) }
                     .sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name })
-                    .map { Node(parent.id + "/" + it.name, it.name, it, it.isDirectory) }
+                    .map { packageNode(parent.id + "/" + it.name, it, inSource + it.name) }
             }
         }
     }

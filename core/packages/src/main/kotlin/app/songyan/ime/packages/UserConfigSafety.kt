@@ -98,7 +98,8 @@ object UserConfigSafety {
         while (base.endsWith("/=")) base = base.removeSuffix("/=")
         if (base == "__include" || base == "__patch") return firstUnsafeReference(value)
         val parts = key.split('/')
-        val appended = parts.lastOrNull() == "+"
+        // librime's append operator is a `/+` suffix; a key that is just `+` names the + symbol.
+        val appended = parts.size > 1 && parts.last() == "+"
         // A string can be built from pieces (`@next: lu`, then `@last/+: a_filter@*x`): lists are what Rime appends to.
         if ((appended || base == "__append" || base == "__merge") && isScalar(value)) return key
         // The key the operators act on: without `=`, `+` and list selectors.

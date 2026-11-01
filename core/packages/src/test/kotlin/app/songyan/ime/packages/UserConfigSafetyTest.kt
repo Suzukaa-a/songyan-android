@@ -198,4 +198,11 @@ class UserConfigSafetyTest {
         }
         assertNull(unsafe("patch:\n  engine/filters/+:\n    - uniquifier\n  a:\n    __append: [x]\n"))
     }
+
+    @Test
+    fun aPunctuationKeyNamedPlusIsNotTheAppendOperator() {
+        // rime-ice's compiled default.yaml maps the + symbol; librime only reads a key ending in `/+` as append.
+        assertNull(unsafe("punctuator:\n  half_shape:\n    \"+\": \"+\"\n    \"/\": \"/\"\n"))
+        assertNotNull(unsafe("patch:\n  \"punctuator/half_shape/+\": \"+\"\n"))
+    }
 }

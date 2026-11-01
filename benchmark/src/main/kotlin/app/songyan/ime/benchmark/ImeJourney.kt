@@ -23,6 +23,10 @@ object ImeJourney {
 
     private const val IME_ID = "$PACKAGE/app.songyan.ime.SongyanInputMethodService"
     private const val PERF_TAG = "SongyanPerf"
+    private val NOISE_FREE =
+        Regex("mCurId|mCurAttribute|mCurClient|mServedInputConnection|mCurFocusedWindow|inputType|mInputShown")
+    private val NOISY =
+        Regex("gsa|WindowMagnification|AudioFlinger|googlequicksearchbox|JobScheduler|ProcessStats|Cronet")
     private val APP_LOG = Regex("(?i)songyan|rime|AndroidRuntime|deploy|FATAL")
     private const val UI_TIMEOUT_MS = 15_000L
     private const val OPEN_TRIES = 3
@@ -150,6 +154,10 @@ object ImeJourney {
             "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
                 perfLines().filter { "key_bound" !in it }.takeLast(15) +
                 "; ime: " + shell("settings get secure default_input_method").trim() +
+                "; imm: " +
+                shell("dumpsys input_method").lines().filter { NOISE_FREE.containsMatchIn(it) }.take(25) +
+                "; warnings: " +
+                shell("logcat -d -v brief *:W").lines().filter { !NOISY.containsMatchIn(it) }.takeLast(25) +
                 "; app log: " +
                 shell(
                     "logcat -d -v brief *:I",

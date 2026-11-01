@@ -10,12 +10,12 @@ import android.view.inputmethod.EditorInfo
 import android.widget.TextView
 import androidx.autofill.inline.UiVersions
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,7 +33,7 @@ class CopiedChipDeviceTest {
             host.chips = true
             host.allowClipboardReads()
             // The clipboard outlives a test: a clip copied by the one before must not be on offer.
-            host.main { host.context.getSystemService(ClipboardManager::class.java).clearPrimaryClip() }
+            host.main { host.clearClipboard() }
             block(host)
         } finally {
             host.close()
@@ -254,9 +254,11 @@ class CopiedChipDeviceTest {
             assertTrue(host.await { host.toolbarLabels().isNotEmpty() })
         }
 
+    // Inline suggestion specs exist from Android 11. SdkSuppress filters the test out; an assumption
+    // failure would be reported as a failed test by the Gradle connected-test report.
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R)
     @Test
     fun theInlineRequestIsBuiltInTheBarsSizeAndStyle() {
-        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
         val context =
             androidx.test.platform.app.InstrumentationRegistry
                 .getInstrumentation()

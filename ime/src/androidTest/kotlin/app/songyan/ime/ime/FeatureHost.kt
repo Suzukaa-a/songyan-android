@@ -337,6 +337,16 @@ internal class FeatureHost(
 
     private var shellIdentityAdopted = false
 
+    /** Empties the clipboard; `clearPrimaryClip` only exists from Android 9. */
+    fun clearClipboard() {
+        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            clipboard.clearPrimaryClip()
+        } else {
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
+        }
+    }
+
     fun start(
         initial: String = "",
         inputType: Int = InputType.TYPE_CLASS_TEXT,
@@ -345,6 +355,8 @@ internal class FeatureHost(
     ) {
         main {
             field = EditText(context)
+            // Before Android 10 the text view's paste and copy actions act on the whole text unless it has focus.
+            field.requestFocus()
             field.inputType = inputType
             field.imeOptions = imeOptions
             field.setText(initial)

@@ -109,10 +109,16 @@ object ImeJourney {
 
     /**
      * Makes sure taps compose pinyin: a keyboard left in English mode inserts letters without
-     * candidates, and the key and commit metrics would measure nothing.
+     * candidates, and the key and commit metrics would measure nothing. A first install is also
+     * silent until the engine data is deployed, which takes minutes on a slow emulator, so the
+     * attempts run until a deadline; each failed attempt flips the language, so once the engine
+     * answers one of two consecutive attempts is in pinyin.
      */
     fun MacrobenchmarkScope.ensureChinese(keyboard: Keyboard) {
-        repeat(3) {
+        val deadline = SystemClock.uptimeMillis() + KEYBOARD_TIMEOUT_MS
+        var attempts = 0
+        while (SystemClock.uptimeMillis() < deadline) {
+            attempts++
             val ok = runCatching { type(keyboard, listOf("n", "i")) }.isSuccess
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
@@ -120,7 +126,7 @@ object ImeJourney {
             tap(switch)
             SystemClock.sleep(500)
         }
-        error("the keyboard does not compose pinyin")
+        error("the keyboard does not compose pinyin after $attempts attempts; log tail: " + perfLines().takeLast(12))
     }
 
     /** Key centres of the current layout by letter, plus the language key. */

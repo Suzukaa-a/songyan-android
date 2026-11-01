@@ -33,7 +33,7 @@ class BarContentAlignmentDeviceTest {
             if (clipboard) {
                 host.chips = true
                 host.allowClipboardReads()
-                host.main { host.context.getSystemService(ClipboardManager::class.java).clearPrimaryClip() }
+                host.main { host.clearClipboard() }
             }
             block(host)
         } finally {

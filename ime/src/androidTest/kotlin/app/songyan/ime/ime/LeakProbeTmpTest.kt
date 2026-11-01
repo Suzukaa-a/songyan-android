@@ -1,11 +1,8 @@
 package app.songyan.ime.ime
 
-import android.content.Context
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,48 +12,50 @@ import java.lang.ref.WeakReference
 class LeakProbeTmpTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
-    private fun probe(make: (Context) -> Any): String {
+    private fun make(): List<WeakReference<Any>> {
         val refs = ArrayList<WeakReference<Any>>()
         instrumentation.runOnMainSync {
-            repeat(8) { refs += WeakReference(make(instrumentation.targetContext)) }
+            repeat(8) { refs += WeakReference(LinearLayout(instrumentation.targetContext)) }
         }
         instrumentation.waitForIdleSync()
+        return refs
+    }
+
+    private fun alive(refs: List<WeakReference<Any>>) = refs.count { it.get() != null }
+
+    @Test
+    fun probe() {
+        val out = StringBuilder()
+        var refs = make()
         repeat(5) {
             System.gc()
             Runtime.getRuntime().runFinalization()
             Thread.sleep(50)
         }
-        return refs.count { it.get() != null }.toString()
-    }
-
-    @Test
-    fun probe() {
-        val out = StringBuilder()
-
-        fun add(
-            name: String,
-            make: (Context) -> Any,
-        ) = out
-            .append(name)
-            .append('=')
-            .append(probe(make))
-            .append(' ')
-        add("plain") { LinearLayout(it) }
-        add("keyboardView") { KeyboardView(it) }
-        add("popupLayer") { KeyPopupLayer(it) }
-        add("candidates") { CandidateBarView(it) }
-        add("toolbar") { ToolbarView(it) }
-        add("inline") { InlineSuggestionStrip(it) }
-        add("reading") { ReadingRowView(it) }
-        add("feedback") { c -> KeyboardFeedback(c).also { it.close() } }
-        add("menu") {
-            KeyboardSwitcherPanel(
-                it,
-                app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas.QUANPIN,
-                KeyboardLayoutKind.QWERTY26,
-            )
+        out.append("gc5=").append(alive(refs)).append(' ')
+        refs = make()
+        repeat(20) {
+            System.gc()
+            Thread.sleep(100)
         }
-        add("shell") { OneHandShell(it, FrameLayout(it)) }
-        fail("PROBE $out")
+        out.append("gc20sleep=").append(alive(refs)).append(' ')
+        refs = make()
+        val junk = ArrayList<ByteArray>()
+        repeat(10) {
+            junk += ByteArray(4 * 1024 * 1024)
+            System.gc()
+        }
+        junk.clear()
+        out.append("pressure=").append(alive(refs)).append(' ')
+        refs = make()
+        // Allocation churn on the main thread, in case a reference is parked in its allocation buffer.
+        instrumentation.runOnMainSync { repeat(200_000) { Object() } }
+        System.gc()
+        out.append("mainchurn=").append(alive(refs)).append(' ')
+        refs = make()
+        Thread.sleep(5_000)
+        System.gc()
+        out.append("sleep5=").append(alive(refs)).append(' ')
+        fail("PROBE $out sdk=${android.os.Build.VERSION.SDK_INT}")
     }
 }

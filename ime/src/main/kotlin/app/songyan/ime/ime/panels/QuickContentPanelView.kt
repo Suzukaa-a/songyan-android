@@ -261,6 +261,9 @@ abstract class QuickContentPanelView(
 
     protected open fun onCellActivated(index: Int) {}
 
+    /** A dimmed cell neither answers a touch nor shows the press layer. */
+    protected open fun cellEnabled(index: Int): Boolean = true
+
     /** Named TalkBack actions of one cell, for what a held cell does that a screen reader cannot hold. */
     protected open fun cellCustomActions(index: Int): List<AccessibilityNodeInfo.AccessibilityAction> = emptyList()
 
@@ -620,7 +623,7 @@ abstract class QuickContentPanelView(
     /** The item under the finger gets a state layer, so every panel answers a touch immediately. */
     private fun drawPressed(canvas: Canvas) {
         val index = pressedItem
-        if (index !in 0 until itemCount) return
+        if (index !in 0 until itemCount || !itemEnabled(index)) return
         val box = itemBounds(index)
         if (box.isEmpty) return
         paint.color = palette.pressed
@@ -1045,7 +1048,13 @@ abstract class QuickContentPanelView(
         return cellIndex in 0 until cellCount() && performCellCustomAction(cellIndex, actionId)
     }
 
+    override fun itemEnabled(index: Int): Boolean {
+        val cellIndex = index - cellItemBase()
+        return cellIndex !in 0 until cellCount() || cellEnabled(cellIndex)
+    }
+
     override fun activateItem(index: Int) {
+        if (!itemEnabled(index)) return
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         // TalkBack activates an item without a touch point; aim at the item's centre instead.
         val bounds = itemBounds(index)

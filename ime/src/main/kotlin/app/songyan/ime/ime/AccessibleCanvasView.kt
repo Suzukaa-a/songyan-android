@@ -26,6 +26,9 @@ abstract class AccessibleCanvasView(
         y: Float,
     ): Int
 
+    /** A dimmed item is announced as unavailable and takes no click. */
+    protected open fun itemEnabled(index: Int): Boolean = true
+
     /** True when the item behaves like a long press, i.e. has a discrete action beyond click. */
     protected open fun itemLongClickable(index: Int): Boolean = false
 
@@ -80,7 +83,7 @@ abstract class AccessibleCanvasView(
                     packageName = context.packageName
                     className = "android.widget.Button"
                     contentDescription = itemLabel(id)
-                    isEnabled = this@AccessibleCanvasView.isEnabled
+                    isEnabled = this@AccessibleCanvasView.isEnabled && itemEnabled(id)
                     isClickable = true
                     val longClickable = itemLongClickable(id)
                     isLongClickable = longClickable
@@ -93,7 +96,7 @@ abstract class AccessibleCanvasView(
                     val bounds = Rect(itemBounds(id))
                     bounds.offset(screen[0], screen[1])
                     setBoundsInScreen(bounds)
-                    addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)
+                    if (itemEnabled(id)) addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)
                     if (longClickable) addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK)
                     itemCustomActions(id).forEach { addAction(it) }
                     addAction(
@@ -115,6 +118,7 @@ abstract class AccessibleCanvasView(
                 if (id !in 0 until itemCount) return false
                 when (action) {
                     AccessibilityNodeInfo.ACTION_CLICK -> {
+                        if (!itemEnabled(id)) return false
                         activateItem(id)
                         emit(id, AccessibilityEvent.TYPE_VIEW_CLICKED)
                     }

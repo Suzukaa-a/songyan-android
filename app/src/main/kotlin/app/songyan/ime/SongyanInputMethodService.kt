@@ -670,6 +670,7 @@ class SongyanInputMethodService : InputMethodService() {
             editor.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         if (movedAway) controller?.discardComposition()
         if (editor.selectionMovedExternally) controller?.onSelectionMovedExternally()
+        controller?.onEditorSelectionChanged(newSelStart, newSelEnd)
         updateAutomaticCaps()
     }
 

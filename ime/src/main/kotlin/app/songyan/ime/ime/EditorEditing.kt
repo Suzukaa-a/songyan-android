@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import app.songyan.ime.ime.panels.EditAvailability
 import app.songyan.ime.keyboard.support.CaretMotion
 
 /** What the edit panel's keys do to the editor. */
@@ -83,6 +84,26 @@ internal fun EditorConnection.performEdit(
         forgetText()
     }
     return handled
+}
+
+/**
+ * Which edit keys are live. A selection is read from what the keyboard tracks, and only asked of the
+ * editor when that is unknown; a private editor reports none, because Copy and Cut are refused there.
+ * Paste only asks whether the clipboard holds a clip, never what is in it, and a private editor keeps it
+ * on so the answer cannot leak into the keyboard.
+ */
+internal fun EditorConnection.editAvailability(
+    clipboard: ClipboardManager?,
+    mayReadText: Boolean,
+): EditAvailability {
+    val hasSelection =
+        when {
+            !mayReadText || keyEventEditor -> false
+            selection.known -> selection.start != selection.end
+            else -> connection()?.getSelectedText(0)?.isNotEmpty() == true
+        }
+    val canPaste = !mayReadText || clipboard == null || clipboard.hasPrimaryClip()
+    return EditAvailability(hasSelection, canPaste)
 }
 
 private val EditAction.changesText: Boolean

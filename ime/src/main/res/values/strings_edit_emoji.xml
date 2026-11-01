@@ -17,6 +17,7 @@
     <string name="ime_edit_delete">Delete</string>
     <string name="ime_edit_select">Select</string>
     <string name="ime_edit_select_on">Select, on</string>
+    <string name="ime_edit_selecting">Selecting</string>
 
     <!-- Emoji panel -->
     <string name="ime_panel_emoji_title">Emoji</string>

@@ -72,28 +72,214 @@ class EditEmojiPanelDeviceTest {
         }
 
     @Test
-    fun editPanelKeysFillTheContentAndTheArrowsSpanItsHeight() =
+    fun editPanelLaysOutADpadWithSelectInTheMiddleAndTheEditingKeysOnTheRight() =
         withHost { host ->
             host.start()
             host.tapToolbar(host.string(R.string.ime_toolbar_edit))
-            val bounds = mutableMapOf<String, android.graphics.Rect>()
-            host.main {
-                val panel = host.find(EditPanelView::class.java)
-                val provider = panel.accessibilityNodeProvider
-                for (index in 0 until 40) {
-                    val node = provider.createAccessibilityNodeInfo(index) ?: continue
-                    val box = android.graphics.Rect()
-                    node.getBoundsInParent(box)
-                    bounds[node.contentDescription?.toString() ?: node.text?.toString() ?: continue] = box
-                }
-            }
-            val left = bounds.getValue(host.string(R.string.ime_edit_left))
-            val right = bounds.getValue(host.string(R.string.ime_edit_right))
-            assertEquals(left.top, right.top)
-            assertEquals(left.bottom, right.bottom)
-            val up = bounds.getValue(host.string(R.string.ime_edit_up))
-            assertTrue(left.right <= up.left && up.right <= right.left)
-            assertTrue(left.height() > up.height() * 2)
+            val bounds = editKeyBounds(host)
+
+            fun key(id: Int) = bounds.getValue(host.string(id))
+            val select = key(R.string.ime_edit_select)
+            val up = key(R.string.ime_edit_up)
+            val down = key(R.string.ime_edit_down)
+            val left = key(R.string.ime_edit_left)
+            val right = key(R.string.ime_edit_right)
+            assertEquals(select.centerX(), up.centerX())
+            assertEquals(select.centerX(), down.centerX())
+            assertEquals(select.centerY(), left.centerY())
+            assertEquals(select.centerY(), right.centerY())
+            assertTrue(up.bottom <= select.top && select.bottom <= down.top)
+            assertTrue(left.right <= select.left && select.right <= right.left)
+            val undo = key(R.string.ime_edit_undo)
+            assertTrue("Undo keeps the top left", undo.left <= left.left && undo.top <= up.top)
+            val lineStart = key(R.string.ime_edit_line_start)
+            val all = key(R.string.ime_edit_select_all)
+            val lineEnd = key(R.string.ime_edit_line_end)
+            assertTrue(down.bottom <= lineStart.top && lineStart.top == all.top && all.top == lineEnd.top)
+            assertTrue(lineStart.right <= all.left && all.right <= lineEnd.left)
+            val column =
+                listOf(R.string.ime_edit_delete, R.string.ime_edit_copy, R.string.ime_edit_cut, R.string.ime_edit_paste)
+            val boxes = column.map { key(it) }
+            boxes.zipWithNext { a, b -> assertTrue(a.bottom <= b.top) }
+            assertTrue(boxes.all { it.left >= right.right && it.left == boxes[0].left })
+            assertTrue("Paste is bottom right", boxes.last().bottom >= lineEnd.bottom)
+        }
+
+    @Test
+    fun selectModeExtendsFromAFixedAnchorWithTheArrowsAndLineKeys() =
+        withHost { host ->
+            host.start()
+            host.setText("one\ntwo three", 6)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_line_end), EditPanelView::class.java)
+            assertEquals(6 to 13, host.selection())
+            host.tap(host.string(R.string.ime_edit_left), EditPanelView::class.java)
+            assertEquals(6 to 12, host.selection())
+            host.tap(host.string(R.string.ime_edit_line_start), EditPanelView::class.java)
+            assertEquals("the anchor stays at 6 while the end passes it", 4 to 6, host.selection().sorted())
+            host.tap(host.string(R.string.ime_edit_up), EditPanelView::class.java)
+            assertEquals(0 to 6, host.selection().sorted())
+            assertTrue("no DPAD events: ${host.keyEvents}", host.keyEvents.none { it.keyCode in DPAD })
+        }
+
+    @Test
+    fun turningSelectOffKeepsTheSelectionAndTheNextArrowCollapsesIt() =
+        withHost { host ->
+            host.start()
+            host.setText("abcdef", 1)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_select_on), EditPanelView::class.java)
+            assertEquals("turning Select off collapses nothing", 1 to 3, host.selection())
+            host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
+            assertEquals(3 to 3, host.selection())
+        }
+
+    @Test
+    fun selectShowsItsStateInTheSpokenLabelAndTheMode() =
+        withHost { host ->
+            host.start()
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
+            assertTrue(host.main2 { host.find(EditPanelView::class.java).selecting })
+            assertTrue(host.string(R.string.ime_edit_select_on) in host.labelsOf(EditPanelView::class.java))
+            host.tap(host.string(R.string.ime_edit_select_on), EditPanelView::class.java)
+            assertFalse(host.main2 { host.find(EditPanelView::class.java).selecting })
+        }
+
+    @Test
+    fun selectAllThenCopyPutsTheTextOnTheClipboardAndLeavesSelectMode() =
+        withHost { host ->
+            host.allowClipboardReads()
+            host.start()
+            host.setText("alpha beta", 3)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
+            assertEquals(0 to 10, host.selection())
+            assertTrue("Select all turns Select on", host.main2 { host.find(EditPanelView::class.java).selecting })
+            host.tap(host.string(R.string.ime_edit_copy), EditPanelView::class.java)
+            assertEquals(
+                "alpha beta",
+                host.main2 {
+                    host.context
+                        .getSystemService(ClipboardManager::class.java)
+                        .primaryClip
+                        ?.getItemAt(0)
+                        ?.text
+                        ?.toString()
+                },
+            )
+            assertFalse("Copy ends Select", host.main2 { host.find(EditPanelView::class.java).selecting })
+            host.tap(host.string(R.string.ime_edit_left), EditPanelView::class.java)
+            assertEquals("an arrow now moves instead of extending", 0 to 0, host.selection())
+        }
+
+    @Test
+    fun selectAllThenCutRemovesTheTextAndLeavesSelectMode() =
+        withHost { host ->
+            host.allowClipboardReads()
+            host.start()
+            host.setText("alpha", 2)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_cut), EditPanelView::class.java)
+            host.assertText("")
+            assertFalse(host.main2 { host.find(EditPanelView::class.java).selecting })
+        }
+
+    @Test
+    fun arrowsAfterSelectAllShrinkTheSelectionFromItsEnd() =
+        withHost { host ->
+            host.start()
+            host.setText("abcd", 2)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_left), EditPanelView::class.java)
+            assertEquals(0 to 3, host.selection())
+        }
+
+    @Test
+    fun copyAndCutAreDimmedAndInertWithoutASelectionAndLightUpWhenOneIsMade() =
+        withHost { host ->
+            host.allowClipboardReads()
+            host.start()
+            host.setText("alpha beta", 3)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            val copy = host.string(R.string.ime_edit_copy)
+            val cut = host.string(R.string.ime_edit_cut)
+            assertFalse(editKeyEnabled(host, copy))
+            assertFalse(editKeyEnabled(host, cut))
+            assertFalse("a dimmed key takes no click", editKeyClick(host, copy))
+            assertEquals("nothing was copied or cut", "alpha beta", host.text())
+            host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
+            assertTrue(editKeyEnabled(host, copy))
+            assertTrue(editKeyEnabled(host, cut))
+            host.tap(host.string(R.string.ime_edit_left), EditPanelView::class.java)
+            assertFalse("shrinking the selection to nothing dims them again", editKeyEnabled(host, copy))
+            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
+            assertTrue(editKeyEnabled(host, cut))
+            host.tap(host.string(R.string.ime_edit_delete), EditPanelView::class.java)
+            assertFalse("a deleted selection dims them", editKeyEnabled(host, cut))
+        }
+
+    @Test
+    fun copyAndCutFollowASelectionTheEditorReportsWhileThePanelIsOpen() =
+        withHost { host ->
+            host.start()
+            host.setText("alpha beta", 3)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            val copy = host.string(R.string.ime_edit_copy)
+            assertFalse(editKeyEnabled(host, copy))
+            host.main { host.controller.onEditorSelectionChanged(0, 5) }
+            assertTrue(editKeyEnabled(host, copy))
+            host.main { host.controller.onEditorSelectionChanged(5, 5) }
+            assertFalse(editKeyEnabled(host, copy))
+        }
+
+    @Test
+    fun pasteIsDimmedWhileTheClipboardIsEmptyAndLiveOnceSomethingWasCopied() =
+        withHost { host ->
+            host.allowClipboardReads()
+            host.start()
+            host.setText("abc", 3)
+            host.clearClipboard()
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            val paste = host.string(R.string.ime_edit_paste)
+            assertFalse(editKeyEnabled(host, paste))
+            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_copy), EditPanelView::class.java)
+            assertTrue(editKeyEnabled(host, paste))
+            host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
+            host.tap(paste, EditPanelView::class.java)
+            host.assertText("abcabc")
+        }
+
+    @Test
+    fun aPasswordFieldNeverLightsCopyOrCut() =
+        withHost { host ->
+            host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+            host.setText("secret", 0, 6)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_copy)))
+            assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_cut)))
+            host.main { host.controller.onEditorSelectionChanged(0, 6) }
+            assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_copy)))
+        }
+
+    @Test
+    fun upAndDownStayPutInASingleLineFieldWithoutKeyEvents() =
+        withHost { host ->
+            host.start()
+            host.setText("hello", 3)
+            host.tapToolbar(host.string(R.string.ime_toolbar_edit))
+            host.tap(host.string(R.string.ime_edit_up), EditPanelView::class.java)
+            host.tap(host.string(R.string.ime_edit_down), EditPanelView::class.java)
+            assertEquals(3 to 3, host.selection())
+            assertTrue(host.keyEvents.none { it.keyCode in DPAD })
         }
 
     @Test
@@ -490,6 +676,67 @@ class EditEmojiPanelDeviceTest {
     private fun FeatureHost.panelLabels(): List<String> = labelsOf(EmojiPanelView::class.java)
 
     /** The search starts on the engine queue after the tap returns; wait until the panel has given way to the keyboard. */
+    private fun Pair<Int, Int>.sorted(): Pair<Int, Int> = minOf(first, second) to maxOf(first, second)
+
+    /** The accessibility node of one edit-panel key, by its spoken name. */
+    private fun <T> FeatureHost.editKey(
+        label: String,
+        read: (android.view.accessibility.AccessibilityNodeInfo) -> T,
+    ): T =
+        main2 {
+            val provider = find(EditPanelView::class.java).accessibilityNodeProvider
+            var id = 0
+            while (true) {
+                val node = provider.createAccessibilityNodeInfo(id++) ?: error("no edit key '$label'")
+                if (node.contentDescription?.toString() == label) return@main2 read(node)
+            }
+            @Suppress("UNREACHABLE_CODE")
+            error("unreachable")
+        }
+
+    private fun editKeyBounds(host: FeatureHost): Map<String, android.graphics.Rect> =
+        host.main2 {
+            val provider = host.find(EditPanelView::class.java).accessibilityNodeProvider
+            val result = mutableMapOf<String, android.graphics.Rect>()
+            var id = 0
+            while (true) {
+                val node = provider.createAccessibilityNodeInfo(id++) ?: break
+                val box = android.graphics.Rect()
+                node.getBoundsInParent(box)
+                result[node.contentDescription?.toString() ?: continue] = box
+            }
+            result
+        }
+
+    private fun editKeyEnabled(
+        host: FeatureHost,
+        label: String,
+    ): Boolean = host.editKey(label) { it.isEnabled }
+
+    /** Clicks the key the way TalkBack does; false when the panel refuses it. */
+    private fun editKeyClick(
+        host: FeatureHost,
+        label: String,
+    ): Boolean =
+        host.main2 {
+            val view = host.find(EditPanelView::class.java)
+            val provider = view.accessibilityNodeProvider
+            var id = 0
+            while (true) {
+                val node = provider.createAccessibilityNodeInfo(id) ?: error("no edit key '$label'")
+                if (node.contentDescription?.toString() == label) {
+                    return@main2 provider.performAction(
+                        id,
+                        android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK,
+                        null,
+                    )
+                }
+                id++
+            }
+            @Suppress("UNREACHABLE_CODE")
+            false
+        }
+
     private fun FeatureHost.startEmojiSearch() {
         tap(string(R.string.ime_emoji_search), EmojiPanelView::class.java)
         assertTrue("the panel gave way to the keyboard", await { findOrNullOnMain(EmojiPanelView::class.java) == null })

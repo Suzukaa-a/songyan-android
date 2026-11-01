@@ -17,6 +17,7 @@
     <string name="ime_edit_delete">删除</string>
     <string name="ime_edit_select">选择</string>
     <string name="ime_edit_select_on">选择，已开启</string>
+    <string name="ime_edit_selecting">选择中</string>
 
     <!-- 表情面板 -->
     <string name="ime_panel_emoji_title">表情</string>

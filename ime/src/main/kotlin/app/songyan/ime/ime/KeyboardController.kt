@@ -10,6 +10,7 @@ import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.palette.KeyboardPalettes
+import app.songyan.ime.ime.panels.EditAvailability
 import app.songyan.ime.ime.panels.KeyboardPanelHost
 import app.songyan.ime.ime.panels.PanelSearchKind
 import app.songyan.ime.ime.panels.QuickContentPanelContent
@@ -98,6 +99,10 @@ class KeyboardController(
          * keyboard may read text back (false in a private editor). True when the editor took it.
          */
         val editAction: (EditAction, Boolean, Boolean) -> Boolean = { _, _, _ -> false },
+        /** Which edit keys are live (selection, clipboard); the flag says whether the keyboard may read text back. */
+        val editAvailability: (
+            Boolean,
+        ) -> EditAvailability = { EditAvailability(hasSelection = false, canPaste = true) },
         /** The way to other input methods and to voice input. */
         val inputMethods: InputMethodAccess = InputMethodAccess.NONE,
         /** A button of the engine notice (retry, settings). */
@@ -488,6 +493,7 @@ class KeyboardController(
             ) {
                 enqueue {
                     if (confirmComposition()) callbacks.editAction(action, extend, !policy.privateInput)
+                    refreshEditPanel()
                     render()
                 }
             }
@@ -714,6 +720,20 @@ class KeyboardController(
         }
     }
 
+    /** Dims or lights the edit panel's Copy, Cut and Paste from the editor and the clipboard as they are now. */
+    private fun refreshEditPanel() {
+        panels?.updateEditAvailability(callbacks.editAvailability(!policy.privateInput))
+    }
+
+    /** The editor reported a new selection: a Copy and Cut that depend on it follow while the edit panel is open. */
+    fun onEditorSelectionChanged(
+        start: Int,
+        end: Int,
+    ) {
+        if (policy.privateInput) return
+        panels?.updateEditSelection(start != end)
+    }
+
     /** The user moved the caret or the host changed the document: the English word guess is stale. */
     fun onSelectionMovedExternally() {
         resetEnglishWord()
@@ -844,6 +864,7 @@ class KeyboardController(
         if (retired) return
         closeKeyboardMenu()
         quick.openEdit()
+        refreshEditPanel()
         callbacks.panelsChanged(true)
     }
 

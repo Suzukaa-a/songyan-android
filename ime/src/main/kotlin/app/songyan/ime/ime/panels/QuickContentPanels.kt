@@ -260,6 +260,16 @@ class QuickContentPanels(
         show(edit)
     }
 
+    /** The edit panel's live keys; ignored while another panel is showing. */
+    fun updateEditAvailability(value: EditAvailability) {
+        if (shown === edit) edit.setAvailability(value)
+    }
+
+    /** A new selection state from the editor, for Copy and Cut. */
+    fun updateEditSelection(hasSelection: Boolean) {
+        if (shown === edit) edit.setSelection(hasSelection)
+    }
+
     /** The emoji catalog for the editor's renderer, for the keyboard's own emoji search. */
     suspend fun emojiCatalog(): EmojiCatalog = emojiSource.catalog(callbacks.emojiMetadataVersion())
 

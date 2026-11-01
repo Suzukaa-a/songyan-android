@@ -704,6 +704,7 @@ fun EditorConnection.keyboardCallbacks(
             replaceBeforeCursor(expected, replacement).also { if (it) onCommitted(replacement) }
         },
         editAction = { action, extend, mayRead -> performEdit(action, extend, clipboard, mayRead) },
+        editAvailability = { mayRead -> editAvailability(clipboard, mayRead) },
         inputMethods = inputMethods,
         engineNoticeAction = engineNoticeAction,
     )

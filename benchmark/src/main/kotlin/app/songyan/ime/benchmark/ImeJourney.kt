@@ -139,10 +139,15 @@ object ImeJourney {
     fun MacrobenchmarkScope.ensureChinese(keyboard: Keyboard) {
         val deadline = SystemClock.uptimeMillis() + KEYBOARD_TIMEOUT_MS
         var attempts = 0
+        val trail = ArrayList<String>()
         while (SystemClock.uptimeMillis() < deadline) {
             attempts++
             val ok = runCatching { type(keyboard, listOf("n", "i")) }.isSuccess
             if (!ok && attempts <= 2) saveScreenshot("compose-attempt$attempts")
+            if (!ok) {
+                val text = device.findObject(By.clazz("android.widget.EditText"))?.text
+                trail += "#$attempts text=$text cand=${candidateLines().size}"
+            }
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
             val switch = checkNotNull(keyboard.languageSwitch) { "no language key to switch to pinyin" }
@@ -151,7 +156,7 @@ object ImeJourney {
         }
         saveScreenshot("compose-failure")
         error(
-            "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
+            "the keyboard does not compose pinyin after $attempts attempts $trail; perf log: " +
                 perfLines().filter { "key_bound" !in it }.takeLast(15) +
                 "; ime: " + shell("settings get secure default_input_method").trim() +
                 "; imm: " +

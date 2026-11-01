@@ -123,6 +123,9 @@ jobs:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
           target: ${{ matrix.target }}
+          # Without a profile the emulator is 320 dp wide, narrower than the phones the suite is
+          # written for; a Pixel 6 is a common 411 dp phone.
+          profile: pixel_6
           disable-animations: true
           # One module per call: modules listed together run in parallel on the same device and disturb each other.
           script: |

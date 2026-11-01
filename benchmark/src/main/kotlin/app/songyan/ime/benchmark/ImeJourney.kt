@@ -134,7 +134,7 @@ object ImeJourney {
     ): Point {
         val before = candidateLines().size
         for (letter in letters) {
-            val key = checkNotNull(keyboard.keys[letter]) { "no key for '$letter'" }
+            val key = checkNotNull(currentKeys(keyboard)[letter]) { "no key for '$letter'" }
             tap(key)
             SystemClock.sleep(120)
         }
@@ -175,7 +175,7 @@ object ImeJourney {
             }
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
-            val switch = checkNotNull(keyboard.languageSwitch) { "no language key to switch to pinyin" }
+            val switch = checkNotNull(currentKeys(keyboard)[LANGUAGE_SWITCH]) { "no language key to switch to pinyin" }
             tap(switch)
             SystemClock.sleep(500)
         }
@@ -223,6 +223,16 @@ object ImeJourney {
 
     /** The test process outlives the app process, so a later show can reuse the boxes it logged. */
     private var lastKeys: Map<String, Point>? = null
+
+    /**
+     * The window can still move after the boxes settled (a late inset change on a slow emulator), so
+     * every tap uses the newest logged boxes; a stale box lands on another key.
+     */
+    private fun MacrobenchmarkScope.currentKeys(keyboard: Keyboard): Map<String, Point> {
+        val latest = parseKeys(perfLines()).takeIf { it.isNotEmpty() } ?: return keyboard.keys
+        lastKeys = latest
+        return latest
+    }
 
     private fun MacrobenchmarkScope.shell(command: String): String = device.executeShellCommand(command)
 

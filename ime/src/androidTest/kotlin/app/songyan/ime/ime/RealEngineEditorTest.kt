@@ -791,6 +791,44 @@ class RealEngineEditorTest {
             host.awaitField(" ")
         }
 
+    /**
+     * A quick thumb tap on the space bar rolls a little up or down while it stays on the bar; that
+     * tap must still confirm the composition, or the user has to press space a second time.
+     */
+    @Test
+    fun aSpaceTapThatDriftsUpOrDownOnTheBarConfirmsTheComposition() =
+        withHost(schema = "songyan_flypy") { host ->
+            host.start()
+            val density = host.context.resources.displayMetrics.density
+            val bar = host.keyRect(host.string(R.string.ime_space))
+            val drift = bar.height() * 0.35f
+            assertTrue("the drift must pass the touch slop", drift > 8f * density)
+            for (direction in listOf(-1f, 1f)) {
+                val before = host.text()
+                host.typeKeys("nihc")
+                host.awaitComposing()
+                val space = host.keyCenter(host.string(R.string.ime_space))
+                val start = SystemClock.uptimeMillis()
+                host.main {
+                    host.touch(start, MotionEvent.ACTION_DOWN, space)
+                    host.touch(
+                        start + 16L,
+                        MotionEvent.ACTION_MOVE,
+                        space.first to space.second + direction * drift,
+                        downTime = start,
+                    )
+                    host.touch(
+                        start + 40L,
+                        MotionEvent.ACTION_UP,
+                        space.first to space.second + direction * drift,
+                        downTime = start,
+                    )
+                }
+                host.awaitField(before + "你好")
+                assertFalse("one space ends the composition", host.editor.composing)
+            }
+        }
+
     @Test
     fun aHeldDeleteStopsOnceTheCompositionIsGone() =
         withHost { host ->

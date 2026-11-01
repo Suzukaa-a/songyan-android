@@ -571,12 +571,15 @@ internal fun KeyboardView.dragCursor(
     y: Float,
     eventTime: Long,
 ) {
-    // A hold that only jitters is still a space: the drag starts after a deliberate sideways move,
-    // while a slide off the bar (any direction past the touch slop) cancels it as before.
+    // A hold that only jitters is still a space: the drag starts after a deliberate sideways move.
+    // Only leaving the bar cancels the tap: a quick thumb tap rolls past the touch slop up or down
+    // while still on the bar, and dropping that space left the composition waiting for a second one.
     val sideways = abs(x - press.startX) > CURSOR_START_DP * density
     if (!sideways) {
         val slop = TOUCH_SLOP_DP * density
-        if (!press.held && abs(y - press.startY) > slop) press.moved = true
+        val hitBox = hitBounds.getOrNull(press.key)
+        val offKey = hitBox == null || !KeyGeometry.near(hitBox, x, y, slop)
+        if (!press.held && offKey) press.moved = true
         return
     }
     press.moved = true

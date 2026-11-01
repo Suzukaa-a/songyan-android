@@ -180,4 +180,18 @@ class BoundedYamlTest {
             assertTrue(error.reason.isNotEmpty())
         }
     }
+
+    @Test
+    fun aParseErrorNamesTheLineItPointsAt() {
+        val error =
+            try {
+                BoundedYaml.load("a: 1\nb: 2\nc: [3\nd: 4\n")
+                null
+            } catch (e: Exception) {
+                e
+            }
+        val line = BoundedYaml.errorLine(requireNotNull(error))
+        assertTrue("line $line", line != null && line in 3..5)
+        assertNull(BoundedYaml.errorLine(IllegalStateException("not yaml")))
+    }
 }

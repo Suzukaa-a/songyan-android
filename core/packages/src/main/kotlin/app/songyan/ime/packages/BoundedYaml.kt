@@ -4,6 +4,7 @@ import org.snakeyaml.engine.v2.api.LoadSettings
 import org.snakeyaml.engine.v2.api.lowlevel.Compose
 import org.snakeyaml.engine.v2.common.ScalarStyle
 import org.snakeyaml.engine.v2.constructor.StandardConstructor
+import org.snakeyaml.engine.v2.exceptions.MarkedYamlEngineException
 import org.snakeyaml.engine.v2.nodes.MappingNode
 import org.snakeyaml.engine.v2.nodes.Node
 import org.snakeyaml.engine.v2.nodes.ScalarNode
@@ -44,6 +45,18 @@ object BoundedYaml {
     class LimitExceeded(
         val reason: String,
     ) : Exception("YAML alias expansion rejected: " + reason)
+
+    /** The 1-based line a parse error from [load] points at, when the parser says. */
+    fun errorLine(error: Throwable): Int? {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is MarkedYamlEngineException) {
+                current.problemMark.orElse(null)?.let { return it.line + 1 }
+            }
+            current = current.cause.takeIf { it !== current }
+        }
+        return null
+    }
 
     /** Drop-in replacement for the library load call. */
     fun load(text: String): Any? {

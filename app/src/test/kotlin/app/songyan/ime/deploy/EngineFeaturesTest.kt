@@ -151,6 +151,37 @@ class EngineFeaturesTest {
         }
 
     @Test
+    fun turningTheGrammarModelOffStaysTheUsersChoiceOnTheNextDeployment() =
+        runBlocking {
+            val (dirs, engine) = setUp()
+            val off =
+                EngineFeatureSettings(
+                    typoCorrection = false,
+                    grammar = mapOf(id to EngineFeatureSettings.GrammarChoice(model = null)),
+                )
+
+            features(dirs, off).apply(engine)
+            val custom = File(dirs.work, "$id.custom.yaml").readText()
+            assertTrue(custom, custom.contains("grammar"))
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+
+            // Our own block in the work directory is not the scheme configuring a grammar model.
+            features(dirs, off).apply(engine)
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+        }
+
+    @Test
+    fun aCustomFileThatSetsTheGrammarModelItselfKeepsIt() =
+        runBlocking {
+            val own = "patch:\n  grammar/language: zh-hans-t-essay-bgw\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings(fuzzyPinyin = mapOf(id to listOf("n-l")))).apply(engine)
+
+            assertEquals(Availability.SCHEME, report(dirs).grammar)
+        }
+
+    @Test
     fun aPatchedInputMethodLibrimeRefusesFailsTheDeployment() {
         val (dirs, engine) = setUp()
         engine.compiles = false

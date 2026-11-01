@@ -237,16 +237,32 @@ internal class EngineFeatures(
     private fun isFuzzyRule(rule: String): Boolean =
         rule.startsWith("fuzz/") || (rule.startsWith("derive/") && rule.endsWith("/fuzz/"))
 
+    /** Whether the custom file sets the grammar model outside our own managed blocks, which a choice writes there. */
     private fun touchesGrammar(custom: ByteArray?): Boolean {
         val text = custom?.toString(Charsets.UTF_8) ?: return false
+        var inManaged = false
         return text.lineSequence().any { line ->
-            val content =
-                line
-                    .substringBefore('#')
-                    .trim()
-                    .removePrefix("- ")
-                    .trim()
-            content.startsWith("grammar") || content.startsWith("\"grammar") || content.startsWith("'grammar")
+            when {
+                inManaged -> {
+                    if (line == "# }") inManaged = false
+                    false
+                }
+                line.startsWith("# Rx: ") && line.endsWith(" {") -> {
+                    inManaged = true
+                    false
+                }
+                else -> {
+                    val content =
+                        line
+                            .substringBefore('#')
+                            .trim()
+                            .removePrefix("- ")
+                            .trim()
+                    content.startsWith("grammar") ||
+                        content.startsWith("\"grammar") ||
+                        content.startsWith("'grammar")
+                }
+            }
         }
     }
 

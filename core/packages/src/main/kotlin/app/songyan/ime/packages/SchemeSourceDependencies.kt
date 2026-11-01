@@ -67,9 +67,25 @@ internal class SchemeSourceDependencies(
         return ids.distinct()
     }
 
-    /** Every referenced path the tree does not contain, sorted. */
-    fun missing(): List<String> {
+    /**
+     * What the tree lacks. [missing] stops the import; [optional] does not: files reached only
+     * through a schema's `dependencies` (a reverse-lookup scheme librime builds when present) or a
+     * dictionary's `use_preset_vocabulary`. librime deploys the input method without them and only
+     * that lookup, or the preset vocabulary, is absent; packages such as 薄荷 and 白霜 rely on the
+     * shared `luna_pinyin` and `essay` that a desktop Rime installs.
+     */
+    class Closure(
+        val missing: List<String>,
+        val optional: List<String>,
+    )
+
+    /** Every referenced path the tree does not contain and the import cannot go without, sorted. */
+    fun missing(): List<String> = closure().missing
+
+    fun closure(): Closure {
         val missing = sortedSetOf<String>()
+        val optional = sortedSetOf<String>()
+        val softPending = ArrayList<String>()
         var selected: Set<String>? = null
         val listed = listedSchemaIds()
         if (listed != null) {
@@ -93,13 +109,23 @@ internal class SchemeSourceDependencies(
                 },
             )
         val visited = HashSet<String>()
+        var soft = false
 
         fun require(name: String) {
             if (!SchemeSourceCheck.safe(name)) throw Invalid(name, false, "unsafe dependency path: $name")
             if (name !in paths) {
-                missing += name
+                if (soft) optional += name else missing += name
             } else if (name !in visited) {
                 pending += name
+            }
+        }
+
+        fun requireSoft(name: String) {
+            if (soft) {
+                require(name)
+            } else {
+                if (!SchemeSourceCheck.safe(name)) throw Invalid(name, false, "unsafe dependency path: $name")
+                softPending += name
             }
         }
 
@@ -114,7 +140,14 @@ internal class SchemeSourceDependencies(
             require(path)
         }
 
-        while (pending.isNotEmpty()) {
+        while (true) {
+            if (pending.isEmpty()) {
+                // The required closure is complete; what only the optional edges reach comes after it.
+                if (soft || softPending.isEmpty()) break
+                soft = true
+                softPending.forEach(::require)
+                continue
+            }
             val path = pending.removeAt(pending.size - 1)
             if (!visited.add(path)) continue
             val data = read(path) ?: continue
@@ -127,7 +160,7 @@ internal class SchemeSourceDependencies(
                 yaml -> {
                     val source = if (path.endsWith(DICTIONARY_SUFFIX)) dictionaryHeader(text) else text
                     val root = parseYaml(path, source) ?: continue
-                    visitConfig(root, ::require)
+                    visitConfig(root, ::require, ::requireSoft)
                     luaReferences(root, ::require, ::requireModule)
                 }
 
@@ -149,7 +182,7 @@ internal class SchemeSourceDependencies(
                 }
             }
         }
-        return missing.toList()
+        return Closure(missing.toList(), (optional - missing).toList())
     }
 
     private fun parseConfig(
@@ -173,6 +206,7 @@ internal class SchemeSourceDependencies(
     private fun visitConfig(
         root: Any?,
         require: (String) -> Unit,
+        requireOptional: (String) -> Unit,
     ) {
         var budget = MAX_NODES
         val stack = ArrayDeque<Any?>()
@@ -196,14 +230,18 @@ internal class SchemeSourceDependencies(
                                     reference(value, require)
                                 }
                             "dictionary" -> scalar(value)?.let { if (it.isNotEmpty()) require(it + DICTIONARY_SUFFIX) }
-                            "use_preset_vocabulary" -> if (value == true) require(PRESET_VOCABULARY)
+                            "use_preset_vocabulary" -> if (value == true) requireOptional(PRESET_VOCABULARY)
                             "import_preset" -> scalar(value)?.let { if (it.isNotEmpty()) require("$it.yaml") }
                             "opencc_config" -> scalar(value)?.let { if (it.isNotEmpty()) require("opencc/$it") }
-                            "import_tables", "dependencies" ->
+                            "import_tables" ->
                                 (value as? List<*>)?.forEach { item ->
-                                    scalar(item)?.takeIf { it.isNotEmpty() }?.let {
-                                        require(it + if (key == "dependencies") SCHEMA_SUFFIX else DICTIONARY_SUFFIX)
-                                    }
+                                    scalar(item)?.takeIf { it.isNotEmpty() }?.let { require(it + DICTIONARY_SUFFIX) }
+                                }
+                            "dependencies" ->
+                                (value as? List<*>)?.forEach { item ->
+                                    scalar(
+                                        item,
+                                    )?.takeIf { it.isNotEmpty() }?.let { requireOptional(it + SCHEMA_SUFFIX) }
                                 }
                         }
                         if (value is Map<*, *> || value is List<*>) stack.addLast(value)

@@ -284,6 +284,35 @@ class SchemePackageImportTest {
     }
 
     @Test
+    fun aReverseLookupSchemeAndThePresetVocabularyMayLackWhatADesktopRimeShares() {
+        // 薄荷's stroke lookup needs luna_pinyin and essay.txt, which neither 薄荷 nor 白霜 ships.
+        val files =
+            arrayOf(
+                "default.yaml" to "schema_list:\n  - schema: mint\n".toByteArray(),
+                "mint.schema.yaml" to
+                    (
+                        "schema: {schema_id: mint, dependencies: [stroke, absent_lookup]}\n" +
+                            "translator: {dictionary: mint}\n"
+                    ).toByteArray(),
+                "mint.dict.yaml" to "---\nname: mint\nversion: '1'\n...\n".toByteArray(),
+                "stroke.schema.yaml" to
+                    (
+                        "schema: {schema_id: stroke, dependencies: [luna_pinyin]}\n" +
+                            "translator: {dictionary: stroke}\nreverse_lookup: {dictionary: luna_pinyin}\n"
+                    ).toByteArray(),
+                "stroke.dict.yaml" to "---\nname: stroke\nuse_preset_vocabulary: true\n...\n".toByteArray(),
+            )
+        assertEquals(listOf("mint"), prepare(zip(*files)).schemaIds)
+
+        // What the input method in the list needs itself still stops the import.
+        val error =
+            assertReason(SchemePackageImportError.Reason.MISSING_DEPENDENCY) {
+                prepare(zip(*files.filter { it.first != "mint.dict.yaml" }.toTypedArray()))
+            }
+        assertEquals(listOf("mint.dict.yaml"), error.paths)
+    }
+
+    @Test
     fun followsIncludesAndPatchesButNotOptionalOrLocalReferences() {
         val prepared =
             prepare(

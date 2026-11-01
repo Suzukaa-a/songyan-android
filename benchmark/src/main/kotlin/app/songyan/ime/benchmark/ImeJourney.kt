@@ -40,6 +40,8 @@ object ImeJourney {
         shell("cmd locale set-app-locales $PACKAGE --user 0 --locales zh-CN")
         // The first-launch notification prompt would cover the settings screen.
         shell("pm grant $PACKAGE android.permission.POST_NOTIFICATIONS")
+        // A slow emulator makes system apps miss their ANR deadline; the dialog would cover the app.
+        shell("settings put global hide_error_dialogs 1")
         shell("ime enable $IME_ID")
         shell("ime set $IME_ID")
         shell("setprop log.tag.$PERF_TAG DEBUG")
@@ -52,6 +54,8 @@ object ImeJourney {
      */
     fun MacrobenchmarkScope.openTryout() {
         repeat(OPEN_TRIES) {
+            // An ANR dialog that appeared before the setting took effect.
+            device.findObject(By.text("Wait"))?.click()
             startActivityAndWait()
             device.wait(Until.findObject(By.text("试打")), UI_TIMEOUT_MS)?.click()
             if (device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MS) != null) return

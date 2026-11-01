@@ -69,6 +69,11 @@ class CompanionOrderTest {
                         file.copyTo(File(build, file.name), overwrite = true)
                         return true
                     }
+
+                    override suspend fun composesKeys(
+                        schemaId: String,
+                        keys: String,
+                    ): Boolean = true
                 },
             )
             return DeployOutcome(true, build, "1.17.0", schemas.map { it.name.removeSuffix(".schema.yaml") }, null)

@@ -766,12 +766,12 @@ class KeyboardAdapterDisplayCapabilityTest {
         // A numeric alphabet folds for the 9-key layout only.
         assertNotNull(adapter.physicalFold("23456789abc", CompactFold.PHONE9))
         assertNull("no present letter, nothing to fold", adapter.physicalFold("23456789", CompactFold.PHONE9))
-        assertNull(adapter.physicalFold("23456789abc", CompactFold.MERGED14))
+        assertEquals("23456789", adapter.physicalFold("23456789abc", CompactFold.MERGED14)?.ignoredCharacters)
         // Uppercase needs its lowercase key declared; an uppercase-only alphabet cannot be typed.
         assertNotNull(adapter.physicalFold("abcA", CompactFold.MERGED14))
         assertNull(adapter.physicalFold("ABC", CompactFold.MERGED14))
         assertNull(adapter.physicalFold("", CompactFold.MERGED14))
-        assertNull(adapter.physicalFold("abcㄅ", CompactFold.MERGED14))
+        assertEquals("ㄅ", adapter.physicalFold("abcㄅ", CompactFold.MERGED14)?.ignoredCharacters)
         val bopomofoKeys =
             "schema: {schema_id: b, name: b}\nengine: {translators: [script_translator]}\n" +
                 "speller: {alphabet: \"ㄅㄆ\"}\ntranslator: {dictionary: d}\n"

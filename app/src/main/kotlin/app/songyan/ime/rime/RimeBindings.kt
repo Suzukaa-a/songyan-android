@@ -70,6 +70,25 @@ object RimeBindings {
             ): String? = engine.schemaValue(schemaId, key)
 
             override suspend fun deploySchema(file: File): Boolean = engine.deploySchemaFile(file)
+
+            // Every call goes through the engine's own dispatcher; nothing here touches librime directly.
+            override suspend fun composesKeys(
+                schemaId: String,
+                keys: String,
+            ): Boolean {
+                if (!engine.selectSchema(schemaId)) return false
+                try {
+                    for (character in keys) {
+                        val key = RimeKey.fromKeyValue(character.toString()) ?: return false
+                        engine.clearComposition()
+                        engine.processKey(key)
+                        if (engine.processKey(key).snapshot.input != "$character$character") return false
+                    }
+                    return true
+                } finally {
+                    engine.clearComposition()
+                }
+            }
         }
 
     /**

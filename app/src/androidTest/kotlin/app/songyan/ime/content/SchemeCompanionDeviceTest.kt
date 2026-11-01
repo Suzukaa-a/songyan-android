@@ -70,6 +70,28 @@ class SchemeCompanionDeviceTest {
         }
 
     /**
+     * A speller alphabet that declares tone digits and a backslash (as rime_wanxiang does) no longer
+     * limits the scheme to 26 keys: all three compact layouts exist, and the 9-key one still types
+     * the toneless spelling although the scheme also spells `yan9`.
+     */
+    @Test
+    fun aSchemeDeclaringToneDigitsStillGetsEveryCompactLayout() =
+        runBlocking {
+            val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage(toneKeys = true)))
+            assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
+            val record = requireNotNull(publisher.readActive())
+            scheme = record.sourceId
+
+            val adapters = adaptersOf(record)
+            assertEquals(
+                listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
+                adapters.keys.toList(),
+            )
+            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.MERGED14), "tabagu").contains(WORD))
+            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.PHONE9), "926744").contains(WORD))
+        }
+
+    /**
      * A package with two input methods is usable as soon as the first has its layouts; the deploy
      * process then publishes a complete generation on its own, without another request.
      */
@@ -173,7 +195,10 @@ class SchemeCompanionDeviceTest {
         }
     }
 
-    private fun schemePackage(vararg schemas: String = arrayOf(SCHEMA)): File {
+    private fun schemePackage(
+        vararg schemas: String = arrayOf(SCHEMA),
+        toneKeys: Boolean = false,
+    ): File {
         val files =
             linkedMapOf(
                 "demo-main/default.yaml" to "schema_list:\n" + schemas.joinToString("") { "  - schema: $it\n" },
@@ -183,7 +208,9 @@ class SchemeCompanionDeviceTest {
                 "schema:\n  schema_id: $schema\n  name: 配套演示\n" +
                 "engine:\n  processors:\n    - speller\n    - selector\n    - express_editor\n" +
                 "  segmentors:\n    - abc_segmentor\n  translators:\n    - script_translator\n" +
-                "speller:\n  alphabet: zyxwvutsrqponmlkjihgfedcba\ntranslator:\n  dictionary: $SCHEMA\n"
+                "speller:\n  alphabet: zyxwvutsrqponmlkjihgfedcba" +
+                (if (toneKeys) "1234567890\\\\\n  algebra:\n    - derive/^(yan)$/yan9/\n" else "\n") +
+                "translator:\n  dictionary: $SCHEMA\n"
         }
         files["demo-main/$SCHEMA.dict.yaml"] =
             "---\nname: $SCHEMA\nversion: \"1\"\nsort: by_weight\n...\n$WORD\tyan shi\t1\n言\tyan\t1\n"

@@ -248,8 +248,15 @@ class KeyboardAdapterProducerContractTest {
         assertTrue("no partner letter, no exact token", sparse.rules.isEmpty())
         assertTrue(sparse.typeableAlphabet.contains("b"))
         assertNull(adapter.physicalFold("", CompactFold.MERGED14))
-        assertNull(adapter.physicalFold("abc中", CompactFold.MERGED14))
-        assertNull(adapter.physicalFold("ab c", CompactFold.MERGED14))
+        assertNull(adapter.physicalFold("中", CompactFold.MERGED14))
+        assertNull(adapter.physicalFold("23456789", CompactFold.PHONE9))
+        // A key the compact layout never sends is ignored, not folded and not accepted.
+        for (alphabet in listOf("abc中", "ab c")) {
+            val fold = requireNotNull(adapter.physicalFold(alphabet, CompactFold.MERGED14))
+            val expected = alphabet.filter { it !in "abc" }
+            assertEquals(String(expected.toSet().sorted().toCharArray()), fold.ignoredCharacters)
+            assertFalse(fold.typeableAlphabet.any { it in fold.ignoredCharacters })
+        }
 
         val rimeAlphabet = "zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`"
         val caseAliases = requireNotNull(adapter.physicalFold(rimeAlphabet, CompactFold.MERGED14))
@@ -258,7 +265,11 @@ class KeyboardAdapterProducerContractTest {
         assertTrue("uppercase fixpoints still need a compact-key derive", caseAliases.rules.contains("derive/Q/q/"))
         assertTrue(caseAliases.typeableAlphabet.contains("W"))
         assertTrue(caseAliases.typeableAlphabet.contains("`"))
-        assertNull(adapter.physicalFold("abcZ", CompactFold.MERGED14))
+        // An uppercase-only key is ignored; an uppercase-only alphabet has nothing to fold.
+        val unpaired = requireNotNull(adapter.physicalFold("abcZ", CompactFold.MERGED14))
+        assertEquals("Z", unpaired.ignoredCharacters)
+        assertFalse(unpaired.rules.any { it.startsWith("derive/Z/") })
+        assertFalse(unpaired.typeableAlphabet.contains("Z"))
         assertNull(adapter.physicalFold("ABC", CompactFold.MERGED14))
     }
 
@@ -286,19 +297,17 @@ class KeyboardAdapterProducerContractTest {
                 )
             adapter.generate(source, "sparse_test", CompactFold.MERGED14, null, projection)
         }
-        val bad = tableSource("bad_test", "abc中").toByteArray()
+        val bad = tableSource("bad_test", "中文").toByteArray()
         assertEquals(
-            CompactSchemaAdapter.Adaptability.Unsupported(
-                "speller alphabet is not a foldable latin/numeric input alphabet",
-            ),
+            CompactSchemaAdapter.Adaptability.Unsupported("speller alphabet has no lowercase latin key to fold"),
             adapter.adaptability(bad, "bad_test"),
         )
         // A numeric key space is typeable on the 9-key layout only, so only that companion is generated.
         val numericAlphabet = "23456789abcdefghijklmnopqrstuvwxyz"
         val numeric = tableSource("numeric_test", numericAlphabet).toByteArray()
         assertEquals(CompactSchemaAdapter.Adaptability.Adaptable, adapter.adaptability(numeric, "numeric_test"))
-        assertNull(adapter.physicalFold(numericAlphabet, CompactFold.MERGED14))
-        assertNotNull(adapter.physicalFold(numericAlphabet, CompactFold.PHONE9))
+        assertEquals("23456789", adapter.physicalFold(numericAlphabet, CompactFold.MERGED14)?.ignoredCharacters)
+        assertEquals("", adapter.physicalFold(numericAlphabet, CompactFold.PHONE9)?.ignoredCharacters)
     }
 
     @Test

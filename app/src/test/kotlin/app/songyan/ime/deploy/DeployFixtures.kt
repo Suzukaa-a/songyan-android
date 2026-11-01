@@ -121,6 +121,11 @@ internal object DeployFixtures {
                     ): String? = null
 
                     override suspend fun deploySchema(file: File): Boolean = false
+
+                    override suspend fun composesKeys(
+                        schemaId: String,
+                        keys: String,
+                    ): Boolean = true
                 },
             )
             return DeployOutcome(

@@ -32,8 +32,10 @@ class KeyboardCompanionsTest {
         override val compiledDir: File,
         var projectionBytes: ByteArray? = projection,
         var compiles: Boolean = true,
+        var composes: (String) -> Boolean = { true },
     ) : DeployedEngine {
         val deployed = mutableListOf<String>()
+        val probed = mutableListOf<Pair<String, String>>()
 
         override suspend fun sourceProjection(schemaId: String): ByteArray? = projectionBytes
 
@@ -55,6 +57,14 @@ class KeyboardCompanionsTest {
             if (!compiles) return false
             file.copyTo(File(compiledDir, file.name), overwrite = true)
             return true
+        }
+
+        override suspend fun composesKeys(
+            schemaId: String,
+            keys: String,
+        ): Boolean {
+            probed += schemaId to keys
+            return composes(schemaId)
         }
     }
 
@@ -91,6 +101,24 @@ class KeyboardCompanionsTest {
             }
             assertEquals(3, engine.deployed.size)
             assertTrue(sourceDir.listFiles().orEmpty().isEmpty())
+        }
+
+    @Test
+    fun aNineKeyCompanionWhoseDigitsAreSwallowedIsSkipped() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp()
+            val nine = CompactSchemaAdapter.identifier(source, requireNotNull(KeyboardLayoutKind.PHONE9.compactFold))
+            engine.composes = { it != nine }
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(engine)
+
+            assertEquals(
+                listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18),
+                EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)).map { it.layout },
+            )
+            // Only the 9-key layout is probed, with exactly the keys it sends.
+            assertEquals(listOf(nine to "23456789"), engine.probed)
+            assertFalse(File(engine.compiledDir, "$nine.schema.yaml").exists())
         }
 
     @Test

@@ -43,6 +43,11 @@ class EngineFeaturesTest {
             deployed += file
             return compiles
         }
+
+        override suspend fun composesKeys(
+            schemaId: String,
+            keys: String,
+        ): Boolean = true
     }
 
     private class Dirs(

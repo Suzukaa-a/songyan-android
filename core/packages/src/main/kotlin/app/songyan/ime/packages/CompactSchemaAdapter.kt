@@ -28,7 +28,7 @@ import kotlinx.serialization.json.jsonObject
  */
 object CompactSchemaAdapter {
     /** Generation / adapter behaviour version; any change to generated artifacts must bump it. */
-    const val DISPLAY_GENERATOR_VERSION = 9
+    const val DISPLAY_GENERATOR_VERSION = 10
 
     /** The wire version of `keyboard_adapter` (iOS `SchemaDisplayCapability.supportedVersion`). */
     private const val DISPLAY_WIRE_VERSION = app.songyan.ime.keyboard.display.SchemaDisplayCapability.SUPPORTED_VERSION
@@ -209,7 +209,7 @@ object CompactSchemaAdapter {
             KeyboardLayoutKind.entries.mapNotNull { it.compactFold }.any {
                 physicalFold(alphabet, it) != null
             }
-        if (!folds) return Adaptability.Unsupported("speller alphabet is not a foldable latin/numeric input alphabet")
+        if (!folds) return Adaptability.Unsupported("speller alphabet has no lowercase latin key to fold")
         return Adaptability.Adaptable
     }
 
@@ -444,37 +444,40 @@ object CompactSchemaAdapter {
         val sourceAlphabet: String,
         /** What the companion must accept so compact keys and direct source codes re-syllabify. */
         val typeableAlphabet: String,
+        /** Declared source characters the layout never sends, sorted; neither folded nor accepted. */
+        val ignoredCharacters: String,
     )
 
     /**
      * The single physical-alphabet contract consumed by both [adaptability] and generation. Null
-     * when the alphabet is empty or holds a character outside the foldable Latin set, the
-     * pass-through punctuation (and 2-9 for the 9-key fold). An uppercase letter is accepted only
-     * when its lowercase key is declared too.
+     * only when the source declares no lowercase Latin letter. Every other declared character is
+     * typeable (lowercase letters, pass-through punctuation, 2-9 on the 9-key fold, uppercase whose
+     * lowercase key is declared too) or ignored: tone digits, `\`, an uppercase-only key or a
+     * non-Latin character are never sent by a compact layout, so the companion neither folds nor
+     * accepts them and spellings needing them stay unreachable there.
      */
     fun physicalFold(
         sourceAlphabet: String,
         compactFold: CompactFold,
     ): PhysicalFold? {
-        if (sourceAlphabet.isEmpty()) return null
         val nineKey = compactFold.isPhoneDigits
-        val foldable = HashSet<Char>()
-        foldable.addAll(FOLDABLE_LETTERS.toList())
-        foldable.addAll(FOLDABLE_PUNCTUATION.toList())
-        if (nineKey) foldable.addAll("23456789".toList())
         val source = sourceAlphabet.toSet()
         val uppercaseLetters = FOLDABLE_LETTERS.uppercase().toSet()
-        val acceptable =
-            sourceAlphabet.all { character ->
-                if (character in foldable) return@all true
-                if (character !in uppercaseLetters) return@all false
-                character.lowercaseChar() in source
-            }
-        if (!acceptable) return null
-
-        val foldMap = compactFold.map
         val present = FOLDABLE_LETTERS.filter { it in sourceAlphabet }
         if (present.isEmpty()) return null
+        val passThrough = HashSet<Char>(FOLDABLE_PUNCTUATION.toList())
+        if (nineKey) passThrough.addAll("23456789".toList())
+        val ignored =
+            sourceAlphabet.filter { character ->
+                when {
+                    character in present -> false
+                    character in passThrough -> false
+                    character !in uppercaseLetters -> true
+                    else -> character.lowercaseChar() !in source
+                }
+            }
+
+        val foldMap = compactFold.map
         // A key letter needs an exact token only when another present letter shares its key.
         val sharedKeys = present.mapNotNull { letter -> foldMap[letter]?.takeIf { it != letter } }.toSet()
         val exactTokens =
@@ -489,7 +492,7 @@ object CompactSchemaAdapter {
             val uppercase = letter.uppercaseChar()
             if (uppercase in source) rules.add("derive/$uppercase/$folded/")
         }
-        val declaredUppercase = source.filter { it in uppercaseLetters }
+        val declaredUppercase = source.filter { it in uppercaseLetters && it !in ignored }
         val typeable =
             (
                 compactFold.keysSent + present.toSet() + exactTokens.map { it.second } +
@@ -508,6 +511,7 @@ object CompactSchemaAdapter {
                 },
             sourceAlphabet = sourceAlphabet,
             typeableAlphabet = typeable,
+            ignoredCharacters = ignored.toSet().sorted().joinToString(""),
         )
     }
 
@@ -559,6 +563,7 @@ object CompactSchemaAdapter {
         canonicalTelephoneDerive: Boolean,
         prependAlgebra: List<String>?,
         extraAlphabet: String,
+        eraseSourceDigitSpellings: Boolean = false,
     ): ByteArray {
         val failure = "scheme is not an auto-adaptable pinyin or double-pinyin configuration"
         val parsed = parseCompiled(compiled, sourceID, ProducerClass.SCRIPT, failure)
@@ -576,8 +581,6 @@ object CompactSchemaAdapter {
             physicalFold(alphabet, compactFold)
                 ?: invalid("scheme alphabet cannot be adapted to the compact keyboard layout")
         val presentLetters = FOLDABLE_LETTERS.filter { it in alphabet }
-        // Non-letter characters the source declares (pass-through punctuation).
-        val sourceExtras = alphabet.filter { it !in presentLetters }
         val mergeSource = presentLetters
         val mergeTarget = presentLetters.map { foldMap[it] ?: it }.joinToString("")
         val target = identifier(sourceID, compactFold)
@@ -596,6 +599,11 @@ object CompactSchemaAdapter {
         val preserveCanonical = nineKey && canonicalTelephoneDerive
         // The alias layer goes BEFORE the untouched source algebra so every source key stays identical.
         if (prependAlgebra != null) algebra.addAll(0, prependAlgebra)
+        if (nineKey && eraseSourceDigitSpellings) {
+            // Before the fold: once letters become digits, a source digit could no longer be told
+            // apart from a telephone key.
+            algebra.add(SOURCE_DIGIT_SPELLING_ERASE)
+        }
         if (preserveCanonical) {
             algebra.addAll(TELEPHONE_DERIVES)
         } else if (!nineKey) {
@@ -611,7 +619,7 @@ object CompactSchemaAdapter {
         }
         speller["algebra"] = algebra
         val typeable =
-            (fold.typeableAlphabet.toSet() + sourceExtras.toSet() + extraAlphabet.toSet()).sorted().joinToString("")
+            (fold.typeableAlphabet.toSet() + extraAlphabet.toSet()).sorted().joinToString("")
         speller["alphabet"] = typeable
         speller["initials"] = typeable
         root["speller"] = speller
@@ -738,6 +746,9 @@ object CompactSchemaAdapter {
         root[producer.namespace] = translator
 
         val algebra = ArrayList(root["speller"].asStringMap()?.get("algebra").asStringList() ?: emptyList())
+        if (compactFold.isPhoneDigits && erasesSourceDigitSpellings(projection)) {
+            algebra.add(SOURCE_DIGIT_SPELLING_ERASE)
+        }
         algebra.addAll(fold.rules)
         val speller = root["speller"].asStringMap()?.toMutableMap() ?: linkedMapOf()
         speller["algebra"] = algebra
@@ -831,6 +842,44 @@ object CompactSchemaAdapter {
     }
 
     private val NUMERIC_DIGITS = "23456789".toSet()
+
+    /**
+     * Removes, ahead of a 9-key fold, every spelling carrying a source digit. On the 9-key layout
+     * the digits are the letter keys, so a source tone digit would read as a key press once the
+     * letters fold (`hao9` would become the code of `hao` followed by w/x/y/z). Alias spellings
+     * (`90...`) are kept for the rewrite; they contain `0`, which no compact key sends.
+     */
+    const val SOURCE_DIGIT_SPELLING_ERASE = "erase/^(?!$TOKEN_ALIAS_SENTINEL[0-9]*$).*[0-9].*$/"
+
+    /**
+     * Whether the 9-key companion must apply [SOURCE_DIGIT_SPELLING_ERASE]: the source spells with
+     * digits but is not itself a telephone-digit code space, whose digits already mean the keys.
+     */
+    fun erasesSourceDigitSpellings(projection: SourceProjection): Boolean {
+        if (isNumericCodeSource(projection)) return false
+        return projection.syllables.any { syllable ->
+            syllable.spellings.any { spelling -> spelling.text.any { it in '0'..'9' } }
+        }
+    }
+
+    /**
+     * Whether typing on the compact layout can reach at least one source spelling: one made only of
+     * keys the layout sends (and digit-free when the 9-key companion erases digit spellings).
+     */
+    fun hasReachableSpelling(
+        projection: SourceProjection,
+        fold: PhysicalFold,
+        compactFold: CompactFold,
+    ): Boolean {
+        val keys = fold.sourceAlphabet.toSet() - fold.ignoredCharacters.toSet()
+        val digitsErased = compactFold.isPhoneDigits && erasesSourceDigitSpellings(projection)
+        return projection.syllables.any { syllable ->
+            syllable.spellings.any { spelling ->
+                spelling.text.isNotEmpty() &&
+                    spelling.text.all { it in keys && !(digitsErased && it in '0'..'9') }
+            }
+        }
+    }
 
     /**
      * Whether every primary token has a final normal non-correction spelling that is a bare 2-9
@@ -1408,6 +1457,7 @@ object CompactSchemaAdapter {
                 canonicalTelephoneDerive = preserveCanonical,
                 prependAlgebra = prependAlgebra,
                 extraAlphabet = if (aliasRewrite) tokenAliasCharacters(sourceProjection) else "",
+                eraseSourceDigitSpellings = sourceProjection?.let(::erasesSourceDigitSpellings) ?: false,
             )
         val target = identifier(sourceID, compactFold)
         // Authorized only when the companion's own baked layer is exactly what was intended.
@@ -1493,11 +1543,13 @@ object CompactSchemaAdapter {
         }
 
         /**
-         * The companion schema file for [fold], or null when the fold cannot type this source's own
-         * alphabet (a numeric key space only fits the 9-key layout), so the layout is skipped.
+         * The companion schema file for [fold], or null when typing on that layout cannot reach any
+         * of this source's spellings (a numeric key space only fits the 9-key layout), so the
+         * layout is skipped.
          */
         fun companion(fold: CompactFold): ByteArray? {
-            if (physicalFold(projection.alphabet, fold) == null) return null
+            val physical = physicalFold(projection.alphabet, fold) ?: return null
+            if (!hasReachableSpelling(projection, physical, fold)) return null
             return generate(
                 compiled,
                 sourceID,

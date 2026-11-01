@@ -137,6 +137,14 @@ internal class KeyboardCompanions(
             if (engine.schemaValue(target, "schema/schema_id") != target) {
                 throw DeployException("the compiled companion $target does not load")
             }
+            // Only the 9-key layout sends digits, which a scheme's own processors may claim (a Lua
+            // processor that picks candidates with them); letter keys are ones the source composes with.
+            if (fold.isPhoneDigits && !engine.composesKeys(target, fold.keysSent.sorted().joinToString(""))) {
+                Log.w(TAG, "$source cannot use the ${fold.id}-key layout: it uses digit keys for other functions")
+                File(engine.compiledDir, "$target.schema.yaml").delete()
+                file.delete()
+                continue
+            }
             result += adapter(source, target, layout, engine)
         }
         return result

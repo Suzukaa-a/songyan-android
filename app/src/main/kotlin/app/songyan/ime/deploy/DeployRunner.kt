@@ -41,6 +41,16 @@ interface DeployedEngine {
 
     /** Compiles one schema file into [compiledDir] without listing it in `schema_list`. */
     suspend fun deploySchema(file: File): Boolean
+
+    /**
+     * Whether every key of [keys], pressed twice in a row on the compiled schema [schemaId], reaches
+     * its composition as typed. The second press arrives while a candidate menu may be open, which
+     * is when a scheme's own processors can claim a digit. Leaves no composition behind.
+     */
+    suspend fun composesKeys(
+        schemaId: String,
+        keys: String,
+    ): Boolean
 }
 
 data class DeployOutcome(

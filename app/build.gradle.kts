@@ -93,6 +93,18 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+    // A GitHub release offers one APK per ABI plus a universal one, since an app bundle only means
+    // something to Play; everyday builds keep a single APK.
+    if (providers.gradleProperty("songyan.abiSplits").orNull == "true") {
+        splits {
+            abi {
+                isEnable = true
+                reset()
+                include("arm64-v8a", "armeabi-v7a", "x86_64")
+                isUniversalApk = true
+            }
+        }
+    }
     bundle {
         abi { enableSplit = true }
         language {

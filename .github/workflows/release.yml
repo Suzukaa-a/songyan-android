@@ -2,7 +2,7 @@ name: Release
 
 # Pushing a tag vX.Y.Z (or vX.Y.Z-suffix, e.g. v0.2.0-dev.1, for a pre-release) on a commit of main
 # waits for that commit's CI run on main to pass (it is not run a second time), then builds the
-# signed release APK and AAB and publishes a GitHub Release. A tag with a
+# signed release APKs (one per ABI plus a universal one) and publishes a GitHub Release. A tag with a
 # suffix is marked as a pre-release: that is the dev channel.
 #
 # Repository secrets: SONGYAN_KEYSTORE_BASE64 (the keystore file, base64), SONGYAN_KEYSTORE_PASSWORD,
@@ -134,32 +134,36 @@ jobs:
           chmod 600 "${keystore}"
           echo "SONGYAN_KEYSTORE_FILE=${keystore}" >>"${GITHUB_ENV}"
       # All ABIs: no -Psongyan.abis.
-      - name: Build the signed release APK and AAB
+      - name: Build the signed release APKs
         env:
           SONGYAN_KEYSTORE_PASSWORD: ${{ secrets.SONGYAN_KEYSTORE_PASSWORD }}
           SONGYAN_KEY_ALIAS: ${{ secrets.SONGYAN_KEY_ALIAS }}
           SONGYAN_KEY_PASSWORD: ${{ secrets.SONGYAN_KEY_PASSWORD }}
         run: |
-          ./gradlew --console=plain assembleRelease bundleRelease \
+          ./gradlew --console=plain assembleRelease -Psongyan.abiSplits=true \
             "-Psongyan.versionName=${VERSION}" "-Psongyan.versionCode=${VERSION_CODE}"
-      - name: Collect and verify the artifacts
+      - name: Collect and verify the APKs
         run: |
           build_tools="${ANDROID_HOME}/build-tools/37.0.0"
           mkdir -p dist
-          cp app/build/outputs/apk/release/*.apk "dist/Songyan-${VERSION}.apk"
-          cp app/build/outputs/bundle/release/*.aab "dist/Songyan-${VERSION}.aab"
-          apk="dist/Songyan-${VERSION}.apk"
-          # A debug-signed or unsigned package must never be published as a release.
-          certs="$("${build_tools}/apksigner" verify --verbose --print-certs "${apk}")"
-          echo "${certs}"
-          ! grep -q "CN=Android Debug" <<<"${certs}" \
-            || { echo "::error::the APK is signed with the debug key"; exit 1; }
-          jarsigner -verify "dist/Songyan-${VERSION}.aab"
-          badging="$("${build_tools}/aapt2" dump badging "${apk}" | head -1)"
-          echo "${badging}"
-          [[ "${badging}" == *"versionCode='${VERSION_CODE}'"* && "${badging}" == *"versionName='${VERSION}'"* ]] \
-            || { echo "::error::the APK does not carry version ${VERSION} (${VERSION_CODE})"; exit 1; }
-          scripts/check-native-engine.sh "${apk}"
+          for abi in arm64-v8a armeabi-v7a x86_64 universal; do
+            apk="dist/Songyan-${VERSION}-${abi}.apk"
+            cp "app/build/outputs/apk/release/app-${abi}-release.apk" "${apk}"
+            # A debug-signed or unsigned package must never be published as a release.
+            certs="$("${build_tools}/apksigner" verify --verbose --print-certs "${apk}")"
+            echo "${certs}"
+            ! grep -q "CN=Android Debug" <<<"${certs}" \
+              || { echo "::error::${apk} is signed with the debug key"; exit 1; }
+            badging="$("${build_tools}/aapt2" dump badging "${apk}" | head -1)"
+            echo "${badging}"
+            [[ "${badging}" == *"versionCode='${VERSION_CODE}'"* && "${badging}" == *"versionName='${VERSION}'"* ]] \
+              || { echo "::error::${apk} does not carry version ${VERSION} (${VERSION_CODE})"; exit 1; }
+            if [[ "${abi}" == universal ]]; then
+              scripts/check-native-engine.sh "${apk}"
+            else
+              scripts/check-native-engine.sh "${apk}" --abi "${abi}"
+            fi
+          done
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

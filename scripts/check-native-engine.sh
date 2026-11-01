@@ -155,6 +155,10 @@ def check_apk(artifact, llvm, pinned_commit, jni_required):
     with tempfile.TemporaryDirectory(prefix="native-check-", dir=cache) as temporary:
         directory = Path(temporary)
         with zipfile.ZipFile(artifact) as package:
+            names = set(package.namelist())
+            for abi in abis:
+                if f"lib/{abi}/libsongyan_rime.so" not in names:
+                    raise ValueError(f"{artifact}: missing lib/{abi}/libsongyan_rime.so.")
             for entry in package.infolist():
                 if not entry.filename.startswith("lib/") or not entry.filename.endswith(".so"):
                     continue

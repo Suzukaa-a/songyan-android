@@ -134,6 +134,7 @@ object ImeJourney {
         while (SystemClock.uptimeMillis() < deadline) {
             attempts++
             val ok = runCatching { type(keyboard, listOf("n", "i")) }.isSuccess
+            if (!ok && attempts <= 2) saveScreenshot("compose-attempt$attempts")
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
             val switch = checkNotNull(keyboard.languageSwitch) { "no language key to switch to pinyin" }
@@ -143,7 +144,7 @@ object ImeJourney {
         saveScreenshot("compose-failure")
         error(
             "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
-                perfLines().filter { "key_us" !in it }.takeLast(15) +
+                perfLines().filter { "key_bound" !in it }.takeLast(15) +
                 "; ime: " + shell("settings get secure default_input_method").trim() +
                 "; app log: " +
                 shell(

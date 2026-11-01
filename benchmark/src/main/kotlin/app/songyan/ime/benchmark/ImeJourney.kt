@@ -163,7 +163,8 @@ object ImeJourney {
             if (!ok && attempts <= 2) saveScreenshot("compose-attempt$attempts")
             if (!ok) {
                 val text = device.findObject(By.clazz("android.widget.EditText"))?.text
-                trail += "#$attempts text=$text cand=${candidateLines().size}"
+                trail +=
+                    "#$attempts text=$text cand=${candidateLines().size} n=${keyboard.keys["n"]} lang=${keyboard.languageSwitch}"
             }
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
@@ -176,6 +177,9 @@ object ImeJourney {
             "the keyboard does not compose pinyin after $attempts attempts $trail; perf log: " +
                 perfLines().filter { "key_bound" !in it }.takeLast(15) +
                 "; ime: " + shell("settings get secure default_input_method").trim() +
+                "; n lines: " + perfLines().filter { " value=n " in it }.map { it.substringAfter("value=") } +
+                "; window: " +
+                shell("dumpsys window windows").lines().filter { "InputMethod" in it || "mFrame" in it }.take(12) +
                 "; imm: " +
                 shell("dumpsys input_method").lines().filter { NOISE_FREE.containsMatchIn(it) }.take(25) +
                 "; warnings: " +

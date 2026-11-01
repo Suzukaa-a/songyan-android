@@ -53,6 +53,10 @@ private fun codeRes(code: LayoutInvalidCode): Int =
         LayoutInvalidCode.LONG_PRESS_REQUIRES_LABEL -> R.string.layout_error_long_press_label
         LayoutInvalidCode.SPLIT_GAP_FRACTION_OUT_OF_RANGE -> R.string.layout_error_split_gap
         LayoutInvalidCode.SPLIT_BREAK_OUT_OF_RANGE -> R.string.layout_error_split_break
+        LayoutInvalidCode.SPLIT_HALVES_ROW_COUNT_MISMATCH,
+        LayoutInvalidCode.SPLIT_HALF_EMPTY,
+        -> R.string.layout_error_split_halves
+        LayoutInvalidCode.SPLIT_HALVES_ONLY_ON_LAYOUT -> R.string.layout_error_split_halves_page
         LayoutInvalidCode.RESOURCE_BUDGET_EXCEEDED,
         LayoutInvalidCode.CATALOG_TOTAL_EXCEEDED,
         LayoutInvalidCode.REGISTRY_PAGE_LIMIT,

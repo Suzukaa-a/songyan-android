@@ -18,6 +18,11 @@ data class KeySelection(
 data class GridEdit(
     val rows: List<LayoutRow>,
     val selection: KeySelection,
+    /**
+     * For an edit that adds, removes or reorders rows: the old index of every new row (null for a row
+     * that is new). Null when every row stayed in place, so a companion arrangement can follow.
+     */
+    val rowOrigin: List<Int?>? = null,
 )
 
 /**
@@ -52,7 +57,8 @@ object KeyGridEditing {
                 (at.row - 1).coerceAtLeast(0)
             }
         val key = if (next.size == rows.size) at.key.coerceAtMost(next[row].keys.lastIndex) else 0
-        return GridEdit(next, KeySelection(row.coerceAtMost(next.lastIndex), key))
+        val origin = if (next.size == rows.size) null else rows.indices.filter { it != at.row }
+        return GridEdit(next, KeySelection(row.coerceAtMost(next.lastIndex), key), origin)
     }
 
     fun moveKey(
@@ -72,7 +78,10 @@ object KeyGridEditing {
     fun addRow(
         rows: List<LayoutRow>,
         template: LayoutKey,
-    ): GridEdit? = LayoutRowsEditing.addRow(rows, template)?.let { GridEdit(it, KeySelection(it.lastIndex, 0)) }
+    ): GridEdit? =
+        LayoutRowsEditing.addRow(rows, template)?.let {
+            GridEdit(it, KeySelection(it.lastIndex, 0), rows.indices.toList() + null)
+        }
 
     fun moveRow(
         rows: List<LayoutRow>,
@@ -80,7 +89,8 @@ object KeyGridEditing {
         delta: Int,
     ): GridEdit? =
         LayoutRowsEditing.moveRow(rows, at.row, delta)?.let {
-            GridEdit(it, KeySelection(at.row + delta, at.key))
+            val origin = rows.indices.toMutableList<Int?>().also { order -> order.swap(at.row, at.row + delta) }
+            GridEdit(it, KeySelection(at.row + delta, at.key), origin)
         }
 
     /** Replaces the selected key; an address that is gone is a no-op. */
@@ -169,4 +179,13 @@ object JumpKeyEditing {
         val label = if (generated || previous == null) pageLabel(target.page) else key.label
         return key.copy(label = label, action = LayoutAction.layoutPageSwitch(target))
     }
+}
+
+private fun <T> MutableList<T>.swap(
+    a: Int,
+    b: Int,
+) {
+    val held = this[a]
+    this[a] = this[b]
+    this[b] = held
 }

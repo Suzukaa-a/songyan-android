@@ -61,6 +61,8 @@ fun LayoutEditorScreen(
         return
     }
     val copySuffix = stringResource(R.string.layout_copy_suffix)
+    // The gap size while its slider moves, so the split view's preview follows it before it is saved.
+    var liveGap by remember { mutableStateOf<Float?>(null) }
     EditorFrame(
         title = stringResource(R.string.layout_editor_title),
         name = current.layout.name,
@@ -72,12 +74,44 @@ fun LayoutEditorScreen(
         onSave = viewModel::save,
         onSaveAsCopy = { viewModel.saveAsCopy(current.layout.name + copySuffix) },
     ) {
+        val inSplit = current.splitView && !current.isNineKey
         GridSections(
-            rows = current.letterRows,
+            rows = current.editRows,
             selection = current.selection,
             selectedKey = current.selectedKey,
             allowCode = true,
             split = current.layout.split,
+            activationOnly = true,
+            cuts = if (inSplit) current.splitCuts else null,
+            gapFraction =
+                current.layout.split.let { split ->
+                    if (split == null || split.automaticGap) {
+                        LayoutSplitConfiguration.DEFAULT_GAP_FRACTION.toFloat()
+                    } else {
+                        liveGap ?: split.gapFraction.toFloat()
+                    }
+                },
+            beforeGrid = {
+                if (!current.isNineKey) {
+                    ArrangementChoice(
+                        split = inSplit,
+                        explicit = current.hasExplicitSplit,
+                        onChange = { on -> viewModel.update { it.withSplitView(on) } },
+                    )
+                }
+            },
+            splitControls = {
+                SplitViewControls(
+                    split = current.layout.split,
+                    cuts = current.splitCuts,
+                    sizes = current.splitLetterRows.map { it.keys.size },
+                    explicit = current.hasExplicitSplit,
+                    onSplit = { split -> viewModel.update { it.withSplit(split) } },
+                    onCut = { row, delta -> viewModel.update { it.moveSplitCut(row, delta) } },
+                    onRestore = { viewModel.update { it.restoreAutomaticSplit() } },
+                    onLive = { liveGap = it },
+                )
+            },
             onSelect = { at -> viewModel.update { it.select(at) } },
             onEdit = { edit -> viewModel.update { it.apply(edit) } },
             onKey = { key -> viewModel.update { it.replaceSelectedKey(key) } },
@@ -325,6 +359,48 @@ private fun EditorFrame(
     }
 }
 
+/**
+ * Which arrangement the grid shows: the keyboard as it is whole, or as it is when split (left half,
+ * gap, right half). The split one is its own copy of the keys once edited.
+ */
+@Composable
+private fun ArrangementChoice(
+    split: Boolean,
+    explicit: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    SectionHeader(stringResource(R.string.layout_editor_arrangement_section))
+    Row(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = !split,
+            onClick = { onChange(false) },
+            label = { Text(stringResource(R.string.layout_editor_arrangement_whole)) },
+        )
+        FilterChip(
+            selected = split,
+            onClick = { onChange(true) },
+            label = { Text(stringResource(R.string.layout_editor_arrangement_split)) },
+        )
+    }
+    val note =
+        when {
+            split -> R.string.layout_editor_arrangement_split_note
+            explicit -> R.string.layout_editor_arrangement_own_note
+            else -> null
+        }
+    if (note != null) {
+        Text(
+            text = stringResource(note),
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
 /** The key grid, the selected key's fields and the split settings: the part both editors share. */
 @Composable
 private fun GridSections(
@@ -337,6 +413,14 @@ private fun GridSections(
     onEdit: (GridEdit?) -> Unit,
     onKey: (LayoutKey) -> Unit,
     onSplit: (LayoutSplitConfiguration?) -> Unit,
+    /** Set while the grid shows the split arrangement: the keys of each row left of the gap. */
+    cuts: List<Int>? = null,
+    /** The gap the split arrangement is drawn with, as a share of the width. */
+    gapFraction: Float = 0f,
+    /** Shown above the grid (the whole / split choice of a main layout). */
+    beforeGrid: @Composable () -> Unit = {},
+    /** What the split arrangement adds under its grid; the activation choice alone is shown otherwise. */
+    splitControls: @Composable () -> Unit = {},
     /** The grid cannot gain, lose or move keys (the nine-key grid): only what a key shows and does is edited. */
     fixedStructure: Boolean = false,
     /** Moving this resets the selected key's text fields. */
@@ -349,23 +433,36 @@ private fun GridSections(
     allowJump: Boolean = false,
     /** A page with Chinese and English marks draws the branch being previewed; null draws the saved labels. */
     asciiPreview: Boolean? = null,
+    /** The gap and the cuts are edited elsewhere (a main layout's split view); only the activation shows here. */
+    activationOnly: Boolean = false,
 ) {
     val template = LayoutKey("·", action = LayoutAction.literal("·"))
+    beforeGrid()
     SectionHeader(stringResource(R.string.layout_editor_keys_section))
-    KeyGrid(rows = rows, selection = selection, onSelect = onSelect, asciiPreview = asciiPreview)
+    KeyGrid(
+        rows = rows,
+        selection = selection,
+        onSelect = onSelect,
+        asciiPreview = asciiPreview,
+        cuts = cuts,
+        gapFraction = gapFraction,
+    )
+    val inSplit = cuts != null
     if (!fixedStructure) {
         GridToolbar(
-            actions = GridActions.of(rows, selection),
+            actions = if (cuts != null) GridActions.ofSplit(rows, cuts, selection) else GridActions.of(rows, selection),
             onMoveKey = { delta -> selection?.let { onEdit(KeyGridEditing.moveKey(rows, it, delta)) } },
             onMoveRow = { delta -> selection?.let { onEdit(KeyGridEditing.moveRow(rows, it, delta)) } },
             onAddKey = { selection?.let { onEdit(KeyGridEditing.addKeyAfter(rows, it, template)) } },
             onRemoveKey = { selection?.let { onEdit(KeyGridEditing.removeKey(rows, it)) } },
         )
-        androidx.compose.material3.TextButton(
-            onClick = { onEdit(KeyGridEditing.addRow(rows, template)) },
-            enabled = GridActions.of(rows, selection).canAddRow,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        ) { Text(stringResource(R.string.layout_editor_add_row)) }
+        if (!inSplit) {
+            androidx.compose.material3.TextButton(
+                onClick = { onEdit(KeyGridEditing.addRow(rows, template)) },
+                enabled = GridActions.of(rows, selection).canAddRow,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) { Text(stringResource(R.string.layout_editor_add_row)) }
+        }
     }
     beforeFields()
     if (selectedKey != null && selectionToken != null) {
@@ -375,7 +472,14 @@ private fun GridSections(
             KeyFields(key = selectedKey, allowCode = allowCode, onChange = onKey, span = spanKey, allowJump = allowJump)
         }
     }
-    if (!fixedStructure) SplitEditor(rows = rows, split = split, onChange = onSplit)
+    if (!fixedStructure) {
+        if (inSplit) {
+            SplitEditor(rows = rows, split = split, onChange = onSplit, activationOnly = true)
+            splitControls()
+        } else {
+            SplitEditor(rows = rows, split = split, onChange = onSplit, activationOnly = activationOnly)
+        }
+    }
 }
 
 /**

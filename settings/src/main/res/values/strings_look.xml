@@ -183,6 +183,16 @@
     <string name="layout_error_key_label_width">Every key needs a title, and its width must be greater than 0.</string>
     <string name="layout_error_long_press_label">Every long-press choice needs a text.</string>
     <string name="layout_error_split_gap">The split gap must be between 0% and 85%.</string>
+    <string name="layout_editor_arrangement_section">Keyboard arrangement</string>
+    <string name="layout_editor_arrangement_whole">Not split</string>
+    <string name="layout_editor_arrangement_split">When split</string>
+    <string name="layout_editor_arrangement_split_note">Left half, gap, right half. Changes here only apply while the keyboard is split.</string>
+    <string name="layout_editor_arrangement_own_note">The split keyboard has its own keys. Changes here do not reach it.</string>
+    <string name="layout_editor_split_gap_section">Gap between the halves</string>
+    <string name="layout_editor_split_point_section">Where each row splits</string>
+    <string name="layout_editor_split_restore">Restore automatic split</string>
+    <string name="layout_error_split_halves">The split keyboard needs the same rows as the keyboard, with at least one key in each half.</string>
+    <string name="layout_error_split_halves_page">Only a keyboard layout can have its own split keys.</string>
     <string name="layout_error_split_break">The split must fall between two keys.</string>
     <string name="layout_error_too_large">There is too much here. Remove some keys, layouts or pages and try again.</string>
     <string name="layout_error_malformed">This file is not a keyboard layout.</string>

@@ -15,6 +15,7 @@ import app.songyan.ime.layout.LayoutResourceBudget
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutRowsEditing
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.LayoutSplitRow
 import app.songyan.ime.layout.PhoneKeypadMetrics
 import app.songyan.ime.layout.PhoneKeypadRailPolicy
 import app.songyan.ime.layout.PhoneKeypadStructure
@@ -38,6 +39,8 @@ data class LayoutDraft(
     val selection: KeySelection? = firstKey(mainRowsOf(original)),
     /** The selected side-column key; at most one of this and [selection] is set. */
     val rail: RailSelection? = null,
+    /** The grid shows (and edits) the arrangement used while split instead of the whole rows. */
+    val splitView: Boolean = false,
 ) {
     /** The layout is a telephone keypad the nine-key shell draws. */
     val isNineKey: Boolean get() = PhoneKeypadStructure.matches(original)
@@ -57,10 +60,36 @@ data class LayoutDraft(
 
     val hasChanges: Boolean get() = layout != original
 
+    /** The split arrangement of every layout row, the control row included: the saved one, else the rows cut. */
+    private val splitArrangement: List<LayoutSplitRow>
+        get() = (layout.split ?: LayoutSplitConfiguration()).arrangement(layout.rows)
+
+    private val letterIndices: List<Int>
+        get() =
+            if (isNineKey) {
+                (0 until PhoneKeypadMetrics.MAIN_ROW_COUNT).toList()
+            } else {
+                layout.rows.indices.filterNot { isControlRow(layout.rows[it]) }
+            }
+
+    /** The user saved a split arrangement of their own; without one it follows the rows and the row cuts. */
+    val hasExplicitSplit: Boolean get() = layout.split?.halves != null
+
+    /** The letter rows as they are when split: each half's keys in order, the halves told apart by [splitCuts]. */
+    val splitLetterRows: List<LayoutRow>
+        get() = splitArrangement.let { all -> letterIndices.map { LayoutRow(all[it].keys) } }
+
+    /** Per letter row, how many keys the left half has. */
+    val splitCuts: List<Int>
+        get() = splitArrangement.let { all -> letterIndices.map { all[it].left.size } }
+
+    /** The rows the grid shows: the whole letter rows, or the split arrangement in the split view. */
+    val editRows: List<LayoutRow> get() = if (splitView && !isNineKey) splitLetterRows else letterRows
+
     val selectedKey: LayoutKey?
         get() =
             rail?.let { RailEditing.keys(layout, it.position).getOrNull(it.index) }
-                ?: selection?.let { LayoutRowsEditing.key(letterRows, it.row, it.key) }
+                ?: selection?.let { LayoutRowsEditing.key(editRows, it.row, it.key) }
 
     /** The side columns are still the keyboard's own; declaring them turns them into editable keys. */
     val usesBundledRails: Boolean get() = PhoneKeypadRailPolicy.usesBundledRails(layout)
@@ -71,7 +100,7 @@ data class LayoutDraft(
         copy(
             selection =
                 at.takeIf {
-                    LayoutRowsEditing.key(letterRows, it.row, it.key) !=
+                    LayoutRowsEditing.key(editRows, it.row, it.key) !=
                         null
                 },
             rail = null,
@@ -85,18 +114,96 @@ data class LayoutDraft(
     fun replaceSelectedKey(key: LayoutKey): LayoutDraft {
         rail?.let { return copy(layout = RailEditing.replace(layout, it, key)) }
         val at = selection ?: return this
+        if (splitView) return withSplitRows(KeyGridEditing.replaceKey(splitLetterRows, at, key), splitCuts)
         return withRows(KeyGridEditing.replaceKey(letterRows, at, key))
     }
 
     /** Applies a structural edit of the grid; null (an edit that could not finish) changes nothing. */
-    fun apply(edit: GridEdit?): LayoutDraft =
-        if (edit ==
-            null
+    fun apply(edit: GridEdit?): LayoutDraft {
+        if (edit == null) return this
+        if (splitView && !isNineKey) return applySplit(edit)
+        return withRows(edit.rows, edit.rowOrigin).copy(selection = edit.selection, rail = null)
+    }
+
+    /**
+     * An edit of the split arrangement. A new key joins the half of the key it was added after, a
+     * removed key leaves its half, a move keeps every cut where it was. The arrangement keeps the
+     * rows of the layout and a key in each half, so an edit that would break either changes nothing.
+     */
+    private fun applySplit(edit: GridEdit): LayoutDraft {
+        val at = selection ?: return this
+        val old = splitLetterRows
+        val cuts = splitCuts
+        if (edit.rows.size != old.size || edit.rowOrigin != null) return this
+        val next =
+            old.indices.map { index ->
+                val size = edit.rows[index].keys.size
+                val cut =
+                    when {
+                        index != at.row || size == old[index].keys.size -> cuts[index]
+                        size > old[index].keys.size -> if (at.key < cuts[index]) cuts[index] + 1 else cuts[index]
+                        else -> if (at.key < cuts[index]) cuts[index] - 1 else cuts[index]
+                    }
+                cut.coerceIn(0, size)
+            }
+        if (edit.rows.indices.any { index ->
+                val size = edit.rows[index].keys.size
+                size > 1 && (next[index] < 1 || next[index] >= size)
+            }
         ) {
-            this
-        } else {
-            withRows(edit.rows).copy(selection = edit.selection, rail = null)
+            return this
         }
+        return withSplitRows(edit.rows, next).copy(selection = edit.selection, rail = null)
+    }
+
+    fun withSplitView(on: Boolean): LayoutDraft {
+        val switched = copy(splitView = on && !isNineKey, rail = null)
+        return switched.copy(selection = firstKey(switched.editRows))
+    }
+
+    /**
+     * Moves the cut of a letter row by [delta] keys. Without a saved arrangement that is the row's
+     * break; with one it moves the key at the cut to the other half.
+     */
+    fun moveSplitCut(
+        row: Int,
+        delta: Int,
+    ): LayoutDraft {
+        val rows = splitLetterRows
+        val cuts = splitCuts
+        val size = rows.getOrNull(row)?.keys?.size ?: return this
+        val cut = cuts[row] + delta
+        if (size < 2 || cut < 1 || cut >= size) return this
+        if (hasExplicitSplit) return withSplitRows(rows, cuts.toMutableList().also { it[row] = cut })
+        val split = layout.split ?: LayoutSplitConfiguration()
+        val breaks =
+            layout.rows.indices
+                .map { split.breakIndex(it, layout.rows[it].keys.size) }
+                .toMutableList()
+        breaks[letterIndices[row]] = cut
+        return copy(layout = layout.withSplit(split.copy(rowBreaks = breaks)))
+    }
+
+    /** Drops the saved split arrangement; the split follows the rows and their cuts again. */
+    fun restoreAutomaticSplit(): LayoutDraft {
+        val split = layout.split ?: return this
+        val restored =
+            copy(layout = layout.withSplit(LayoutRowsEditing.adjusted(split.copy(halves = null), layout.rows)))
+        return restored.copy(selection = firstKey(restored.editRows))
+    }
+
+    /** Stores [rows] cut at [cuts] as the saved split arrangement (turning the derived one into data). */
+    private fun withSplitRows(
+        rows: List<LayoutRow>,
+        cuts: List<Int>,
+    ): LayoutDraft {
+        val full = splitArrangement.toMutableList()
+        for ((n, index) in letterIndices.withIndex()) {
+            full[index] = LayoutSplitRow(rows[n].keys.take(cuts[n]), rows[n].keys.drop(cuts[n]))
+        }
+        val split = layout.split ?: LayoutSplitConfiguration()
+        return copy(layout = layout.withSplit(split.copy(halves = full)))
+    }
 
     fun withSplit(split: LayoutSplitConfiguration?): LayoutDraft =
         copy(layout = layout.withSplit(split?.let { LayoutRowsEditing.adjusted(it, layout.rows) }))
@@ -128,9 +235,28 @@ data class LayoutDraft(
             ?: this
     }
 
-    private fun withRows(rows: List<LayoutRow>): LayoutDraft {
+    /**
+     * Stores the whole rows. A saved split arrangement is its own copy of the keys: key edits do not
+     * reach it, but rows that were added, removed or reordered follow into it so it keeps one entry
+     * per row ([origin] says where each new row came from).
+     */
+    private fun withRows(
+        rows: List<LayoutRow>,
+        origin: List<Int?>? = null,
+    ): LayoutDraft {
         val all = rows + controlRows
-        val split = layout.split?.let { LayoutRowsEditing.adjusted(it, all) }
+        var split = layout.split?.let { LayoutRowsEditing.adjusted(it, all) }
+        val saved = layout.split?.halves
+        val adjusted = split
+        if (adjusted != null && saved != null && origin != null) {
+            val letters = letterIndices
+            val controls = layout.rows.indices.filter { it !in letters }
+            val follow =
+                rows.indices.map { n ->
+                    origin[n]?.let { saved[letters[it]] } ?: adjusted.cut(n, rows[n].keys)
+                } + controls.map { saved[it] }
+            split = adjusted.copy(halves = follow)
+        }
         return copy(layout = layout.copy(rows = all, split = split))
     }
 

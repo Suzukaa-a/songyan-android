@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -81,11 +82,20 @@ fun KeyGrid(
     modifier: Modifier = Modifier,
     /** Draws every automatic literal as the Chinese (false) or the English (true) mark; null keeps the saved label. */
     asciiPreview: Boolean? = null,
+    /** The split arrangement: how many keys of each row are left of the gap, drawn as a gap of [gapFraction]. */
+    cuts: List<Int>? = null,
+    gapFraction: Float = 0f,
 ) {
+    // One gap width for every row, as on the keyboard: the share of the widest row that [gapFraction] asks for.
+    val widest = rows.maxOfOrNull { row -> row.keys.sumOf { it.widthWeight } } ?: 1.0
+    val gapWeight = (gapFraction * widest / (1.0 - gapFraction)).toFloat()
     Column(modifier = modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         rows.forEachIndexed { rowIndex, row ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.keys.forEachIndexed { keyIndex, key ->
+                    if (cuts != null && keyIndex == cuts.getOrNull(rowIndex) && keyIndex > 0 && gapWeight > 0f) {
+                        Spacer(modifier = Modifier.weight(gapWeight).height(KEY_HEIGHT))
+                    }
                     val at = KeySelection(rowIndex, keyIndex)
                     val selected = at == selection
                     val face = if (asciiPreview == null) key.label else key.face(asciiPreview)
@@ -153,6 +163,31 @@ data class GridActions(
     val canRemoveKey: Boolean,
 ) {
     companion object {
+        /**
+         * In the split arrangement the rows are those of the layout, so rows cannot be added or moved
+         * there, and a key stays removable only while each half of its row keeps a key.
+         */
+        fun ofSplit(
+            rows: List<LayoutRow>,
+            cuts: List<Int>,
+            at: KeySelection?,
+        ): GridActions {
+            val whole = of(rows, at)
+            val row = at?.let { rows.getOrNull(it.row) }
+            val cut = at?.let { cuts.getOrNull(it.row) } ?: 0
+            val removable =
+                at != null &&
+                    row != null &&
+                    row.keys.size > 2 &&
+                    (if (at.key < cut) cut > 1 else row.keys.size - cut > 1)
+            return whole.copy(
+                canMoveRowUp = false,
+                canMoveRowDown = false,
+                canAddRow = false,
+                canRemoveKey = removable,
+            )
+        }
+
         fun of(
             rows: List<LayoutRow>,
             at: KeySelection?,
@@ -550,14 +585,17 @@ private fun LongPressFields(
 private const val MAX_LONG_PRESS = 16
 
 /**
- * How the layout or page splits on a wide surface: when, how wide the gutter is, and after which key
- * each row is cut. [rows] are the rows being edited, so the cuts line up with what the grid shows.
+ * When the layout or page splits on a wide surface and, for a page, how wide the gutter is and after
+ * which key each row is cut. A main layout edits the gutter and the cuts in its split view instead
+ * ([activationOnly], see [SplitViewControls]). [rows] are the rows being edited, so the cuts line up
+ * with what the grid shows.
  */
 @Composable
 fun SplitEditor(
     rows: List<LayoutRow>,
     split: LayoutSplitConfiguration?,
     onChange: (LayoutSplitConfiguration?) -> Unit,
+    activationOnly: Boolean = false,
 ) {
     val activation = split?.activation ?: LayoutSplitConfiguration.Activation.OFF
     Column {
@@ -582,60 +620,122 @@ fun SplitEditor(
                 },
             )
         }
-        if (split != null && activation != LayoutSplitConfiguration.Activation.OFF) {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.layout_editor_split_gap_automatic)) },
-                trailingContent = {
-                    Switch(checked = split.automaticGap, onCheckedChange = { onChange(split.copy(automaticGap = it)) })
-                },
-                modifier = Modifier.clickable { onChange(split.copy(automaticGap = !split.automaticGap)) },
-            )
-            if (!split.automaticGap) {
-                var gap by remember(split.gapFraction) { mutableStateOf(split.gapFraction.toFloat()) }
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            stringResource(R.string.layout_editor_split_gap, (gap * 100).roundToInt()),
-                        )
-                    },
-                    supportingContent = {
-                        Slider(
-                            value = gap,
-                            onValueChange = { gap = it },
-                            onValueChangeFinished = { onChange(split.copy(gapFraction = gap.toDouble())) },
-                            valueRange = 0f..MAX_GAP,
-                        )
-                    },
-                )
-            }
+        if (!activationOnly && split != null && activation != LayoutSplitConfiguration.Activation.OFF) {
+            SplitGapControls(split, onChange)
             rows.forEachIndexed { index, row ->
                 if (row.keys.size < 2) return@forEachIndexed
                 val cut = split.breakIndex(index, row.keys.size)
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.layout_editor_split_row, index + 1, cut)) },
-                    trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { onChange(withCut(split, rows, index, cut - 1)) },
-                                enabled = cut > 1,
-                            ) {
-                                Icon(
-                                    Icons.Filled.Remove,
-                                    contentDescription = stringResource(R.string.layout_editor_split_fewer),
-                                )
-                            }
-                            IconButton(
-                                onClick = { onChange(withCut(split, rows, index, cut + 1)) },
-                                enabled = cut < row.keys.size - 1,
-                            ) {
-                                Icon(
-                                    Icons.Filled.Add,
-                                    contentDescription = stringResource(R.string.layout_editor_split_more),
-                                )
-                            }
-                        }
-                    },
+                CutRow(
+                    row = index,
+                    cut = cut,
+                    size = row.keys.size,
+                    onFewer = { onChange(withCut(split, rows, index, cut - 1)) },
+                    onMore = { onChange(withCut(split, rows, index, cut + 1)) },
                 )
+            }
+        }
+    }
+}
+
+/** The gap between the halves: automatic by default, or a size the user sets. */
+@Composable
+private fun SplitGapControls(
+    split: LayoutSplitConfiguration,
+    onChange: (LayoutSplitConfiguration?) -> Unit,
+    /** Reports the size while the slider moves, so a preview follows it; null once it is released. */
+    onLive: (Float?) -> Unit = {},
+) {
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.layout_editor_split_gap_automatic)) },
+        trailingContent = {
+            Switch(
+                checked = split.automaticGap,
+                onCheckedChange = {
+                    onLive(null)
+                    onChange(split.copy(automaticGap = it))
+                },
+            )
+        },
+        modifier =
+            Modifier.clickable {
+                onLive(null)
+                onChange(split.copy(automaticGap = !split.automaticGap))
+            },
+    )
+    if (!split.automaticGap) {
+        var gap by remember(split.gapFraction) { mutableStateOf(split.gapFraction.toFloat()) }
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.layout_editor_split_gap, (gap * 100).roundToInt())) },
+            supportingContent = {
+                Slider(
+                    value = gap,
+                    onValueChange = {
+                        gap = it
+                        onLive(it)
+                    },
+                    onValueChangeFinished = {
+                        onChange(split.copy(gapFraction = gap.toDouble()))
+                        onLive(null)
+                    },
+                    valueRange = 0f..MAX_GAP,
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun CutRow(
+    row: Int,
+    cut: Int,
+    size: Int,
+    onFewer: () -> Unit,
+    onMore: () -> Unit,
+) {
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.layout_editor_split_row, row + 1, cut)) },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onFewer, enabled = cut > 1) {
+                    Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.layout_editor_split_fewer))
+                }
+                IconButton(onClick = onMore, enabled = cut < size - 1) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.layout_editor_split_more))
+                }
+            }
+        },
+    )
+}
+
+/**
+ * What the split view of a main layout adds under the grid: the gap (automatic unless the user sets
+ * one; [onLive] feeds the grid's preview while the slider moves), where each row is cut, and the way
+ * back to a split that follows the rows. The grid above is the arrangement itself, so keys are added,
+ * removed, moved and changed with the ordinary tools.
+ */
+@Composable
+fun SplitViewControls(
+    split: LayoutSplitConfiguration?,
+    cuts: List<Int>,
+    sizes: List<Int>,
+    explicit: Boolean,
+    onSplit: (LayoutSplitConfiguration?) -> Unit,
+    onCut: (row: Int, delta: Int) -> Unit,
+    onRestore: () -> Unit,
+    onLive: (Float?) -> Unit,
+) {
+    Column {
+        SectionHeader(stringResource(R.string.layout_editor_split_gap_section))
+        SplitGapControls(split ?: LayoutSplitConfiguration(), { onSplit(it) }, onLive)
+        SectionHeader(stringResource(R.string.layout_editor_split_point_section))
+        cuts.forEachIndexed { index, cut ->
+            val size = sizes[index]
+            if (size < 2) return@forEachIndexed
+            CutRow(index, cut, size, onFewer = { onCut(index, -1) }, onMore = { onCut(index, +1) })
+        }
+        if (explicit) {
+            TextButton(onClick = onRestore, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(stringResource(R.string.layout_editor_split_restore))
             }
         }
     }

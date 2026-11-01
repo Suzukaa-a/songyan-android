@@ -183,6 +183,16 @@
     <string name="layout_error_key_label_width">每个按键都要有标题，宽度要大于 0。</string>
     <string name="layout_error_long_press_label">每个长按选项都要有文字。</string>
     <string name="layout_error_split_gap">拆分间距应在 0% 到 85% 之间。</string>
+    <string name="layout_editor_arrangement_section">键盘排列</string>
+    <string name="layout_editor_arrangement_whole">不拆分</string>
+    <string name="layout_editor_arrangement_split">拆分时</string>
+    <string name="layout_editor_arrangement_split_note">左边、间距、右边。在这里改的键只在键盘拆分时使用。</string>
+    <string name="layout_editor_arrangement_own_note">拆分时的键盘有自己的一套按键，这里的改动不会同步过去。</string>
+    <string name="layout_editor_split_gap_section">两边的间距</string>
+    <string name="layout_editor_split_point_section">每行在哪里分开</string>
+    <string name="layout_editor_split_restore">恢复为自动拆分</string>
+    <string name="layout_error_split_halves">拆分时的键盘要和键盘有同样的行数，每一边至少要有一个键。</string>
+    <string name="layout_error_split_halves_page">只有键盘布局可以单独设置拆分时的按键。</string>
     <string name="layout_error_split_break">拆分位置应在两个按键之间。</string>
     <string name="layout_error_too_large">内容太多了，请删掉一些按键、布局或页面后再试。</string>
     <string name="layout_error_malformed">这个文件不是键盘布局。</string>

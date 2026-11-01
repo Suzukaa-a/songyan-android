@@ -182,6 +182,30 @@ class EngineFeaturesTest {
         }
 
     @Test
+    fun tuningTheGrammarModelsParametersLeavesTheChoiceOfModelToTheSettings() =
+        runBlocking {
+            val own =
+                "patch:\n  grammar/collocation_penalty: -14\n  grammar:\n    rear_penalty: -18\n" +
+                    "  translator/max_homophones: 8\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings(fuzzyPinyin = mapOf(id to listOf("n-l")))).apply(engine)
+
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+        }
+
+    @Test
+    fun aGrammarMapThatNamesTheModelKeepsItToTheScheme() =
+        runBlocking {
+            val own = "patch:\n  grammar:\n    language: wanxiang-lts-zh-hans\n    rear_penalty: -18\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings(fuzzyPinyin = mapOf(id to listOf("n-l")))).apply(engine)
+
+            assertEquals(Availability.SCHEME, report(dirs).grammar)
+        }
+
+    @Test
     fun aPatchedInputMethodLibrimeRefusesFailsTheDeployment() {
         val (dirs, engine) = setUp()
         engine.compiles = false

@@ -1,6 +1,7 @@
 package app.songyan.ime.deploy
 
 import android.util.Log
+import app.songyan.ime.packages.BoundedYaml
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.DeclarativeRecipe
 import app.songyan.ime.packages.EngineFeatureReport
@@ -237,34 +238,51 @@ internal class EngineFeatures(
     private fun isFuzzyRule(rule: String): Boolean =
         rule.startsWith("fuzz/") || (rule.startsWith("derive/") && rule.endsWith("/fuzz/"))
 
-    /** Whether the custom file sets the grammar model outside our own managed blocks, which a choice writes there. */
+    /**
+     * Whether the custom file, outside our own managed blocks (which a choice writes there), picks
+     * the grammar model itself: a `grammar/language` at any depth. Tuning the model's parameters
+     * (`grammar/collocation_penalty` and the like) leaves the choice of model to the settings.
+     * A file that does not parse is treated as the user's.
+     */
     private fun touchesGrammar(custom: ByteArray?): Boolean {
         val text = custom?.toString(Charsets.UTF_8) ?: return false
         var inManaged = false
-        return text.lineSequence().any { line ->
-            when {
-                inManaged -> {
-                    if (line == "# }") inManaged = false
-                    false
-                }
-                line.startsWith("# Rx: ") && line.endsWith(" {") -> {
-                    inManaged = true
-                    false
-                }
-                else -> {
-                    val content =
-                        line
-                            .substringBefore('#')
-                            .trim()
-                            .removePrefix("- ")
-                            .trim()
-                    content.startsWith("grammar") ||
-                        content.startsWith("\"grammar") ||
-                        content.startsWith("'grammar")
+        val own =
+            text.lineSequence().filter { line ->
+                when {
+                    inManaged -> {
+                        if (line == "# }") inManaged = false
+                        false
+                    }
+                    line.startsWith("# Rx: ") && line.endsWith(" {") -> {
+                        inManaged = true
+                        false
+                    }
+                    else -> true
                 }
             }
-        }
+        val root =
+            try {
+                BoundedYaml.load(own.joinToString("\n"))
+            } catch (_: Exception) {
+                return true
+            }
+        return setsGrammarLanguage(root, "")
     }
+
+    private fun setsGrammarLanguage(
+        node: Any?,
+        path: String,
+    ): Boolean =
+        when (node) {
+            is Map<*, *> ->
+                node.any { (key, value) ->
+                    val child = if (path.isEmpty()) key.toString() else "$path/$key"
+                    child.endsWith("grammar/language") || setsGrammarLanguage(value, child)
+                }
+            is List<*> -> node.any { setsGrammarLanguage(it, path) }
+            else -> false
+        }
 
     companion object {
         /** The package reference in the managed blocks' Rx markers. */

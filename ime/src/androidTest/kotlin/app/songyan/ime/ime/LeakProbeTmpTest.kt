@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.os.Debug
 import android.widget.LinearLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -12,50 +13,56 @@ import java.lang.ref.WeakReference
 class LeakProbeTmpTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
-    private fun make(): List<WeakReference<Any>> {
-        val refs = ArrayList<WeakReference<Any>>()
-        instrumentation.runOnMainSync {
-            repeat(8) { refs += WeakReference(LinearLayout(instrumentation.targetContext)) }
-        }
-        instrumentation.waitForIdleSync()
-        return refs
-    }
+    private fun gcCount() =
+        Debug.getRuntimeStat("art.gc.gc-count") + "/" + Debug.getRuntimeStat("art.gc.blocking-gc-count")
 
-    private fun alive(refs: List<WeakReference<Any>>) = refs.count { it.get() != null }
-
-    @Test
-    fun probe() {
-        val out = StringBuilder()
-        var refs = make()
-        repeat(5) {
+    private fun settle() {
+        repeat(3) {
             System.gc()
             Runtime.getRuntime().runFinalization()
             Thread.sleep(50)
         }
-        out.append("gc5=").append(alive(refs)).append(' ')
-        refs = make()
-        repeat(20) {
-            System.gc()
-            Thread.sleep(100)
-        }
-        out.append("gc20sleep=").append(alive(refs)).append(' ')
-        refs = make()
-        val junk = ArrayList<ByteArray>()
-        repeat(10) {
-            junk += ByteArray(4 * 1024 * 1024)
-            System.gc()
-        }
-        junk.clear()
-        out.append("pressure=").append(alive(refs)).append(' ')
-        refs = make()
-        // Allocation churn on the main thread, in case a reference is parked in its allocation buffer.
-        instrumentation.runOnMainSync { repeat(200_000) { Object() } }
-        System.gc()
-        out.append("mainchurn=").append(alive(refs)).append(' ')
-        refs = make()
-        Thread.sleep(5_000)
-        System.gc()
-        out.append("sleep5=").append(alive(refs)).append(' ')
-        fail("PROBE $out sdk=${android.os.Build.VERSION.SDK_INT}")
+    }
+
+    private fun aliveOf(make: () -> Any): Int {
+        val refs = ArrayList<WeakReference<Any>>()
+        repeat(8) { refs += WeakReference(make()) }
+        settle()
+        return refs.count { it.get() != null }
+    }
+
+    private fun aliveOnMain(make: () -> Any): Int {
+        val refs = ArrayList<WeakReference<Any>>()
+        instrumentation.runOnMainSync { repeat(8) { refs += WeakReference(make()) } }
+        instrumentation.waitForIdleSync()
+        settle()
+        return refs.count { it.get() != null }
+    }
+
+    @Test
+    fun probe() {
+        val out = StringBuilder()
+        val context = instrumentation.targetContext
+        val before = gcCount()
+        out.append("object=").append(aliveOf { Any() }).append(' ')
+        out
+            .append("gcs=")
+            .append(before)
+            .append("->")
+            .append(gcCount())
+            .append(' ')
+        out.append("sb=").append(aliveOf { StringBuilder("x") }).append(' ')
+        out.append("viewTestThread=").append(aliveOf { LinearLayout(context) }).append(' ')
+        out.append("viewMain=").append(aliveOnMain { LinearLayout(context) }).append(' ')
+        out.append("viewAppCtx=").append(aliveOnMain { LinearLayout(context.applicationContext) }).append(' ')
+        out.append("viewTestCtx=").append(aliveOnMain { LinearLayout(instrumentation.context) }).append(' ')
+        out.append("objectMain=").append(aliveOnMain { Any() }).append(' ')
+        out
+            .append(
+                "handlerThread=",
+            ).append(aliveOf { android.os.Handler(android.os.Looper.getMainLooper()) })
+            .append(' ')
+        out.append("sdk=").append(android.os.Build.VERSION.SDK_INT)
+        fail("PROBE $out")
     }
 }

@@ -30,6 +30,8 @@ object ImeJourney {
     private val APP_LOG = Regex("(?i)songyan|rime|AndroidRuntime|deploy|FATAL")
     private const val UI_TIMEOUT_MS = 15_000L
     private const val OPEN_TRIES = 3
+    private const val STABLE_READS = 4
+    private const val SETTLE_TIMEOUT_MS = 20_000L
     private const val TOUCH_SETTLE_MS = 400L
 
     /** A first install deploys the built-in engine data before the keyboard can draw. */
@@ -98,16 +100,21 @@ object ImeJourney {
 
     /**
      * The key boxes are logged again whenever the keyboard window moves (insets, resize), so the
-     * newest lines win; waits until two reads agree.
+     * newest lines win; waits until several reads in a row agree (the window animation can take seconds on a slow emulator).
      */
     private fun MacrobenchmarkScope.settledKeys(first: Map<String, Point>): Map<String, Point> {
         var current = first
-        val deadline = SystemClock.uptimeMillis() + UI_TIMEOUT_MS
-        while (SystemClock.uptimeMillis() < deadline) {
+        var stable = 0
+        val deadline = SystemClock.uptimeMillis() + SETTLE_TIMEOUT_MS
+        while (stable < STABLE_READS && SystemClock.uptimeMillis() < deadline) {
             SystemClock.sleep(TOUCH_SETTLE_MS)
-            val latest = parseKeys(perfLines()).takeIf { it.isNotEmpty() } ?: return current
-            if (latest == current) break
-            current = latest
+            val latest = parseKeys(perfLines()).takeIf { it.isNotEmpty() } ?: break
+            if (latest == current) {
+                stable++
+            } else {
+                current = latest
+                stable = 0
+            }
         }
         lastKeys = current
         return current

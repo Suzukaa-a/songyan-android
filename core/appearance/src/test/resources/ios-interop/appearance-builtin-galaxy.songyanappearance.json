@@ -1,0 +1,82 @@
+{
+  "appearance" : "system",
+  "candidateBar" : {
+    "collapsed" : {
+      "cellPaddingX" : 7,
+      "cellSpacing" : 0,
+      "fillsAvailableWidth" : false,
+      "height" : 40
+    },
+    "compositionRow" : {
+      "visible" : "composingOnly"
+    },
+    "controls" : {
+      "pagePosition" : "both",
+      "showsExpand" : true
+    },
+    "expanded" : {
+      "columnSpacing" : 0,
+      "columns" : 2,
+      "fullRowTextLength" : 8,
+      "mode" : "adaptive",
+      "rowSpacing" : 0
+    },
+    "formatVersion" : 1,
+    "id" : "builtin-galaxy",
+    "name" : "星河"
+  },
+  "formatVersion" : 1,
+  "id" : "builtin-galaxy",
+  "name" : "星河",
+  "skin" : {
+    "formatVersion" : 1,
+    "id" : "builtin-galaxy",
+    "keycap" : {
+      "borderWidth" : 0,
+      "cornerRadius" : 6,
+      "shadow" : "none"
+    },
+    "name" : "星河",
+    "spacing" : {
+      "visualInsetX" : 0,
+      "visualInsetY" : 1
+    },
+    "typography" : {
+      "candidateSize" : 21,
+      "family" : "system",
+      "keySize" : 22,
+      "secondarySize" : 10,
+      "weight" : "regular"
+    },
+    "variants" : {
+      "dark" : {
+        "colors" : {
+          "accent" : "#3B82F6",
+          "accentText" : "#000000",
+          "border" : "#808080",
+          "control" : "#182234",
+          "key" : "#1F2937",
+          "panel" : "#111827",
+          "pressed" : "#364761",
+          "secondaryText" : "#8FA3BF",
+          "selected" : "#28436B",
+          "text" : "#F3F4F6"
+        }
+      },
+      "light" : {
+        "colors" : {
+          "accent" : "#1A56DB",
+          "accentText" : "#FFFFFF",
+          "border" : "#777777",
+          "control" : "#C5D3E3",
+          "key" : "#FFFFFF",
+          "panel" : "#DCE4EC",
+          "pressed" : "#B5C8DE",
+          "secondaryText" : "#465975",
+          "selected" : "#C7D8ED",
+          "text" : "#0F1E36"
+        }
+      }
+    }
+  }
+}

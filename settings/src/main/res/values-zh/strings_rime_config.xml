@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rime_config_section">Rime 配置</string>
+    <string name="rime_config_body">用 xxx.custom.yaml 等文件修改输入方案，和电脑上的 Rime 一样。文件在「文件」应用的「松烟 Rime 配置」里，改完点「应用更改」才会生效。</string>
+    <string name="rime_config_open">在「文件」应用里打开</string>
+    <string name="rime_config_apply">应用更改</string>
+    <string name="rime_config_applying">正在应用…</string>
+    <string name="rime_config_pending">有改动还没应用。</string>
+    <string name="rime_config_empty">还没有配置文件。</string>
+    <plurals name="rime_config_in_use">
+        <item quantity="other">键盘正在使用你的 %1$d 个配置文件。</item>
+    </plurals>
+    <string name="rime_config_applied">已应用更改。</string>
+    <string name="rime_config_no_files_app">找不到「文件」应用。</string>
+    <string name="rime_config_failed">没能应用更改。</string>
+</resources>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Input schemes · scheme package -->
+    <string name="schemes_scheme_import_file">Import input scheme</string>
+    <string name="schemes_scheme_import_note">Supports .zip files, folders, ZIP download links and GitHub repository addresses. A newer version of a scheme you already have replaces it and keeps the words it learned and its grammar model.</string>
+    <string name="schemes_scheme_import_unavailable">Input schemes cannot be imported right now. Try again later.</string>
+    <string name="schemes_scheme_importing">Importing the input scheme…</string>
+    <string name="schemes_scheme_downloading">Downloading the input scheme…</string>
+    <string name="schemes_scheme_importing_note">A large input scheme can take a few minutes.</string>
+    <string name="transfer_downloaded_of">Downloaded %1$s of %2$s</string>
+    <string name="transfer_downloaded">Downloaded %1$s</string>
+    <string name="schemes_scheme_import_success">Input scheme imported.</string>
+    <string name="schemes_scheme_import_success_named">Imported “%1$s”</string>
+    <string name="schemes_scheme_import_failed">Could not import the scheme package. Try again.</string>
+
+    <string name="schemes_sources_section">My input schemes</string>
+    <string name="schemes_source_kind_builtin">Built-in</string>
+    <string name="schemes_source_kind_dictionary">Built-in input methods · imported dictionary</string>
+    <string name="schemes_source_kind_scheme">Imported input scheme</string>
+    <string name="schemes_source_use">Use</string>
+    <string name="schemes_source_delete">Delete</string>
+    <string name="schemes_source_delete_title">Delete “%1$s”?</string>
+    <string name="schemes_source_delete_body">Learned words are kept and come back if you import it again.</string>
+    <string name="schemes_source_working">Working…</string>
+    <string name="schemes_source_failed">That did not finish. Try again.</string>
+
+    <!-- Input schemes · folder, link, recommended, update -->
+    <string name="schemes_scheme_import_folder">Import folder</string>
+    <string name="schemes_scheme_import_link">Import from link</string>
+    <string name="schemes_scheme_link_label">ZIP link or GitHub repository address</string>
+    <string name="schemes_scheme_link_invalid">Enter a link that starts with https.</string>
+    <string name="schemes_scheme_link_note">The network is used only after you tap Download. Files can be up to 1.5 GB.</string>
+    <string name="schemes_scheme_link_confirm">Download</string>
+    <string name="schemes_recommended_section">Recommended</string>
+    <string name="schemes_recommended_rime_ice_name">Rime-ice (雾凇拼音)</string>
+    <string name="schemes_recommended_rime_ice_detail">Full pinyin and several double pinyin layouts, large dictionary · GPL-3.0</string>
+    <string name="schemes_recommended_wanxiang_name">Wanxiang Pinyin (万象拼音)</string>
+    <string name="schemes_recommended_wanxiang_detail">Full pinyin and several double pinyin layouts; needs a separate model of about 400 MB · CC-BY-4.0</string>
+    <string name="schemes_recommended_confirm_title">Download “%1$s”?</string>
+    <string name="schemes_recommended_confirm_body">This downloads the input scheme from GitHub. It is large, so use Wi-Fi if you can.</string>
+    <string name="schemes_recommended_confirm">Download</string>
+    <string name="schemes_incoming_title">Import the input scheme you received?</string>
+    <string name="schemes_incoming_body">Another app wants to import a ZIP file into Songyan as an input scheme.</string>
+    <string name="schemes_incoming_confirm">Import</string>
+    <string name="schemes_status_update_available">New version</string>
+    <string name="schemes_status_damaged">Damaged</string>
+    <string name="schemes_source_damaged_note">Files are missing. Delete it and import it again.</string>
+    <string name="schemes_source_update">Update</string>
+    <string name="schemes_source_use_new">Use new version</string>
+    <string name="schemes_source_deleted">Deleted “%1$s”</string>
+    <string name="schemes_source_undo">Undo</string>
+    <string name="schemes_update_up_to_date">Already up to date.</string>
+    <string name="schemes_update_up_to_date_named">“%1$s” is already up to date.</string>
+    <string name="schemes_update_success_named">Updated “%1$s”</string>
+
+    <!-- Input schemes · learned words that came with a package -->
+    <plurals name="schemes_scheme_learning_question">
+        <item quantity="one">This package comes with learned words for %d dictionary. Merge them too?</item>
+        <item quantity="other">This package comes with learned words for %d dictionaries. Merge them too?</item>
+    </plurals>
+    <string name="schemes_scheme_learning_merge">Merge</string>
+    <string name="schemes_scheme_learning_use_and_merge">Use and merge</string>
+    <string name="schemes_scheme_learning_decline">Don’t merge</string>
+    <string name="schemes_scheme_learning_merging">Merging learned words…</string>
+    <string name="schemes_grammar_needed">This grammar model is needed to use the input method. Download or import it first.</string>
+    <string name="schemes_grammar_model_n">Grammar model %1$d</string>
+    <string name="schemes_grammar_download">Download grammar model (about %1$d MB)</string>
+    <string name="schemes_grammar_from_file">Import grammar model from a file</string>
+    <string name="schemes_grammar_later">Later</string>
+    <string name="schemes_grammar_imported">Grammar model imported. Choose it under Input Options → Corrections and suggestions to start using it.</string>
+    <string name="schemes_grammar_choose">Choose it</string>
+    <!-- Input scheme detail -->
+    <string name="schemes_detail_status_section">Status</string>
+    <string name="schemes_detail_not_found">Input scheme not found.</string>
+    <string name="schemes_detail_from_link">From %1$s</string>
+    <string name="schemes_detail_from_file">From a file on this device</string>
+    <string name="schemes_detail_update_section">Source and update</string>
+    <string name="schemes_detail_reimport_note">To switch to a newer version, import the same input scheme again.</string>
+    <string name="schemes_detail_builtin_note">The built-in input scheme is updated with Songyan and cannot be deleted.</string>
+    <string name="schemes_detail_stop_using">Stop using</string>
+    <string name="schemes_detail_stop_using_note">After you stop using it, the keyboard switches to “%1$s”.</string>
+</resources>

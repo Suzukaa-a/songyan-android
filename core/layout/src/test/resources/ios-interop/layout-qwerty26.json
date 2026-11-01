@@ -1,0 +1,630 @@
+{
+  "id" : "qwerty26",
+  "input" : {
+    "builtinLayout" : "qwerty26"
+  },
+  "name" : "26 键",
+  "rows" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "q"
+          },
+          "label" : "q",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "1"
+              },
+              "label" : "1"
+            }
+          ],
+          "secondaryLabel" : "1"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "w"
+          },
+          "label" : "w",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "2"
+              },
+              "label" : "2"
+            }
+          ],
+          "secondaryLabel" : "2"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "e"
+          },
+          "label" : "e",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "3"
+              },
+              "label" : "3"
+            }
+          ],
+          "secondaryLabel" : "3"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "r"
+          },
+          "label" : "r",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "4"
+              },
+              "label" : "4"
+            }
+          ],
+          "secondaryLabel" : "4"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "t"
+          },
+          "label" : "t",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "5"
+              },
+              "label" : "5"
+            }
+          ],
+          "secondaryLabel" : "5"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "y"
+          },
+          "label" : "y",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "6"
+              },
+              "label" : "6"
+            }
+          ],
+          "secondaryLabel" : "6"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "u"
+          },
+          "label" : "u",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "7"
+              },
+              "label" : "7"
+            }
+          ],
+          "secondaryLabel" : "7"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "i"
+          },
+          "label" : "i",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "8"
+              },
+              "label" : "8"
+            }
+          ],
+          "secondaryLabel" : "8"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "o"
+          },
+          "label" : "o",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "9"
+              },
+              "label" : "9"
+            }
+          ],
+          "secondaryLabel" : "9"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "p"
+          },
+          "label" : "p",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "0"
+              },
+              "label" : "0"
+            }
+          ],
+          "secondaryLabel" : "0"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "a"
+          },
+          "label" : "a",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "，"
+              },
+              "label" : "，"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : ","
+              },
+              "label" : ","
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "s"
+          },
+          "label" : "s",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "。"
+              },
+              "label" : "。"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "."
+              },
+              "label" : "."
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "…"
+              },
+              "label" : "…"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "d"
+          },
+          "label" : "d",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "？"
+              },
+              "label" : "？"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "?"
+              },
+              "label" : "?"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "f"
+          },
+          "label" : "f",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "！"
+              },
+              "label" : "！"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "!"
+              },
+              "label" : "!"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "g"
+          },
+          "label" : "g",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "、"
+              },
+              "label" : "、"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "\\"
+              },
+              "label" : "\\"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "h"
+          },
+          "label" : "h",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "："
+              },
+              "label" : "："
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : ":"
+              },
+              "label" : ":"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "j"
+          },
+          "label" : "j",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "；"
+              },
+              "label" : "；"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : ";"
+              },
+              "label" : ";"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "k"
+          },
+          "label" : "k",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "（"
+              },
+              "label" : "（"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "("
+              },
+              "label" : "("
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "l"
+          },
+          "label" : "l",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "）"
+              },
+              "label" : "）"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : ")"
+              },
+              "label" : ")"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "z"
+          },
+          "label" : "z",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "@"
+              },
+              "label" : "@"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "x"
+          },
+          "label" : "x",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "-"
+              },
+              "label" : "-"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "_"
+              },
+              "label" : "_"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "c"
+          },
+          "label" : "c",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "“"
+              },
+              "label" : "“"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "”"
+              },
+              "label" : "”"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "\""
+              },
+              "label" : "\""
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "v"
+          },
+          "label" : "v",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "‘"
+              },
+              "label" : "‘"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "’"
+              },
+              "label" : "’"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "'"
+              },
+              "label" : "'"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "b"
+          },
+          "label" : "b",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "【"
+              },
+              "label" : "【"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "["
+              },
+              "label" : "["
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "《"
+              },
+              "label" : "《"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "<"
+              },
+              "label" : "<"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "n"
+          },
+          "label" : "n",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "】"
+              },
+              "label" : "】"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "]"
+              },
+              "label" : "]"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "》"
+              },
+              "label" : "》"
+            },
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : ">"
+              },
+              "label" : ">"
+            }
+          ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "m"
+          },
+          "label" : "m",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "/"
+              },
+              "label" : "/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "modeSwitch",
+            "value" : "nextLayout"
+          },
+          "label" : "布局"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "width" : 4
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫"
+        },
+        {
+          "action" : {
+            "type" : "enter"
+          },
+          "label" : "⏎"
+        }
+      ]
+    }
+  ]
+}

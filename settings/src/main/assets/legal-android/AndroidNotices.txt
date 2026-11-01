@@ -1,0 +1,48 @@
+1. Kotlin 与 kotlinx（标准库、协程、序列化、atomicfu）及 JetBrains annotations
+   - License: Apache-2.0
+   - Copyright: Copyright JetBrains s.r.o. and Kotlin Programming Language contributors
+   - Upstream: https://github.com/JetBrains/kotlin ; https://github.com/Kotlin/kotlinx.coroutines ; https://github.com/Kotlin/kotlinx.serialization ; https://github.com/Kotlin/kotlinx-atomicfu ; https://github.com/JetBrains/java-annotations
+   - Role: 应用、键盘与设置界面的实现语言与运行库，打包进 APK
+   - Full text: Apache-2.0.txt
+
+2. AndroidX、Jetpack Compose 与 Material 图标
+   - License: Apache-2.0
+   - Copyright: Copyright The Android Open Source Project
+   - Upstream: https://developer.android.com/jetpack/androidx ; https://github.com/androidx/androidx
+   - Role: 设置界面（Compose、Material 3、Navigation、Lifecycle、DataStore、Activity）、键盘与系统的衔接（Core、Autofill、DocumentFile、DynamicAnimation、Emoji2、ProfileInstaller），打包进 APK
+   - Full text: Apache-2.0.txt
+
+3. SnakeYAML Engine 3.2
+   - License: Apache-2.0
+   - Copyright: Copyright SnakeYAML contributors
+   - Upstream: https://bitbucket.org/snakeyaml/snakeyaml-engine
+   - Role: 读取与写出方案包、词库与配套方案的 YAML，打包进 APK
+   - Full text: Apache-2.0.txt
+
+4. Okio 3.17.0
+   - License: Apache-2.0
+   - Copyright: Copyright 2013 Square, Inc.
+   - Upstream: https://github.com/square/okio
+   - Role: AndroidX DataStore 使用的读写库，打包进 APK
+   - Full text: Apache-2.0.txt
+
+5. Guava ListenableFuture 1.0
+   - License: Apache-2.0
+   - Copyright: Copyright The Guava Authors
+   - Upstream: https://github.com/google/guava
+   - Role: AndroidX 使用的异步结果接口（只含 ListenableFuture 一个接口），打包进 APK
+   - Full text: Apache-2.0.txt
+
+6. JSpecify 1.0.0
+   - License: Apache-2.0
+   - Copyright: Copyright The JSpecify Authors
+   - Upstream: https://github.com/jspecify/jspecify
+   - Role: AndroidX 使用的空值注解，打包进 APK
+   - Full text: Apache-2.0.txt
+
+7. Protocol Buffers（AndroidX DataStore 内置的精简版）
+   - License: BSD-3-Clause
+   - Copyright: Copyright 2008 Google Inc.
+   - Upstream: https://github.com/protocolbuffers/protobuf
+   - Role: AndroidX DataStore 保存设置时使用的序列化库，打包进 APK
+   - Full text: protobuf-BSD-3-Clause.txt

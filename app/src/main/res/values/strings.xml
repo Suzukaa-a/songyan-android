@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Songyan</string>
+    <string name="ime_name">Songyan</string>
+    <string name="subtype_pinyin">Pinyin</string>
+
+    <!-- Deploy process foreground notification. -->
+    <string name="deploy_channel_name">Input scheme setup</string>
+    <string name="deploy_channel_description">Shown while input schemes are being set up, updated or imported.</string>
+    <string name="deploy_notification_title">Preparing input schemes</string>
+    <string name="deploy_notification_text">The keyboard will be ready shortly.</string>
+    <string name="deploy_notification_failed">Input scheme setup failed. Tap to open Songyan and retry.</string>
+    <string name="deploy_notification_done">Input schemes are ready.</string>
+    <string name="deploy_notification_dictionary_title">Importing the dictionary</string>
+    <string name="deploy_notification_dictionary_text">The keyboard uses it when it is done.</string>
+    <string name="deploy_notification_scheme_title">Importing the input scheme</string>
+    <string name="deploy_notification_scheme_text">The keyboard uses it when it is done.</string>
+
+    <string name="import_cancelled">Import cancelled.</string>
+    <string name="import_path_separator">", "</string>
+
+    <string name="dictionary_import_error_unsupported_file">Only .dict.yaml dictionary files can be imported here.</string>
+    <string name="dictionary_import_error_encoding">The dictionary text cannot be read. Save it as UTF-8 and try again.</string>
+    <string name="dictionary_import_error_too_large">The file is too large. The limit is %s.</string>
+    <string name="dictionary_import_error_too_many_files">Up to 128 dictionary files can be imported at once.</string>
+    <string name="dictionary_import_error_duplicate_file">Two of the selected files have the same name.</string>
+    <string name="dictionary_import_error_too_many_entries">The dictionary has more than 2,000,000 entries.</string>
+    <string name="dictionary_import_error_empty">The dictionary has no entries.</string>
+    <string name="dictionary_import_error_format">This dictionary format is not supported.</string>
+    <string name="dictionary_import_error_missing_dependencies">Dictionaries it refers to are missing: %s. Select them together.</string>
+    <string name="dictionary_import_error_dependency_cycle">These dictionaries refer to each other and cannot be imported.</string>
+    <string name="dictionary_import_error_unreferenced_file">These files are not part of the dictionary: %s.</string>
+    <string name="dictionary_import_error_template">This dictionary does not work with this version of Songyan. Update and try again.</string>
+    <string name="dictionary_import_error_staging">The import did not finish. Try again.</string>
+    <string name="dictionary_import_error_read">This dictionary file cannot be read.</string>
+    <string name="dictionary_import_error_url">Enter a link that starts with https://.</string>
+    <string name="dictionary_import_error_url_file">The link must point directly at a .dict.yaml file.</string>
+    <string name="dictionary_import_error_download">Downloading the dictionary failed. Check the network and try again.</string>
+    <string name="dictionary_import_error_download_timeout">The download took too long and was stopped. Check the network and try again.</string>
+    <string name="dictionary_import_error_redirects">The link redirects too many times. Use another link.</string>
+    <string name="dictionary_import_error_insecure_redirect">The link redirects to an insecure http address. Use another link.</string>
+    <string name="dictionary_import_error_deploy">Importing the dictionary failed. Try again.</string>
+    <string name="dictionary_import_error_deploy_unavailable">An earlier import is still running. Try again when it finishes.</string>
+    <string name="dictionary_import_error_timeout">The import took too long and was stopped. Try again.</string>
+    <string name="dictionary_import_error_remove">Removing the dictionary did not finish. Try again later.</string>
+
+    <string name="scheme_import_error_not_a_package">Only .zip input schemes can be imported here.</string>
+    <string name="scheme_import_error_name_encoding">File names in the archive are not UTF-8. Compress it again with the system tool and retry.</string>
+    <string name="scheme_import_error_too_large">The file is too large. The limit is %s.</string>
+    <string name="scheme_import_error_too_many_files">The archive has too many files. The limit is 2000.</string>
+    <string name="scheme_import_error_unsafe_files">The archive contains unsafe file paths. Use another file.</string>
+    <string name="scheme_import_error_user_data">The archive contains learning data (.userdb). Remove it and try again.</string>
+    <string name="scheme_import_error_missing_scheme">This file has no usable input method.</string>
+    <string name="scheme_import_error_invalid_scheme">A configuration file of the input scheme is invalid. Check its contents.</string>
+    <string name="scheme_import_error_encoding">A file of the input scheme is not UTF-8 text.</string>
+    <string name="scheme_import_error_missing_dependency">The input scheme is missing these files: %s.</string>
+    <string name="scheme_import_error_invalid_model">The grammar model of the input scheme cannot be used.</string>
+    <string name="scheme_import_error_builtin_customization">This input scheme changes Songyan\'s own input methods, which is not supported.</string>
+    <string name="scheme_import_error_read">This file cannot be read.</string>
+    <string name="scheme_import_error_staging">The import did not finish. Try again.</string>
+    <string name="scheme_import_error_deploy_unavailable">An earlier import is still running. Try again when it finishes.</string>
+    <string name="scheme_import_error_deploy">Importing the input scheme failed. Try again.</string>
+    <string name="scheme_import_error_timeout">The import took too long and was stopped. Try again.</string>
+
+    <string name="source_builtin_name">Songyan built-in</string>
+    <string name="source_error_activate">Could not switch to this input scheme. Try again.</string>
+    <string name="source_error_delete">Could not delete this input scheme. Try again.</string>
+
+    <string name="scheme_builtin_quanpin">Full Pinyin</string>
+    <string name="scheme_builtin_flypy">Xiaohe Shuangpin</string>
+    <string name="keyboard_input_method_pinyin">Pinyin</string>
+    <string name="keyboard_layout_14">14-key</string>
+    <string name="keyboard_layout_18">18-key</string>
+    <string name="keyboard_layout_9">9-key</string>
+    <string name="keyboard_layout_26">26-key</string>
+
+    <string name="dictionary_import_error_row">Line %2$d of %1$s doesn\'t have the expected columns.</string>
+    <string name="dictionary_import_error_word">Line %2$d of %1$s has an entry that isn\'t Chinese characters.</string>
+    <string name="dictionary_import_error_syllable_count">Line %2$d of %1$s has a different number of syllables than characters.</string>
+    <string name="dictionary_import_error_syllable_unknown">Line %2$d of %1$s has a pinyin syllable that can\'t be read.</string>
+    <string name="dictionary_import_error_weight">Line %2$d of %1$s has an invalid weight.</string>
+    <string name="dictionary_import_error_row_unknown">An entry in the dictionary can\'t be read.</string>
+    <string name="dictionary_import_error_download_host">We couldn\'t find that address. Check the link.</string>
+    <string name="dictionary_import_error_download_offline">There is no network connection. Check your network and try again.</string>
+    <string name="dictionary_import_error_download_server">The server returned an error (%1$s). Try again later.</string>
+    <string name="dictionary_import_error_download_not_found">There is no file at that link.</string>
+    <string name="dictionary_import_error_target">This input scheme cannot take an imported dictionary. Choose another one.</string>
+    <string name="scheme_import_error_dictionary_stack">The new version of this package cannot take your imported dictionary. Remove the dictionary, then import again.</string>
+    <string name="scheme_import_error_keyboard_companion">This input scheme cannot be set up for the 14-, 18- and 9-key layouts, so it was not imported. Check its configuration files.</string>
+    <string name="features_error_prediction_file">The selected file is not a valid prediction database (predict.db).</string>
+    <string name="features_error_grammar_file">The selected file is not a usable grammar model (.gram).</string>
+    <string name="features_error_too_large">The file is too large. The limit is 512 MB.</string>
+    <string name="features_error_read">The selected file could not be opened. Choose it again.</string>
+    <string name="features_error_save">Could not save. Try again.</string>
+    <string name="deploy_notification_download_title">Downloading</string>
+    <string name="deploy_notification_download_text">It is saved when the download finishes.</string>
+    <string name="learning_backup_file_name">songyan-learning-backup-%1$s.json</string>
+    <string name="learning_safety_file_name">songyan-before-merge-%1$s.json</string>
+    <string name="learning_error_no_source">No input scheme is in use yet.</string>
+    <string name="learning_error_nothing">The input scheme in use has not learned any words yet.</string>
+    <string name="learning_error_backup">Could not read the learning data. Try again.</string>
+    <string name="learning_error_no_safety_backup">There is no backup from before a merge yet.</string>
+    <string name="learning_error_write">Could not save the file. Choose where to save it again.</string>
+    <string name="learning_error_read">Could not read the selected file. Choose it again.</string>
+    <string name="learning_error_invalid">This file is not a Songyan learning backup, or it is damaged. Nothing was changed.</string>
+    <string name="learning_error_other_source">This backup is from another input scheme and cannot be merged into the one in use. Nothing was changed.</string>
+    <string name="learning_error_safety">Could not save the current learning data first, so the merge did not start.</string>
+    <string name="learning_error_merge">The merge did not finish. Your learning data is unchanged. Try again.</string>
+    <string name="learning_error_quarantine_gone">This learning data is no longer there.</string>
+    <string name="learning_error_quarantine_unreadable">This learning data cannot be read safely. It is kept as it is. Nothing was changed.</string>
+    <string name="learning_error_quarantine_not_in_use">Use the input scheme this data came from first, then restore it. Nothing was changed.</string>
+    <string name="learning_error_quarantine_empty">There are no words to restore in this learning data.</string>
+    <string name="learning_error_delete">Could not delete it. Try again.</string>
+    <string name="learning_error_too_large">Too many or too large files. Import them a few at a time. Nothing was changed.</string>
+    <string name="learning_files_none_found">There are no Rime dictionary files there.</string>
+    <string name="learning_files_merge">%1$s with %2$s will merge into %3$s.</string>
+    <string name="learning_files_merged">Merged %1$s with %2$s.</string>
+    <string name="learning_files_nothing">None of these files can merge. Nothing was changed.</string>
+    <string name="learning_files_skipped_header">These files will not merge:</string>
+    <string name="learning_files_skip_invalid">%1$s: not a Rime dictionary file, or damaged</string>
+    <string name="learning_files_skip_too_large">%1$s: too large</string>
+    <string name="learning_files_skip_empty">%1$s: holds no words</string>
+    <string name="learning_files_skip_not_installed">%1$s: the input scheme in use has no use for this dictionary</string>
+    <string name="learning_files_other_scheme_hint">If these dictionaries belong to another input scheme of yours, use that input scheme in My Keyboards first, then import again.</string>
+    <plurals name="learning_files_dictionaries">
+        <item quantity="one">%d dictionary</item>
+        <item quantity="other">%d dictionaries</item>
+    </plurals>
+    <plurals name="learning_files_entries">
+        <item quantity="one">%s entry</item>
+        <item quantity="other">%s entries</item>
+    </plurals>
+    <plurals name="learning_files_not_merged">
+        <item quantity="one">" %d file was not merged."</item>
+        <item quantity="other">" %d files were not merged."</item>
+    </plurals>
+    <string name="scheme_import_error_link_not_zip">The link doesn\'t point to a ZIP file. Enter a ZIP download link or a GitHub repository address.</string>
+    <string name="scheme_update_error_missing">The input scheme to update is no longer there.</string>
+    <string name="source_error_restore">Couldn\'t restore this input scheme.</string>
+    <string name="source_damaged_name">Damaged input scheme</string>
+    <!-- The Rime configuration folder in the Files app, and what applying it can report. -->
+    <string name="rime_config_root_title">Songyan Rime configuration</string>
+    <string name="rime_config_folder_edit">My configuration</string>
+    <string name="rime_config_folder_active">In use: %1$s</string>
+    <string name="rime_config_folder_active_none">In use</string>
+    <string name="rime_config_folder_sources">All input schemes</string>
+    <string name="rime_config_error_yaml">“%1$s” has a formatting error, so nothing was applied. The keyboard keeps its previous settings. Fix or delete the file, then try again.</string>
+    <string name="rime_config_error_text">“%1$s” isn\'t UTF-8 text, so nothing was applied. The keyboard keeps its previous settings.</string>
+    <string name="rime_config_error_large">“%1$s” is too large, so nothing was applied. Each file can be up to 4 MB, and all of them together up to 8 MB.</string>
+    <string name="rime_config_error_many">There are too many files, so nothing was applied. The folder can hold up to 100.</string>
+    <string name="rime_config_error_deploy">The changes didn\'t work, so the keyboard keeps its previous settings. Check the files you changed last, then try again.</string>
+    <string name="rime_config_error_unavailable">Couldn\'t apply the changes right now. Try again later.</string>
+    <string name="rime_config_skipped">Your configuration doesn\'t work with the input scheme in use, so the scheme is used as it comes.</string>
+    <string name="rime_config_refused_read_only">This folder is read-only. Put your files in “My configuration”, then tap Apply changes in Songyan settings.</string>
+    <string name="rime_config_refused_folder">“My configuration” can\'t hold folders. Put the files in it directly.</string>
+    <string name="rime_config_refused_type">“%1$s” can\'t go here. “My configuration” takes .yaml and .txt files.</string>
+    <string name="package_learning_failed">The package was imported, but its learned words did not merge. Your learning data is unchanged.</string>
+    <string name="package_learning_not_in_use">Could not switch to this input scheme, so its learned words were not merged.</string>
+    <string name="package_learning_nothing">The learned words in this package do not match its dictionaries. Nothing was merged.</string>
+    <string name="package_learning_gone">These learned words are no longer there.</string>
+</resources>

@@ -1,0 +1,24 @@
+{
+  "collapsed" : {
+    "cellPaddingX" : 14,
+    "cellSpacing" : 6,
+    "height" : 52
+  },
+  "compositionRow" : {
+    "visible" : "composingOnly"
+  },
+  "controls" : {
+    "pagePosition" : "leading",
+    "showsExpand" : true
+  },
+  "expanded" : {
+    "columnSpacing" : 2,
+    "columns" : 3,
+    "fullRowTextLength" : 8,
+    "mode" : "grid",
+    "rowSpacing" : 4
+  },
+  "formatVersion" : 1,
+  "id" : "grid-bar",
+  "name" : "三列网格"
+}

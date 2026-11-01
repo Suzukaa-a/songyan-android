@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Quick content -->
+    <string name="quick_content_loading">Loading…</string>
+    <string name="quick_content_save">Save</string>
+    <string name="quick_content_cancel">Cancel</string>
+    <string name="quick_content_delete">Delete</string>
+    <string name="quick_content_edit">Edit</string>
+
+    <string name="quick_content_clipboard_section">Clipboard history</string>
+    <string name="quick_content_clipboard_switch">Record clipboard history</string>
+    <string name="quick_content_clipboard_body">Copied text is stored on this device (up to %1$d). Passwords are never recorded.</string>
+    <string name="quick_content_clipboard_empty">Nothing recorded yet.</string>
+    <string name="quick_content_clipboard_clear">Clear history</string>
+    <string name="quick_content_clipboard_clear_title">Clear clipboard history?</string>
+    <string name="quick_content_clipboard_clear_body">This cannot be undone.</string>
+    <string name="quick_content_clipboard_delete">Delete this entry</string>
+
+    <string name="quick_content_phrases_section">Phrases</string>
+    <string name="quick_content_phrases_counter">%1$d / %2$d</string>
+    <string name="quick_content_phrases_empty">No phrases yet.</string>
+    <string name="quick_content_phrases_add">Add a phrase</string>
+    <string name="quick_content_phrase_add_title">Add a phrase</string>
+    <string name="quick_content_phrase_edit_title">Edit phrase</string>
+    <string name="quick_content_phrase_shortcut_label">Search term (optional)</string>
+    <string name="quick_content_phrase_shortcut_hint">For example dz or sh. Search this term in the keyboard to find the phrase.</string>
+    <string name="quick_content_error_shortcut_too_long">The search term is too long.</string>
+    <string name="quick_content_phrase_text_label">Text</string>
+
+    <string name="quick_content_error_text_required">Enter some text.</string>
+    <string name="quick_content_error_text_too_long">That text is too long.</string>
+    <string name="quick_content_error_duplicate">A phrase with the same text already exists.</string>
+    <string name="quick_content_error_limit_reached">Phrase limit reached (%1$d). Delete one first.</string>
+    <string name="quick_content_error_invalid">The phrases file is damaged and can\'t be read.</string>
+    <string name="quick_content_error_storage">Reading or writing failed. Try again later.</string>
+    <string name="quick_content_error_locked">Try again in a moment.</string>
+
+    <string name="quick_content_symbols_section">Symbol library</string>
+    <string name="quick_content_symbols_builtin">Built-in symbol library</string>
+    <string name="quick_content_symbols_custom">Custom symbol library imported</string>
+    <string name="quick_content_symbols_summary">Symbols: %1$d · Categories: %2$d</string>
+    <string name="quick_content_symbols_recent">Recently used: %1$d</string>
+    <string name="quick_content_symbols_clear_recent">Clear recent symbols</string>
+    <string name="quick_content_phrases_import">Import phrases</string>
+    <string name="quick_content_phrases_export">Export phrases</string>
+    <string name="quick_content_phrases_import_title">Replace all phrases?</string>
+    <string name="quick_content_phrases_import_body">Importing replaces your current phrases. You can export a backup first.</string>
+    <string name="quick_content_phrases_import_confirm">Import and replace</string>
+    <string name="quick_content_phrases_imported">Imported %1$d phrases.</string>
+    <string name="quick_content_phrases_exported">Phrases exported.</string>
+    <string name="quick_content_symbols_import">Import symbol library</string>
+    <string name="quick_content_symbols_export">Export current symbol library</string>
+    <string name="quick_content_symbols_restore">Restore built-in symbol library</string>
+    <string name="quick_content_symbols_restore_title">Restore the built-in symbol library?</string>
+    <string name="quick_content_symbols_restore_body">Your custom symbol library will be removed and the built-in symbols come back.</string>
+    <string name="quick_content_symbols_restore_confirm">Restore</string>
+    <string name="quick_content_symbols_imported">Imported the symbol library with %1$d symbols.</string>
+    <string name="quick_content_symbols_exported">Symbol library exported.</string>
+    <string name="quick_content_symbols_restored">Built-in symbol library restored.</string>
+    <string name="quick_content_file_unreadable">Couldn\'t open the file. Pick it again.</string>
+    <string name="quick_content_file_rejected">This file can\'t be used. Nothing was changed.</string>
+    <string name="quick_content_write_failed">Couldn\'t save. Check the location and try again.</string>
+</resources>

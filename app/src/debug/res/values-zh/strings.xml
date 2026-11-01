@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Debug installs sit next to a release install; the names tell them apart. -->
+    <string name="app_name">松烟 Debug</string>
+    <string name="ime_name">松烟输入法 Debug</string>
+</resources>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Quick content panels -->
+    <string name="ime_panel_close">Close</string>
+    <string name="ime_panel_symbols_title">Symbols</string>
+    <string name="ime_panel_phrases_title">Phrases and clipboard</string>
+    <string name="ime_panel_settings_title">Keyboard settings</string>
+    <string name="ime_panel_recent">Recent</string>
+    <string name="ime_panel_phrases">Phrases</string>
+    <string name="ime_panel_clipboard">Clipboard</string>
+    <string name="ime_panel_phrases_empty">No phrases yet.</string>
+    <string name="ime_panel_clipboard_disabled">Clipboard history is off.</string>
+    <string name="ime_panel_clipboard_empty">Nothing recorded yet.</string>
+    <string name="ime_panel_add_phrase">Add phrase</string>
+    <string name="ime_panel_symbols_empty">The symbol library is empty.</string>
+    <string name="ime_panel_clipboard_delete">Delete</string>
+    <string name="ime_panel_quick_content">Phrases and clipboard</string>
+    <string name="ime_panel_quick_insert">Insert</string>
+    <string name="ime_panel_repeat">Repeat last input</string>
+    <string name="ime_panel_nothing_to_repeat">Nothing to repeat</string>
+    <string name="ime_panel_open_settings">Open Songyan settings</string>
+
+    <!-- Keyboard settings panel -->
+    <string name="ime_qs_one_hand">One-handed mode</string>
+    <string name="ime_qs_key_height">Keyboard height</string>
+    <string name="ime_qs_layout">Keyboard layout</string>
+    <string name="ime_qs_appearance">Light or dark</string>
+    <string name="ime_qs_key_sound">Key sound</string>
+    <string name="ime_qs_key_haptics">Key vibration</string>
+    <string name="ime_qs_phrases">Phrases</string>
+    <string name="ime_qs_phrases_more">and clipboard</string>
+    <string name="ime_qs_key_preview">Key preview</string>
+    <string name="ime_qs_on">On</string>
+    <string name="ime_qs_off">Off</string>
+    <string name="ime_qs_engine_section">Input method options</string>
+    <string name="ime_qs_engine_traditional">Traditional output</string>
+    <string name="ime_qs_engine_simplified">Simplified output</string>
+    <string name="ime_qs_engine_emoji">Emoji candidates</string>
+    <string name="ime_qs_engine_full_shape">Full width</string>
+    <string name="ime_qs_left">Left</string>
+    <string name="ime_qs_right">Right</string>
+    <string name="ime_qs_height_compact">Short</string>
+    <string name="ime_qs_height_standard">Standard</string>
+    <string name="ime_qs_height_tall">Tall</string>
+    <string name="ime_qs_mode_system">Follow system</string>
+    <string name="ime_qs_mode_light">Light</string>
+    <string name="ime_qs_mode_dark">Dark</string>
+    <string name="ime_qs_system_off">Off in system settings</string>
+    <string name="ime_qs_unavailable">Not available here</string>
+    <string name="ime_qs_more">More settings</string>
+    <string name="ime_qs_back">Back</string>
+    <string name="ime_qs_label_value">%1$s, %2$s</string>
+    <string name="ime_qs_option_selected">%1$s, selected</string>
+</resources>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shuangpin hints -->
+    <string name="shuangpin_title">Shuangpin hints</string>
+    <string name="shuangpin_entry_on">In use: %1$s</string>
+    <string name="shuangpin_entry_off">Off</string>
+    <string name="shuangpin_switch">Show shuangpin hints on letter keys</string>
+    <string name="shuangpin_current">Current hints: %1$s</string>
+    <string name="shuangpin_footer">Choose the hints that match the shuangpin input method you use.</string>
+    <string name="shuangpin_presets_section">Hint presets</string>
+    <string name="shuangpin_presets_note">Tap a preset to use it. Xiaohe hints are built in; copy them to make changes.</string>
+    <string name="shuangpin_builtin_count">Built-in · hints on %1$d letters</string>
+    <string name="shuangpin_count">Hints on %1$d letters</string>
+    <string name="shuangpin_more">More options</string>
+    <string name="shuangpin_copy">Copy</string>
+    <string name="shuangpin_edit">Edit</string>
+    <string name="shuangpin_export">Export</string>
+    <string name="shuangpin_delete">Delete</string>
+    <string name="shuangpin_copy_suffix">%1$s copy</string>
+    <string name="shuangpin_imported_suffix"> (imported)</string>
+    <string name="shuangpin_new">New hint preset</string>
+    <string name="shuangpin_import_file">Import from file</string>
+    <string name="shuangpin_import_link">Import from link</string>
+    <string name="shuangpin_link_title">Import hints from a link</string>
+    <string name="shuangpin_link_body">Use an https link to an exported hints file.</string>
+    <string name="shuangpin_link_confirm">Import</string>
+    <string name="shuangpin_link_stop">Stop</string>
+    <string name="shuangpin_downloading">Downloading…</string>
+    <string name="shuangpin_link_invalid">Enter a link that starts with https://.</string>
+    <string name="shuangpin_download_failed">Couldn\'t download the file. Try again later.</string>
+    <string name="shuangpin_export_all">Export all settings</string>
+    <string name="shuangpin_reset">Restore defaults</string>
+    <string name="shuangpin_reset_title">Restore defaults?</string>
+    <string name="shuangpin_reset_body">All your hint presets will be deleted and shuangpin hints will turn off. You can export the current file first.</string>
+    <string name="shuangpin_delete_title">Delete the hint preset \"%1$s\"?</string>
+    <string name="shuangpin_damaged">The keyboard can\'t read these settings, so no hints show. Restore defaults to start again.</string>
+    <string name="shuangpin_cancel">Cancel</string>
+    <string name="shuangpin_save">Save</string>
+
+    <string name="shuangpin_editor_new_title">New hint preset</string>
+    <string name="shuangpin_editor_edit_title">Edit hint preset</string>
+    <string name="shuangpin_editor_name">Name</string>
+    <string name="shuangpin_editor_default_name">My shuangpin hints</string>
+    <string name="shuangpin_editor_row">Row %1$d</string>
+    <string name="shuangpin_editor_too_long">Too long: at most %1$d bytes.</string>
+    <string name="shuangpin_editor_name_required">Enter a name.</string>
+    <string name="shuangpin_editor_discard_title">Discard changes?</string>
+    <string name="shuangpin_editor_discard">Discard</string>
+
+    <string name="shuangpin_saved">Saved \"%1$s\".</string>
+    <string name="shuangpin_imported">Imported \"%1$s\".</string>
+    <string name="shuangpin_deleted">Deleted \"%1$s\".</string>
+    <string name="shuangpin_exported">Exported.</string>
+    <string name="shuangpin_reset_done">Defaults restored.</string>
+    <string name="shuangpin_file_unreadable">Can\'t read that file. Choose it again.</string>
+    <string name="shuangpin_write_failed">That didn\'t finish. Try again.</string>
+
+    <string name="shuangpin_error_too_large">The hint file is too large: keep it under 256 KB.</string>
+    <string name="shuangpin_error_malformed">Can\'t read the hint file. Choose a hint preset file.</string>
+    <string name="shuangpin_error_unknown_field">The hint file has an unsupported field \"%1$s\". Check the file.</string>
+    <string name="shuangpin_error_missing_field">The hint file is missing \"%1$s\". Fill it in and import again.</string>
+    <string name="shuangpin_error_wrong_type">\"%1$s\" in the hint file has the wrong type. Check the file.</string>
+    <string name="shuangpin_error_version">This hint file version isn\'t supported.</string>
+    <string name="shuangpin_error_id">The hint file\'s id can\'t be used: letters, digits, - and _ only, at most 64 bytes.</string>
+    <string name="shuangpin_error_name">The name can\'t be used: it\'s required and at most 128 bytes.</string>
+    <string name="shuangpin_error_too_many_hints">At most 26 hints.</string>
+    <string name="shuangpin_error_letter">\"%1$s\" can\'t be used: each key must be one letter a–z.</string>
+    <string name="shuangpin_error_duplicate_letter">\"%1$s\" can\'t be used: write each letter once.</string>
+    <string name="shuangpin_error_hint_too_long">The hint for %1$s is too long: at most 16 bytes.</string>
+    <string name="shuangpin_error_line_break">The hint for %1$s can\'t contain a line break.</string>
+    <string name="shuangpin_error_too_many_presets">At most 64 presets. Delete one you don\'t use first.</string>
+    <string name="shuangpin_error_duplicate_preset">The hint settings contain a duplicate preset.</string>
+    <string name="shuangpin_error_missing_selection">The hint settings don\'t contain the preset in use.</string>
+</resources>

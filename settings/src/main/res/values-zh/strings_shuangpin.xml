@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 双拼提示 -->
+    <string name="shuangpin_title">双拼提示</string>
+    <string name="shuangpin_entry_on">正在使用：%1$s</string>
+    <string name="shuangpin_entry_off">未开启</string>
+    <string name="shuangpin_switch">在字母键上显示双拼提示</string>
+    <string name="shuangpin_current">当前提示：%1$s</string>
+    <string name="shuangpin_footer">请选择与你使用的双拼输入方式相符的提示。</string>
+    <string name="shuangpin_presets_section">提示预设</string>
+    <string name="shuangpin_presets_note">点按一个预设即可使用；「小鹤双拼提示」是内置预设，可复制后修改。</string>
+    <string name="shuangpin_builtin_count">内置 · %1$d 个字母有提示</string>
+    <string name="shuangpin_count">%1$d 个字母有提示</string>
+    <string name="shuangpin_more">更多操作</string>
+    <string name="shuangpin_copy">复制</string>
+    <string name="shuangpin_edit">编辑</string>
+    <string name="shuangpin_export">导出</string>
+    <string name="shuangpin_delete">删除</string>
+    <string name="shuangpin_copy_suffix">%1$s 副本</string>
+    <string name="shuangpin_imported_suffix">（导入）</string>
+    <string name="shuangpin_new">新建提示预设</string>
+    <string name="shuangpin_import_file">从文件导入</string>
+    <string name="shuangpin_import_link">从链接导入</string>
+    <string name="shuangpin_link_title">从链接导入提示</string>
+    <string name="shuangpin_link_body">填写导出的提示文件的 https 链接。</string>
+    <string name="shuangpin_link_confirm">导入</string>
+    <string name="shuangpin_link_stop">停止</string>
+    <string name="shuangpin_downloading">正在下载…</string>
+    <string name="shuangpin_link_invalid">请输入以 https:// 开头的链接。</string>
+    <string name="shuangpin_download_failed">下载失败，请稍后再试。</string>
+    <string name="shuangpin_export_all">导出全部设置</string>
+    <string name="shuangpin_reset">恢复默认设置</string>
+    <string name="shuangpin_reset_title">恢复默认设置？</string>
+    <string name="shuangpin_reset_body">自定义提示将全部删除，双拼提示会关闭。你可以先导出当前文件。</string>
+    <string name="shuangpin_delete_title">删除提示预设「%1$s」？</string>
+    <string name="shuangpin_damaged">键盘暂时读不到这些设置，提示不会显示。恢复默认设置后可以重新开始。</string>
+    <string name="shuangpin_cancel">取消</string>
+    <string name="shuangpin_save">保存</string>
+
+    <string name="shuangpin_editor_new_title">新建提示预设</string>
+    <string name="shuangpin_editor_edit_title">编辑提示预设</string>
+    <string name="shuangpin_editor_name">名称</string>
+    <string name="shuangpin_editor_default_name">我的双拼提示</string>
+    <string name="shuangpin_editor_row">第 %1$d 行</string>
+    <string name="shuangpin_editor_too_long">太长了，最多 %1$d 字节。</string>
+    <string name="shuangpin_editor_name_required">请输入名称。</string>
+    <string name="shuangpin_editor_discard_title">放弃修改？</string>
+    <string name="shuangpin_editor_discard">放弃</string>
+
+    <string name="shuangpin_saved">已保存提示预设「%1$s」。</string>
+    <string name="shuangpin_imported">已导入提示预设「%1$s」。</string>
+    <string name="shuangpin_deleted">已删除提示预设「%1$s」。</string>
+    <string name="shuangpin_exported">已导出。</string>
+    <string name="shuangpin_reset_done">已恢复默认设置。</string>
+    <string name="shuangpin_file_unreadable">无法读取所选文件，请重新选择。</string>
+    <string name="shuangpin_write_failed">操作没有完成，请重试。</string>
+
+    <string name="shuangpin_error_too_large">提示文件过大：请控制在 256 KB 以内。</string>
+    <string name="shuangpin_error_malformed">提示文件无法读取，请选择提示预设文件。</string>
+    <string name="shuangpin_error_unknown_field">提示文件里有不支持的字段「%1$s」，请检查文件。</string>
+    <string name="shuangpin_error_missing_field">提示文件缺少「%1$s」，请填写后再导入。</string>
+    <string name="shuangpin_error_wrong_type">提示文件里「%1$s」的内容类型不对，请检查文件。</string>
+    <string name="shuangpin_error_version">提示文件的版本不受支持。</string>
+    <string name="shuangpin_error_id">提示文件的标识无法使用：只能用英文字母、数字、短横线和下划线，不超过 64 字节。</string>
+    <string name="shuangpin_error_name">名称无法使用：必填且不超过 128 字节。</string>
+    <string name="shuangpin_error_too_many_hints">提示最多 26 条。</string>
+    <string name="shuangpin_error_letter">「%1$s」无法使用：键名必须是一个英文字母 a–z。</string>
+    <string name="shuangpin_error_duplicate_letter">「%1$s」无法使用：同一个字母只写一次。</string>
+    <string name="shuangpin_error_hint_too_long">字母 %1$s 的提示太长了，最多 16 字节。</string>
+    <string name="shuangpin_error_line_break">字母 %1$s 的提示不能换行。</string>
+    <string name="shuangpin_error_too_many_presets">预设最多 64 个，请先删除不用的预设。</string>
+    <string name="shuangpin_error_duplicate_preset">提示设置里有重复的预设。</string>
+    <string name="shuangpin_error_missing_selection">提示设置里找不到正在使用的预设。</string>
+</resources>

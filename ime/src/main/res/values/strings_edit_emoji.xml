@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Edit panel -->
+    <string name="ime_panel_edit_title">Edit</string>
+    <string name="ime_toolbar_edit">Edit</string>
+    <string name="ime_edit_select_all">Select all</string>
+    <string name="ime_edit_up">Up</string>
+    <string name="ime_edit_down">Down</string>
+    <string name="ime_edit_left">Left</string>
+    <string name="ime_edit_right">Right</string>
+    <string name="ime_edit_line_start">Line start</string>
+    <string name="ime_edit_line_end">Line end</string>
+    <string name="ime_edit_copy">Copy</string>
+    <string name="ime_edit_cut">Cut</string>
+    <string name="ime_edit_paste">Paste</string>
+    <string name="ime_edit_undo">Undo</string>
+    <string name="ime_edit_delete">Delete</string>
+    <string name="ime_edit_select">Select</string>
+    <string name="ime_edit_select_on">Select, on</string>
+
+    <!-- Emoji panel -->
+    <string name="ime_panel_emoji_title">Emoji</string>
+    <string name="ime_toolbar_emoji">Emoji</string>
+    <string name="ime_emoji_search">Search</string>
+    <string name="ime_emoji_search_chip">Search: %1$s</string>
+    <string name="ime_emoji_search_empty">Search emoji</string>
+    <string name="ime_symbol_search_empty">Search symbols</string>
+    <string name="ime_phrase_search_empty">Search phrases</string>
+    <string name="ime_emoji_skin_tone_title">Choose a skin tone</string>
+    <string name="ime_emoji_choose_skin_tone_action">Choose skin tone</string>
+    <string name="ime_emoji_recent_empty">No recent emoji yet.</string>
+    <string name="ime_emoji_loading">Loading emoji…</string>
+    <string name="ime_emoji_category_smileys">Smileys</string>
+    <string name="ime_emoji_category_people">People</string>
+    <string name="ime_emoji_category_animals">Nature</string>
+    <string name="ime_emoji_category_food">Food</string>
+    <string name="ime_emoji_category_travel">Travel</string>
+    <string name="ime_emoji_category_activities">Activities</string>
+    <string name="ime_emoji_category_objects">Objects</string>
+    <string name="ime_emoji_category_symbols">Symbols</string>
+    <string name="ime_emoji_category_flags">Flags</string>
+</resources>

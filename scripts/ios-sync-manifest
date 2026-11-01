@@ -1,0 +1,42 @@
+# iOS -> Android sync manifest for the Songyan IME port.
+# Line format: <ios-repo-relative path> <this-repo-relative path>
+# A trailing slash means "copy the contents of the directory recursively".
+# Paths are compared byte-for-byte by scripts/check-ios-sync.sh; do not edit the
+# files listed here by hand (see CONTRIBUTING.md, "Project rules").
+
+# --- native engine sources and build inputs -------------------------------
+Tools/BuildRimeIOS/src/ native/src/
+Tools/BuildRimeIOS/patches/ native/patches/
+Tools/BuildRimeIOS/grammar/CMakeLists.txt native/grammar/CMakeLists.txt
+Tools/BuildRimeIOS/lua/CMakeLists.txt native/lua/CMakeLists.txt
+Tools/BuildRimeIOS/scripts/instrument-grammar.py native/scripts/instrument-grammar.py
+Tools/BuildRimeIOS/scripts/gen-builtin-companions.sh native/scripts/gen-builtin-companions.sh
+Tools/BuildRime/VERSIONS.env native/VERSIONS.env
+Tools/BuildRimeIOS/GRAMMAR-VERSIONS.env native/GRAMMAR-VERSIONS.env
+Tools/BuildRimeIOS/LUA-VERSIONS.env native/LUA-VERSIONS.env
+Tools/BuildRimeIOS/PREDICT-VERSIONS.env native/PREDICT-VERSIONS.env
+Packages/RimeBridge/Sources/RimeLeversSupport/ native/levers/
+
+# --- Rime data shipped in the APK ----------------------------------------
+Resources/BuiltinPackages/Basic/ core/rime/src/main/assets/rime/builtin/
+Resources/EngineResources/opencc/ core/rime/src/main/assets/rime/opencc/
+Resources/EngineResources/licenses/ core/rime/src/main/assets/rime/licenses/
+Resources/EngineResources/engine-capabilities.json core/rime/src/main/assets/rime/engine-capabilities.json
+Packages/PackageManager/Sources/PackageManager/Resources/RimePrelude/ core/rime/src/main/assets/rime/prelude/
+# Only the engine and shared-data notices; the iOS-only notices stay out of the APK.
+Resources/Legal/ThirdPartyNotices.txt settings/src/main/assets/legal/ThirdPartyNotices.txt
+Resources/Legal/licenses/ settings/src/main/assets/legal/licenses/
+
+# --- Reusable UI data ----------------------------------------------------
+Resources/Layouts/ core/layout/src/main/resources/layouts/
+Packages/QuickContentKit/Sources/QuickContentKit/Resources/default-symbols.json core/content/src/main/resources/default-symbols.json
+
+# --- Engine fixtures (androidTest assets) --------------------------------
+Tests/EngineFixtures/Builtin/ core/rime/src/androidTest/assets/engine-fixtures/builtin/
+Tests/Fixtures/GrammarRanking/ core/rime/src/androidTest/assets/engine-fixtures/grammar-ranking/
+Tools/BuildRimeIOS/testdata/generic-ambiguity/ core/rime/src/androidTest/assets/engine-fixtures/ambiguity/
+# --- Package manager fixtures (cross-checked schema projections) ----------
+Packages/PackageManager/Tests/PackageManagerTests/Fixtures/songyan_quanpin.projection.json core/packages/src/test/resources/package-fixtures/songyan_quanpin.projection.json
+Packages/PackageManager/Tests/PackageManagerTests/Fixtures/songyan_flypy.projection.json core/packages/src/test/resources/package-fixtures/songyan_flypy.projection.json
+Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_flypy.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_flypy.projection.json
+Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_mspy_test.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_mspy_test.projection.json

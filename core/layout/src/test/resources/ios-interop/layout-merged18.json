@@ -1,0 +1,308 @@
+{
+  "id" : "merged18",
+  "input" : {
+    "builtinLayout" : "merged18"
+  },
+  "name" : "18 键",
+  "note" : "部分键由两个字母合用，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。",
+  "rows" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "q"
+          },
+          "label" : "Q",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "w"
+          },
+          "label" : "WE",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "e"
+              },
+              "label" : "e"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "r"
+          },
+          "label" : "RT",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "t"
+              },
+              "label" : "t"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "y"
+          },
+          "label" : "Y",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "u"
+          },
+          "label" : "U",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "i"
+          },
+          "label" : "IO",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "o"
+              },
+              "label" : "o"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "p"
+          },
+          "label" : "P",
+          "width" : 1.3
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "a"
+          },
+          "label" : "A",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "s"
+          },
+          "label" : "SD",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "d"
+              },
+              "label" : "d"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "f"
+          },
+          "label" : "FG",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "g"
+              },
+              "label" : "g"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "h"
+          },
+          "label" : "H",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "j"
+          },
+          "label" : "JK",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "k"
+              },
+              "label" : "k"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "l"
+          },
+          "label" : "L",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "，"
+              },
+              "label" : "，"
+            }
+          ],
+          "width" : 1.3
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "z"
+          },
+          "label" : "Z",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "x"
+          },
+          "label" : "XC",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "c"
+              },
+              "label" : "c"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "v"
+          },
+          "label" : "V",
+          "width" : 1.3
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "b"
+          },
+          "label" : "BN",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "n"
+              },
+              "label" : "n"
+            }
+          ],
+          "secondaryLabel" : "合并键",
+          "width" : 1.7
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "m"
+          },
+          "label" : "M",
+          "longPress" : [
+            {
+              "action" : {
+                "type" : "literal",
+                "value" : "。"
+              },
+              "label" : "。"
+            }
+          ],
+          "width" : 1.3
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "modeSwitch",
+            "value" : "nextLayout"
+          },
+          "label" : "布局"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "width" : 4
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫"
+        },
+        {
+          "action" : {
+            "type" : "enter"
+          },
+          "label" : "⏎"
+        }
+      ]
+    }
+  ],
+  "split" : {
+    "activation" : "automatic",
+    "automaticGap" : true,
+    "gapFraction" : 0.32,
+    "rowBreaks" : [
+
+    ]
+  }
+}

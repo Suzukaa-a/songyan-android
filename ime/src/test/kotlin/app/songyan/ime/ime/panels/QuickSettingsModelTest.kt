@@ -1,0 +1,167 @@
+package app.songyan.ime.ime.panels
+
+import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.ime.ColorMode
+import app.songyan.ime.ime.KeyHeight
+import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class QuickSettingsModelTest {
+    private fun tile(
+        state: QuickSettingsState,
+        setting: QuickSetting,
+    ) = QuickSettingsModel.tiles(state).single { it.setting == setting }
+
+    @Test
+    fun theGridOffersTheHighFrequencySettingsInOrder() {
+        assertEquals(
+            listOf(
+                QuickSetting.ONE_HAND,
+                QuickSetting.KEY_HEIGHT,
+                QuickSetting.LAYOUT,
+                QuickSetting.APPEARANCE,
+                QuickSetting.KEY_SOUND,
+                QuickSetting.KEY_HAPTICS,
+                QuickSetting.KEY_PREVIEW,
+                QuickSetting.PHRASES,
+            ),
+            QuickSettingsModel.tiles(QuickSettingsState()).map { it.setting },
+        )
+    }
+
+    @Test
+    fun oneHandOffersThreeChoicesWithTheCurrentOneMarked() {
+        val one = tile(QuickSettingsState(oneHand = KeyboardOneHandMode.LEFT), QuickSetting.ONE_HAND)
+        assertEquals(QuickTile.Kind.CHOICE, one.kind)
+        assertEquals(listOf("off", "left", "right"), one.options.map { it.key })
+        assertEquals(listOf("left"), one.options.filter { it.selected }.map { it.key })
+        assertEquals("left", one.valueKey)
+    }
+
+    @Test
+    fun keyHeightUsesTheSameValuesAsTheSettingsApp() {
+        val height = tile(QuickSettingsState(keyHeight = KeyHeight.TALL), QuickSetting.KEY_HEIGHT)
+        assertEquals(listOf("compact", "standard", "tall"), height.options.map { it.key })
+        assertEquals("tall", height.valueKey)
+        assertEquals(
+            QuickSettingChange.Height(KeyHeight.COMPACT),
+            height.options.first { it.key == "compact" }.change,
+        )
+    }
+
+    @Test
+    fun appearanceOffersSystemLightAndDark() {
+        val appearance = tile(QuickSettingsState(colorMode = ColorMode.DARK), QuickSetting.APPEARANCE)
+        assertEquals(listOf("system", "light", "dark"), appearance.options.map { it.key })
+        assertEquals("dark", appearance.valueKey)
+    }
+
+    @Test
+    fun oneHandIsUnavailableWhereTheKeyboardNeverNarrows() {
+        assertFalse(tile(QuickSettingsState(oneHandAvailable = false), QuickSetting.ONE_HAND).enabled)
+        assertTrue(tile(QuickSettingsState(), QuickSetting.ONE_HAND).enabled)
+    }
+
+    @Test
+    fun layoutIsAnActionThatNamesTheCurrentLayout() {
+        val layout = tile(QuickSettingsState(layout = KeyboardLayoutKind.MERGED14), QuickSetting.LAYOUT)
+        assertEquals(QuickTile.Kind.ACTION, layout.kind)
+        assertEquals("merged14", layout.valueKey)
+    }
+
+    @Test
+    fun aTapOnAToggleAsksForTheOppositeValue() {
+        val state = QuickSettingsState(soundOn = true, hapticsOn = false, previewOn = true)
+        assertEquals(QuickSettingChange.Sound(false), QuickSettingsModel.toggled(tile(state, QuickSetting.KEY_SOUND)))
+        assertEquals(
+            QuickSettingChange.Haptics(true),
+            QuickSettingsModel.toggled(tile(state, QuickSetting.KEY_HAPTICS)),
+        )
+        assertEquals(
+            QuickSettingChange.Preview(false),
+            QuickSettingsModel.toggled(tile(state, QuickSetting.KEY_PREVIEW)),
+        )
+    }
+
+    @Test
+    fun theSoundToggleDoesNothingWhileTheSystemSwitchIsOff() {
+        val sound = tile(QuickSettingsState(soundOn = false, soundBlockedBySystem = true), QuickSetting.KEY_SOUND)
+        assertFalse(sound.enabled)
+        assertNull(QuickSettingsModel.toggled(sound))
+    }
+
+    @Test
+    fun onlyTogglesToggle() {
+        val state = QuickSettingsState()
+        assertNull(QuickSettingsModel.toggled(tile(state, QuickSetting.ONE_HAND)))
+        assertNull(QuickSettingsModel.toggled(tile(state, QuickSetting.LAYOUT)))
+        assertNull(QuickSettingsModel.toggled(tile(state, QuickSetting.PHRASES)))
+    }
+
+    @Test
+    fun changesAdvanceTheStateTheTilesAreBuiltFrom() {
+        var state = QuickSettingsState()
+        state = state.apply(QuickSettingChange.OneHand(KeyboardOneHandMode.RIGHT))
+        state = state.apply(QuickSettingChange.Height(KeyHeight.COMPACT))
+        state = state.apply(QuickSettingChange.Appearance(ColorMode.LIGHT))
+        state = state.apply(QuickSettingChange.Sound(false))
+        state = state.apply(QuickSettingChange.Haptics(false))
+        state = state.apply(QuickSettingChange.Preview(false))
+        assertEquals("right", tile(state, QuickSetting.ONE_HAND).valueKey)
+        assertEquals("compact", tile(state, QuickSetting.KEY_HEIGHT).valueKey)
+        assertEquals("light", tile(state, QuickSetting.APPEARANCE).valueKey)
+        assertFalse(tile(state, QuickSetting.KEY_SOUND).on)
+        assertFalse(tile(state, QuickSetting.KEY_HAPTICS).on)
+        assertFalse(tile(state, QuickSetting.KEY_PREVIEW).on)
+    }
+
+    @Test
+    fun aStoredColorModeResolvesAndAnUnknownOneFollowsTheSystem() {
+        assertEquals(ColorMode.SYSTEM, ColorMode.resolve(null))
+        assertEquals(ColorMode.SYSTEM, ColorMode.resolve("nonsense"))
+        assertEquals(ColorMode.DARK, ColorMode.resolve("dark"))
+    }
+
+    @Test
+    fun theSwitchesOfTheInputMethodFollowThePlainTilesAsToggles() {
+        val state =
+            QuickSettingsState(
+                engineOptions =
+                    listOf(
+                        EngineOptionTile("traditionalize", EngineOptionKind.TRADITIONAL, on = true),
+                        EngineOptionTile("emoji", EngineOptionKind.EMOJI, on = false),
+                    ),
+            )
+        val tiles = QuickSettingsModel.tiles(state)
+        assertEquals(QuickSetting.PHRASES, tiles[tiles.size - 3].setting)
+        val (first, second) = tiles.takeLast(2)
+        assertTrue(first.kind == QuickTile.Kind.TOGGLE && first.on)
+        assertFalse(second.on)
+        assertEquals(QuickSettingChange.EngineOption("traditionalize", false), QuickSettingsModel.toggled(first))
+        assertEquals(QuickSettingChange.EngineOption("emoji", true), QuickSettingsModel.toggled(second))
+    }
+
+    @Test
+    fun aSwitchChangeAdvancesOnlyThatSwitch() {
+        val state =
+            QuickSettingsState(
+                engineOptions =
+                    listOf(
+                        EngineOptionTile("a", EngineOptionKind.TRADITIONAL, on = false),
+                        EngineOptionTile("b", EngineOptionKind.EMOJI, on = false),
+                    ),
+            )
+        val next = state.apply(QuickSettingChange.EngineOption("b", true))
+        assertEquals(listOf(false, true), next.engineOptions.map { it.on })
+    }
+
+    @Test
+    fun anInputMethodWithoutSwitchesAddsNoTiles() {
+        assertEquals(8, QuickSettingsModel.tiles(QuickSettingsState()).size)
+    }
+}

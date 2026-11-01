@@ -1,0 +1,82 @@
+{
+  "appearance" : "system",
+  "candidateBar" : {
+    "collapsed" : {
+      "cellPaddingX" : 7,
+      "cellSpacing" : 0,
+      "fillsAvailableWidth" : false,
+      "height" : 40
+    },
+    "compositionRow" : {
+      "visible" : "composingOnly"
+    },
+    "controls" : {
+      "pagePosition" : "both",
+      "showsExpand" : true
+    },
+    "expanded" : {
+      "columnSpacing" : 0,
+      "columns" : 2,
+      "fullRowTextLength" : 8,
+      "mode" : "adaptive",
+      "rowSpacing" : 0
+    },
+    "formatVersion" : 1,
+    "id" : "builtin-twilight",
+    "name" : "薄暮"
+  },
+  "formatVersion" : 1,
+  "id" : "builtin-twilight",
+  "name" : "薄暮",
+  "skin" : {
+    "formatVersion" : 1,
+    "id" : "builtin-twilight",
+    "keycap" : {
+      "borderWidth" : 0,
+      "cornerRadius" : 6,
+      "shadow" : "none"
+    },
+    "name" : "薄暮",
+    "spacing" : {
+      "visualInsetX" : 0,
+      "visualInsetY" : 1
+    },
+    "typography" : {
+      "candidateSize" : 21,
+      "family" : "system",
+      "keySize" : 22,
+      "secondarySize" : 10,
+      "weight" : "regular"
+    },
+    "variants" : {
+      "dark" : {
+        "colors" : {
+          "accent" : "#A855F7",
+          "accentText" : "#000000",
+          "border" : "#808080",
+          "control" : "#221C2E",
+          "key" : "#2D243A",
+          "panel" : "#1A1625",
+          "pressed" : "#493F59",
+          "secondaryText" : "#AFA3BF",
+          "selected" : "#4E3A63",
+          "text" : "#F3EEF9"
+        }
+      },
+      "light" : {
+        "colors" : {
+          "accent" : "#7E3AF2",
+          "accentText" : "#FFFFFF",
+          "border" : "#777777",
+          "control" : "#D5CDDE",
+          "key" : "#FFFFFF",
+          "panel" : "#E8E3EE",
+          "pressed" : "#C5BDD0",
+          "secondaryText" : "#635570",
+          "selected" : "#DDD4E8",
+          "text" : "#261A35"
+        }
+      }
+    }
+  }
+}

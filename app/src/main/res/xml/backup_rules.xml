@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 26-30 full backup (cloud, and device transfer through it), held to the 25 MB cloud limit like the
+     API 31+ cloud rules: imported scheme packages and stacked dictionaries can be large, so they are not in
+     it (they can be imported again). Also not in it: published Rime generations, deploy work, caches and request state (rebuildable),
+     the clipboard history (private to this device), the large engine feature models (over the 25 MB cloud
+     limit) and the automatic learning snapshots (the live userdb is already in). The built-in source is
+     unpacked from the app again. BackupRulesTest checks the paths against AppStorage. -->
+<full-backup-content>
+    <include domain="file" path="rime/user" />
+    <include domain="file" path="rime/features/settings.json" />
+    <include domain="file" path="rime/options" />
+    <include domain="file" path="rime/config/edit" />
+    <include domain="file" path="rime/config/applied" />
+    <include domain="file" path="content" />
+    <include domain="file" path="layouts" />
+    <include domain="file" path="appearance" />
+    <include domain="file" path="datastore" />
+    <include domain="sharedpref" path="quick_insert.xml" />
+    <exclude domain="file" path="content/clipboard.json" />
+    <exclude domain="file" path="content/.lock" />
+</full-backup-content>

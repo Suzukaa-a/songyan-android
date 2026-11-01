@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">键盘外观</string>
+
+    <string name="appearance_section_theme">深浅色</string>
+    <string name="appearance_theme_system">跟随系统</string>
+    <string name="appearance_theme_light">浅色</string>
+    <string name="appearance_theme_dark">深色</string>
+
+    <string name="appearance_dynamic_title">跟随壁纸</string>
+
+    <string name="appearance_section_palette">键盘配色</string>
+    <string name="appearance_unavailable">暂时读不到外观列表，键盘仍使用默认外观。</string>
+    <string name="appearance_apply_failed">无法应用这个外观。</string>
+
+    <string name="appearance_name_songyan">松烟墨韵</string>
+    <string name="appearance_name_ink">墨夜</string>
+    <string name="appearance_name_bamboo">青竹</string>
+    <string name="appearance_name_paper">暖纸</string>
+    <string name="appearance_name_galaxy">星河</string>
+    <string name="appearance_name_dusk">薄暮</string>
+    <string name="appearance_name_system">系统默认</string>
+</resources>

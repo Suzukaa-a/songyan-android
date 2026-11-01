@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Input schemes · dictionary -->
+    <string name="schemes_dictionary_section">Dictionary</string>
+    <string name="schemes_dictionary_unavailable">Dictionaries cannot be imported right now. Try again later.</string>
+    <string name="schemes_dictionary_entry_count">Imported dictionary · Entries: %1$d</string>
+    <string name="schemes_dictionary_import_file">Import Dictionary</string>
+    <string name="schemes_dictionary_import_url">Import from Link</string>
+    <string name="schemes_dictionary_note">Supports .dict.yaml files; select the dictionaries it imports together with it.</string>
+    <string name="schemes_dictionary_importing">Importing dictionary…</string>
+    <string name="schemes_dictionary_removing">Removing dictionary…</string>
+    <string name="schemes_dictionary_remove">Remove</string>
+    <string name="schemes_dictionary_remove_title">Remove the imported dictionary?</string>
+    <string name="schemes_dictionary_remove_body">Learned words are kept.</string>
+    <string name="schemes_dictionary_cancel">Cancel</string>
+    <string name="schemes_dictionary_import_success">Dictionary imported.</string>
+    <string name="schemes_dictionary_remove_success">Imported dictionary removed.</string>
+    <string name="schemes_dictionary_import_failed">Could not import the dictionary. Try again.</string>
+    <string name="schemes_dictionary_remove_failed">Could not remove the dictionary. Try again.</string>
+
+    <!-- Import from link -->
+    <string name="schemes_dictionary_url_label">Dictionary link</string>
+    <string name="schemes_dictionary_url_invalid">Enter a link that starts with https://.</string>
+    <string name="schemes_dictionary_url_note">The link must point directly to a .dict.yaml file.</string>
+    <string name="schemes_dictionary_url_confirm">Import</string>
+    <string name="schemes_dictionary_target_title">Add to which input scheme?</string>
+    <string name="schemes_dictionary_target_builtin">Songyan built-in</string>
+    <string name="schemes_dictionary_target_continue">Continue</string>
+    <string name="schemes_dictionary_stacked_on">Added to %1$s</string>
+</resources>

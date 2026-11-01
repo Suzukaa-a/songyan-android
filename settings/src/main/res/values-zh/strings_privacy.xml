@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 关于 · 隐私 -->
+    <string name="about_privacy_title">隐私</string>
+    <string name="about_privacy_local">松烟完全在本机运行，不收集也不上传你输入的内容。</string>
+    <string name="about_privacy_network">只有你在设置里下载输入方案、语法模型或联想词库，或者从链接导入词库时，才会联网下载这些内容。键盘本身从不联网。</string>
+    <string name="about_privacy_private">密码等私密输入框不学习、不记录剪贴板，也不显示联想。</string>
+</resources>

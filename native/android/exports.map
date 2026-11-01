@@ -1,0 +1,11 @@
+/* Linker version script: the engine library exports only its JNI surface and build marker.
+   Everything else (librime, plugins, Boost, libc++) stays internal so --gc-sections can
+   drop unreferenced code. Keep in sync with allowed_exports in scripts/check-native-engine.sh. */
+{
+  global:
+    Java_app_songyan_ime_rime_RimeNative_*;
+    JNI_OnLoad;
+    songyan_librime_marker;
+  local:
+    *;
+};

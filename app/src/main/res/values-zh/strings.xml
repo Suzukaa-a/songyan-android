@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">松烟</string>
+    <string name="ime_name">松烟输入法</string>
+    <string name="subtype_pinyin">拼音</string>
+
+    <!-- Deploy process foreground notification. -->
+    <string name="deploy_channel_name">输入方案准备</string>
+    <string name="deploy_channel_description">首次使用、更新或导入输入方案时显示进度。</string>
+    <string name="deploy_notification_title">正在准备输入方案</string>
+    <string name="deploy_notification_text">准备完成后即可使用键盘。</string>
+    <string name="deploy_notification_failed">输入方案准备失败，点按打开松烟重试。</string>
+    <string name="deploy_notification_done">输入方案已就绪。</string>
+    <string name="deploy_notification_dictionary_title">正在导入词库</string>
+    <string name="deploy_notification_dictionary_text">完成后键盘会自动使用。</string>
+    <string name="deploy_notification_scheme_title">正在导入输入方案</string>
+    <string name="deploy_notification_scheme_text">完成后键盘会自动使用。</string>
+
+    <string name="import_cancelled">已取消导入。</string>
+    <string name="import_path_separator">、</string>
+
+    <!-- Imported dictionary: request results (shown by settings 输入方案). -->
+    <string name="dictionary_import_error_unsupported_file">这里只能导入 .dict.yaml 词库文件。</string>
+    <string name="dictionary_import_error_encoding">读不出这个词库的文字。请用 UTF-8 编码保存后再试。</string>
+    <string name="dictionary_import_error_too_large">文件太大，最大支持 %s。</string>
+    <string name="dictionary_import_error_too_many_files">一次最多导入 128 个词库文件。</string>
+    <string name="dictionary_import_error_duplicate_file">选中了两个同名的词库文件。</string>
+    <string name="dictionary_import_error_too_many_entries">词库超过 200 万条。</string>
+    <string name="dictionary_import_error_empty">词库里没有词条。</string>
+    <string name="dictionary_import_error_format">不支持这种词库格式。</string>
+    <string name="dictionary_import_error_missing_dependencies">还缺少它引用的词库：%s。请把这些文件一起选上。</string>
+    <string name="dictionary_import_error_dependency_cycle">这些词库互相引用，无法导入。</string>
+    <string name="dictionary_import_error_unreferenced_file">这些文件和要导入的词库无关：%s。</string>
+    <string name="dictionary_import_error_template">这个词库和当前版本的松烟不兼容，请更新后再试。</string>
+    <string name="dictionary_import_error_staging">导入没有完成，请重试。</string>
+    <string name="dictionary_import_error_read">无法读取这个词库文件。</string>
+    <string name="dictionary_import_error_url">请填以 https:// 开头的链接。</string>
+    <string name="dictionary_import_error_url_file">链接要直接指向 .dict.yaml 文件。</string>
+    <string name="dictionary_import_error_download">下载词库失败，请检查网络后重试。</string>
+    <string name="dictionary_import_error_download_timeout">下载时间太长，已停止。请检查网络后重试。</string>
+    <string name="dictionary_import_error_redirects">链接跳转次数过多，请更换链接。</string>
+    <string name="dictionary_import_error_insecure_redirect">链接跳转到了不安全的 http 地址，请换一个链接。</string>
+    <string name="dictionary_import_error_deploy">词库导入失败，请重试。</string>
+    <string name="dictionary_import_error_deploy_unavailable">正在处理上一个导入，完成后再试。</string>
+    <string name="dictionary_import_error_timeout">导入时间太长，已停止。请重试。</string>
+    <string name="dictionary_import_error_remove">移除词库没有完成，请稍后重试。</string>
+
+    <!-- Imported scheme package: request results (shown by settings 输入方案). -->
+    <string name="scheme_import_error_not_a_package">这里只能导入 .zip 格式的输入方案。</string>
+    <string name="scheme_import_error_name_encoding">压缩包里的文件名不是 UTF-8 编码。请用系统自带的压缩工具重新压缩后再试。</string>
+    <string name="scheme_import_error_too_large">文件太大，最大支持 %s。</string>
+    <string name="scheme_import_error_too_many_files">压缩包里的文件太多，最多支持 2000 个。</string>
+    <string name="scheme_import_error_unsafe_files">压缩包里有不安全的文件路径，请换一个文件。</string>
+    <string name="scheme_import_error_user_data">压缩包里带有学习数据（.userdb），请去掉后再试。</string>
+    <string name="scheme_import_error_missing_scheme">这个文件里没有可用的输入方式。</string>
+    <string name="scheme_import_error_invalid_scheme">输入方案里的配置文件有误，请检查文件内容。</string>
+    <string name="scheme_import_error_encoding">输入方案里有文件不是 UTF-8 文本。</string>
+    <string name="scheme_import_error_missing_dependency">输入方案缺少这些文件：%s。</string>
+    <string name="scheme_import_error_invalid_model">输入方案里的语法模型文件不可用。</string>
+    <string name="scheme_import_error_builtin_customization">这个输入方案会改动松烟自带的输入方式，暂不支持。</string>
+    <string name="scheme_import_error_read">无法读取这个文件。</string>
+    <string name="scheme_import_error_staging">导入没有完成，请重试。</string>
+    <string name="scheme_import_error_deploy_unavailable">正在处理上一个导入，完成后再试。</string>
+    <string name="scheme_import_error_deploy">输入方案导入失败，请重试。</string>
+    <string name="scheme_import_error_timeout">导入时间太长，已停止。请重试。</string>
+
+    <!-- Stored sources (settings 输入方案). -->
+    <string name="source_builtin_name">松烟内置</string>
+    <string name="source_error_activate">没能换用这个输入方案，请重试。</string>
+    <string name="source_error_delete">没能删除这个输入方案，请重试。</string>
+
+    <!-- Settings: built-in scheme and keyboard names. -->
+    <string name="scheme_builtin_quanpin">全拼</string>
+    <string name="scheme_builtin_flypy">小鹤双拼</string>
+    <string name="keyboard_input_method_pinyin">拼音</string>
+    <string name="keyboard_layout_14">14 键</string>
+    <string name="keyboard_layout_18">18 键</string>
+    <string name="keyboard_layout_9">9 键</string>
+    <string name="keyboard_layout_26">26 键</string>
+
+    <!-- IME status overlay before a published generation exists. -->
+    <string name="dictionary_import_error_row">「%1$s」第 %2$d 行的列数不对。</string>
+    <string name="dictionary_import_error_word">「%1$s」第 %2$d 行的词不是汉字。</string>
+    <string name="dictionary_import_error_syllable_count">「%1$s」第 %2$d 行的拼音个数与字数不一致。</string>
+    <string name="dictionary_import_error_syllable_unknown">「%1$s」第 %2$d 行有无法识别的拼音。</string>
+    <string name="dictionary_import_error_weight">「%1$s」第 %2$d 行的权重不是有效数字。</string>
+    <string name="dictionary_import_error_row_unknown">词库里有无法识别的词条。</string>
+    <string name="dictionary_import_error_download_host">找不到这个链接的网址，请检查链接。</string>
+    <string name="dictionary_import_error_download_offline">没有网络连接，请检查网络后重试。</string>
+    <string name="dictionary_import_error_download_server">服务器出错了（%1$s），请稍后重试。</string>
+    <string name="dictionary_import_error_download_not_found">这个链接下没有文件。</string>
+    <string name="dictionary_import_error_target">这个输入方案不支持加入词库，请选择其他输入方案。</string>
+    <string name="scheme_import_error_dictionary_stack">新版本的方案包无法加入你导入的词库。先移除这个词库，再导入。</string>
+    <string name="scheme_import_error_keyboard_companion">这个输入方案无法用于 14 键、18 键和 9 键，没有导入。请检查方案里的配置文件。</string>
+    <string name="features_error_prediction_file">所选文件不是有效的联想词库（predict.db）。</string>
+    <string name="features_error_grammar_file">所选文件不是可用的语法模型（.gram）。</string>
+    <string name="features_error_too_large">文件太大，最大支持 512 MB。</string>
+    <string name="features_error_read">无法打开所选文件，请重新选择。</string>
+    <string name="features_error_save">未能保存，请重试。</string>
+    <string name="deploy_notification_download_title">正在下载</string>
+    <string name="deploy_notification_download_text">下载完成后会自动保存。</string>
+    <string name="learning_backup_file_name">松烟-学习备份-%1$s.json</string>
+    <string name="learning_safety_file_name">松烟-合并前备份-%1$s.json</string>
+    <string name="learning_error_no_source">还没有正在使用的输入方案。</string>
+    <string name="learning_error_nothing">正在使用的输入方案还没有学到词。</string>
+    <string name="learning_error_backup">没能读取学习数据，请重试。</string>
+    <string name="learning_error_no_safety_backup">还没有合并前的备份。</string>
+    <string name="learning_error_write">没能保存文件，请重新选择保存位置。</string>
+    <string name="learning_error_read">无法读取所选的文件，请重新选择。</string>
+    <string name="learning_error_invalid">这个文件不是松烟学习备份，或者已经损坏。没有做任何修改。</string>
+    <string name="learning_error_other_source">这份备份来自其他输入方案，不能并入正在使用的输入方案。没有做任何修改。</string>
+    <string name="learning_error_safety">没能先保存当前的学习数据，合并没有开始。</string>
+    <string name="learning_error_merge">合并没有完成，学习数据没有改变。请重试。</string>
+    <string name="learning_error_quarantine_gone">这份学习数据已经不在了。</string>
+    <string name="learning_error_quarantine_unreadable">这份学习数据无法安全读取，已原样保留。没有做任何修改。</string>
+    <string name="learning_error_quarantine_not_in_use">请先使用这份数据所属的输入方案，再来恢复。没有做任何修改。</string>
+    <string name="learning_error_quarantine_empty">这份学习数据里没有可恢复的词。</string>
+    <string name="learning_error_delete">没能删除，请重试。</string>
+    <string name="learning_error_too_large">所选的文件太多或太大，请分几次导入。没有做任何修改。</string>
+    <string name="learning_files_none_found">所选的位置里没有 Rime 词库文件。</string>
+    <string name="learning_files_merge">%1$s，共 %2$s，会并入「%3$s」。</string>
+    <string name="learning_files_merged">已并入%1$s，共 %2$s。</string>
+    <string name="learning_files_nothing">所选文件里没有能并入的词库，没有做任何修改。</string>
+    <string name="learning_files_skipped_header">这些文件不会并入：</string>
+    <string name="learning_files_skip_invalid">%1$s：不是 Rime 词库文件，或者已经损坏</string>
+    <string name="learning_files_skip_too_large">%1$s：文件太大</string>
+    <string name="learning_files_skip_empty">%1$s：里面没有词</string>
+    <string name="learning_files_skip_not_installed">%1$s：正在使用的输入方案用不到这份词库</string>
+    <string name="learning_files_other_scheme_hint">如果这些词库属于你的其他输入方案，先在「我的键盘」里使用那个输入方案，再来导入。</string>
+    <plurals name="learning_files_dictionaries">
+        <item quantity="other">%d 份词库</item>
+    </plurals>
+    <plurals name="learning_files_entries">
+        <item quantity="other">%s 条</item>
+    </plurals>
+    <plurals name="learning_files_not_merged">
+        <item quantity="other">另有 %d 个文件没有并入。</item>
+    </plurals>
+    <string name="scheme_import_error_link_not_zip">链接没有指向 ZIP 文件。请填写 ZIP 下载链接，或 GitHub 仓库地址。</string>
+    <string name="scheme_update_error_missing">要更新的输入方案已经不在了。</string>
+    <string name="source_error_restore">没能恢复这个输入方案。</string>
+    <string name="source_damaged_name">已损坏的输入方案</string>
+    <!-- 「文件」应用里的 Rime 配置文件夹，以及应用更改时的提示。 -->
+    <string name="rime_config_root_title">松烟 Rime 配置</string>
+    <string name="rime_config_folder_edit">我的配置</string>
+    <string name="rime_config_folder_active">正在使用：%1$s</string>
+    <string name="rime_config_folder_active_none">正在使用</string>
+    <string name="rime_config_folder_sources">全部输入方案</string>
+    <string name="rime_config_error_yaml">「%1$s」格式有误，改动没有应用，键盘仍用原来的设置。改好或删掉这个文件后再试。</string>
+    <string name="rime_config_error_text">「%1$s」不是 UTF-8 文本，改动没有应用，键盘仍用原来的设置。</string>
+    <string name="rime_config_error_large">「%1$s」太大，改动没有应用。每个文件不超过 4 MB，全部加起来不超过 8 MB。</string>
+    <string name="rime_config_error_many">文件太多，改动没有应用。最多放 100 个文件。</string>
+    <string name="rime_config_error_deploy">改动没能生效，键盘仍用原来的设置。检查最近改过的文件后再试。</string>
+    <string name="rime_config_error_unavailable">现在没法应用更改，请稍后再试。</string>
+    <string name="rime_config_skipped">你的配置不适用于正在使用的输入方案，这个方案现在按原样使用。</string>
+    <string name="rime_config_refused_read_only">这个文件夹只能查看。把文件放进「我的配置」，再到松烟设置里点「应用更改」。</string>
+    <string name="rime_config_refused_folder">「我的配置」里不能放文件夹，把文件直接放进去。</string>
+    <string name="rime_config_refused_type">「%1$s」放不进来。「我的配置」只收 .yaml 和 .txt 文件。</string>
+    <string name="package_learning_failed">方案包已导入，但用词记录没有并入。你已学到的词没有改动。</string>
+    <string name="package_learning_not_in_use">没能切换到这个输入方案，用词记录没有并入。</string>
+    <string name="package_learning_nothing">方案包里的用词记录与它的词库对不上，没有并入。</string>
+    <string name="package_learning_gone">这些用词记录已经不在了。</string>
+</resources>

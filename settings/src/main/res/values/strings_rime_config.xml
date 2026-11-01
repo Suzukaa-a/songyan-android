@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rime_config_section">Rime configuration</string>
+    <string name="rime_config_body">Change input schemes with files such as xxx.custom.yaml, the same way as Rime on a computer. Edit them in “Songyan Rime configuration” in the Files app. Changes take effect after you tap “Apply changes”.</string>
+    <string name="rime_config_open">Open in Files</string>
+    <string name="rime_config_apply">Apply changes</string>
+    <string name="rime_config_applying">Applying…</string>
+    <string name="rime_config_pending">Some changes aren\'t applied yet.</string>
+    <string name="rime_config_empty">No configuration files yet.</string>
+    <plurals name="rime_config_in_use">
+        <item quantity="one">The keyboard uses your %1$d configuration file.</item>
+        <item quantity="other">The keyboard uses your %1$d configuration files.</item>
+    </plurals>
+    <string name="rime_config_applied">Changes applied.</string>
+    <string name="rime_config_no_files_app">Couldn\'t find the Files app.</string>
+    <string name="rime_config_failed">Couldn\'t apply the changes.</string>
+</resources>

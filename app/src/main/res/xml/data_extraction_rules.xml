@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 31+. Cloud backup is limited to 25 MB and the system drops the whole backup above it, so anything
+     that can grow large travels only in a device-to-device transfer: imported scheme packages
+     (rime/sources), stacked dictionaries, the engine feature models (rime/features: the prediction database
+     and grammar models) and the automatic learning snapshots. The cloud keeps what is small and cannot be
+     downloaded again: learning data, the Rime configuration files (8 MB at most), phrases, settings, layouts and appearances.
+     Never in either: published generations, deploy work, caches, request state, the clipboard history,
+     the built-in source. BackupRulesTest checks the paths. -->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="file" path="rime/user" />
+        <include domain="file" path="rime/features/settings.json" />
+        <include domain="file" path="rime/options" />
+        <include domain="file" path="rime/config/edit" />
+        <include domain="file" path="rime/config/applied" />
+        <include domain="file" path="content" />
+        <include domain="file" path="layouts" />
+        <include domain="file" path="appearance" />
+        <include domain="file" path="datastore" />
+        <include domain="sharedpref" path="quick_insert.xml" />
+        <exclude domain="file" path="content/clipboard.json" />
+        <exclude domain="file" path="content/.lock" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="rime/user" />
+        <include domain="file" path="rime/sources" />
+        <include domain="file" path="rime/stacked-dictionaries" />
+        <include domain="file" path="rime/features" />
+        <include domain="file" path="rime/options" />
+        <include domain="file" path="rime/config/edit" />
+        <include domain="file" path="rime/config/applied" />
+        <include domain="file" path="rime/learning-snapshots" />
+        <include domain="file" path="content" />
+        <include domain="file" path="layouts" />
+        <include domain="file" path="appearance" />
+        <include domain="file" path="datastore" />
+        <include domain="sharedpref" path="quick_insert.xml" />
+        <exclude domain="file" path="rime/sources/songyan-builtin" />
+        <exclude domain="file" path="rime/features/features.lock" />
+        <exclude domain="file" path="content/clipboard.json" />
+        <exclude domain="file" path="content/.lock" />
+    </device-transfer>
+</data-extraction-rules>

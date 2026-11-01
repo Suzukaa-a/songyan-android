@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 快捷内容 -->
+    <string name="quick_content_loading">正在读取…</string>
+    <string name="quick_content_save">保存</string>
+    <string name="quick_content_cancel">取消</string>
+    <string name="quick_content_delete">删除</string>
+    <string name="quick_content_edit">编辑</string>
+
+    <string name="quick_content_clipboard_section">剪贴板历史</string>
+    <string name="quick_content_clipboard_switch">记录剪贴板历史</string>
+    <string name="quick_content_clipboard_body">复制的文字会保存在本机，最多 %1$d 条。密码不会被记录。</string>
+    <string name="quick_content_clipboard_empty">还没有记录。</string>
+    <string name="quick_content_clipboard_clear">清空历史</string>
+    <string name="quick_content_clipboard_clear_title">清空剪贴板历史？</string>
+    <string name="quick_content_clipboard_clear_body">清空后不能恢复。</string>
+    <string name="quick_content_clipboard_delete">删除这一条</string>
+
+    <string name="quick_content_phrases_section">常用语</string>
+    <string name="quick_content_phrases_counter">%1$d / %2$d</string>
+    <string name="quick_content_phrases_empty">还没有常用语。</string>
+    <string name="quick_content_phrases_add">添加常用语</string>
+    <string name="quick_content_phrase_add_title">添加常用语</string>
+    <string name="quick_content_phrase_edit_title">编辑常用语</string>
+    <string name="quick_content_phrase_shortcut_label">搜索词（可选）</string>
+    <string name="quick_content_phrase_shortcut_hint">例如：dz、sh。在键盘里搜索这个词，即可找到这条常用语。</string>
+    <string name="quick_content_error_shortcut_too_long">搜索词太长了。</string>
+    <string name="quick_content_phrase_text_label">内容</string>
+
+    <string name="quick_content_error_text_required">请输入内容。</string>
+    <string name="quick_content_error_text_too_long">内容太长了。</string>
+    <string name="quick_content_error_duplicate">已经有同样内容的常用语。</string>
+    <string name="quick_content_error_limit_reached">最多 %1$d 条，先删掉一条再添加。</string>
+    <string name="quick_content_error_invalid">常用语文件已损坏，无法读取。</string>
+    <string name="quick_content_error_storage">读写失败，请稍后再试。</string>
+    <string name="quick_content_error_locked">请稍后再试。</string>
+
+    <string name="quick_content_symbols_section">符号库</string>
+    <string name="quick_content_symbols_builtin">内置符号库</string>
+    <string name="quick_content_symbols_custom">已导入自定义符号库</string>
+    <string name="quick_content_symbols_summary">符号 %1$d 个 · 分类 %2$d 个</string>
+    <string name="quick_content_symbols_recent">最近使用 %1$d 个</string>
+    <string name="quick_content_symbols_clear_recent">清除最近使用</string>
+    <string name="quick_content_phrases_import">导入常用语</string>
+    <string name="quick_content_phrases_export">导出常用语</string>
+    <string name="quick_content_phrases_import_title">替换所有常用语？</string>
+    <string name="quick_content_phrases_import_body">导入会替换现有常用语。你可以先导出一份备份。</string>
+    <string name="quick_content_phrases_import_confirm">导入并替换</string>
+    <string name="quick_content_phrases_imported">已导入 %1$d 条常用语。</string>
+    <string name="quick_content_phrases_exported">已导出常用语。</string>
+    <string name="quick_content_symbols_import">导入符号库</string>
+    <string name="quick_content_symbols_export">导出当前符号库</string>
+    <string name="quick_content_symbols_restore">恢复内置符号库</string>
+    <string name="quick_content_symbols_restore_title">恢复内置符号库？</string>
+    <string name="quick_content_symbols_restore_body">将移除自定义符号库，恢复为内置符号。</string>
+    <string name="quick_content_symbols_restore_confirm">恢复</string>
+    <string name="quick_content_symbols_imported">已导入符号库，共 %1$d 个符号。</string>
+    <string name="quick_content_symbols_exported">已导出符号库。</string>
+    <string name="quick_content_symbols_restored">已恢复内置符号库。</string>
+    <string name="quick_content_file_unreadable">无法打开文件，请重新选择。</string>
+    <string name="quick_content_file_rejected">这个文件不能用，原有内容没有改动。</string>
+    <string name="quick_content_write_failed">无法保存，请检查保存位置后重试。</string>
+</resources>

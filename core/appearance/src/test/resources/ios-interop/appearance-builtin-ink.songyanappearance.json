@@ -1,0 +1,82 @@
+{
+  "appearance" : "system",
+  "candidateBar" : {
+    "collapsed" : {
+      "cellPaddingX" : 7,
+      "cellSpacing" : 0,
+      "fillsAvailableWidth" : false,
+      "height" : 40
+    },
+    "compositionRow" : {
+      "visible" : "composingOnly"
+    },
+    "controls" : {
+      "pagePosition" : "both",
+      "showsExpand" : true
+    },
+    "expanded" : {
+      "columnSpacing" : 0,
+      "columns" : 2,
+      "fullRowTextLength" : 8,
+      "mode" : "adaptive",
+      "rowSpacing" : 0
+    },
+    "formatVersion" : 1,
+    "id" : "builtin-ink",
+    "name" : "墨夜"
+  },
+  "formatVersion" : 1,
+  "id" : "builtin-ink",
+  "name" : "墨夜",
+  "skin" : {
+    "formatVersion" : 1,
+    "id" : "builtin-ink",
+    "keycap" : {
+      "borderWidth" : 0,
+      "cornerRadius" : 6,
+      "shadow" : "none"
+    },
+    "name" : "墨夜",
+    "spacing" : {
+      "visualInsetX" : 0,
+      "visualInsetY" : 1
+    },
+    "typography" : {
+      "candidateSize" : 21,
+      "family" : "system",
+      "keySize" : 22,
+      "secondarySize" : 10,
+      "weight" : "regular"
+    },
+    "variants" : {
+      "dark" : {
+        "colors" : {
+          "accent" : "#3A6EA5",
+          "accentText" : "#FFFFFF",
+          "border" : "#808080",
+          "control" : "#1F2126",
+          "key" : "#2B2D33",
+          "panel" : "#141518",
+          "pressed" : "#454952",
+          "secondaryText" : "#A7ADB8",
+          "selected" : "#3A6EA5",
+          "text" : "#F2F3F5"
+        }
+      },
+      "light" : {
+        "colors" : {
+          "accent" : "#2B2D33",
+          "accentText" : "#FFFFFF",
+          "border" : "#777777",
+          "control" : "#D1D5DB",
+          "key" : "#FFFFFF",
+          "panel" : "#E5E7EB",
+          "pressed" : "#9CA3AF",
+          "secondaryText" : "#4B5563",
+          "selected" : "#D1D5DB",
+          "text" : "#111827"
+        }
+      }
+    }
+  }
+}

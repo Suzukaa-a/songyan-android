@@ -1,0 +1,81 @@
+{
+  "appearance" : "dark",
+  "candidateBar" : {
+    "collapsed" : {
+      "cellPaddingX" : 14,
+      "cellSpacing" : 6,
+      "height" : 52
+    },
+    "compositionRow" : {
+      "visible" : "composingOnly"
+    },
+    "controls" : {
+      "pagePosition" : "leading",
+      "showsExpand" : true
+    },
+    "expanded" : {
+      "columnSpacing" : 2,
+      "columns" : 3,
+      "fullRowTextLength" : 8,
+      "mode" : "grid",
+      "rowSpacing" : 4
+    },
+    "formatVersion" : 1,
+    "id" : "grid-look",
+    "name" : "网格外观"
+  },
+  "formatVersion" : 1,
+  "id" : "grid-look",
+  "name" : "网格外观",
+  "skin" : {
+    "formatVersion" : 1,
+    "id" : "grid-look",
+    "keycap" : {
+      "borderWidth" : 0,
+      "cornerRadius" : 6,
+      "shadow" : "none"
+    },
+    "name" : "网格外观",
+    "spacing" : {
+      "visualInsetX" : 0,
+      "visualInsetY" : 1
+    },
+    "typography" : {
+      "candidateSize" : 21,
+      "family" : "system",
+      "keySize" : 22,
+      "secondarySize" : 10,
+      "weight" : "regular"
+    },
+    "variants" : {
+      "dark" : {
+        "colors" : {
+          "accent" : "#3F9A71",
+          "accentText" : "#000000",
+          "border" : "#808080",
+          "control" : "#27342D",
+          "key" : "#34443B",
+          "panel" : "#1B2520",
+          "pressed" : "#4A5E52",
+          "secondaryText" : "#AFC2B6",
+          "selected" : "#2F5F48",
+          "text" : "#EEF5F0"
+        }
+      },
+      "light" : {
+        "colors" : {
+          "accent" : "#2E7D5B",
+          "accentText" : "#FFFFFF",
+          "border" : "#777777",
+          "control" : "#C3D6C8",
+          "key" : "#FBFDFB",
+          "panel" : "#DDE8E0",
+          "pressed" : "#B3CBBB",
+          "secondaryText" : "#4C5E53",
+          "selected" : "#BFDCCB",
+          "text" : "#1E2A23"
+        }
+      }
+    }
+  }
+}

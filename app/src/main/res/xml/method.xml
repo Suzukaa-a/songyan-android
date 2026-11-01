@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedAttribute"
+    android:supportsSwitchingToNextInputMethod="true"
+    android:supportsInlineSuggestions="true"
+    android:supportsInlineSuggestionsWithTouchExploration="true"
+    android:settingsActivity="app.songyan.ime.SongyanSettingsActivity">
+
+    <subtype
+        android:imeSubtypeLocale="zh_CN"
+        android:imeSubtypeMode="keyboard"
+        android:languageTag="zh-CN"
+        android:isAsciiCapable="true"
+        android:label="@string/subtype_pinyin" />
+</input-method>

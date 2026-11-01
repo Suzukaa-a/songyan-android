@@ -1,0 +1,470 @@
+package app.songyan.ime.layout
+
+/**
+ * Independently authored layout data, also available as editable JSON in resources/layouts.
+ *
+ * The JSON examples and these declarations must stay in step: the examples are the copy source for
+ * authors, so [BuiltinLayoutsTest] compares them field for field.
+ */
+object BuiltinLayouts {
+    val qwerty26: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = "qwerty26",
+                name = "26 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.QWERTY26),
+                rows = alphabetRows() + listOf(controls),
+            )
+
+    val merged14: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = "merged14",
+                name = "14 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.MERGED14),
+                rows =
+                    mergedRows(
+                        listOf(
+                            listOf("qw", "er", "ty", "ui", "op"),
+                            listOf("as", "df", "gh", "jk", "l"),
+                            listOf("zx", "cv", "bn", "m"),
+                        ),
+                    ) + listOf(controls),
+                note = "两个字母合用一个键，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。",
+                // Wide surfaces split by default so both thumbs reach the merged pairs; a saved
+                // split, including an explicit off, stays authoritative.
+                split = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.AUTOMATIC),
+            )
+
+    /**
+     * Every key must be easy to hit, single letters included. Two-unit pairs would leave the singles
+     * as the narrowest caps on the pad (about 38 pt on a 420 pt phone), so pairs give width back:
+     * 1.7 units against 1.3, caps about 1.33 : 1. Pairs stay wider because one cap carries two
+     * letters and the sideways swipe. All upper-row singles and pairs share one width each, so row 2
+     * (9.0 units) sits centred under row 1 (10.3) half a single key in from each side.
+     */
+    val merged18: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = "merged18",
+                name = "18 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.MERGED18),
+                rows =
+                    mergedRows(
+                        listOf(
+                            listOf("q", "we", "rt", "y", "u", "io", "p"),
+                            listOf("a", "sd", "fg", "h", "jk", "l"),
+                            listOf("z", "xc", "v", "bn", "m"),
+                        ),
+                        singleWidth = 1.3,
+                        pairWidth = 1.7,
+                    ) + listOf(controls),
+                note = "部分键由两个字母合用，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。",
+                split = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.AUTOMATIC),
+            )
+
+    val phone9: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = "phone9",
+                name = "9 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.PHONE9),
+                rows =
+                    listOf(
+                        // Corner badge 1 + long-press 1 (like 2-9), so editors show the key that runs.
+                        LayoutRow(
+                            listOf(
+                                LayoutKey(
+                                    label = "，。？",
+                                    secondaryLabel = T9_DIGIT_ONE,
+                                    action = LayoutAction.literal("，"),
+                                    longPress = listOf(literalOption(T9_DIGIT_ONE)),
+                                ),
+                                phone("ABC", "2"),
+                                phone("DEF", "3"),
+                            ),
+                        ),
+                        LayoutRow(listOf(phone("GHI", "4"), phone("JKL", "5"), phone("MNO", "6"))),
+                        LayoutRow(listOf(phone("PQRS", "7"), phone("TUV", "8"), phone("WXYZ", "9"))),
+                        LayoutRow(
+                            listOf(
+                                LayoutKey("布局", action = LayoutAction(LayoutActionKind.MODE_SWITCH, "nextLayout")),
+                                LayoutKey("空格", width = 4.0, action = LayoutAction(LayoutActionKind.SPACE)),
+                                LayoutKey("🌐", action = LayoutAction(LayoutActionKind.GLOBE)),
+                            ),
+                        ),
+                    ),
+                auxiliaryAreas =
+                    listOf(
+                        LayoutAuxiliaryArea(
+                            position = LayoutAuxiliaryArea.Position.TRAILING,
+                            role = LayoutAuxiliaryArea.Role.EDITING,
+                            keys =
+                                listOf(
+                                    LayoutKey("⌫", action = LayoutAction(LayoutActionKind.BACKSPACE)),
+                                    LayoutKey("分词", action = LayoutAction.code("'")),
+                                    LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)),
+                                ),
+                        ),
+                        LayoutAuxiliaryArea(
+                            position = LayoutAuxiliaryArea.Position.LEADING,
+                            role = LayoutAuxiliaryArea.Role.DISAMBIGUATION,
+                        ),
+                    ),
+                note = PHONE9_NOTE,
+            )
+
+    /**
+     * Primary-gesture identity of the bundled 9-key: the known input metadata and the three main rows'
+     * key counts, widths and primary actions. Labels, corner hints, title modes and long-press menus,
+     * and everything outside the three rows (control row, rails), are face metadata and never break
+     * it, so the first key keeps cycling the quick symbols after such edits.
+     */
+    fun matchesPhone9PrimarySemantics(definition: LayoutDefinition): Boolean =
+        definition.input == phone9.input && mainRowsMatch(definition, phone9)
+
+    /**
+     * The narrow visual identity iOS uses for its native shell: the primary semantics, the rails and
+     * the control row exactly as declared by the preset, and every main key's face unchanged (only
+     * long-press menus may differ). Android draws the main keys from data and the bottom row from the
+     * editor, so it only needs [matchesPhone9PrimarySemantics] and
+     * [PhoneKeypadRailPolicy.usesBundledRails]; this stays as the iOS-compatible identity.
+     */
+    fun matchesPhone9VisualShell(definition: LayoutDefinition): Boolean {
+        val preset = phone9
+        if (!matchesPhone9PrimarySemantics(definition) ||
+            definition.rows.size != preset.rows.size ||
+            definition.auxiliaryAreas != preset.auxiliaryAreas ||
+            definition.rows.last() != preset.rows.last()
+        ) {
+            return false
+        }
+        return definition.rows.take(PhoneKeypadMetrics.MAIN_ROW_COUNT).zip(preset.rows).all { (row, presetRow) ->
+            row.keys.zip(presetRow.keys).all { (key, presetKey) ->
+                key.label == presetKey.label &&
+                    key.secondaryLabel == presetKey.secondaryLabel &&
+                    key.titleMode == presetKey.titleMode
+            }
+        }
+    }
+
+    /** The main area is the first three rows by declaration: count, width and primary action must match. */
+    private fun mainRowsMatch(
+        definition: LayoutDefinition,
+        preset: LayoutDefinition,
+    ): Boolean {
+        val count = PhoneKeypadMetrics.MAIN_ROW_COUNT
+        if (definition.rows.size < count) return false
+        return definition.rows.take(count).zip(preset.rows.take(count)).all { (row, presetRow) ->
+            row.keys.size == presetRow.keys.size &&
+                row.keys.zip(presetRow.keys).all { (key, presetKey) ->
+                    key.width == presetKey.width && key.action == presetKey.action
+                }
+        }
+    }
+
+    /** Shown to users (resource inspector, layout manager), so it must match real behavior. */
+    private const val PHONE9_NOTE =
+        "2–9 键按所选的输入方案输入。输入中轻点首键可分词；未输入时，左栏前三个符号可直接输入，连续点按首键可轮换其余符号。长按首键输入 1，长按 2–9 输入对应数字。"
+
+    /** Long-press digit shared by the first key and 2-9. */
+    const val T9_DIGIT_ONE: String = "1"
+
+    /** The ordered builtin layouts; the registry starts from these. */
+    val all: List<LayoutDefinition>
+        get() = listOf(qwerty26, merged14, merged18, phone9)
+
+    fun byId(id: String): LayoutDefinition? = all.firstOrNull { it.id == id }
+
+    /** The bundled preset of a physical shape. */
+    fun preset(layout: LayoutInput.Builtin): LayoutDefinition =
+        when (layout) {
+            LayoutInput.Builtin.QWERTY26 -> qwerty26
+            LayoutInput.Builtin.MERGED14 -> merged14
+            LayoutInput.Builtin.MERGED18 -> merged18
+            LayoutInput.Builtin.PHONE9 -> phone9
+        }
+
+    // MARK: - 9-key quick symbols
+
+    /**
+     * Ordered quick symbols: saved order first, missing items filled from the default sequence,
+     * full-width mapped to half-width in ASCII mode, then de-duplicated after mapping (first
+     * occurrence decides rank), with the original first-key address/URL marks appended as a
+     * low-frequency tail.
+     *
+     * This is the single ordering source for both the leading rail (first three) and the first-key
+     * cycle (4th item on), so titles, accessibility hints and insertion order cannot disagree.
+     */
+    fun t9QuickSymbolValues(
+        saved: String,
+        ascii: Boolean,
+    ): List<String> {
+        val userOrdered =
+            (saved + T9QuickSymbolStore.DEFAULT_SYMBOLS).map { character ->
+                val value = character.toString()
+                if (!ascii) value else T9_ASCII_PUNCTUATION[value] ?: value
+            }
+        val seen = mutableSetOf<String>()
+        return (userOrdered + t9PunctuationSymbols()).filter { seen.add(it) }
+    }
+
+    /** The first three items typed directly by the leading rail, top to bottom. */
+    fun t9QuickRailValues(
+        saved: String,
+        ascii: Boolean,
+    ): List<String> = t9QuickSymbolValues(saved, ascii).take(3)
+
+    /** From the 4th item on: cycled by repeated taps on the first key of the main area. */
+    fun t9QuickCycleValues(
+        saved: String,
+        ascii: Boolean,
+    ): List<String> = t9QuickSymbolValues(saved, ascii).drop(3)
+
+    /** Full-width to half-width punctuation, used only in ASCII mode. */
+    private val T9_ASCII_PUNCTUATION: Map<String, String> =
+        mapOf(
+            "，" to ",",
+            "、" to ",",
+            "。" to ".",
+            "？" to "?",
+            "！" to "!",
+            "…" to "...",
+            "（" to "(",
+            "）" to ")",
+            "：" to ":",
+            "；" to ";",
+            "【" to "[",
+            "】" to "]",
+        )
+
+    /**
+     * Whether a builtin 9-key digit key (2-9) should take the layout declared alternates. A digit key
+     * is label "ABC" + a digit code + a digit literal long-press; the generic policy returns empty
+     * for it, so these keys must take the declared path.
+     */
+    fun t9DigitKeyUsesDeclaredAlternates(key: LayoutKey): Boolean {
+        if (key.action.type != LayoutActionKind.CODE) return false
+        val value = key.action.value ?: return false
+        if (value.length != 1 || value[0] !in '2'..'9') return false
+        // Without declared long-press alternates, fall back to the generic policy.
+        return (key.longPress ?: emptyList()).isNotEmpty()
+    }
+
+    /** The idle first key cycles the address/URL marks of the system 9-key. */
+    fun t9PunctuationSymbols(): List<String> = listOf("@", "/", ".", ":", "_", "-")
+
+    /**
+     * Cap and action of the first key, derived from the cycle order: the label is the first three
+     * values and tap inserts the first. Returns null for an empty list, never a dead-looking key.
+     */
+    fun t9CycleKey(values: List<String>): LayoutKey? {
+        val first = values.firstOrNull() ?: return null
+        if (first.isEmpty()) return null
+        return LayoutKey(
+            label = values.take(3).joinToString(""),
+            secondaryLabel = T9_DIGIT_ONE,
+            action = LayoutAction.literal(first),
+            longPress = listOf(literalOption(T9_DIGIT_ONE)),
+        )
+    }
+
+    /** Last-resort first key built from the address-mark fallback. */
+    fun t9PunctuationKey(): LayoutKey {
+        val marks = t9PunctuationSymbols()
+        return LayoutKey(label = marks.take(3).joinToString(""), action = LayoutAction.literal(marks[0]))
+    }
+
+    /**
+     * First key while composing: tap separates syllables (sends apostrophe); long-press types 1 like
+     * 2-9. It is a plain code action, so it commits the composition first, then inserts the digit.
+     */
+    fun t9SeparatorKey(): LayoutKey =
+        LayoutKey(
+            label = "分词",
+            secondaryLabel = T9_DIGIT_ONE,
+            action = LayoutAction.code("'"),
+            longPress = listOf(literalOption(T9_DIGIT_ONE)),
+        )
+
+    /** Idle-only, ordered defaults; the live builtin lets users replace each slot. */
+    fun t9LeadingShortcuts(ascii: Boolean): List<LayoutKey> =
+        (if (ascii) "@/-()_" else "@/-()…").map { character ->
+            val value = character.toString()
+            LayoutKey(label = value, action = LayoutAction.literal(value))
+        }
+
+    // MARK: - 123 / symbol page rows
+
+    /**
+     * The real 123 punctuation rail order: period/question/exclamation first, then the last and
+     * second numeric rows, de-duplicated by the branch actual strings.
+     */
+    fun phoneNumericRailValues(ascii: Boolean): List<String> {
+        val priority = if (ascii) listOf(".", "?", "!") else listOf(".", "？", "！")
+        val rows = numericPageRows(ascii)
+        // The row pages type the comma from the bottom row; the digit pad has none, so the rail keeps
+        // it right after the period.
+        val last = (rows.lastOrNull() ?: emptyList()).toMutableList()
+        last.add(minOf(1, last.size), if (ascii) "," else "，")
+        val rest = last + (if (rows.size > 1) rows[1] else emptyList())
+        val seen = mutableSetOf<String>()
+        return (priority + rest).filter { seen.add(it) }
+    }
+
+    /**
+     * The 123 page: digits, then the everyday marks, so what most text needs is one tap from the
+     * letters. Nothing here repeats on the symbol page, which holds the rest one page deeper (the
+     * comma is in the bottom row).
+     */
+    fun numericPageRows(ascii: Boolean): List<List<String>> =
+        if (ascii) {
+            listOf(
+                "1234567890".map { it.toString() },
+                listOf("-", "/", ":", ";", "(", ")", "$", "&", "@", "\""),
+                listOf(".", "?", "!", "'", "%", "#", "+"),
+            )
+        } else {
+            listOf(
+                "1234567890".map { it.toString() },
+                listOf("-", "/", "：", "；", "（", "）", "¥", "@", "“", "”"),
+                listOf("。", "？", "！", "、", "…", ".", "%"),
+            )
+        }
+
+    /**
+     * The row-shaped symbol page: the 123 geometry with the less frequent marks, none of which is
+     * also on the 123 page.
+     */
+    fun symbolPageRows(ascii: Boolean): List<List<String>> =
+        if (ascii) {
+            listOf(
+                listOf("[", "]", "{", "}", "*", "=", "\\", "€", "£", "¥"),
+                listOf("•", "°", "§", "×", "÷", "±", "≈", "≠", "©", "™"),
+                listOf("<", ">", "~", "`", "^", "_", "|"),
+            )
+        } else {
+            listOf(
+                listOf("【", "】", "{", "}", "#", "^", "*", "+", "=", "&"),
+                listOf("_", "——", "\\", "|", "～", "《", "》", "「", "」", "·"),
+                listOf("$", "€", "£", "<", ">", "‘", "’"),
+            )
+        }
+
+    /**
+     * The Chinese/ASCII branch pair for one page slot. It is the same position in the two existing
+     * key tables, not a punctuation translation: the Chinese comma/question and the ASCII at/amp
+     * stay the two explicitly authored versions of that slot.
+     */
+    data class BilingualPageMark(
+        val chinese: String,
+        val ascii: String,
+    )
+
+    /** Numeric 123 slots paired by position across the two existing canonical tables. */
+    fun numericPageBilingualRows(): List<List<BilingualPageMark>> =
+        pairRows(numericPageRows(ascii = false), numericPageRows(ascii = true))
+
+    /** Row-shaped symbol slots paired by position across the two existing canonical tables. */
+    fun symbolPageBilingualRows(): List<List<BilingualPageMark>> =
+        pairRows(symbolPageRows(ascii = false), symbolPageRows(ascii = true))
+
+    private fun pairRows(
+        chinese: List<List<String>>,
+        ascii: List<List<String>>,
+    ): List<List<BilingualPageMark>> {
+        if (chinese.size != ascii.size) return emptyList()
+        return chinese.zip(ascii).map { (chineseRow, asciiRow) ->
+            chineseRow.zip(asciiRow).map { (chineseMark, asciiMark) ->
+                BilingualPageMark(chineseMark, asciiMark)
+            }
+        }
+    }
+
+    // MARK: - Shared construction
+
+    /** The bottom control row shared by every 26/14/18 declaration. */
+    val controls: LayoutRow
+        get() =
+            LayoutRow(
+                listOf(
+                    LayoutKey("布局", action = LayoutAction(LayoutActionKind.MODE_SWITCH, "nextLayout")),
+                    LayoutKey("🌐", action = LayoutAction(LayoutActionKind.GLOBE)),
+                    LayoutKey("空格", width = 4.0, action = LayoutAction(LayoutActionKind.SPACE)),
+                    LayoutKey("⌫", action = LayoutAction(LayoutActionKind.BACKSPACE)),
+                    LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)),
+                ),
+            )
+
+    private fun literalOption(value: String): LayoutOption =
+        LayoutOption(label = value, action = LayoutAction.literal(value))
+
+    private fun phone(
+        letters: String,
+        digit: String,
+    ): LayoutKey =
+        LayoutKey(
+            label = letters,
+            secondaryLabel = digit,
+            action = LayoutAction.code(digit),
+            longPress = listOf(literalOption(digit)),
+        )
+
+    private fun mergedRows(
+        groups: List<List<String>>,
+        singleWidth: Double? = null,
+        pairWidth: Double? = null,
+    ): List<LayoutRow> =
+        groups.map { row ->
+            LayoutRow(row.map { mergedKey(it, if (it.length > 1) pairWidth else singleWidth) })
+        }
+
+    /**
+     * Real long-press alternates for merged keys: the main key sends the cluster representative and
+     * long-press types the rest of the cluster; single-letter keys (l/m) get common punctuation.
+     */
+    private fun mergedKey(
+        group: String,
+        width: Double?,
+    ): LayoutKey {
+        val partnerOptions = group.drop(1).map { literalOption(it.toString()) }
+        val punctuationOptions =
+            when (group) {
+                "l" -> listOf(literalOption("，"))
+                "m" -> listOf(literalOption("。"))
+                else -> emptyList()
+            }
+        var options = partnerOptions + punctuationOptions
+        if (group == "qw") options = options + listOf(literalOption("1"), literalOption("!"))
+        return LayoutKey(
+            label = group.uppercase(),
+            secondaryLabel =
+                when {
+                    group == "qw" -> "1 !"
+                    group.length > 1 -> "合并键"
+                    else -> null
+                },
+            width = width,
+            action = LayoutAction.code(group.take(1)),
+            longPress = options.ifEmpty { null },
+        )
+    }
+
+    private fun alphabetRows(): List<LayoutRow> {
+        val digits = "qwertyuiop".map { it.toString() }.zip("1234567890".map { it.toString() }).toMap()
+        return listOf("qwertyuiop", "asdfghjkl", "zxcvbnm").map { letters ->
+            LayoutRow(
+                letters.map { letter ->
+                    val value = letter.toString()
+                    LayoutKey(
+                        label = value,
+                        secondaryLabel = digits[value],
+                        action = LayoutAction.code(value),
+                        longPress =
+                            AlternateKeyPolicy.defaultLetterLiterals(value).map { literalOption(it) },
+                    )
+                },
+            )
+        }
+    }
+}

@@ -24,6 +24,9 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the retired `tools` package, which sdkmanager no longer finds.
+          packages: platform-tools
       - name: Install SDK components
         run: |
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
@@ -85,6 +88,9 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the retired `tools` package, which sdkmanager no longer finds.
+          packages: platform-tools
       - name: Install SDK components
         run: |
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
@@ -133,6 +139,9 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the retired `tools` package, which sdkmanager no longer finds.
+          packages: platform-tools
       - name: Install SDK components
         run: |
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"

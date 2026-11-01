@@ -349,4 +349,35 @@ class UserConfigDeployTest {
     private companion object {
         const val PATCH = "patch:\n  menu/page_size: 7\n"
     }
+
+    @Test
+    fun aComponentAssembledFromPiecesFailsTheDeploymentUnlessConfirmedOrShipped() =
+        runTest {
+            importPackage()
+            val before = publisher.readActive()!!
+            runner.compiledYaml["extra.yaml"] = "engine:\n  filters:\n    - lua_filter@*assembled\n"
+            edit("rime_ice.custom.yaml", PATCH)
+
+            val refused = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(DeployPipeline.CONFIG_PREFIX + "UNCONFIRMED_SCRIPT", refused.problem)
+            assertEquals(listOf("extra.yaml"), refused.paths)
+            assertEquals(before.generation, publisher.readActive()!!.generation)
+        }
+
+    @Test
+    fun anAppliedCopyThatNoLongerPassesItsChecksIsLeftOutAndNamed() =
+        runTest {
+            importPackage()
+            // What a backup restore or an older version left: never run through today's checks.
+            File(storage.appliedConfigDir, "x.custom.yaml")
+                .also { it.parentFile?.mkdirs() }
+                .writeText("translator:\n  user_dict: /abs/leak\n")
+
+            run(DeployMode.REDEPLOY_ACTIVE)
+
+            assertFalse(runner.overlays.last().containsKey("x.custom.yaml"))
+            assertEquals("x.custom.yaml", status.read()?.file)
+            assertEquals(UserConfigStatus.State.FAILED, status.read()?.state)
+        }
 }

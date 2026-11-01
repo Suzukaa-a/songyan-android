@@ -266,4 +266,18 @@ class UserConfigFilesTest {
             assertEquals(text, UserConfigProblem.UNSAFE_REFERENCE, error?.problem)
         }
     }
+
+    @Test
+    fun theAppliedCopyIsCheckedAgainBeforeItIsUsed() {
+        File(edit, "ok.custom.yaml").writeText("patch:\n  menu/page_size: 7\n")
+        assertNull(UserConfigFiles.verify(edit))
+
+        File(edit, "evil.custom.yaml").writeText("translator:\n  user_dict: /abs/leak\n")
+        val bad = UserConfigFiles.verify(edit)
+        assertEquals(UserConfigProblem.UNSAFE_REFERENCE, bad?.problem)
+        assertEquals("evil.custom.yaml", bad?.file)
+
+        File(edit, "evil.custom.yaml").writeText("a: [1\n")
+        assertEquals(UserConfigProblem.INVALID_YAML, UserConfigFiles.verify(edit)?.problem)
+    }
 }

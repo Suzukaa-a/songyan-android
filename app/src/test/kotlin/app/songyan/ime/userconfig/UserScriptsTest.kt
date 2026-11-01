@@ -114,4 +114,23 @@ class UserScriptsTest {
             scripts.entries(edit, source).map { it.id },
         )
     }
+
+    @Test
+    fun anEscapedSpellingOfAComponentIsStillOne() {
+        put(edit, "x.custom.yaml", "patch:\n  engine/filters/+: [\"\\x6Cua_filter@*x\"]\n")
+
+        assertEquals(listOf("x.custom.yaml: lua_filter@*x"), scripts.entries(edit, source).map { it.id })
+    }
+
+    @Test
+    fun shippedAndConfirmedComponentsAreKnownByTheirContent() {
+        put(source, "p.schema.yaml", "engine:\n  filters:\n    - lua_filter@*shipped\n")
+        put(source, "build/x.yaml", "engine:\n  filters:\n    - lua_filter@*compiled\n")
+        assertEquals(setOf("lua_filter@*shipped"), scripts.shippedComponents(source))
+
+        put(edit, "x.custom.yaml", "patch:\n  engine/filters/+: [lua_filter@*mine]\n")
+        assertTrue(scripts.confirmedComponents().isEmpty())
+        scripts.accept(scripts.unconfirmed(edit, source))
+        assertEquals(setOf("lua_filter@*mine"), scripts.confirmedComponents())
+    }
 }

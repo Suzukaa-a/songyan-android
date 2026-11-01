@@ -13,8 +13,16 @@ import java.io.File
 object CompiledConfigGuard {
     private const val MAX_BYTES = 32L * 1024 * 1024
 
-    /** Throws [UserConfigException] naming the compiled file at fault. */
-    fun check(compiledDir: File) {
+    /**
+     * Throws [UserConfigException] naming the compiled file at fault. A Lua component the compiled
+     * files name must be one the source ships ([shipped]) or one the user agreed to ([confirmed]):
+     * a patch can assemble an entry from pieces no check on the files reads whole.
+     */
+    fun check(
+        compiledDir: File,
+        shipped: Set<String> = emptySet(),
+        confirmed: Set<String> = emptySet(),
+    ) {
         val files =
             compiledDir
                 .listFiles { file -> file.isFile && file.name.endsWith(".yaml") }
@@ -32,6 +40,9 @@ object CompiledConfigGuard {
                 }
             UserConfigSafety.unsafeReference(parsed)?.let {
                 throw UserConfigException(file.name, UserConfigProblem.UNSAFE_REFERENCE, it.take(80))
+            }
+            UserConfigSafety.luaComponents(parsed).firstOrNull { it !in shipped && it !in confirmed }?.let {
+                throw UserConfigException(file.name, UserConfigProblem.UNCONFIRMED_SCRIPT, it.take(80))
             }
         }
     }

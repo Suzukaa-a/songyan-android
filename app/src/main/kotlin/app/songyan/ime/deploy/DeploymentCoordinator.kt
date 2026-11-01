@@ -68,6 +68,9 @@ class DeploymentCoordinator(
      */
     private var strictConfig = false
 
+    /** The applied configuration's files (name, size, time) and whether they passed [UserConfigFiles.verify]. */
+    private var verifiedConfig: Pair<String, Boolean>? = null
+
     /** The built-in source's install stamp: an app or data update reinstalls it. */
     private val builtinRevision: String = "builtin-" + stamp.data + "-" + stamp.app
 
@@ -360,7 +363,24 @@ class DeploymentCoordinator(
     ): String = manifest.revision + "+" + overlay.digest(manifest, features, config)
 
     /** The applied user configuration every deployment layers over its source, or null when there is none. */
-    private fun appliedConfig(): File? = storage.appliedConfigDir.takeIf { UserConfigFiles.hasFiles(it) }
+    private fun appliedConfig(): File? {
+        val dir = storage.appliedConfigDir.takeIf { UserConfigFiles.hasFiles(it) } ?: return null
+        // What applying just checked needs no second look; what a restored backup or an older version left does.
+        if (strictConfig) return dir
+        val signature =
+            UserConfigFiles.files(dir).joinToString("|") {
+                UserConfigFiles.relativePath(dir, it) + ":" + it.length() + ":" + it.lastModified()
+            }
+        val known = verifiedConfig
+        if (known?.first == signature) return dir.takeIf { known.second }
+        val problem = UserConfigFiles.verify(dir)
+        if (problem != null) {
+            Log.w(TAG, "the applied configuration no longer passes its checks; deploying without it", problem)
+            configStatus.write(UserConfigStatus.failed(problem.file, problem.problem.name))
+        }
+        verifiedConfig = signature to (problem == null)
+        return dir.takeIf { problem == null }
+    }
 
     private fun builtinManifest() =
         SourceManifest(
@@ -577,7 +597,14 @@ class DeploymentCoordinator(
                 throw DeployException("deployment produced no build directory: $compiledDir")
             }
             // Whatever the user's patches spelled, no compiled file may name a file outside the data folders.
-            if (config != null) CompiledConfigGuard.check(compiledDir)
+            if (config != null) {
+                val scripts = UserScripts(storage)
+                CompiledConfigGuard.check(
+                    compiledDir,
+                    scripts.shippedComponents(sourceDir),
+                    scripts.confirmedComponents(),
+                )
+            }
             // The layouts still to come may use seeded prisms; the deployment completing them drops the rest.
             if (!companionsPending) CompiledReuse.dropUnusedPrisms(compiledDir, seededFiles(workDir))
             val deployed = outcome.deployedSchemaIds

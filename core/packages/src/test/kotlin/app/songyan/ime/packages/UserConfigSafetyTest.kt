@@ -164,4 +164,38 @@ class UserConfigSafetyTest {
             )
         assertEquals(listOf("lua_filter", "lua_translator@t"), UserConfigSafety.luaComponents(root))
     }
+
+    @Test
+    fun aRepeatedKeyIsKeptSoTheHiddenPairIsChecked() {
+        val doubled =
+            "__patch:\n  translator/user_dict: /abs/leak\n  engine/filters/@next: lua_filter@*x\n__patch: {}\n"
+        val root = BoundedYaml.loadAsText(doubled) as Map<*, *>
+        assertEquals(listOf("__patch", "__patch/="), root.keys.toList())
+        assertNotNull(UserConfigSafety.unsafeReference(root))
+        assertEquals(
+            listOf("lua_filter@*x"),
+            UserConfigSafety.luaComponents(BoundedYaml.loadAsText("a:\n  f: lua_filter@*x\na: {}\n")),
+        )
+        assertNotNull(
+            "a hidden include",
+            UserConfigSafety.unsafeReference(BoundedYaml.loadAsText("__include: /abs/edit/evil:/\n__include: ok\n")),
+        )
+        // Schemas that repeat a key on purpose are still readable.
+        assertNull(
+            UserConfigSafety.unsafeReference(BoundedYaml.loadAsText("menu:\n  page_size: 5\nmenu:\n  page_size: 7\n")),
+        )
+    }
+
+    @Test
+    fun stringsAreNeverBuiltFromAppendedPieces() {
+        for (yaml in listOf(
+            "patch:\n  engine/filters/@next: lu\n  engine/filters/@last/+: \"a_filter@*x\"\n",
+            "patch:\n  menu/foo/+: text\n",
+            "patch:\n  a:\n    __append: text\n",
+            "patch:\n  a:\n    __merge: text\n",
+        )) {
+            assertNotNull(yaml, unsafe(yaml))
+        }
+        assertNull(unsafe("patch:\n  engine/filters/+:\n    - uniquifier\n  a:\n    __append: [x]\n"))
+    }
 }

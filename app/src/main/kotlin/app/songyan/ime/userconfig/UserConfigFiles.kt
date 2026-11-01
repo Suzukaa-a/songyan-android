@@ -249,6 +249,24 @@ object UserConfigFiles {
     }
 
     /**
+     * The problem with the files of [dir] (the applied copy) as the checks of applying see them, or
+     * null: a copy a backup restored, or an older version wrote, is not trusted because it is there.
+     */
+    fun verify(dir: File): UserConfigException? {
+        val files = files(dir)
+        if (files.size > MAX_FILES) return UserConfigException(null, UserConfigProblem.TOO_MANY)
+        var total = 0L
+        for (file in files) {
+            val name = relativePath(dir, file)
+            if (file.length() > MAX_FILE_BYTES) return UserConfigException(name, UserConfigProblem.TOO_LARGE)
+            total += file.length()
+            if (total > MAX_TOTAL_BYTES) return UserConfigException(name, UserConfigProblem.TOO_LARGE)
+            check(name, file.readBytes())?.let { return it }
+        }
+        return null
+    }
+
+    /**
      * Copies the files of [dir] into a deployment's work directory and returns the copies. Copies,
      * never links: the deployment rewrites some of them in place (feature patches go into the
      * user's `xxx.custom.yaml`), which must not reach the applied folder.

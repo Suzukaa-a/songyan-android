@@ -81,7 +81,9 @@ object BoundedYaml {
      * Reads [text] the way librime does for what a file names: every scalar, key or value, is its
      * text, whatever tag it carries. `!!null x` or `!!bool x` would otherwise come out as null or
      * true here while yaml-cpp keeps `x`, and a check on the typed value would never see it.
-     * Maps and lists keep their shape; a key that is not a scalar is dropped.
+     * Maps and lists keep their shape; a key that is not a scalar is dropped. A key a mapping
+     * repeats is kept too, as `key/=`, `key/=/=`…: yaml-cpp keeps every pair and librime acts on
+     * each, so a check must see each one (a patch operator `/=` on a key names that same key).
      */
     fun loadAsText(text: String): Any? {
         val root = compose(text) ?: return null
@@ -96,7 +98,9 @@ object BoundedYaml {
                     LinkedHashMap<String, Any?>().also { map ->
                         for (tuple in node.value) {
                             val key = tuple.keyNode as? ScalarNode ?: continue
-                            map[key.value] = convert(tuple.valueNode)
+                            var name = key.value
+                            while (name in map) name += "/="
+                            map[name] = convert(tuple.valueNode)
                         }
                     }
                 else -> null

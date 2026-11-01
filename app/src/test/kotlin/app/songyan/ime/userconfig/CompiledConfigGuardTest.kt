@@ -62,4 +62,23 @@ class CompiledConfigGuardTest {
         File(build, "bad.schema.yaml").writeText("a: [1\n")
         assertEquals(UserConfigProblem.INVALID_YAML, refusal()?.problem)
     }
+
+    @Test
+    fun aLuaComponentMustBeShippedOrConfirmed() {
+        File(
+            build,
+            "a.schema.yaml",
+        ).writeText("engine:\n  filters:\n    - lua_filter@*shipped\n    - lua_filter@*mine\n")
+        assertEquals(UserConfigProblem.UNCONFIRMED_SCRIPT, refusal()?.problem)
+
+        CompiledConfigGuard.check(build, shipped = setOf("lua_filter@*shipped"), confirmed = setOf("lua_filter@*mine"))
+        val partial =
+            try {
+                CompiledConfigGuard.check(build, shipped = setOf("lua_filter@*shipped"))
+                null
+            } catch (e: UserConfigException) {
+                e
+            }
+        assertEquals("a.schema.yaml", partial?.file)
+    }
 }

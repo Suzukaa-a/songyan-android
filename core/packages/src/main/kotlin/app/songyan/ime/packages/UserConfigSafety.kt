@@ -93,13 +93,17 @@ object UserConfigSafety {
         key: String,
         value: Any?,
     ): String? {
-        if (key == "__include" || key == "__patch") return firstUnsafeReference(value)
+        // A repeated key arrives as `key/=`: the same key again.
+        var base = key
+        while (base.endsWith("/=")) base = base.removeSuffix("/=")
+        if (base == "__include" || base == "__patch") return firstUnsafeReference(value)
         val parts = key.split('/')
         val appended = parts.lastOrNull() == "+"
+        // A string can be built from pieces (`@next: lu`, then `@last/+: a_filter@*x`): lists are what Rime appends to.
+        if ((appended || base == "__append" || base == "__merge") && isScalar(value)) return key
         // The key the operators act on: without `=`, `+` and list selectors.
         val name = parts.lastOrNull { it.isNotEmpty() && it != "=" && it != "+" && !it.startsWith("@") } ?: return null
         if (name !in FILE_KEYS) return null
-        if (appended && value != null && value !is List<*> && value !is Map<*, *>) return key
         return firstUnsafeName(value)
     }
 
@@ -121,6 +125,8 @@ object UserConfigSafety {
     }
 
     /** A `file:/node` reference (or a list of them, as `__patch` takes) whose file part is unsafe, or null. */
+    private fun isScalar(value: Any?): Boolean = value != null && value !is List<*> && value !is Map<*, *>
+
     private fun firstUnsafeReference(value: Any?): String? =
         when (value) {
             is List<*> -> value.firstNotNullOfOrNull { firstUnsafeReference(it) }

@@ -472,6 +472,27 @@ class RimeConfigDeviceTest {
     }
 
     @Test
+    fun onlyAFewWritersCanBeOpenAtOnce() {
+        val uri = create("custom_phrase.txt", "x\n")
+        val open = ArrayList<java.io.OutputStream>()
+        try {
+            repeat(8) { open += requireNotNull(resolver.openOutputStream(uri, "wt")) }
+            val refused =
+                try {
+                    resolver.openOutputStream(uri, "wt")?.close()
+                    false
+                } catch (_: FileNotFoundException) {
+                    true
+                }
+            assertTrue("a ninth writer is refused", refused)
+        } finally {
+            open.forEach { it.close() }
+        }
+        waitFor { storage.configRoot.listFiles { f -> f.name.startsWith(".write-") }.isNullOrEmpty() }
+        requireNotNull(resolver.openOutputStream(uri, "wt")).close()
+    }
+
+    @Test
     fun aNewScriptIsMadeFromTheTemplateAndWaitsForTheUsersYes() {
         val gateway = RimeConfigHolder.current
         val created = runBlocking { gateway.createScript("probe_new") } as RimeScriptCreateResult.Created

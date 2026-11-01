@@ -280,6 +280,7 @@ class RimeConfigProvider : DocumentsProvider() {
         packagePath: String? = null,
     ): ParcelFileDescriptor {
         sweepOnce()
+        if (openTemps.size >= WriteTemps.MAX_OPEN) throw FileNotFoundException("too many files are being written")
         val temp = File(storage.configRoot, WRITE_PREFIX + System.nanoTime())
         openTemps += temp.name
         temp.parentFile?.mkdirs()
@@ -292,7 +293,12 @@ class RimeConfigProvider : DocumentsProvider() {
         }
         val over = AtomicBoolean(false)
         val closed = AtomicBoolean(false)
-        watchSize(temp, over, closed)
+        watchSize(
+            temp,
+            over,
+            closed,
+            WriteWatch(UserConfigFiles.MAX_FILE_BYTES, WriteTemps.MAX_OPEN_MS, System.currentTimeMillis()),
+        )
         return ParcelFileDescriptor.open(temp, flags or ParcelFileDescriptor.MODE_CREATE, closeHandler) { error ->
             closed.set(true)
             openTemps -= temp.name
@@ -335,11 +341,13 @@ class RimeConfigProvider : DocumentsProvider() {
         temp: File,
         over: AtomicBoolean,
         closed: AtomicBoolean,
+        watch: WriteWatch,
     ) {
         closeHandler.postDelayed(
             {
                 if (closed.get()) return@postDelayed
-                if (over.get() || temp.length() > UserConfigFiles.MAX_FILE_BYTES) {
+                val verdict = watch.check(temp.length(), System.currentTimeMillis())
+                if (over.get() || verdict != WriteWatch.Verdict.FINE) {
                     over.set(true)
                     try {
                         RandomAccessFile(temp, "rw").use { it.setLength(0) }
@@ -347,7 +355,13 @@ class RimeConfigProvider : DocumentsProvider() {
                         // Gone already: the writer closed.
                     }
                 }
-                watchSize(temp, over, closed)
+                if (verdict == WriteWatch.Verdict.TOO_LONG) {
+                    // A writer that never closes stops counting, and stops being watched.
+                    temp.delete()
+                    openTemps -= temp.name
+                    return@postDelayed
+                }
+                watchSize(temp, over, closed, watch)
             },
             SIZE_CHECK_MS,
         )
@@ -356,7 +370,10 @@ class RimeConfigProvider : DocumentsProvider() {
     /** The first use after a start removes what dead writers left; on the writer thread, never the main one. */
     private fun sweepOnce() {
         if (swept.compareAndSet(false, true)) {
-            closeHandler.post { WriteTemps.sweep(storage.configRoot, openTemps) }
+            closeHandler.post {
+                WriteTemps.sweep(storage.configRoot, openTemps)
+                WriteTemps.sweepTree(storage.userConfigDir, STALE_EDIT_TEMP_MS)
+            }
         }
     }
 
@@ -621,6 +638,7 @@ class RimeConfigProvider : DocumentsProvider() {
         const val SOURCES = RimeConfigPaths.SOURCES
         private const val WRITE_PREFIX = WriteTemps.PREFIX
         private const val SIZE_CHECK_MS = 100L
+        private const val STALE_EDIT_TEMP_MS = 60_000L
 
         private val ROOT_COLUMNS =
             arrayOf(

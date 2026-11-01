@@ -12,6 +12,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import java.io.File
+import java.nio.file.Files
 import java.security.MessageDigest
 
 /**
@@ -57,6 +58,29 @@ class UserScripts(
         }
         return found
     }
+
+    /** Every Lua component entry the YAML files of the source [sourceDir] ship themselves. */
+    fun shippedComponents(sourceDir: File?): Set<String> {
+        if (sourceDir == null || !sourceDir.isDirectory) return emptySet()
+        val found = HashSet<String>()
+        sourceDir
+            .walkTopDown()
+            .onEnter { it.name != "build" && !Files.isSymbolicLink(it.toPath()) }
+            .filter { it.isFile && it.name.endsWith(".yaml") && it.length() <= UserConfigFiles.MAX_FILE_BYTES }
+            .forEach { found += components(it.name, it.readBytes()) }
+        return found
+    }
+
+    /** The Lua component entries the user has agreed to (by their own content: the entry's hash is part of the record). */
+    fun confirmedComponents(): Set<String> =
+        readConfirmed()
+            .mapNotNull { key ->
+                val id = key.substringBeforeLast('@')
+                // A record is `<file>: <component>@<hash>`, and the component itself holds an `@`.
+                val hash = key.substringAfterLast('@')
+                val component = id.substringAfter(": ", "")
+                component.takeIf { it.isNotEmpty() && sha256(it.toByteArray()) == hash }
+            }.toSet()
 
     /** The scripts of [configDir] the user has not agreed to yet. */
     fun unconfirmed(
@@ -119,7 +143,8 @@ class UserScripts(
         val text = UserConfigFiles.decode(bytes)?.removePrefix("\uFEFF") ?: return emptyList()
         // The same part of the file the checks read: a dictionary's rows after `...` are not YAML.
         val yaml = UserConfigFiles.yamlPart(name, text)
-        if (!yaml.contains("lua_") || UserConfigSafety.tooDeep(yaml)) return emptyList()
+        // No shortcut on the raw text: an escape (`"\x6Cua_filter"`) spells a component without writing it.
+        if (UserConfigSafety.tooDeep(yaml)) return emptyList()
         return try {
             UserConfigSafety.luaComponents(BoundedYaml.loadAsText(yaml))
         } catch (_: Exception) {

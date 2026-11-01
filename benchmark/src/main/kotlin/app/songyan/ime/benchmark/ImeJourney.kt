@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Until
+import java.io.File
 
 /**
  * The user journeys that the Macrobenchmarks measure and the Baseline Profile covers: open the
@@ -139,14 +140,31 @@ object ImeJourney {
             tap(switch)
             SystemClock.sleep(500)
         }
+        saveScreenshot("compose-failure")
         error(
             "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
                 perfLines().filter { "key_us" !in it }.takeLast(15) +
+                "; ime: " + shell("settings get secure default_input_method").trim() +
                 "; app log: " +
                 shell(
                     "logcat -d -v brief *:I",
                 ).lines().filter { APP_LOG.containsMatchIn(it) && "key_" !in it }.takeLast(40),
         )
+    }
+
+    /** Keeps a screenshot next to the benchmark output, so a CI failure shows what the device displayed. */
+    private fun MacrobenchmarkScope.saveScreenshot(name: String) {
+        val arguments =
+            androidx.test.platform.app.InstrumentationRegistry
+                .getArguments()
+        val directory =
+            arguments.getString("additionalTestOutputDir")?.let(::File)
+                ?: androidx.test.platform.app.InstrumentationRegistry
+                    .getInstrumentation()
+                    .context.externalMediaDirs
+                    .first()
+        directory.mkdirs()
+        device.takeScreenshot(File(directory, "$name.png"))
     }
 
     /** Key centres of the current layout by letter, plus the language key. */

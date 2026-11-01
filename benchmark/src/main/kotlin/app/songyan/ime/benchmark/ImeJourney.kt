@@ -23,7 +23,8 @@ object ImeJourney {
     private const val IME_ID = "$PACKAGE/app.songyan.ime.SongyanInputMethodService"
     private const val PERF_TAG = "SongyanPerf"
     private val APP_LOG = Regex("(?i)songyan|rime|AndroidRuntime|deploy|FATAL")
-    private const val UI_TIMEOUT_MS = 10_000L
+    private const val UI_TIMEOUT_MS = 15_000L
+    private const val OPEN_TRIES = 3
     private const val TOUCH_SETTLE_MS = 400L
 
     /** A first install deploys the built-in engine data before the keyboard can draw. */
@@ -43,13 +44,24 @@ object ImeJourney {
         shell("setprop log.tag.$PERF_TAG DEBUG")
     }
 
-    /** Brings the 试打 screen with its text field to the front. */
+    /**
+     * Brings the 试打 screen with its text field to the front. A cold emulator can be slow to draw
+     * the first screen, or show a system dialog over it, so a few tries are made before giving up
+     * with what is on screen.
+     */
     fun MacrobenchmarkScope.openTryout() {
-        startActivityAndWait()
-        device.wait(Until.findObject(By.text("试打")), UI_TIMEOUT_MS)?.click()
-        checkNotNull(device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MS)) {
-            "the 试打 text field did not appear"
+        repeat(OPEN_TRIES) {
+            startActivityAndWait()
+            device.wait(Until.findObject(By.text("试打")), UI_TIMEOUT_MS)?.click()
+            if (device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MS) != null) return
+            device.pressBack()
         }
+        val hierarchy =
+            java.io
+                .ByteArrayOutputStream()
+                .also { device.dumpWindowHierarchy(it) }
+                .toString()
+        error("the 试打 text field did not appear; on screen: " + hierarchy.take(4000))
     }
 
     /** Taps the text field and waits until the keyboard is drawn and accepts taps. */

@@ -22,6 +22,7 @@ object ImeJourney {
 
     private const val IME_ID = "$PACKAGE/app.songyan.ime.SongyanInputMethodService"
     private const val PERF_TAG = "SongyanPerf"
+    private val APP_LOG = Regex("(?i)songyan|rime|AndroidRuntime|deploy|FATAL")
     private const val UI_TIMEOUT_MS = 10_000L
     private const val TOUCH_SETTLE_MS = 400L
 
@@ -129,7 +130,10 @@ object ImeJourney {
         error(
             "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
                 perfLines().filter { "key_us" !in it }.takeLast(15) +
-                "; problems: " + shell("logcat -d -v brief *:W").lines().takeLast(40),
+                "; app log: " +
+                shell(
+                    "logcat -d -v brief *:I",
+                ).lines().filter { APP_LOG.containsMatchIn(it) && "key_" !in it }.takeLast(40),
         )
     }
 

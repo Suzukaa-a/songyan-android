@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -119,6 +120,8 @@ class BarContentAlignmentDeviceTest {
     fun autofillChipsSitOnTheCentreLineUnderAReadingRow() =
         host(layout = "merged18") { host ->
             host.start()
+            // The layout is applied from the preference flow, which a slow device takes a while to deliver.
+            assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.MERGED18 })
             // The window may be short on a given run; the rule is what is under test, not the budget.
             host.main {
                 host.controller.readingRowDp = ReadingRowBudget.ROW_DP

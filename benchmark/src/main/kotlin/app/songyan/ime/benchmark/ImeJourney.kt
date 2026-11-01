@@ -126,7 +126,11 @@ object ImeJourney {
             tap(switch)
             SystemClock.sleep(500)
         }
-        error("the keyboard does not compose pinyin after $attempts attempts; log tail: " + perfLines().takeLast(12))
+        error(
+            "the keyboard does not compose pinyin after $attempts attempts; perf log: " +
+                perfLines().filter { "key_us" !in it }.takeLast(15) +
+                "; problems: " + shell("logcat -d -v brief *:W").lines().takeLast(40),
+        )
     }
 
     /** Key centres of the current layout by letter, plus the language key. */

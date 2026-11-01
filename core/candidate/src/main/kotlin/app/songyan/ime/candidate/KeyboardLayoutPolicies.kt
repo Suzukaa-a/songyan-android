@@ -45,14 +45,21 @@ object KeyboardOneHandLayoutPolicy {
     /** Narrowed content keeps this share of the panel width. */
     const val CONTENT_RATIO: Double = 0.85
 
-    /** Lower bound of the narrowed content so alphabetic keys stay usable. */
-    const val MINIMUM_CONTENT_WIDTH: Double = 320.0
+    /**
+     * Lower bound of the narrowed content so alphabetic keys stay usable: ten columns of about
+     * 29 dp, close to what a 360 dp phone's keys get with the usual 85% narrowing.
+     */
+    const val MINIMUM_CONTENT_WIDTH: Double = 288.0
 
     /** The gutter carries the restore control, which needs a 44 dp target. */
     const val MINIMUM_GUTTER_WIDTH: Double = 44.0
 
-    /** Standard phone portrait widths start here. */
-    const val MINIMUM_PANEL_WIDTH: Double = 375.0
+    /**
+     * The narrowest panel that still fits the content floor and the gutter. Android phones are
+     * commonly 360 dp wide, and less at a larger display size, so an iPhone-sized floor would hide
+     * the mode on most of them.
+     */
+    const val MINIMUM_PANEL_WIDTH: Double = MINIMUM_CONTENT_WIDTH + MINIMUM_GUTTER_WIDTH
 
     /** Keep narrowing within phone-sized surfaces, even before the size classes update. */
     const val MAXIMUM_PANEL_WIDTH: Double = 600.0

@@ -60,10 +60,44 @@ class KeyboardLayoutPoliciesTest {
     }
 
     @Test
+    fun commonAndroidPhoneWidthsOfferTheModeAndTooNarrowOnesDoNot() {
+        for (width in listOf(360.0, 392.7, 411.4)) {
+            assertTrue(
+                KeyboardOneHandLayoutPolicy.isAvailable(
+                    width,
+                    isPhone = true,
+                    compactHeight = false,
+                    regularWidth = false,
+                ),
+                "width " + width,
+            )
+        }
+        for (width in listOf(320.0, 331.9)) {
+            assertFalse(
+                KeyboardOneHandLayoutPolicy.isAvailable(
+                    width,
+                    isPhone = true,
+                    compactHeight = false,
+                    regularWidth = false,
+                ),
+                "width " + width,
+            )
+            assertEquals(
+                KeyboardOneHandPlan.inactive(width),
+                KeyboardOneHandLayoutPolicy.plan(KeyboardOneHandMode.LEFT, width, isPhonePortrait = true),
+            )
+        }
+    }
+
+    @Test
     fun standardPortraitWidthsProduceExactContentAndGutter() {
         val cases =
             listOf(
-                375.0 to 320.0, // 318.75 floored is 318, so the 320 floor wins; gutter 55
+                332.0 to 288.0, // 282.2 floored is 282, so the 288 floor wins; gutter 44
+                340.0 to 289.0,
+                // The common Android phone width, also what a 393 dp phone becomes at a larger display size.
+                360.0 to 306.0,
+                375.0 to 318.0, // 318.75 -> 318
                 390.0 to 331.0, // 331.5 -> 331
                 393.0 to 334.0,
                 402.0 to 341.0,
@@ -130,7 +164,7 @@ class KeyboardLayoutPoliciesTest {
 
     @Test
     fun thePlanTilesThePanelExactlyOnBothEdges() {
-        var width = 375.0
+        var width = KeyboardOneHandLayoutPolicy.MINIMUM_PANEL_WIDTH
         while (width <= 600.0) {
             for (mode in listOf(KeyboardOneHandMode.LEFT, KeyboardOneHandMode.RIGHT)) {
                 val plan = KeyboardOneHandLayoutPolicy.plan(mode = mode, panelWidth = width, isPhonePortrait = true)

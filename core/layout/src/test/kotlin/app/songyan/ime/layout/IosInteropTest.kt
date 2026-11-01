@@ -111,6 +111,18 @@ class IosInteropTest {
     }
 
     @Test
+    fun anIosAuthoredSplitArrangementKeepsItsDuplicateKeys() {
+        val layout = LayoutJson.decode(File(directory, "layout-custom-split-keys.json").readText())
+        assertEquals(BuiltinLayouts.qwerty26.rows, layout.rows)
+        val halves = layout.split!!.halves!!
+        fun text(keys: List<LayoutKey>) = keys.joinToString("") { it.label }
+        assertEquals(listOf("qwerty", "yuiop"), listOf(text(halves[0].left), text(halves[0].right)))
+        assertEquals(listOf("asdfg", "ghjkl"), listOf(text(halves[1].left), text(halves[1].right)))
+        assertEquals(listOf("zxcv", "vbnm"), listOf(text(halves[2].left), text(halves[2].right)))
+        assertTrue(layout.split!!.automaticGap)
+    }
+
+    @Test
     fun anIosAuthoredNineKeyLayoutKeepsItsFacesRailsAndControlRow() {
         val layout = LayoutJson.decode(File(directory, "layout-custom-phone9.json").readText())
         // It is a telephone keypad the shell can draw, and it is not the built-in one.
@@ -155,6 +167,17 @@ class IosInteropTest {
             File(directory, "layouts.json").readText(),
             File(resaved, LayoutStore.CATALOG_FILE_NAME).readText(),
         )
+    }
+
+    /** The acceptance layout as the Android editor leaves it: y, g and v repeated on both halves. */
+    private fun androidSplitKeysLayout(): LayoutDefinition {
+        fun letter(c: Char) = LayoutKey(c.toString(), action = LayoutAction.code(c.toString()))
+        val split = LayoutSplitConfiguration.of(LayoutSplitConfiguration.Activation.ALWAYS)
+        val halves = split.derivedArrangement(BuiltinLayouts.qwerty26.rows).toMutableList()
+        halves[0] = halves[0].copy(left = halves[0].left + letter('y'))
+        halves[1] = halves[1].copy(right = listOf(letter('g')) + halves[1].right)
+        halves[2] = halves[2].copy(right = listOf(letter('v')) + halves[2].right)
+        return BuiltinLayouts.qwerty26.copyWithId("android-split-keys", "拆分键").withSplit(split.copy(halves = halves))
     }
 
     /** A catalog the way the Android editors leave it: a user layout with a manual split, authored pages and a pairing. */
@@ -209,6 +232,7 @@ class IosInteropTest {
         val out = System.getenv("SONGYAN_INTEROP_OUT")?.let(::File) ?: return
         out.mkdirs()
         for (file in layoutFiles()) File(out, file.name).writeText(LayoutJson.decode(file.readText()).encoded())
+        File(out, "layout-android-split-keys.json").writeText(androidSplitKeysLayout().encoded())
         val folder = temporary.newFolder("catalog-out")
         File(directory, "layouts.json").copyTo(File(folder, LayoutStore.CATALOG_FILE_NAME))
         val registry = LayoutStore(folder.absolutePath).load()

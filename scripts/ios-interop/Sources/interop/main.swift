@@ -43,6 +43,34 @@ func export(to out: URL) throws {
     let customLayout = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .prettyPrinted])
     try write(customLayout, out, "layout-custom-qwerty.json")
 
+    // A layout with its own split arrangement: y, g and v repeat on both halves. Encoded by the iOS encoder
+    // after decoding, so the sample is what iOS writes.
+    var splitObject = try JSONSerialization.jsonObject(with: BuiltinLayouts.qwerty26.encoded()) as! [String: Any]
+    splitObject["id"] = "custom-split-keys"
+    splitObject["name"] = "拆分键"
+    let splitRows = splitObject["rows"] as! [[String: Any]]
+    func codeKey(_ letter: String) -> [String: Any] {
+        ["label": letter, "action": ["type": "code", "value": letter] as [String: Any]]
+    }
+    var halves: [[String: Any]] = []
+    for (index, cut) in [5, 5, 4].enumerated() {
+        let keys = splitRows[index]["keys"] as! [[String: Any]]
+        halves.append(["left": Array(keys[..<cut]), "right": Array(keys[cut...])])
+    }
+    var firstRow = halves[0]; firstRow["left"] = (firstRow["left"] as! [[String: Any]]) + [codeKey("y")]; halves[0] = firstRow
+    var secondRow = halves[1]; secondRow["right"] = [codeKey("g")] + (secondRow["right"] as! [[String: Any]]); halves[1] = secondRow
+    var thirdRow = halves[2]; thirdRow["right"] = [codeKey("v")] + (thirdRow["right"] as! [[String: Any]]); halves[2] = thirdRow
+    let controlKeys = splitRows[3]["keys"] as! [[String: Any]]
+    let spaceAt = controlKeys.firstIndex { ($0["action"] as! [String: Any])["type"] as? String == "space" }!
+    var halfSpace = controlKeys[spaceAt]
+    halfSpace["width"] = ((controlKeys[spaceAt]["width"] as? Double) ?? 1.0) / 2
+    halves.append(["left": Array(controlKeys[..<spaceAt]) + [halfSpace], "right": [halfSpace] + Array(controlKeys[(spaceAt + 1)...])])
+    splitObject["split"] = [
+        "activation": "always", "rowBreaks": [] as [Int], "gapFraction": 0.32, "automaticGap": true, "halves": halves,
+    ] as [String: Any]
+    let splitLayout = try LayoutDefinition.decode(try JSONSerialization.data(withJSONObject: splitObject))
+    try write(splitLayout.encoded(), out, "layout-custom-split-keys.json")
+
     // A nine-key layout authored on iOS: its own faces, its own rails and an edited control row
     // (the control row is not drawn on Android, but it must come back out unchanged).
     var phone = try JSONSerialization.jsonObject(with: BuiltinLayouts.phone9.encoded()) as! [String: Any]

@@ -176,7 +176,7 @@
 | `core/rime/src/main/assets/rime/` | 内置输入方案（`builtin/`）、prelude、OpenCC 数据与许可（同步自 iOS）。`prelude/README.md`、`prelude/PROVENANCE.md` 是随 prelude 同步来的数据文件（说明该数据集的来源），不是本项目文档，不要在这里修改 |
 | `app/src/main/assets/rime/starter/` | Android 额外打包的起步词库行（CC-CEDICT 读音、rime-essay 词频，多音字按 Unihan kHanyuPinlu 分配各读音的词频；由 [generate-starter-dict.py](../scripts/generate-starter-dict.py) 生成，输入与用法见脚本头；随 `songyan_basic.dict.yaml` 合并，许可见同目录 `NOTICE.md`），以及生成词库的许可文本 |
 | `core/layout/src/main/resources/layouts/` | 四种示例布局 JSON（同步自 iOS） |
-| `core/appearance/src/test/resources/ios-interop/`、`core/layout/src/test/resources/ios-interop/` | iOS 自己的编码器写出的外观、皮肤、候选栏、布局（含自定义 26 键与自定义九键）与目录样本（生成物，不是同步文件；`scripts/ios-interop.sh <ios 仓库> export <目录>` 重新生成，Swift 驱动在 `scripts/ios-interop/`） |
+| `core/appearance/src/test/resources/ios-interop/`、`core/layout/src/test/resources/ios-interop/` | iOS 自己的编码器写出的外观、皮肤、候选栏、布局（含自定义 26 键、带自己拆分排列的 26 键与自定义九键）与目录样本（生成物，不是同步文件；`scripts/ios-interop.sh <ios 仓库> export <目录>` 重新生成，Swift 驱动在 `scripts/ios-interop/`） |
 | `core/content/src/main/resources/default-symbols.json` | 默认符号库（同步自 iOS） |
 | `ime/src/main/assets/emoji/` | 表情目录 `emoji-data.tsv`（Unicode emoji-test 与 CLDR 中英注释，由 [generate-emoji-data.py](../scripts/generate-emoji-data.py) 生成，输入与用法见脚本头）、`NOTICE.md` 与 Unicode-3.0 许可文本；许可屏经 `LicenseCatalog` 读取 |
 | `filesDir/content/`、`filesDir/content/symbols/`、`filesDir/content/emoji/` | 常用语、剪贴板历史、符号库与最近使用的表情数据（`core:content` 的 store 读写；运行时目录） |

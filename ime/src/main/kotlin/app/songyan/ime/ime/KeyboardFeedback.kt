@@ -24,7 +24,7 @@ enum class FeedbackKind {
     /** A hold opened a popup, a menu or caret mode. */
     HOLD,
 
-    /** One caret step of a space-bar drag. */
+    /** One caret step of a space-bar drag, or another alternate selected in a popup. */
     TICK,
 }
 
@@ -131,7 +131,7 @@ class KeyboardFeedback(
         vibrate(view, KeyHaptics.HOLD)
     }
 
-    /** One caret step while dragging on the space bar; silent, haptic only. */
+    /** One caret step on the space bar or one alternate step in a popup; silent, haptic only. */
     fun tick(view: View) {
         vibrate(view, KeyHaptics.REPEAT)
     }

@@ -116,55 +116,70 @@ class KeyMotionTest {
 }
 
 class PopupSelectionTest {
+    // Four 48 px cells above a key whose press began at the centre of the first cell (density 1).
     private val popup = KeyBounds(100f, 100f, 292f, 152f)
-    private val anchor = KeyBounds(100f, 152f, 292f, 204f)
-    private val slop = 8f
+    private val originX = 124f
+    private val originY = 180f
 
     private fun index(
         x: Float,
-        y: Float,
-    ): Int = PopupSelection.index(popup, anchor, 4, x, y, slop)
+        y: Float = originY,
+        current: Int = 0,
+        mirrored: Boolean = false,
+        origin: Float = originX,
+    ): Int = PopupSelection.index(popup, 4, origin, originY, x, y, current, 1f, mirrored)
 
     @Test
-    fun restingOnTheKeyKeepsTheFirstAlternate() {
-        assertEquals(0, index(196f, 178f))
+    fun restingOrWobblingOnTheKeyKeepsTheFirstAlternate() {
+        assertEquals(0, index(originX))
+        assertEquals(0, index(originX + 11f, originY - 30f))
+        assertEquals(0, index(originX - 11f, originY + 20f))
     }
 
     @Test
-    fun movingIntoThePopupSelectsByColumn() {
-        assertEquals(0, index(110f, 120f))
-        assertEquals(1, index(160f, 120f))
-        assertEquals(3, index(285f, 120f))
+    fun slidingAlongTheKeyRowSelectsByTravelWithoutReachingThePopup() {
+        assertEquals(1, index(originX + 48f))
+        assertEquals(2, index(originX + 96f))
+        assertEquals(3, index(originX + 144f))
+        assertEquals("inside the popup works the same", 2, index(originX + 96f, 120f))
+        assertEquals("above the popup too", 2, index(originX + 96f, 60f))
     }
 
     @Test
-    fun leavingTheCorridorSelectsNothing() {
-        assertEquals("far above the popup", -1, index(196f, 40f))
-        assertEquals("far below the key", -1, index(196f, 260f))
-        assertEquals("far left of the popup", -1, index(40f, 120f))
-        assertEquals("far right of the popup", -1, index(400f, 120f))
+    fun aBoundaryNeedsAMarginToCross() {
+        // The boundary between cells 0 and 1 is 24 px from the origin.
+        assertEquals(0, index(originX + 30f, current = 0))
+        assertEquals(1, index(originX + 33f, current = 0))
+        assertEquals(1, index(originX + 18f, current = 1))
+        assertEquals(0, index(originX + 15f, current = 1))
     }
 
     @Test
-    fun theCorridorHasAFixedSmallTolerance() {
-        assertEquals("just above the popup", 2, index(196f, 100f - slop + 1f))
-        assertEquals(-1, index(196f, 100f - slop - 2f))
+    fun overshootingTheEndsSticksToTheLastCellUntilTheCancelMargin() {
+        assertEquals(3, index(292f + 20f))
+        assertEquals(-1, index(292f + 30f))
+        assertEquals(0, index(100f - 20f, current = 0))
+        assertEquals(-1, index(100f - 30f))
     }
 
     @Test
-    fun aMirroredPopupMapsTheRightmostCellToTheFirstAlternate() {
-        assertEquals(3, PopupSelection.index(popup, anchor, 4, 110f, 120f, slop, mirrored = true))
-        assertEquals(0, PopupSelection.index(popup, anchor, 4, 285f, 120f, slop, mirrored = true))
-        assertEquals(
-            "resting on the key is still the first",
-            0,
-            PopupSelection.index(popup, anchor, 4, 196f, 178f, slop, true),
-        )
+    fun aClearPullDownCancelsAndComingBackRestoresTheFirstAlternate() {
+        assertEquals(1, index(originX + 48f, originY + 60f, current = 1))
+        assertEquals(-1, index(originX + 48f, originY + 72f, current = 1))
+        assertEquals(0, index(originX, current = -1))
+    }
+
+    @Test
+    fun aMirroredPopupCountsTravelLeftwardsFromTheRightmostCell() {
+        val origin = 268f
+        assertEquals(0, index(origin, mirrored = true, origin = origin))
+        assertEquals(1, index(origin - 48f, mirrored = true, origin = origin))
+        assertEquals(3, index(origin - 144f, mirrored = true, origin = origin))
     }
 
     @Test
     fun anEmptyAlternateListSelectsNothing() {
-        assertEquals(-1, PopupSelection.index(popup, anchor, 0, 196f, 178f, slop))
+        assertEquals(-1, PopupSelection.index(popup, 0, originX, originY, originX, originY, 0, 1f))
     }
 }
 

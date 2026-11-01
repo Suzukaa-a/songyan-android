@@ -74,6 +74,35 @@ class KeyboardFeelDeviceTest {
         }
 
     @Test
+    fun slidingAlongTheKeyRowPicksAnAlternateWithoutReachingThePopup() =
+        withHost { host ->
+            host.start()
+            var mirrored = false
+            val labels =
+                host.hold("b", ViewConfiguration.getLongPressTimeout() + 200L) {
+                    mirrored = host.controller.keyboard.popupMirrored
+                    host.controller.keyboard.popupOptions
+                        .map { it.label }
+                }
+            assumeTrue("b needs three alternates: $labels", labels.size >= 3)
+            // Lifting a finger that rested on the key committed the first alternate.
+            assertTrue("committed: ${host.text()}", host.await { host.text() == labels[0] })
+            val keyboard = host.main2 { host.controller.keyboard }
+            val dp = host.main2 { keyboard.density }
+            // Near the right edge the alternates run leftwards, and so does the slide.
+            val cell = host.main2 { keyboard.metrics.popupCellWidthDp * dp } * (if (mirrored) -1 else 1)
+            val drift = if (mirrored) -4 * dp else 4 * dp
+            // The thumb stays at the key's height, drifts a little down, and never enters the popup.
+            val seen =
+                host.holdAndSlide(
+                    "b",
+                    listOf(drift to 0f, cell to 4 * dp, 2 * cell to 20 * dp, 2 * cell + drift to 24 * dp),
+                ) { keyboard.popupIndex }
+            assertEquals(listOf(0, 1, 2, 2), seen)
+            assertTrue("committed: ${host.text()}", host.await { host.text() == labels[0] + labels[2] })
+        }
+
+    @Test
     fun aLongerChosenDelayKeepsAHoldThatTheSystemWouldHaveOpened() =
         withHost { host ->
             host.start()

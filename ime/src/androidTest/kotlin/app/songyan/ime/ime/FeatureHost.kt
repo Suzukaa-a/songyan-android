@@ -483,6 +483,48 @@ internal class FeatureHost(
         return seen
     }
 
+    /**
+     * Holds a key until its popup opens, then moves the finger by each offset (px, from the key's
+     * centre) in turn, reading [observe] after every move, and lifts it at the last one.
+     */
+    fun <R> holdAndSlide(
+        label: String,
+        offsets: List<Pair<Float, Float>>,
+        observe: () -> R,
+    ): List<R> {
+        var center = 0f to 0f
+        main {
+            val view = find(KeyboardView::class.java)
+            val labels = labels(view)
+            val index = labels.indexOfFirst { it.equals(label, true) }
+            assertTrue("no key '$label' in $labels", index >= 0)
+            val bounds = Rect()
+            view.accessibilityNodeProvider.createAccessibilityNodeInfo(index)!!.getBoundsInParent(bounds)
+            center = bounds.exactCenterX() to bounds.exactCenterY()
+        }
+        val start = SystemClock.uptimeMillis()
+        main { touch(KeyboardView::class.java, start, MotionEvent.ACTION_DOWN, center, start) }
+        SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
+        var point = center
+        val seen =
+            offsets.map { (dx, dy) ->
+                point = center.first + dx to center.second + dy
+                main {
+                    touch(
+                        KeyboardView::class.java,
+                        SystemClock.uptimeMillis(),
+                        MotionEvent.ACTION_MOVE,
+                        point,
+                        start,
+                    )
+                }
+                main2(observe)
+            }
+        main { touch(KeyboardView::class.java, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, point, start) }
+        awaitIdle()
+        return seen
+    }
+
     private fun touch(
         type: Class<out View>,
         time: Long,

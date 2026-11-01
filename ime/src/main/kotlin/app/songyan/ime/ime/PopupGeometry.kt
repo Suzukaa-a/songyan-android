@@ -1,5 +1,7 @@
 package app.songyan.ime.ime
 
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -79,42 +81,59 @@ internal object PopupGeometry {
 }
 
 /**
- * Where the finger of an open alternates popup selects, and whether it selects anything at all.
+ * Which alternate a finger dragging across an open popup selects.
  *
- * The corridor is the popup plus the pressed key: resting on the key keeps the first alternate,
- * moving into the popup picks by column, and anything beyond the corridor selects nothing so the
- * release cancels instead of committing a highlighted option.
+ * The popup sits above the key and the thumb covers it, so the pick follows how far the finger has
+ * travelled sideways since the press began, one cell per cell width, rather than which cell it is
+ * over: a thumb sliding along the key row, below the popup, selects just as well as one inside it.
+ * A small move keeps the current option, a boundary needs a margin to cross so jitter cannot
+ * flicker, and only a clear slide past either end or a clear pull down, away from the popup,
+ * selects nothing so the release cancels.
  */
 internal object PopupSelection {
-    /** Index of the alternate the finger selects, or -1 when it is outside the corridor. */
+    /** Sideways travel below this keeps the current option. */
+    const val DEAD_ZONE_DP = 12f
+
+    /** How far past a cell boundary the finger must go before the selection follows it. */
+    const val HYSTERESIS_DP = 8f
+
+    /** Sliding this far past either end of the popup cancels. */
+    const val CANCEL_MARGIN_DP = 28f
+
+    /** Pulling down this far below where the press began cancels; edge keys cannot slide out sideways. */
+    const val CANCEL_DROP_DP = 72f
+
+    /** Index of the alternate selected, or -1 when the finger has cancelled the pick. */
     fun index(
         popup: KeyBounds,
-        anchor: KeyBounds,
         count: Int,
+        originX: Float,
+        originY: Float,
         x: Float,
         y: Float,
-        slop: Float,
+        current: Int,
+        density: Float,
         mirrored: Boolean = false,
     ): Int {
         if (count <= 0) return -1
-        if (inside(popup, x, y, slop)) {
-            val cell = (popup.right - popup.left) / count
-            if (cell <= 0f) return 0
-            val column = ((x - popup.left) / cell).toInt().coerceIn(0, count - 1)
-            return if (mirrored) count - 1 - column else column
-        }
-        if (inside(anchor, x, y, slop)) return 0
-        return -1
-    }
+        val margin = CANCEL_MARGIN_DP * density
+        if (x < popup.left - margin || x > popup.right + margin) return -1
+        if (y - originY >= CANCEL_DROP_DP * density) return -1
+        val dx = x - originX
+        val held = if (current in 0 until count) current else 0
+        if (abs(dx) < DEAD_ZONE_DP * density) return held
+        val cell = (popup.right - popup.left) / count
+        if (cell <= 0f) return held
 
-    private fun inside(
-        bounds: KeyBounds,
-        x: Float,
-        y: Float,
-        slop: Float,
-    ): Boolean =
-        x >= bounds.left - slop &&
-            x <= bounds.right + slop &&
-            y >= bounds.top - slop &&
-            y <= bounds.bottom + slop
+        fun cellOf(option: Int) = if (mirrored) count - 1 - option else option
+        // The press began on the first alternate, so travel counts from the centre of its cell.
+        val continuous = cellOf(0) + 0.5f + dx / cell
+        var column = floor(continuous).toInt().coerceIn(0, count - 1)
+        if (current in 0 until count) {
+            val kept = cellOf(current)
+            val sticky = HYSTERESIS_DP * density / cell
+            if (column != kept && continuous > kept - sticky && continuous < kept + 1 + sticky) column = kept
+        }
+        return if (mirrored) count - 1 - column else column
+    }
 }

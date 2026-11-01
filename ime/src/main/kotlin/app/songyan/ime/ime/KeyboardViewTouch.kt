@@ -12,7 +12,6 @@ import app.songyan.ime.ime.KeyboardView.Companion.FLICK_DISTANCE_DP
 import app.songyan.ime.ime.KeyboardView.Companion.FLICK_KEY_SHARE
 import app.songyan.ime.ime.KeyboardView.Companion.FLICK_RETURN_DP
 import app.songyan.ime.ime.KeyboardView.Companion.NO_POINTER
-import app.songyan.ime.ime.KeyboardView.Companion.POPUP_CORRIDOR_DP
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_GROW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_MAX_CHARS
 import app.songyan.ime.ime.KeyboardView.Companion.SWIPE_PREVIEW_DP
@@ -333,7 +332,6 @@ internal fun KeyboardView.showPopup(
 ) {
     popupOptions = options
     popupIndex = 0
-    popupAnchor = slot
     popupLayer?.hidePreview(0)
     updateLayerOffset()
     val layer = popupLayer
@@ -382,17 +380,10 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         }
         when {
             popupKey >= 0 && popupOwner == press.pointerId -> {
-                val next =
-                    PopupSelection.index(
-                        popupBounds,
-                        popupAnchor,
-                        popupOptions.size,
-                        x,
-                        y,
-                        POPUP_CORRIDOR_DP * density,
-                        popupMirrored,
-                    )
+                val next = popupSelection(press, x, y)
                 if (next != popupIndex) {
+                    // Moving onto another alternate ticks, so a thumb covering the popup can count cells.
+                    if (next >= 0) feedback(press.snapshot, FeedbackKind.TICK)
                     popupIndex = next
                     popupLayer?.select(next)
                 }
@@ -674,23 +665,30 @@ internal fun KeyboardView.handleUp(
     performClick()
 }
 
-/** Commits only an alternate the finger is actually over; everything else cancels. */
+internal fun KeyboardView.popupSelection(
+    press: Press,
+    x: Float,
+    y: Float,
+): Int =
+    PopupSelection.index(
+        popupBounds,
+        popupOptions.size,
+        press.startX,
+        press.startY,
+        x,
+        y,
+        popupIndex,
+        density,
+        popupMirrored,
+    )
+
+/** Commits the selected alternate; a release after a slide-out or a pull down cancels. */
 internal fun KeyboardView.finishPopup(
     press: Press,
     x: Float,
     y: Float,
 ) {
-    val index =
-        PopupSelection.index(
-            popupBounds,
-            popupAnchor,
-            popupOptions.size,
-            x,
-            y,
-            POPUP_CORRIDOR_DP * density,
-            popupMirrored,
-        )
-    val option = popupOptions.getOrNull(index)
+    val option = popupOptions.getOrNull(popupSelection(press, x, y))
     dismissPopup(animated = true)
     if (option != null) onAction(option.action)
     press.held = true

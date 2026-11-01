@@ -140,7 +140,6 @@ class KeyboardView(
     internal var popupIndex = -1
     internal var popupOptions: List<LayoutOption> = emptyList()
     internal var popupBounds = KeyBounds(0f, 0f, 0f, 0f)
-    internal var popupAnchor = KeyBounds(0f, 0f, 0f, 0f)
     internal var popupMirrored = false
 
     /** Layer position of this view, for converting key bounds into the popup layer's coordinates. */
@@ -919,9 +918,6 @@ class KeyboardView(
 
         /** Finger travel that turns a tap into a slide (dp). */
         const val TOUCH_SLOP_DP = 8f
-
-        /** How far outside the popup and its key a finger may sit and still select (dp). */
-        const val POPUP_CORRIDOR_DP = 8f
 
         /** Cursor cue outline: inset into the space key and stroke width (dp). */
         const val CURSOR_CUE_INSET_DP = 2f

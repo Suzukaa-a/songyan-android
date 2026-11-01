@@ -129,4 +129,10 @@ class KeyboardSplitTest {
     fun eighteenKeysPutThreeThreeAndFourKeysOnTheLeft() {
         assertEquals(listOf("qwert", "asdfg", "zxcvbn"), leftLetters(KeyboardLayoutKind.MERGED18))
     }
+
+    /** The iOS app pins the same strings for every bundled letter layout (BuiltinLayoutSplitTests). */
+    @Test
+    fun fourteenKeysSplitEachRowInTheMiddle() {
+        assertEquals(listOf("qwerty", "asdfgh", "zxcv"), leftLetters(KeyboardLayoutKind.MERGED14))
+    }
 }

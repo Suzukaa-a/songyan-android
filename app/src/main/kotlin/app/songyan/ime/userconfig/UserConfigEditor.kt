@@ -19,9 +19,11 @@ class UserConfigEditor(
     private val overrides: UserOverrides = UserOverrides(storage),
 ) {
     /** The file for [key]: an input method's id, or [RimeEditTarget.GLOBAL_KEY]; null when no such file name is allowed. */
-    fun fileName(key: String): String? =
-        (if (key == RimeEditTarget.GLOBAL_KEY) "default.custom.yaml" else "$key.custom.yaml")
+    fun fileName(key: String): String? {
+        RimeEditTarget.scriptName(key)?.let { return "lua/$it.lua".takeIf(UserConfigFiles::isAllowedPath) }
+        return (if (key == RimeEditTarget.GLOBAL_KEY) "default.custom.yaml" else "$key.custom.yaml")
             .takeIf(UserConfigFiles::isAllowedName)
+    }
 
     /**
      * Makes the file [name] when the user's folder has none: a copy of the file the source in use
@@ -73,6 +75,7 @@ class UserConfigEditor(
         target: File,
         bytes: ByteArray,
     ) {
+        target.parentFile?.mkdirs()
         val temp = File(target.parentFile, ".write-" + System.nanoTime())
         try {
             temp.writeBytes(bytes)

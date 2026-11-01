@@ -131,6 +131,75 @@ class UserConfigDeployTest {
         }
 
     @Test
+    fun aCompiledFileThatNamesAFileOutsideTheDataFoldersFailsTheDeploymentWhateverTheSpelling() =
+        runTest {
+            importPackage()
+            val before = publisher.readActive()!!
+            // The compiled file is where every patch spelling ends up.
+            runner.compiledYaml["extra.yaml"] =
+                "translator:\n  user_dict: /data/user/0/app/files/rime/config/edit/leak\n"
+            edit("rime_ice.custom.yaml", PATCH)
+            val calls = runner.calls
+
+            val refused = run(DeployMode.APPLY_USER_CONFIG)
+
+            assertEquals(RequestState.FAILED, refused.state)
+            assertEquals(DeployPipeline.CONFIG_PREFIX + "UNSAFE_REFERENCE", refused.problem)
+            assertEquals(listOf("extra.yaml"), refused.paths)
+            assertTrue("it did compile", runner.calls > calls)
+            assertEquals("the keyboard keeps its generation", before.generation, publisher.readActive()!!.generation)
+            assertEquals("the earlier configuration stays", null, UserConfigFiles.digest(storage.appliedConfigDir))
+            assertEquals("extra.yaml", status.read()?.file)
+        }
+
+    @Test
+    fun aRestoredBackupsScriptsAreLeftOutOfEveryDeploymentUntilConfirmedAgain() =
+        runTest {
+            importPackage()
+            File(storage.userConfigDir, "lua").mkdirs()
+            File(storage.userConfigDir, "lua/date.lua").writeText("return 1\n")
+            val scripts = UserScripts(storage)
+            scripts.accept(scripts.unconfirmed(storage.userConfigDir, null))
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            assertEquals("return 1\n", runner.overlays.last()["lua/date.lua"])
+
+            // A restore brings back `applied/` but not the confirmations.
+            storage.scriptsConfirmedFile.delete()
+            run(DeployMode.REDEPLOY_ACTIVE)
+
+            assertFalse("the script is left out", runner.overlays.last().containsKey("lua/date.lua"))
+            val active = publisher.readActive()!!
+            assertFalse(File(storage.generationDir(active.generation), "resources/lua/date.lua").exists())
+        }
+
+    @Test
+    fun aCopyIdenticalToOneSourcesOwnFileIsStillAScriptForAnother() {
+        val overlay = DeployOverlay(storage)
+
+        fun manifest(id: String) =
+            app.songyan.ime.storage.SourceManifest(
+                sourceId = id,
+                kind = app.songyan.ime.storage.SourceKind.SCHEME,
+                displayName = id,
+                schemes =
+                    listOf(
+                        app.songyan.ime.storage
+                            .SourceScheme("s", "s"),
+                    ),
+                revision = "1",
+            )
+        File(storage.sourceDir("scheme-a"), "lua").mkdirs()
+        File(storage.sourceDir("scheme-a"), "lua/date.lua").writeText("return 1\n")
+        File(storage.sourceDir("scheme-b"), "lua").mkdirs()
+        File(storage.sourceDir("scheme-b"), "lua/date.lua").writeText("return 2\n")
+        File(storage.appliedConfigDir, "lua").mkdirs()
+        File(storage.appliedConfigDir, "lua/date.lua").writeText("return 1\n")
+
+        assertEquals(emptySet<String>(), overlay.excluded(manifest("scheme-a"), storage.appliedConfigDir))
+        assertEquals(setOf("lua/date.lua"), overlay.excluded(manifest("scheme-b"), storage.appliedConfigDir))
+    }
+
+    @Test
     fun editsWaitForApplyingAndThenReachEveryLaterDeployment() =
         runTest {
             edit("songyan_quanpin.custom.yaml", PATCH)

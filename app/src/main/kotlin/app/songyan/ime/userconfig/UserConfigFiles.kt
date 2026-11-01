@@ -177,7 +177,7 @@ object UserConfigFiles {
             }
             val parsed =
                 try {
-                    BoundedYaml.load(yaml)
+                    BoundedYaml.loadAsText(yaml)
                 } catch (e: Exception) {
                     return UserConfigException(
                         name,
@@ -196,7 +196,7 @@ object UserConfigFiles {
     }
 
     /** A dictionary source is a YAML header, ended by `...`, then tab-separated rows; only the header is YAML. */
-    private fun yamlPart(
+    fun yamlPart(
         name: String,
         text: String,
     ): String {
@@ -256,9 +256,10 @@ object UserConfigFiles {
     fun copyInto(
         dir: File,
         workDir: File,
+        exclude: Set<String> = emptySet(),
     ): List<File> {
         workDir.mkdirs()
-        return files(dir).map { file ->
+        return files(dir).filter { relativePath(dir, it) !in exclude }.map { file ->
             File(workDir, relativePath(dir, file)).also {
                 it.parentFile?.mkdirs()
                 Files.copy(file.toPath(), it.toPath(), StandardCopyOption.REPLACE_EXISTING)
@@ -269,8 +270,11 @@ object UserConfigFiles {
     }
 
     /** Identity of the files of [dir], or null when it holds none. */
-    fun digest(dir: File): String? {
-        val files = files(dir)
+    fun digest(
+        dir: File,
+        exclude: Set<String> = emptySet(),
+    ): String? {
+        val files = files(dir).filter { relativePath(dir, it) !in exclude }
         if (files.isEmpty()) return null
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(BUFFER_BYTES)

@@ -9,6 +9,7 @@ import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.userconfig.UserConfigFiles
+import app.songyan.ime.userconfig.UserScripts
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -40,7 +41,7 @@ internal class DeployOverlay(
         val parts = ArrayList<String>()
         parts += "features:" + hex(MessageDigest.getInstance("SHA-256").digest(features.encode().toByteArray()))
         parts += "companions:" + CompactSchemaAdapter.DISPLAY_GENERATOR_VERSION
-        config?.let(UserConfigFiles::digest)?.let { parts += "config:$it" }
+        config?.let { UserConfigFiles.digest(it, excluded(manifest, it)) }?.let { parts += "config:$it" }
         stackOf(manifest)?.let { stack ->
             val revision = ImportedDictionaryMetadataReader.read(stack)?.revision ?: sha256(File(stack, STACKED_FILE))
             parts += "stack:$revision"
@@ -62,10 +63,25 @@ internal class DeployOverlay(
         workDir: File,
         config: File? = null,
     ): List<File> {
-        val configured = config?.let { UserConfigFiles.copyInto(it, workDir) }.orEmpty()
+        val configured = config?.let { UserConfigFiles.copyInto(it, workDir, excluded(manifest, it)) }.orEmpty()
         stackOf(manifest)?.let { writeStack(sourceDir, manifest, it, workDir) }
         return configured
     }
+
+    /**
+     * The files of the applied configuration that hold a script the user has not confirmed, against
+     * the files of this very source (a copy identical to another source's own is not identical to
+     * this one's). They are left out, so the source's own files are used: a restored backup or a
+     * file that changed behind the user's back never runs a script nobody agreed to.
+     */
+    fun excluded(
+        manifest: SourceManifest,
+        config: File,
+    ): Set<String> =
+        UserScripts(storage)
+            .unconfirmed(config, storage.sourceDir(manifest.sourceId).takeIf { it.isDirectory })
+            .map { it.path }
+            .toSet()
 
     /** The stacked dictionary of a scheme package, or null. */
     fun stackOf(manifest: SourceManifest): File? {

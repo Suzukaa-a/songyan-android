@@ -107,4 +107,61 @@ class UserConfigSafetyTest {
             UserConfigSafety.luaComponents(root),
         )
     }
+
+    @Test
+    fun patchOperatorsAndListSelectorsDoNotHideAFileKey() {
+        for (yaml in listOf(
+            "patch:\n  translator/user_dict/=: /data/data/x/files/rime/config/edit/leak\n",
+            "patch:\n  translator/user_dict/+: ../../leak\n",
+            "patch:\n  translator/dictionary/+: /abs\n",
+            "patch:\n  schema_list/@0/schema: ../../x\n",
+            "patch:\n  schema_list/@next/schema: /abs\n",
+            "patch:\n  schema_list/@before 0/schema: ../x\n",
+            "patch:\n  schema_list/@last/schema/=: ../x\n",
+            "patch:\n  schema/dependencies/@after 1: ../x\n",
+            "patch:\n  translator:\n    user_dict:\n      __append: ../x\n",
+            "patch:\n  translator:\n    db:\n      __merge: /abs\n",
+            "patch:\n  predictor/db/=: ../../x\n",
+        )) {
+            assertNotNull(yaml, unsafe(yaml))
+        }
+        // Appending a list of plain names is an ordinary patch.
+        assertNull(unsafe("patch:\n  schema_list/+:\n    - schema: extra\n  translator/packs/+: [a, b]\n"))
+        assertNull(unsafe("patch:\n  translator/user_dict/=: my_words\n"))
+    }
+
+    @Test
+    fun schemaListEntriesDependenciesAndPacksAreChecked() {
+        assertNotNull(unsafe("schema_list:\n  - schema: ../../edit/live\n"))
+        assertNotNull(unsafe("schema:\n  dependencies:\n    - ../x\n"))
+        assertNotNull(unsafe("translator:\n  packs:\n    - /abs/pack\n"))
+        assertNull(
+            unsafe(
+                "schema_list:\n  - schema: rime_ice\nschema:\n  schema_id: rime_ice\n  dependencies: [luna_pinyin]\n",
+            ),
+        )
+    }
+
+    @Test
+    fun explicitScalarTagsCannotHideAValueFromTheChecks() {
+        val tagged = "translator:\n  dictionary: !!null ../../x\n  user_dict: !!bool /abs\n"
+        // The typed reader turns these into null / true / a number: nothing to check.
+        assertNull(UserConfigSafety.unsafeReference(BoundedYaml.load(tagged)))
+        // The text reader keeps what yaml-cpp (librime) reads.
+        assertNotNull(UserConfigSafety.unsafeReference(BoundedYaml.loadAsText(tagged)))
+        assertNotNull(UserConfigSafety.unsafeReference(BoundedYaml.loadAsText("!!null dictionary: ../x\n")))
+        assertEquals(
+            listOf("lua_filter@x"),
+            UserConfigSafety.luaComponents(BoundedYaml.loadAsText("engine:\n  filters:\n    - !!null lua_filter@x\n")),
+        )
+    }
+
+    @Test
+    fun aBareLuaComponentNameCountsToo() {
+        val root =
+            BoundedYaml.loadAsText(
+                "engine:\n  filters:\n    - lua_filter\n    - lua_filters_not\n    - lua_translator@t\n",
+            )
+        assertEquals(listOf("lua_filter", "lua_translator@t"), UserConfigSafety.luaComponents(root))
+    }
 }

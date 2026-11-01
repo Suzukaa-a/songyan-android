@@ -164,6 +164,8 @@
     <!-- 新建配置文件开头的注释行，是文件内容，不是界面文案。 -->
     <string name="rime_config_template_hint">在 patch 下写要改的项，改完回到松烟点「应用更改」。</string>
     <string name="rime_config_template_example">例：每页显示 7 个候选</string>
+    <string name="rime_config_script_taken">输入方案里已经有叫「%1$s」的脚本，换个名字。</string>
+    <string name="rime_config_script_template_hint">在配置文件里写上 lua_filter@*%1$s 就会用到它（也可以是 lua_translator、lua_processor、lua_segmentor）。</string>
     <string name="rime_config_grammar_example_new">语法模型参数示例（去掉行首的 # 后生效）：</string>
     <string name="rime_config_grammar_example_under">语法模型参数示例（去掉行首的 # 后生效，这些行要放在上面的 patch: 下面）：</string>
     <string name="rime_config_grammar_example_empty">语法模型参数示例（先把上面的 patch: {} 改成 patch:，再去掉行首的 # 后生效）：</string>

@@ -7,6 +7,7 @@ import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigGateway
 import app.songyan.ime.settings.state.RimeConfigInfo
 import app.songyan.ime.settings.state.RimeConfigSaveResult
+import app.songyan.ime.settings.state.RimeScriptCreateResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -43,7 +44,7 @@ class RimeFileEditorViewModelTest {
 
         override suspend fun info() = RimeConfigInfo(fileCount = 0, pending = false)
 
-        override suspend fun apply(confirmScripts: Boolean): RimeConfigApplyResult = RimeConfigApplyResult.Applied
+        override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult = RimeConfigApplyResult.Applied
 
         override suspend fun restore(path: String) = Unit
 
@@ -56,6 +57,8 @@ class RimeFileEditorViewModelTest {
             this.grammarExample = grammarExample
             return load
         }
+
+        override suspend fun createScript(name: String): RimeScriptCreateResult = RimeScriptCreateResult.Failure(null)
 
         override suspend fun saveFile(
             key: String,

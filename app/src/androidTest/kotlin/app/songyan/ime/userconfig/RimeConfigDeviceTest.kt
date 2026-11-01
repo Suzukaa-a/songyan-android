@@ -17,6 +17,7 @@ import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigHolder
 import app.songyan.ime.settings.state.RimeConfigSaveResult
 import app.songyan.ime.settings.state.RimeEditTarget
+import app.songyan.ime.settings.state.RimeScriptCreateResult
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
 import app.songyan.ime.settings.state.StoredSourcesHolder
@@ -320,11 +321,12 @@ class RimeConfigDeviceTest {
             waitFor { File(storage.userConfigDir, "lua/probe.lua").isFile }
             val before = requireNotNull(publisher.readActive())
 
-            val first = apply()
-            assertEquals(RimeConfigApplyResult.NeedsConfirmation(listOf("lua/probe.lua"), firstTime = true), first)
+            val first = apply() as RimeConfigApplyResult.NeedsConfirmation
+            assertEquals(listOf("lua/probe.lua"), first.scripts)
+            assertTrue(first.firstTime)
             assertEquals("nothing was applied", before.generation, publisher.readActive()!!.generation)
 
-            val confirmed = runBlocking { RimeConfigHolder.current.apply(confirmScripts = true) }
+            val confirmed = runBlocking { RimeConfigHolder.current.apply(first.keys) }
             assertEquals(RimeConfigApplyResult.Applied, confirmed)
             val after = requireNotNull(publisher.readActive())
             assertEquals(
@@ -419,10 +421,19 @@ class RimeConfigDeviceTest {
         assertEquals("nothing was applied", before.generation, publisher.readActive()!!.generation)
         assertFalse("declining sets nothing", storage.scriptsConfirmedFile.exists())
         assertTrue("it asks again", apply() is RimeConfigApplyResult.NeedsConfirmation)
+        assertTrue(
+            "a yes to something else is not a yes to this",
+            runBlocking {
+                RimeConfigHolder.current.apply(
+                    listOf("lua/other.lua@0"),
+                )
+            } is RimeConfigApplyResult.NeedsConfirmation,
+        )
+        assertFalse(storage.scriptsConfirmedFile.exists())
 
         assertEquals(
             RimeConfigApplyResult.Applied,
-            runBlocking { RimeConfigHolder.current.apply(confirmScripts = true) },
+            runBlocking { RimeConfigHolder.current.apply(first.keys) },
         )
         val after = requireNotNull(publisher.readActive())
         assertTrue(candidates(after, "songyan_quanpin", "ni").contains("LUAPROBE"))
@@ -433,6 +444,63 @@ class RimeConfigDeviceTest {
         val later = apply() as RimeConfigApplyResult.NeedsConfirmation
         assertFalse(later.firstTime)
         assertEquals(listOf("lua/probe_filter.lua"), later.scripts)
+    }
+
+    @Test
+    fun aRunawayWriterIsCutOffAndItsWriteIsDiscarded() {
+        val uri = create("custom_phrase.txt", "x\n")
+        val stream = requireNotNull(resolver.openOutputStream(uri, "wt"))
+        val chunk = ByteArray(1024 * 1024) { 'a'.code.toByte() }
+        repeat(24) { stream.write(chunk) }
+        stream.flush()
+        Thread.sleep(600)
+
+        val temp =
+            storage.configRoot
+                .listFiles { f -> f.name.startsWith(".write-") }
+                .orEmpty()
+                .single()
+        val used =
+            android.system.Os
+                .stat(temp.path)
+                .st_blocks * 512
+        assertTrue("the temporary file gave its space back: $used bytes", used < UserConfigFiles.MAX_FILE_BYTES)
+
+        stream.close()
+        waitFor { storage.configRoot.listFiles { f -> f.name.startsWith(".write-") }.isNullOrEmpty() }
+        assertEquals("x\n", read(uri))
+    }
+
+    @Test
+    fun aNewScriptIsMadeFromTheTemplateAndWaitsForTheUsersYes() {
+        val gateway = RimeConfigHolder.current
+        val created = runBlocking { gateway.createScript("probe_new") } as RimeScriptCreateResult.Created
+        assertEquals("script:probe_new", created.key)
+        val file = File(storage.userConfigDir, "lua/probe_new.lua")
+        assertTrue(file.readText().contains("lua_filter@*probe_new"))
+        val loaded = runBlocking { gateway.loadFile(created.key) } as RimeConfigFileResult.Loaded
+        assertEquals("lua/probe_new.lua", loaded.fileName)
+        assertEquals(
+            RimeConfigSaveResult.Saved,
+            runBlocking { gateway.saveFile(created.key, loaded.text + "-- edit\n") },
+        )
+
+        val first = apply() as RimeConfigApplyResult.NeedsConfirmation
+        assertEquals(listOf("lua/probe_new.lua"), first.scripts)
+        assertTrue(first.firstTime)
+        assertEquals(RimeConfigApplyResult.Applied, runBlocking { gateway.apply(first.keys) })
+        assertTrue(runBlocking { gateway.info() }.unusedScripts.isEmpty())
+    }
+
+    @Test
+    fun scriptsLeftOutBecauseNobodyConfirmedThemAreReported() {
+        val gateway = RimeConfigHolder.current
+        runBlocking { gateway.createScript("probe_unused") }
+        val first = apply() as RimeConfigApplyResult.NeedsConfirmation
+        runBlocking { gateway.apply(first.keys) }
+        // A restored backup has the applied copy but not the confirmations.
+        storage.scriptsConfirmedFile.delete()
+        assertEquals(listOf("lua/probe_unused.lua"), runBlocking { gateway.info() }.unusedScripts)
     }
 
     private fun waitFor(condition: () -> Boolean) {

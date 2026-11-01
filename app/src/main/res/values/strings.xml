@@ -162,6 +162,8 @@
     <!-- Comment lines at the top of a new configuration file; file content, not interface text. -->
     <string name="rime_config_template_hint">Write what you want to change under patch, then tap “Apply changes” in Songyan.</string>
     <string name="rime_config_template_example">Example: show 7 candidates per page</string>
+    <string name="rime_config_script_taken">The input scheme already has a script called “%1$s”. Pick another name.</string>
+    <string name="rime_config_script_template_hint">Use it by adding lua_filter@*%1$s (or lua_translator, lua_processor, lua_segmentor) to a configuration file.</string>
     <string name="rime_config_grammar_example_new">Grammar model parameters, as an example (remove the leading # to use them):</string>
     <string name="rime_config_grammar_example_under">Grammar model parameters, as an example (remove the leading # and keep these lines under the patch: above):</string>
     <string name="rime_config_grammar_example_empty">Grammar model parameters, as an example (change the patch: {} above to patch:, then remove the leading #):</string>

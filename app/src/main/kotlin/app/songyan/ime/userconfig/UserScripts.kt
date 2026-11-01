@@ -31,6 +31,9 @@ class UserScripts(
         val hash: String,
     ) {
         val key: String get() = "$id@$hash"
+
+        /** The file the script is in. */
+        val path: String get() = id.substringBefore(": ")
     }
 
     /** The scripts of [configDir]'s files that differ from [sourceDir]'s own, in path order. */
@@ -46,8 +49,8 @@ class UserScripts(
                 val bytes = file.readBytes()
                 if (own == null || !own.readBytes().contentEquals(bytes)) found += Entry(path, sha256(bytes))
             } else if (path.endsWith(".yaml")) {
-                val shipped = own?.let { components(it.readBytes()) }.orEmpty().toSet()
-                for (component in components(file.readBytes())) {
+                val shipped = own?.let { components(path, it.readBytes()) }.orEmpty().toSet()
+                for (component in components(path, file.readBytes())) {
                     if (component !in shipped) found += Entry("$path: $component", sha256(component.toByteArray()))
                 }
             }
@@ -109,11 +112,16 @@ class UserScripts(
     }
 
     /** The Lua components a YAML file names; none when it is not readable YAML (applying refuses such a file). */
-    private fun components(bytes: ByteArray): List<String> {
+    private fun components(
+        name: String,
+        bytes: ByteArray,
+    ): List<String> {
         val text = UserConfigFiles.decode(bytes)?.removePrefix("\uFEFF") ?: return emptyList()
-        if (UserConfigSafety.tooDeep(text)) return emptyList()
+        // The same part of the file the checks read: a dictionary's rows after `...` are not YAML.
+        val yaml = UserConfigFiles.yamlPart(name, text)
+        if (!yaml.contains("lua_") || UserConfigSafety.tooDeep(yaml)) return emptyList()
         return try {
-            UserConfigSafety.luaComponents(BoundedYaml.load(text))
+            UserConfigSafety.luaComponents(BoundedYaml.loadAsText(yaml))
         } catch (_: Exception) {
             emptyList()
         } catch (_: StackOverflowError) {

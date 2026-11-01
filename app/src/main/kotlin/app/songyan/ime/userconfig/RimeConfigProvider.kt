@@ -23,8 +23,11 @@ import app.songyan.ime.storage.SourceKind
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The Rime configuration folder in the system Files app and document picker
@@ -46,6 +49,8 @@ import java.nio.file.StandardCopyOption
 class RimeConfigProvider : DocumentsProvider() {
     private val storage: AppStorage by lazy { AppStorage(requireNotNull(context).filesDir) }
     private val overrides: UserOverrides by lazy { UserOverrides(storage) }
+    private val openTemps: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val swept = AtomicBoolean(false)
     private val closeHandler: Handler by lazy {
         Handler(HandlerThread("rime-config-writes").apply { start() }.looper)
     }
@@ -54,6 +59,7 @@ class RimeConfigProvider : DocumentsProvider() {
     override fun onCreate(): Boolean = true
 
     override fun queryRoots(projection: Array<out String>?): Cursor {
+        sweepOnce()
         val context = requireNotNull(context)
         val cursor = MatrixCursor(projection ?: ROOT_COLUMNS)
         cursor.newRow().apply {
@@ -273,7 +279,9 @@ class RimeConfigProvider : DocumentsProvider() {
         packageFile: File? = null,
         packagePath: String? = null,
     ): ParcelFileDescriptor {
+        sweepOnce()
         val temp = File(storage.configRoot, WRITE_PREFIX + System.nanoTime())
+        openTemps += temp.name
         temp.parentFile?.mkdirs()
         // Without a user's copy yet, a writer that keeps the content starts from the package's file.
         val seed = target.takeIf { it.isFile } ?: packageFile
@@ -282,8 +290,17 @@ class RimeConfigProvider : DocumentsProvider() {
         } else {
             temp.writeBytes(ByteArray(0))
         }
+        val over = AtomicBoolean(false)
+        val closed = AtomicBoolean(false)
+        watchSize(temp, over, closed)
         return ParcelFileDescriptor.open(temp, flags or ParcelFileDescriptor.MODE_CREATE, closeHandler) { error ->
+            closed.set(true)
+            openTemps -= temp.name
             try {
+                if (over.get()) {
+                    Log.w(TAG, "discarded a write to $documentId: over the size limit")
+                    return@open
+                }
                 if (error == null && packageFile != null && !target.isFile && sameContent(temp, packageFile)) {
                     // Opened for writing, closed without a change: no copy of the package's file is worth keeping.
                     return@open
@@ -306,6 +323,40 @@ class RimeConfigProvider : DocumentsProvider() {
             } finally {
                 temp.delete()
             }
+        }
+    }
+
+    /**
+     * A writer holds the temporary file itself, so a runaway one is cut off from here: past the
+     * per-file limit the file is emptied on every check (its space is given back) and the write is
+     * discarded when the writer closes. Disk use stays at what one writer fits in between two checks.
+     */
+    private fun watchSize(
+        temp: File,
+        over: AtomicBoolean,
+        closed: AtomicBoolean,
+    ) {
+        closeHandler.postDelayed(
+            {
+                if (closed.get()) return@postDelayed
+                if (over.get() || temp.length() > UserConfigFiles.MAX_FILE_BYTES) {
+                    over.set(true)
+                    try {
+                        RandomAccessFile(temp, "rw").use { it.setLength(0) }
+                    } catch (_: IOException) {
+                        // Gone already: the writer closed.
+                    }
+                }
+                watchSize(temp, over, closed)
+            },
+            SIZE_CHECK_MS,
+        )
+    }
+
+    /** The first use after a start removes what dead writers left; on the writer thread, never the main one. */
+    private fun sweepOnce() {
+        if (swept.compareAndSet(false, true)) {
+            closeHandler.post { WriteTemps.sweep(storage.configRoot, openTemps) }
         }
     }
 
@@ -568,7 +619,8 @@ class RimeConfigProvider : DocumentsProvider() {
         const val EDIT = RimeConfigPaths.EDIT
         const val ACTIVE = RimeConfigPaths.ACTIVE
         const val SOURCES = RimeConfigPaths.SOURCES
-        private const val WRITE_PREFIX = ".write-"
+        private const val WRITE_PREFIX = WriteTemps.PREFIX
+        private const val SIZE_CHECK_MS = 100L
 
         private val ROOT_COLUMNS =
             arrayOf(

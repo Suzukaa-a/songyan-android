@@ -291,6 +291,8 @@ private fun NavGraphBuilder.settingsGraph(
             onOpenRimeEditor = { key -> navController.navigate(SettingsRoutes.rimeFile(key)) },
             onRestoreRimeFile = rimeConfigModel::restore,
             onDismissRimeOverrideNotice = rimeConfigModel::dismissOverrideNotice,
+            onCreateRimeScript = rimeConfigModel::createScript,
+            onRimeEditorOpened = rimeConfigModel::editorOpened,
             onUseRimeScripts = rimeConfigModel::confirmScripts,
             onCancelRimeScripts = rimeConfigModel::cancelScripts,
             grammarModel =

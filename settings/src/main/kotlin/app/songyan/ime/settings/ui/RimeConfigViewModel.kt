@@ -9,6 +9,8 @@ import app.songyan.ime.settings.state.RimeConfigApplyResult
 import app.songyan.ime.settings.state.RimeConfigGateway
 import app.songyan.ime.settings.state.RimeConfigHolder
 import app.songyan.ime.settings.state.RimeConfigInfo
+import app.songyan.ime.settings.state.RimeEditTarget
+import app.songyan.ime.settings.state.RimeScriptCreateResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,7 @@ sealed interface RimeConfigMessage {
 data class ScriptConfirmation(
     val scripts: List<String>,
     val firstTime: Boolean,
+    val keys: List<String> = scripts,
 )
 
 data class RimeConfigUiState(
@@ -44,6 +47,8 @@ data class RimeConfigUiState(
     val overrideNotice: List<String>? = null,
     /** Scripts waiting for the user's yes before anything is applied; null when none. */
     val scriptConfirmation: ScriptConfirmation? = null,
+    /** A new script to open in the editor, until the screen has done so. */
+    val openEditor: String? = null,
 ) {
     /** Applying does something: there are changes, or the last attempt or deployment left them out. */
     val canApply: Boolean
@@ -91,25 +96,32 @@ class RimeConfigViewModel(
         }
     }
 
-    fun apply() = applyWith(confirmScripts = false)
+    fun apply() = applyWith(emptyList())
 
     /** The user agreed to use the scripts [RimeConfigUiState.scriptConfirmation] listed: apply for real. */
     fun confirmScripts() {
+        val keys =
+            mutable.value.scriptConfirmation
+                ?.keys
+                .orEmpty()
         mutable.update { it.copy(scriptConfirmation = null) }
-        applyWith(confirmScripts = true)
+        applyWith(keys)
     }
 
     /** The user declined: nothing is applied and the files stay as they are. */
     fun cancelScripts() = mutable.update { it.copy(scriptConfirmation = null) }
 
-    private fun applyWith(confirmScripts: Boolean) {
+    private fun applyWith(confirmed: List<String>) {
         if (!mutable.value.canApply) return
         mutable.update { it.copy(applying = true, message = null) }
         viewModelScope.launch {
-            val result = gateway.apply(confirmScripts)
+            val result = gateway.apply(confirmed)
             if (result is RimeConfigApplyResult.NeedsConfirmation) {
                 mutable.update {
-                    it.copy(applying = false, scriptConfirmation = ScriptConfirmation(result.scripts, result.firstTime))
+                    it.copy(
+                        applying = false,
+                        scriptConfirmation = ScriptConfirmation(result.scripts, result.firstTime, result.keys),
+                    )
                 }
                 return@launch
             }
@@ -133,6 +145,21 @@ class RimeConfigViewModel(
             }
         }
     }
+
+    /** Makes the script `lua/<name>.lua`; the screen then opens it in the editor. */
+    fun createScript(name: String) {
+        if (!RimeEditTarget.isScriptName(name)) return
+        viewModelScope.launch {
+            when (val result = gateway.createScript(name)) {
+                is RimeScriptCreateResult.Created -> mutable.update { it.copy(openEditor = result.key) }
+                is RimeScriptCreateResult.Failure ->
+                    mutable.update { it.copy(message = RimeConfigMessage.Failure(result.message)) }
+            }
+            refresh()
+        }
+    }
+
+    fun editorOpened() = mutable.update { it.copy(openEditor = null) }
 
     fun dismissMessage() = mutable.update { it.copy(message = null) }
 

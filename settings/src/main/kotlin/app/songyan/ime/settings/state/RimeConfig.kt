@@ -17,6 +17,22 @@ data class RimeEditTarget(
         /** The key of the settings every input method shares. */
         const val GLOBAL_KEY = "default"
 
+        private const val SCRIPT_PREFIX = "script:"
+        private val SCRIPT_NAME = Regex("[a-z0-9_]{1,40}")
+
+        /** Whether [name] can name a new script: lowercase letters, digits and underscores. */
+        fun isScriptName(name: String): Boolean = SCRIPT_NAME.matches(name)
+
+        /** The key of the user's script `lua/<name>.lua`. */
+        fun scriptKey(name: String): String = SCRIPT_PREFIX + name
+
+        /** The script name a [key] stands for, or null when it is not a script key. */
+        fun scriptName(key: String): String? =
+            key.removePrefix(SCRIPT_PREFIX).takeIf {
+                key.startsWith(SCRIPT_PREFIX) &&
+                    isScriptName(it)
+            }
+
         val GLOBAL = RimeEditTarget(GLOBAL_KEY, null)
     }
 }
@@ -37,6 +53,8 @@ data class RimeConfigInfo(
     val unacknowledged: List<String> = emptyList(),
     /** What "modify an input method" offers, the scheme's input methods first. */
     val editTargets: List<RimeEditTarget> = emptyList(),
+    /** Files with scripts the keyboard leaves out because the user has not confirmed them (a restored backup, say). */
+    val unusedScripts: List<String> = emptyList(),
 )
 
 /** How applying the changes ended; [Failure.message] is already localized. */
@@ -45,12 +63,14 @@ sealed interface RimeConfigApplyResult {
 
     /**
      * Scripts ([scripts], as shown to the user) that are new or changed; nothing was applied, and
-     * [RimeConfigGateway.apply] with `confirmScripts` goes ahead. [firstTime]: the user has not been
-     * told what a script can do yet.
+     * [RimeConfigGateway.apply] with [keys] goes ahead. [firstTime]: the user has not been told
+     * what a script can do yet.
      */
     data class NeedsConfirmation(
         val scripts: List<String>,
         val firstTime: Boolean = false,
+        /** Identifies exactly the scripts listed (path and content), to hand back with the yes. */
+        val keys: List<String> = scripts,
     ) : RimeConfigApplyResult
 
     data class Failure(
@@ -87,6 +107,18 @@ sealed interface RimeConfigSaveResult {
     ) : RimeConfigSaveResult
 }
 
+/** A new script was made (the key opens it in the editor), or why not. */
+sealed interface RimeScriptCreateResult {
+    data class Created(
+        val key: String,
+    ) : RimeScriptCreateResult
+
+    /** [message] is already localized, null for generic copy. */
+    data class Failure(
+        val message: String?,
+    ) : RimeScriptCreateResult
+}
+
 /** The file to open in another app is ready ([intents] open it, the most specific first), or why it is not. */
 sealed interface RimeConfigEditResult {
     data class Ready(
@@ -112,10 +144,12 @@ interface RimeConfigGateway {
 
     /**
      * Checks the edited files and rebuilds the scheme in use with them; returns once that ended.
-     * Scripts that are new or changed need the user's yes first: without [confirmScripts] the result
-     * is [RimeConfigApplyResult.NeedsConfirmation] and nothing happens; with it they count as agreed to.
+     * Scripts that are new or changed need the user's yes first: unless [confirmed] holds the keys
+     * of every one of them the result is [RimeConfigApplyResult.NeedsConfirmation] and nothing
+     * happens. Only the scripts in [confirmed] count as agreed to; another one that turned up since
+     * is asked about again.
      */
-    suspend fun apply(confirmScripts: Boolean = false): RimeConfigApplyResult
+    suspend fun apply(confirmed: List<String> = emptyList()): RimeConfigApplyResult
 
     /** Deletes the user's version of [path], so the scheme's own file is used again after the next apply. */
     suspend fun restore(path: String)
@@ -132,6 +166,9 @@ interface RimeConfigGateway {
         key: String,
         grammarExample: Boolean = false,
     ): RimeConfigFileResult
+
+    /** Makes the user's script `lua/<name>.lua` with a short commented template; [name] is checked ([RimeEditTarget.isScriptName]). */
+    suspend fun createScript(name: String): RimeScriptCreateResult
 
     /** Saves [text] as that file if it is valid; the keyboard still waits for the next apply. */
     suspend fun saveFile(
@@ -151,7 +188,7 @@ class UnavailableRimeConfigGateway : RimeConfigGateway {
 
     override suspend fun info() = RimeConfigInfo(fileCount = 0, pending = false)
 
-    override suspend fun apply(confirmScripts: Boolean): RimeConfigApplyResult = RimeConfigApplyResult.Failure(null)
+    override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult = RimeConfigApplyResult.Failure(null)
 
     override suspend fun restore(path: String) = Unit
 
@@ -161,6 +198,8 @@ class UnavailableRimeConfigGateway : RimeConfigGateway {
         key: String,
         grammarExample: Boolean,
     ): RimeConfigFileResult = RimeConfigFileResult.Failure(null)
+
+    override suspend fun createScript(name: String): RimeScriptCreateResult = RimeScriptCreateResult.Failure(null)
 
     override suspend fun saveFile(
         key: String,

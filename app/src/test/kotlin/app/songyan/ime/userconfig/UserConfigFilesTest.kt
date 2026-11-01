@@ -253,4 +253,17 @@ class UserConfigFilesTest {
             UserConfigFiles.files(edit).map { UserConfigFiles.relativePath(edit, it) },
         )
     }
+
+    @Test
+    fun aHiddenOrTaggedFileNameIsRefusedLikeAPlainOne() {
+        for (text in listOf(
+            "patch:\n  translator/user_dict/=: /data/data/app/files/rime/config/edit/leak\n",
+            "patch:\n  translator/db_class/=: plain_userdb\n  translator/user_dict/+: ../../leak\n",
+            "translator:\n  dictionary: !!null ../../x\n",
+            "schema_list:\n  - schema: ../../edit/live\n",
+        )) {
+            val error = UserConfigFiles.check("x.custom.yaml", text.toByteArray())
+            assertEquals(text, UserConfigProblem.UNSAFE_REFERENCE, error?.problem)
+        }
+    }
 }

@@ -105,4 +105,41 @@ class UserConfigEditorTest {
         assertEquals(UserConfigProblem.TOO_MANY, refusal)
         assertFalse(File(storage.userConfigDir, "new.custom.yaml").exists())
     }
+
+    @Test
+    fun aScriptKeyNamesALuaFileAndNothingElse() {
+        assertEquals("lua/my_filter.lua", editor.fileName(RimeEditTarget.scriptKey("my_filter")))
+        for (key in listOf(
+            "script:Bad",
+            "script:a-b",
+            "script:../x",
+            "script:a/b",
+            "script:",
+            "script:" + "a".repeat(41),
+        )) {
+            assertNull(key, editor.fileName(key))
+        }
+        assertTrue(RimeEditTarget.isScriptName("a1_b2"))
+        assertFalse(RimeEditTarget.isScriptName("A"))
+        assertFalse(RimeEditTarget.isScriptName(""))
+    }
+
+    @Test
+    fun aNewScriptIsMadeUnderLuaFromItsTemplateAndSavesLikeAnyFile() {
+        val name = requireNotNull(editor.fileName(RimeEditTarget.scriptKey("probe")))
+
+        val text = editor.load(name, null) { ScriptTemplate.text("probe", "How to use it.") }
+
+        assertTrue(text.startsWith("-- How to use it.\n-- engine/filters/+: [lua_filter@*probe]\nreturn {"))
+        val file = File(storage.userConfigDir, "lua/probe.lua")
+        assertEquals(text, file.readText())
+        assertTrue(UserConfigFiles.isScriptPath("lua/probe.lua"))
+        assertNull(editor.save(name, text + "-- more\n"))
+        assertTrue(file.readText().endsWith("-- more\n"))
+        assertEquals(
+            "the new script is one the user must confirm",
+            listOf("lua/probe.lua"),
+            UserScripts(storage).unconfirmed(storage.userConfigDir, source).map { it.id },
+        )
+    }
 }

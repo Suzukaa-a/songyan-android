@@ -21,6 +21,7 @@ import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.storage.SourceScheme
+import app.songyan.ime.userconfig.CompiledConfigGuard
 import app.songyan.ime.userconfig.UserConfigException
 import app.songyan.ime.userconfig.UserConfigFiles
 import app.songyan.ime.userconfig.UserConfigProblem
@@ -326,7 +327,11 @@ class DeploymentCoordinator(
             } catch (e: Throwable) {
                 applied.deleteRecursively()
                 moveDirectory(previous, applied)
-                if (e !is CancellationException) configStatus.write(UserConfigStatus.failed(null, DEPLOY_PROBLEM))
+                if (e is UserConfigException) {
+                    configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
+                } else if (e !is CancellationException) {
+                    configStatus.write(UserConfigStatus.failed(null, DEPLOY_PROBLEM))
+                }
                 throw e
             } finally {
                 strictConfig = false
@@ -571,6 +576,8 @@ class DeploymentCoordinator(
             if (!compiledDir.isDirectory) {
                 throw DeployException("deployment produced no build directory: $compiledDir")
             }
+            // Whatever the user's patches spelled, no compiled file may name a file outside the data folders.
+            if (config != null) CompiledConfigGuard.check(compiledDir)
             // The layouts still to come may use seeded prisms; the deployment completing them drops the rest.
             if (!companionsPending) CompiledReuse.dropUnusedPrisms(compiledDir, seededFiles(workDir))
             val deployed = outcome.deployedSchemaIds

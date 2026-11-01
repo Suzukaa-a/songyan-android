@@ -25,8 +25,11 @@ object UserConfigSafety {
             "import_tables",
             "db",
             "language",
+            "schema",
+            "dependencies",
+            "packs",
         )
-    private val LUA_COMPONENT = Regex("""^lua_(?:processor|translator|filter|segmentor)@""")
+    private val LUA_COMPONENT = Regex("""^lua_(?:processor|translator|filter|segmentor)(?:@|$)""")
 
     /** Whether [path] is a relative path a source or the user's folder may hold. */
     fun safePath(path: String): Boolean = runCatching { SchemePackageImportBuilder.validatePath(path) }.isSuccess
@@ -60,8 +63,12 @@ object UserConfigSafety {
     /**
      * The first value in the parsed document [root] that names a file outside the data folders (or
      * is not a plain relative name), or null. Covers include and patch references (`file:/node`),
-     * `import_preset`, `dictionary`, `import_tables`, `prism`, `user_dict`, `vocabulary`,
-     * `opencc_config`, `db` and `grammar/language`.
+     * `import_preset`, `dictionary`, `import_tables`, `prism`, `packs`, `user_dict`, `vocabulary`,
+     * `opencc_config`, `db`, `grammar/language`, `schema` (a `schema_list` entry) and
+     * `dependencies`. Patch operators do not hide a key: `a/user_dict/=`, `a/user_dict/+` and list
+     * selectors (`@0`, `@last`, `@before 1`, `@after 1`, `@next`) are read as the key they act on, and
+     * appending a string to one of these values is refused outright (it can build a path out of
+     * pieces). The same walk over a compiled build file finds the keys at their real paths.
      */
     fun unsafeReference(root: Any?): String? {
         var budget = MAX_NODES
@@ -72,11 +79,7 @@ object UserConfigSafety {
             when (val node = stack.removeLast()) {
                 is Map<*, *> ->
                     for ((key, value) in node) {
-                        val name = (key as? String)?.substringAfterLast('/')
-                        when {
-                            key == "__include" || key == "__patch" -> firstUnsafeReference(value)?.let { return it }
-                            name in FILE_KEYS -> firstUnsafeName(value)?.let { return it }
-                        }
+                        if (key is String) unsafeEntry(key, value)?.let { return it }
                         if (value is Map<*, *> || value is List<*>) stack.addLast(value)
                     }
                 is List<*> -> node.forEach { if (it is Map<*, *> || it is List<*>) stack.addLast(it) }
@@ -84,6 +87,20 @@ object UserConfigSafety {
             }
         }
         return null
+    }
+
+    private fun unsafeEntry(
+        key: String,
+        value: Any?,
+    ): String? {
+        if (key == "__include" || key == "__patch") return firstUnsafeReference(value)
+        val parts = key.split('/')
+        val appended = parts.lastOrNull() == "+"
+        // The key the operators act on: without `=`, `+` and list selectors.
+        val name = parts.lastOrNull { it.isNotEmpty() && it != "=" && it != "+" && !it.startsWith("@") } ?: return null
+        if (name !in FILE_KEYS) return null
+        if (appended && value != null && value !is List<*> && value !is Map<*, *>) return key
+        return firstUnsafeName(value)
     }
 
     /** Every Lua component entry (`lua_filter@name`, `lua_translator@*module`) in the parsed document. */
@@ -126,7 +143,17 @@ object UserConfigSafety {
     private fun firstUnsafeName(value: Any?): String? =
         when (value) {
             is List<*> -> value.firstNotNullOfOrNull { firstUnsafeName(it) }
-            is Map<*, *> -> null
+            // `{__append: x}` / `{__merge: x}` spell the same value another way.
+            is Map<*, *> ->
+                value.entries.firstNotNullOfOrNull { (k, v) ->
+                    if (k is String &&
+                        k.startsWith("__")
+                    ) {
+                        firstUnsafeName(v)
+                    } else {
+                        null
+                    }
+                }
             null -> null
             else -> value.toString().takeIf { it.isNotEmpty() && (!SchemeSourceCheck.safe(it) || !safePath(it)) }
         }

@@ -58,6 +58,9 @@ internal object DeployFixtures {
 
         /** What librime's schema list holds after the deploy; every source schema when null. */
         var schemaList: List<String>? = null
+
+        /** Extra compiled files (name to text) every deploy leaves in its build directory. */
+        val compiledYaml = mutableMapOf<String, String>()
         val deployedSources = mutableListOf<File>()
         val workDirExisted = mutableListOf<Boolean>()
 
@@ -109,6 +112,7 @@ internal object DeployFixtures {
                 File(build, dictionary.name.replace(".dict.yaml", ".table.bin")).writeText(dictionary.readText())
             }
             File(build, "default.yaml").writeText("__build_info:\n  rime_version: 1.17.0\n")
+            for ((name, text) in compiledYaml) File(build, name).writeText(text)
             afterDeploy?.invoke(
                 object : DeployedEngine {
                     override val compiledDir = build

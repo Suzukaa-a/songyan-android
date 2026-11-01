@@ -93,4 +93,25 @@ class UserScriptsTest {
         assertEquals("a changed script is asked about again", 1, scripts.unconfirmed(edit, source).size)
         assertTrue("but the risk is not explained again", scripts.riskAccepted())
     }
+
+    @Test
+    fun aDictionaryHeaderIsReadAndItsRowsAreNot() {
+        put(
+            edit,
+            "mine.dict.yaml",
+            "---\nname: mine\nfilters:\n  - lua_filter@*from_header\n...\nlua_filter@*in_row\tabc\t1\n",
+        )
+
+        assertEquals(listOf("mine.dict.yaml: lua_filter@*from_header"), scripts.entries(edit, source).map { it.id })
+    }
+
+    @Test
+    fun aBareComponentNameAndATaggedOneAreScriptsToo() {
+        put(edit, "x.custom.yaml", "patch:\n  engine/filters/+: [lua_filter, !!null lua_translator@t]\n")
+
+        assertEquals(
+            listOf("x.custom.yaml: lua_filter", "x.custom.yaml: lua_translator@t"),
+            scripts.entries(edit, source).map { it.id },
+        )
+    }
 }

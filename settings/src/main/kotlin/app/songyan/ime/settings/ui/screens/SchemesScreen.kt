@@ -124,6 +124,8 @@ fun SchemesScreen(
     onOpenRimeEditor: (key: String) -> Unit = {},
     onRestoreRimeFile: (String) -> Unit = {},
     onDismissRimeOverrideNotice: () -> Unit = {},
+    onCreateRimeScript: (String) -> Unit = {},
+    onRimeEditorOpened: () -> Unit = {},
     onUseRimeScripts: () -> Unit = {},
     onCancelRimeScripts: () -> Unit = {},
     /** The grammar-model download and import the card after a package import drives; the card is left out without it. */
@@ -201,6 +203,12 @@ fun SchemesScreen(
             null -> null
         }
     var showRimeEditPicker by rememberSaveable { mutableStateOf(false) }
+    var showNewScript by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(rimeConfig.openEditor) {
+        val key = rimeConfig.openEditor ?: return@LaunchedEffect
+        onOpenRimeEditor(key)
+        onRimeEditorOpened()
+    }
     LaunchedEffect(configMessage) {
         if (configMessage != null) {
             snackbarHostState.showSnackbar(configMessage)
@@ -431,6 +439,7 @@ fun SchemesScreen(
                     },
                     onApply = onApplyRimeConfig,
                     onEdit = { showRimeEditPicker = true },
+                    onNewScript = { showNewScript = true },
                     onRestore = onRestoreRimeFile,
                 )
             }
@@ -445,6 +454,15 @@ fun SchemesScreen(
                 onOpenRimeEditor(it.key)
             },
             onDismiss = { showRimeEditPicker = false },
+        )
+    }
+    if (showNewScript) {
+        RimeNewScriptDialog(
+            onCreate = {
+                showNewScript = false
+                onCreateRimeScript(it)
+            },
+            onDismiss = { showNewScript = false },
         )
     }
     rimeConfig.scriptConfirmation?.let { RimeScriptConfirmDialog(it, onUseRimeScripts, onCancelRimeScripts) }

@@ -15,9 +15,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -40,6 +45,7 @@ internal fun LazyListScope.rimeConfigRows(
     onOpen: () -> Unit,
     onApply: () -> Unit,
     onEdit: () -> Unit,
+    onNewScript: () -> Unit,
     onRestore: (String) -> Unit,
 ) {
     item(key = "rime_config_header") { SectionHeader(stringResource(R.string.rime_config_section)) }
@@ -111,12 +117,32 @@ internal fun LazyListScope.rimeConfigRows(
             ) {
                 Text(stringResource(R.string.rime_config_edit))
             }
+            OutlinedButton(
+                onClick = onNewScript,
+                enabled = state.available && !state.applying,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.rime_config_new_script))
+            }
             Button(
                 onClick = onApply,
                 enabled = state.canApply && !busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.rime_config_apply))
+            }
+        }
+    }
+    val unused = state.info?.unusedScripts.orEmpty()
+    if (unused.isNotEmpty()) {
+        item(key = "rime_config_unused_scripts") {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                Text(
+                    text = stringResource(R.string.rime_config_scripts_unused),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                for (path in unused) Text(path, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -145,6 +171,40 @@ private fun LazyListScope.changedFileRows(
         )
     }
 }
+
+/** Asks the name of a new script: lowercase letters, digits and underscores, saved as `lua/<name>.lua`. */
+@Composable
+internal fun RimeNewScriptDialog(
+    onCreate: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    val valid = RimeEditTarget.isScriptName(name)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.rime_config_new_script)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(MAX_SCRIPT_NAME) },
+                label = { Text(stringResource(R.string.rime_config_script_name)) },
+                supportingText = { Text(stringResource(R.string.rime_config_script_name_rule)) },
+                isError = name.isNotEmpty() && !valid,
+                singleLine = true,
+                modifier = Modifier.testTag(RIME_SCRIPT_NAME_TAG),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onCreate(name) }, enabled = valid) {
+                Text(stringResource(R.string.rime_config_script_create))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+private const val MAX_SCRIPT_NAME = 40
+internal const val RIME_SCRIPT_NAME_TAG = "rime_script_name"
 
 /** Which input method's file to open; its own file, or the one every input method shares. */
 @Composable

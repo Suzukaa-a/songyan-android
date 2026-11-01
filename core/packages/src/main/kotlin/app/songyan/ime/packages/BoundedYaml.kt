@@ -77,6 +77,36 @@ object BoundedYaml {
         return root.orElse(null)
     }
 
+    /**
+     * Reads [text] the way librime does for what a file names: every scalar, key or value, is its
+     * text, whatever tag it carries. `!!null x` or `!!bool x` would otherwise come out as null or
+     * true here while yaml-cpp keeps `x`, and a check on the typed value would never see it.
+     * Maps and lists keep their shape; a key that is not a scalar is dropped.
+     */
+    fun loadAsText(text: String): Any? {
+        val root = compose(text) ?: return null
+        var budget = MAXIMUM_TEXT_NODES
+
+        fun convert(node: Node): Any? {
+            if (--budget < 0) throw LimitExceeded("more than " + MAXIMUM_TEXT_NODES + " nodes to read")
+            return when (node) {
+                is ScalarNode -> node.value
+                is SequenceNode -> node.value.map { convert(it) }
+                is MappingNode ->
+                    LinkedHashMap<String, Any?>().also { map ->
+                        for (tuple in node.value) {
+                            val key = tuple.keyNode as? ScalarNode ?: continue
+                            map[key.value] = convert(tuple.valueNode)
+                        }
+                    }
+                else -> null
+            }
+        }
+        return convert(root)
+    }
+
+    private const val MAXIMUM_TEXT_NODES: Int = 500_000
+
     private val coreTags: Set<Tag> =
         setOf(Tag.STR, Tag.INT, Tag.FLOAT, Tag.BOOL, Tag.NULL, Tag.MAP, Tag.SEQ)
 

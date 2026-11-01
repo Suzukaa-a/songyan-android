@@ -2,10 +2,13 @@ package app.songyan.ime.settings
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import app.songyan.ime.settings.state.RimeConfigApplyResult
 import app.songyan.ime.settings.state.RimeConfigEditResult
@@ -13,11 +16,14 @@ import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigGateway
 import app.songyan.ime.settings.state.RimeConfigInfo
 import app.songyan.ime.settings.state.RimeConfigSaveResult
+import app.songyan.ime.settings.state.RimeScriptCreateResult
 import app.songyan.ime.settings.ui.RimeFileEditorViewModel
 import app.songyan.ime.settings.ui.screens.RIME_EDITOR_ERROR_TAG
 import app.songyan.ime.settings.ui.screens.RIME_EDITOR_FIELD_TAG
 import app.songyan.ime.settings.ui.screens.RIME_EDITOR_SCRIPTS_TAG
+import app.songyan.ime.settings.ui.screens.RIME_SCRIPT_NAME_TAG
 import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
+import app.songyan.ime.settings.ui.screens.RimeNewScriptDialog
 import app.songyan.ime.settings.ui.theme.SongyanTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -38,7 +44,7 @@ class RimeFileEditorScreenTest {
 
         override suspend fun info() = RimeConfigInfo(fileCount = 0, pending = false)
 
-        override suspend fun apply(confirmScripts: Boolean): RimeConfigApplyResult = RimeConfigApplyResult.Applied
+        override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult = RimeConfigApplyResult.Applied
 
         override suspend fun restore(path: String) = Unit
 
@@ -48,6 +54,8 @@ class RimeFileEditorScreenTest {
             key: String,
             grammarExample: Boolean,
         ): RimeConfigFileResult = RimeConfigFileResult.Loaded("内置全拼", "songyan_quanpin.custom.yaml", text)
+
+        override suspend fun createScript(name: String): RimeScriptCreateResult = RimeScriptCreateResult.Failure(null)
 
         override suspend fun saveFile(
             key: String,
@@ -116,5 +124,22 @@ class RimeFileEditorScreenTest {
         show(Gateway(text = "# lua_filter@x is only a comment here\npatch: {}\n"))
 
         compose.onNodeWithTag(RIME_EDITOR_SCRIPTS_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun theNewScriptDialogOnlyTakesLowercaseLettersDigitsAndUnderscores() {
+        var created: String? = null
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                RimeNewScriptDialog(onCreate = { created = it }, onDismiss = {})
+            }
+        }
+        compose.onNodeWithTag(RIME_SCRIPT_NAME_TAG).performTextInput("Bad Name")
+        compose.onNodeWithText(str(R.string.rime_config_script_create)).assertIsNotEnabled()
+
+        compose.onNodeWithTag(RIME_SCRIPT_NAME_TAG).performTextClearance()
+        compose.onNodeWithTag(RIME_SCRIPT_NAME_TAG).performTextInput("my_filter2")
+        compose.onNodeWithText(str(R.string.rime_config_script_create)).assertIsEnabled().performClick()
+        assertEquals("my_filter2", created)
     }
 }

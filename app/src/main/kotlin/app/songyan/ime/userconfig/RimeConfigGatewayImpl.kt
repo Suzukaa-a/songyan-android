@@ -20,6 +20,7 @@ import app.songyan.ime.settings.state.RimeConfigInfo
 import app.songyan.ime.settings.state.RimeConfigSaveResult
 import app.songyan.ime.settings.state.RimeEditTarget
 import app.songyan.ime.settings.state.RimeOverrideFile
+import app.songyan.ime.settings.state.RimeScriptCreateResult
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceCatalog
@@ -70,6 +71,11 @@ internal class RimeConfigGatewayImpl(
             RimeConfigInfo(
                 overrides = overrides.entries(sourceDir).map { RimeOverrideFile(it.path, it.updated) },
                 unacknowledged = overrides.unacknowledged(sourceDir),
+                unusedScripts =
+                    scripts
+                        .unconfirmed(storage.appliedConfigDir, sourceDir)
+                        .map { it.path }
+                        .distinct(),
                 editTargets =
                     active
                         ?.let { SourceCatalog(storage).read(it) }
@@ -90,14 +96,19 @@ internal class RimeConfigGatewayImpl(
             )
         }
 
-    override suspend fun apply(confirmScripts: Boolean): RimeConfigApplyResult =
+    override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult =
         client.detached {
             val unconfirmed =
                 withContext(Dispatchers.IO) { scripts.unconfirmed(storage.userConfigDir, activeSourceDir()) }
             if (unconfirmed.isNotEmpty()) {
-                if (!confirmScripts) {
+                // Only what the user was shown counts: a script that turned up since is asked about too.
+                if (!unconfirmed.all { it.key in confirmed }) {
                     val firstTime = withContext(Dispatchers.IO) { !scripts.riskAccepted() }
-                    return@detached RimeConfigApplyResult.NeedsConfirmation(unconfirmed.map { it.id }, firstTime)
+                    return@detached RimeConfigApplyResult.NeedsConfirmation(
+                        unconfirmed.map { it.id },
+                        firstTime,
+                        unconfirmed.map { it.key },
+                    )
                 }
                 // The deployment checks the files it applies against this record, so a change after now is refused.
                 withContext(Dispatchers.IO) { scripts.accept(unconfirmed) }
@@ -131,7 +142,7 @@ internal class RimeConfigGatewayImpl(
         withContext(Dispatchers.IO) {
             val name = editor.fileName(key) ?: return@withContext RimeConfigFileResult.Failure(null)
             try {
-                val loaded = editor.load(name, activeSourceDir(), ::template)
+                val loaded = editor.load(name, activeSourceDir()) { templateFor(name) }
                 val text =
                     if (grammarExample) {
                         GrammarParameterExample.appendedTo(loaded) { appContext.getString(grammarHeading(it)) }
@@ -143,6 +154,29 @@ internal class RimeConfigGatewayImpl(
                 RimeConfigFileResult.Failure(failureText(e))
             } catch (_: IOException) {
                 RimeConfigFileResult.Failure(null)
+            }
+        }
+
+    override suspend fun createScript(name: String): RimeScriptCreateResult =
+        withContext(Dispatchers.IO) {
+            val key = RimeEditTarget.scriptKey(name)
+            val path = editor.fileName(key) ?: return@withContext RimeScriptCreateResult.Failure(null)
+            try {
+                // A name the source's own scripts use would replace that script: not by accident.
+                val own = activeSourceDir()?.let { UserOverrides.packageFile(it, path) }
+                if (own != null) {
+                    return@withContext RimeScriptCreateResult.Failure(
+                        appContext.getString(R.string.rime_config_script_taken, name),
+                    )
+                }
+                editor.load(path, null) {
+                    ScriptTemplate.text(name, appContext.getString(R.string.rime_config_script_template_hint, name))
+                }
+                RimeScriptCreateResult.Created(key)
+            } catch (e: UserConfigException) {
+                RimeScriptCreateResult.Failure(failureText(e))
+            } catch (_: IOException) {
+                RimeScriptCreateResult.Failure(null)
             }
         }
 
@@ -168,7 +202,7 @@ internal class RimeConfigGatewayImpl(
         withContext(Dispatchers.IO) {
             val name = editor.fileName(key) ?: return@withContext RimeConfigEditResult.Failure(null)
             try {
-                editor.load(name, activeSourceDir(), ::template)
+                editor.load(name, activeSourceDir()) { templateFor(name) }
             } catch (e: UserConfigException) {
                 return@withContext RimeConfigEditResult.Failure(failureText(e))
             } catch (_: IOException) {
@@ -192,7 +226,9 @@ internal class RimeConfigGatewayImpl(
             ?.takeIf { it.isDirectory }
 
     private fun titleOf(key: String): String? =
-        if (key == RimeEditTarget.GLOBAL_KEY) {
+        if (RimeEditTarget.scriptName(key) != null) {
+            editor.fileName(key)
+        } else if (key == RimeEditTarget.GLOBAL_KEY) {
             null
         } else {
             GenerationPublisher(storage)
@@ -202,6 +238,14 @@ internal class RimeConfigGatewayImpl(
                 ?.schemes
                 ?.firstOrNull { it.schemaId == key }
                 ?.name
+        }
+
+    private fun templateFor(name: String): String =
+        if (name.endsWith(".lua")) {
+            val script = name.removePrefix("lua/").removeSuffix(".lua")
+            ScriptTemplate.text(script, appContext.getString(R.string.rime_config_script_template_hint, script))
+        } else {
+            template()
         }
 
     /** A new file that patches nothing yet, with a hint on how to. */

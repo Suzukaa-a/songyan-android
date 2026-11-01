@@ -22,6 +22,11 @@
     <string name="rime_config_file_updated">%1$s has a newer version. Your version is still in use.</string>
     <string name="rime_config_override_notice">These files are now your own versions. They won\'t change when the input scheme is updated; all other files are updated as usual.</string>
     <string name="rime_config_override_ok">Got it</string>
+    <string name="rime_config_new_script">New extension script</string>
+    <string name="rime_config_script_name">Name</string>
+    <string name="rime_config_script_name_rule">Lowercase letters, digits and underscores only.</string>
+    <string name="rime_config_script_create">Create</string>
+    <string name="rime_config_scripts_unused">Your extension scripts aren\'t in use yet. Tap Apply changes and confirm them to use them.</string>
     <string name="rime_config_scripts_first_title">Use your own extension scripts?</string>
     <string name="rime_config_scripts_first_body">Extension scripts can read everything you type. Songyan stops scripts from running commands, loading outside programs and going online, but a flaw in the script engine itself could still be abused. Only use scripts from sources you trust.</string>
     <string name="rime_config_scripts_changed">These extension scripts have changed.</string>

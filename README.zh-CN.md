@@ -2,18 +2,12 @@
 
 [English](README.md)
 
-松烟是一款基于 [RIME 中州韵](https://rime.im) 引擎的 Android 通用中文输入法，是 [松烟 iOS 版](https://github.com/Suzukaa-a/songyan-ios) 的 Android 姊妹项目：引擎、内置方案与数据格式相同，键盘和设置界面按 Android 的习惯重新设计，而不是从 iOS 直译。
-
-## 当前状态
-
-仍在开发中，尚不能日常使用。
+松烟是一款基于 [RIME 中州韵](https://rime.im) 引擎的 Android 通用中文输入法，是 [松烟 iOS 版](https://github.com/Suzukaa-a/songyan-ios) 的 Android 姊妹项目：引擎、内置方案与数据格式相同，键盘和设置界面按 Android 的习惯重新设计。
 
 ## 功能
 
 - RIME 引擎（librime 1.17），包含 `lua`、`octagram`（语法模型）与 `predict` 插件和九键处理器，从源码为 Android 构建并链接成单个原生库。
-- 内置全拼和小鹤双拼两种输入方案，可用于 26 键、14 键、18 键、9 键四种键盘布局；14、18、9 键版本由方案自动生成。
-- 在合并键上左右滑动可直接打出其中一个字母。
-- 支持导入 RIME 输入方案包（文件、文件夹、链接，或从其他 App 打开）与词库，可在设置中启用、更新或删除。
+- 内置 26 键、14 键、18 键、9 键四种键盘布局
 - 键盘外观、候选栏与键盘布局编辑；动态取色、单手模式、大屏与拆分键盘。外观与布局文件可与 iOS 版互相导入导出。
 - 可按需开启模糊音、错键纠正、联想（需自行导入 `predict.db`）和语法模型，并支持逐项开关 Lua 组件。
 - 符号库、常用语、剪贴板历史、表情面板，以及学习数据的备份与合并（备份格式与 iOS 版通用）。
@@ -24,7 +18,6 @@
 
 - 运行：Android 8.0（API 26）及以上。
 - 构建：JDK 17 或更高版本（CI 用 21）、Android SDK 37（`platforms;android-37.0`、`build-tools;37.0.0`）、NDK 30.0.16248370、CMake 3.31.6。确切版本钉在 [gradle/libs.versions.toml](gradle/libs.versions.toml) 与 [core/rime/build.gradle.kts](core/rime/build.gradle.kts)。用不入库的 `local.properties`（`sdk.dir=...`）或 `ANDROID_HOME` 告诉 Gradle SDK 的位置。
-- 首次构建会下载钉住版本的引擎源码并编译，需要一些时间。
 
 ## 构建与安装
 

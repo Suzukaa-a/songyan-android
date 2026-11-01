@@ -5,22 +5,13 @@
 Songyan is a general-purpose Chinese input method for Android built on the
 [RIME](https://rime.im) engine. It is the Android sibling of the
 [Songyan iOS keyboard](https://github.com/Suzukaa-a/songyan-ios): the same engine, built-in
-schemes and data formats, with a keyboard and settings app designed for Android rather than
-translated from iOS.
-
-## Status
-
-Work in progress; not ready for daily use.
+schemes and data formats, with a keyboard and settings app designed for Android.
 
 ## Features
 
 - RIME engine (librime 1.17) with the `lua`, `octagram` (grammar model) and `predict` plugins and
   the nine-key processor, built from source for Android and linked into one native library.
-- Two built-in input schemes, full pinyin and Xiaohe (flypy) double pinyin, on four layouts: 26,
-  14, 18 and 9 keys. The 14-, 18- and 9-key variants are generated from the scheme.
-- On merged keys, swipe sideways to type either letter.
-- Import RIME scheme packages (files, folders, links, or opened from other apps) and
-  dictionaries; enable, update or remove them in settings.
+- Four built-in keyboard layouts: 26, 14, 18 and 9 keys.
 - Appearance, candidate bar and key layout editors; dynamic color, one-handed mode, large-screen
   and split layouts. Appearance and layout files are interchangeable with the iOS app.
 - Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar
@@ -42,7 +33,6 @@ Work in progress; not ready for daily use.
   [gradle/libs.versions.toml](gradle/libs.versions.toml) and
   [core/rime/build.gradle.kts](core/rime/build.gradle.kts). Point Gradle at the SDK with a
   git-ignored `local.properties` (`sdk.dir=...`) or `ANDROID_HOME`.
-- The first build downloads the pinned engine sources and compiles them; expect it to take a while.
 
 ## Build and install
 

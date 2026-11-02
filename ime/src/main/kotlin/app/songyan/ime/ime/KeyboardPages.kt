@@ -15,6 +15,7 @@ import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.KeyboardSymbolPresentation
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
@@ -452,6 +453,8 @@ internal object KeyboardPages {
                     PhoneKeypadLayout.draws(main) -> emptyList()
                 authoredEnglish != null ->
                     authoredEnglish.chrome?.bottom?.filter { jumpDrawn(it, config) } ?: lettersFooter(config)
+                !config.englishDirectInput && config.field == FieldKind.TEXT ->
+                    LayoutBottomRow.authored(main)?.filter { railKeyDrawn(it, config) } ?: lettersFooter(config)
                 else -> lettersFooter(config)
             }
         val cuts =
@@ -510,7 +513,7 @@ internal object KeyboardPages {
         }
         val letters =
             halves
-                .filterIndexed { index, _ -> base.rows[index].keys.none { it.action.type == LayoutActionKind.SPACE } }
+                .filterIndexed { index, _ -> index != LayoutBottomRow.index(base) }
                 .map { row ->
                     val shown = face(row)
                     LayoutSplitRow(shown.left.map(::chineseLetterKey), shown.right.map(::chineseLetterKey))
@@ -541,7 +544,7 @@ internal object KeyboardPages {
     ): LayoutSplitConfiguration? {
         val handSplit = BuiltinLayouts.handSplit(main) ?: return null
         val letters = handSplit.rowBreaks
-        val letterRows = main.rows.filter { row -> row.keys.none { it.action.type == LayoutActionKind.SPACE } }
+        val letterRows = main.rows.filterIndexed { index, _ -> index != LayoutBottomRow.index(main) }
         val cuts =
             rows.mapIndexed { index, row ->
                 val cut = letters.getOrNull(index) ?: return null
@@ -584,18 +587,15 @@ internal object KeyboardPages {
         layout: KeyboardLayoutKind,
         base: LayoutDefinition,
     ): List<LayoutRow> {
-        // The 9-key shell has its own rows and rails; this page shape is the fallback for a nine-key
-        // layout the shell cannot draw. Its declared control row is never drawn: the bottom row is
-        // generated from the editor and the language.
+        // A nine-key definition the phone shell cannot draw falls back to the row renderer.
         if (layout == KeyboardLayoutKind.PHONE9) {
             val declared = if (PhoneKeypadRailPolicy.controlRowKeys(base) != null) base.rows.dropLast(1) else base.rows
             return declared.map { row -> LayoutRow(row.keys.map { mergedFace(it) }) }
         }
         val rows =
-            // The control row (the one with the space bar) is drawn natively from the editor and the
-            // language, so only the letter rows come from the layout.
+            // Footer keys are added separately so removing Space never turns them into letter keys.
             base.rows
-                .filter { row -> row.keys.none { it.action.type == LayoutActionKind.SPACE } }
+                .filterIndexed { index, _ -> index != LayoutBottomRow.index(base) }
                 .map { row -> LayoutRow(row.keys.map { chineseLetterKey(mergedFace(it)) }) }
                 .toMutableList()
         if (rows.isEmpty()) return rows

@@ -43,8 +43,16 @@ class DeployPipelineTest {
     }
 
     @Test
-    fun firstRunPublishesTheBuiltInPackageWithAStamp() =
+    fun aFreshInstallDoesNotPublishTheBuiltInPackage() =
         runTest {
+            assertEquals(RequestState.FAILED, pipeline.run(DeployRequest("first", DeployMode.BUILTIN)).state)
+            assertNull(publisher.readActive())
+        }
+
+    @Test
+    fun restoredLearningPublishesTheBuiltInPackageWithAStamp() =
+        runTest {
+            File(storage.userRoot, "pinyin").mkdirs()
             val status = pipeline.run(DeployRequest("r1", DeployMode.BUILTIN))
 
             assertEquals(RequestState.SUCCEEDED, status.state)

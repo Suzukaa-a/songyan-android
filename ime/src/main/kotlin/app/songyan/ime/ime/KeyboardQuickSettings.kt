@@ -24,7 +24,15 @@ internal fun KeyboardController.quickSettingsState(): QuickSettingsState =
                 ?.takeIf { ready }
                 ?.options
                 .orEmpty()
-                .map { EngineOptionTile(it.descriptor.name, it.descriptor.kind, it.value) },
+                .map {
+                    EngineOptionTile(
+                        it.descriptor.name,
+                        it.descriptor.kind,
+                        it.value,
+                        it.descriptor.choiceGroup,
+                        it.descriptor.choiceLabel,
+                    )
+                },
     )
 
 /**

@@ -11,6 +11,7 @@ import app.songyan.ime.settings.state.EngineFeaturesSnapshot
 import app.songyan.ime.settings.state.FeatureChangeResult
 import app.songyan.ime.settings.state.GrammarSelection
 import app.songyan.ime.settings.state.TransferProgress
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,21 +49,24 @@ class EngineFeaturesViewModel(
     val uiState: StateFlow<EngineFeaturesUiState> = mutable.asStateFlow()
 
     private var schemaId: String? = null
+    private var reloadJob: Job? = null
     private var lastDownload: (() -> Unit)? = null
 
-    /** Shows [id]'s features; reads again when the input method in use changed. */
+    /** Reads the published features whenever the page opens, including changes applied elsewhere. */
     fun show(id: String?) {
-        if (id == null || id == schemaId) return
+        if (id == null) return
         schemaId = id
         reload()
     }
 
     fun reload() {
         val id = schemaId ?: return
-        viewModelScope.launch {
-            val snapshot = gateway.load(id)
-            mutable.update { it.copy(loading = false, snapshot = snapshot) }
-        }
+        reloadJob?.cancel()
+        reloadJob =
+            viewModelScope.launch {
+                val snapshot = gateway.load(id)
+                if (schemaId == id) mutable.update { it.copy(loading = false, snapshot = snapshot) }
+            }
     }
 
     fun setTypoCorrection(enabled: Boolean) = launchChange { gateway.setTypoCorrection(enabled) }
@@ -145,13 +149,15 @@ class EngineFeaturesViewModel(
         }
         viewModelScope.launch {
             val result = change()
-            val snapshot = schemaId?.let { gateway.load(it) }
+            reloadJob?.cancel()
+            val id = schemaId
+            val snapshot = id?.let { gateway.load(it) }
             mutable.update {
                 it.copy(
                     saving = false,
                     cancellable = false,
                     transfer = null,
-                    snapshot = snapshot ?: it.snapshot,
+                    snapshot = if (schemaId == id) snapshot ?: it.snapshot else it.snapshot,
                     failure = (result as? FeatureChangeResult.Failure)?.message,
                     failed = result is FeatureChangeResult.Failure,
                     retryable = (result as? FeatureChangeResult.Failure)?.retryable == true,

@@ -70,4 +70,20 @@ class EngineOptionPreferencesTest {
                 .toList(),
         )
     }
+
+    @Test
+    fun aRadioChoiceUsesOneAtomicRecordAndRestoresExactlyOneMember() {
+        val names = listOf("original", "traditional", "hongkong", "taiwan")
+        val choices = names.map { option(name = it).copy(choiceGroup = names, choiceLabel = it) }
+        assertTrue(choices.all { preferences.read(it) == null })
+        preferences.write(choices[1], true)
+        assertEquals(listOf(false, true, false, false), choices.map { preferences.read(it) })
+        preferences.write(choices[3], true)
+        val reopened = EngineOptionPreferences(directory)
+        assertEquals(listOf(false, false, false, true), choices.map { reopened.read(it) })
+        assertEquals(1, directory.walkTopDown().count { it.isFile })
+        val failure = runCatching { preferences.write(choices[3], false) }.exceptionOrNull()
+        assertTrue(failure is java.io.IOException)
+        assertEquals(true, reopened.read(choices[3]))
+    }
 }

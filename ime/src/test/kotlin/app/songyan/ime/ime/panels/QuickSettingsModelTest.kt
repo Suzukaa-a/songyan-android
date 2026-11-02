@@ -12,6 +12,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class QuickSettingsModelTest {
+    @Test
+    fun characterFormsShareOneChoiceTileAndSelectingOneReplacesThePreviousChoice() {
+        val names = listOf("s2s", "s2t", "s2hk", "s2tw")
+        val labels = listOf("简体", "繁体", "香港", "臺灣")
+        val state =
+            QuickSettingsState(
+                engineOptions =
+                    names.mapIndexed { index, name ->
+                        EngineOptionTile(name, EngineOptionKind.TRADITIONAL, index == 0, names, labels[index])
+                    } + EngineOptionTile("emoji", EngineOptionKind.EMOJI, true),
+            )
+        val tiles = QuickSettingsModel.tiles(state).filter { it.setting == QuickSetting.ENGINE_OPTION }
+        assertEquals(2, tiles.size)
+        val forms = tiles.first()
+        assertEquals(QuickTile.Kind.CHOICE, forms.kind)
+        assertEquals(labels, forms.options.map { it.label })
+        assertEquals("s2s", forms.valueKey)
+        assertNull(QuickSettingsModel.toggled(forms))
+        val selected = state.apply(forms.options.last().change)
+        assertEquals(listOf("s2tw", "emoji"), selected.engineOptions.filter { it.on }.map { it.name })
+        assertEquals(
+            "s2tw",
+            QuickSettingsModel.tiles(selected).first { it.setting == QuickSetting.ENGINE_OPTION }.valueKey,
+        )
+    }
+
     private fun tile(
         state: QuickSettingsState,
         setting: QuickSetting,

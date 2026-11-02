@@ -8,6 +8,21 @@ import org.junit.Test
 
 class OnboardingProgressTest {
     @Test
+    fun aSelectedKeyboardWithoutASchemeStillStartsWithDownload() {
+        val progress = onboardingProgress(ImeStatus(true, true), hasTyped = true, schemeReady = false)
+        assertEquals(OnboardingStep.DOWNLOAD_SCHEME, progress.nextStep)
+        assertFalse(progress.tryOutDone)
+        assertFalse(progress.allDone)
+    }
+
+    @Test
+    fun aPublishedSchemeUnlocksTheNextSystemStep() {
+        val progress = onboardingProgress(ImeStatus(false, false), hasTyped = false, schemeReady = true)
+        assertTrue(progress.schemeDone)
+        assertEquals(OnboardingStep.ENABLE_IME, progress.nextStep)
+    }
+
+    @Test
     fun `selected implies enabled even when the enabled list could not be read`() {
         val progress = onboardingProgress(ImeStatus(enabled = false, selected = true), hasTyped = false)
         assertTrue(progress.enableDone)

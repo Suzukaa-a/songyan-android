@@ -36,6 +36,60 @@ class DeploymentCoordinatorTest {
     }
 
     @Test
+    fun firstRunAndRetryWaitForTheUsersScheme() =
+        runTest {
+            assertTrue(coordinator.ensureDeployed().isFailure)
+            assertTrue(coordinator.redeployActive().isFailure)
+            assertNull(publisher.readActive())
+            assertFalse(storage.sourceDir(SourceIds.BUILTIN).exists())
+            val downloaded = coordinator.installSource(staged("download", "first")).getOrThrow()
+            assertEquals(downloaded, coordinator.ensureDeployed().getOrThrow())
+        }
+
+    @Test
+    fun aFailedFirstImportDoesNotEnableTheBundledSchemeOnRetry() =
+        runTest {
+            runner.succeed = false
+            assertTrue(coordinator.installSource(staged("failed", "first")).isFailure)
+            assertTrue(coordinator.ensureDeployed().isFailure)
+            assertNull(publisher.readActive())
+        }
+
+    @Test
+    fun aFirstInstallKilledAfterMovingTheSourceDoesNotActivateTheBundledScheme() =
+        runTest {
+            val source = staged("interrupted", "first")
+            app.songyan.ime.storage.SourceCatalog
+                .write(source.directory, source.manifest)
+            File(source.directory, app.songyan.ime.storage.InputSchemeSetup.INSTALLING).writeText("")
+            source.directory.renameTo(storage.sourceDir(source.manifest.sourceId))
+            assertTrue(coordinator.ensureDeployed().isFailure)
+            assertNull(publisher.readActive())
+        }
+
+    @Test
+    fun restoredLearningCanStillRecoverWithTheBundledScheme() =
+        runTest {
+            val learned = File(storage.userRoot, "pinyin/words.userdb").also { it.mkdirs() }
+            val words = File(learned, "words").also { it.writeText("keep") }
+            assertEquals(SourceIds.BUILTIN, coordinator.ensureDeployed().getOrThrow().sourceId)
+            assertEquals("keep", words.readText())
+        }
+
+    @Test
+    fun anExistingBuiltInChoiceSurvivesAnUpgrade() =
+        runTest {
+            coordinator.deployBuiltin().getOrThrow()
+            val upgraded =
+                DeployFixtures.coordinator(
+                    storage,
+                    runner,
+                    stamp = DeployFixtures.STAMP.copy(app = "upgrade"),
+                )
+            assertEquals(SourceIds.BUILTIN, upgraded.ensureDeployed().getOrThrow().sourceId)
+        }
+
+    @Test
     fun installMovesTheStagedTreeAndPublishesIt() =
         runTest {
             val stage = staged("a", "alpha")

@@ -87,6 +87,25 @@ class InputOptionsScreenTest {
     }
 
     @Test
+    fun characterFormsOpenAsOneSelectionAndChoosingOneClosesThePicker() {
+        val names = listOf("s2s", "s2t", "s2hk", "s2tw")
+        val labels = listOf("简体", "繁体", "香港", "臺灣")
+        engineOptions =
+            EngineOptionsUiState(
+                options =
+                    names.mapIndexed { index, name ->
+                        EngineOptionSetting(name, EngineOptionKind.TRADITIONAL, index == 0, names, labels[index])
+                    },
+            )
+        show()
+        compose.onNodeWithText(str(R.string.options_engine_character_form)).performScrollTo().performClick()
+        compose.onNode(hasText("简体") and hasAnyAncestor(isDialog())).assertIsSelected()
+        compose.onNodeWithText("臺灣").performClick()
+        assertEquals(listOf("s2tw" to true), engineChanges)
+        compose.onNode(isDialog()).assertDoesNotExist()
+    }
+
+    @Test
     fun anInputMethodWithoutSwitchesShowsNoSection() {
         show()
         compose.onNodeWithText(str(R.string.options_engine_section)).assertDoesNotExist()

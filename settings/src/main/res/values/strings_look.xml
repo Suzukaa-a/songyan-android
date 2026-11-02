@@ -132,7 +132,7 @@
     <string name="layout_editor_long_press">Long-press choices</string>
     <string name="layout_editor_long_press_add">Add a choice</string>
     <string name="layout_editor_long_press_remove">Remove this choice</string>
-    <string name="layout_editor_control_row_note">The bottom row (123, space, return) changes with the text field by itself, so it is not edited here.</string>
+    <string name="layout_editor_bottom_section">Bottom row</string>
     <string name="layout_editor_split_section">Split on large screens</string>
     <string name="layout_editor_split_off">Do not split</string>
     <string name="layout_editor_split_automatic">Split on large screens</string>

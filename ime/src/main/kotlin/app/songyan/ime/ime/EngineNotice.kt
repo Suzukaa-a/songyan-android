@@ -2,6 +2,9 @@ package app.songyan.ime.ime
 
 /** Why the Chinese engine cannot take input right now. */
 enum class EngineNoticeKind {
+    /** The user must download an input scheme in settings before typing. */
+    NEEDS_SCHEME,
+
     /** The engine is being deployed, started or swapped; it comes back on its own. */
     PREPARING,
 

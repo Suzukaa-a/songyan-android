@@ -37,8 +37,13 @@ import androidx.compose.ui.unit.sp
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.OnboardingProgress
 import app.songyan.ime.settings.state.OnboardingStep
+import app.songyan.ime.settings.state.RecommendedSchemes
+import app.songyan.ime.settings.ui.DictionaryImportUiState
+import app.songyan.ime.settings.ui.SchemeImportUiState
+import app.songyan.ime.settings.ui.components.ImportStatusCard
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.TryOutField
+import app.songyan.ime.settings.ui.components.importCardOf
 
 /**
  * Step-by-step enablement. Every step reflects the real system state, so a finished step is never
@@ -54,9 +59,20 @@ fun OnboardingScreen(
     onRetry: () -> Unit,
     onTyped: () -> Unit,
     onBack: (() -> Unit)?,
+    schemeImport: SchemeImportUiState = SchemeImportUiState.Idle,
+    downloadAvailable: Boolean = false,
+    onDownload: (String) -> Unit = {},
+    onOtherSchemes: () -> Unit = {},
+    onCancelDownload: () -> Unit = {},
+    onRetryDownload: () -> Unit = {},
+    onDismissDownload: () -> Unit = {},
+    onAnswerSchemeLearning: (Boolean) -> Unit = {},
 ) {
     val nextStep = progress.nextStep
     var showWarning by rememberSaveable { mutableStateOf(false) }
+    var recommendedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val importCard = importCardOf(DictionaryImportUiState.Idle, schemeImport)
+    val downloading = schemeImport is SchemeImportUiState.Running
     SettingsScaffold(
         title = stringResource(R.string.onboarding_title),
         onBack = onBack,
@@ -92,8 +108,44 @@ fun OnboardingScreen(
                 return@Column
             }
 
+            if (importCard != null) {
+                ImportStatusCard(
+                    card = importCard,
+                    onCancel = onCancelDownload,
+                    onRetry = onRetryDownload,
+                    onDismiss = onDismissDownload,
+                    onAnswerOffer = onAnswerSchemeLearning,
+                )
+            }
             OnboardingStep(
                 number = 1,
+                title = stringResource(R.string.onboarding_step_download_title),
+                body = stringResource(R.string.onboarding_step_download_body),
+                done = progress.schemeDone,
+                isCurrent = nextStep == OnboardingStep.DOWNLOAD_SCHEME,
+                actionLabel = null,
+                onAction = null,
+            ) {
+                for (recommended in RecommendedSchemes.catalog) {
+                    OutlinedButton(
+                        onClick = { recommendedId = recommended.id },
+                        enabled = downloadAvailable && !downloading,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(recommended.nameRes))
+                    }
+                    Text(
+                        text = stringResource(recommended.detailRes),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                TextButton(onClick = onOtherSchemes, enabled = !downloading) {
+                    Text(stringResource(R.string.onboarding_other_schemes))
+                }
+            }
+
+            OnboardingStep(
+                number = 2,
                 title = stringResource(R.string.onboarding_step_enable_title),
                 body = stringResource(R.string.onboarding_step_enable_body),
                 done = progress.enableDone,
@@ -105,7 +157,7 @@ fun OnboardingScreen(
             )
 
             OnboardingStep(
-                number = 2,
+                number = 3,
                 title = stringResource(R.string.onboarding_step_select_title),
                 body = stringResource(R.string.onboarding_step_select_body),
                 done = progress.selectDone,
@@ -115,7 +167,7 @@ fun OnboardingScreen(
             )
 
             OnboardingStep(
-                number = 3,
+                number = 4,
                 title = stringResource(R.string.onboarding_step_try_title),
                 body = stringResource(R.string.onboarding_step_try_body),
                 done = progress.tryOutDone,
@@ -140,6 +192,32 @@ fun OnboardingScreen(
                 }
             }
         }
+    }
+
+    val recommended = RecommendedSchemes.catalog.firstOrNull { it.id == recommendedId }
+    if (recommended != null) {
+        AlertDialog(
+            onDismissRequest = { recommendedId = null },
+            title = {
+                Text(
+                    stringResource(R.string.schemes_recommended_confirm_title, stringResource(recommended.nameRes)),
+                )
+            },
+            text = { Text(stringResource(R.string.schemes_recommended_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    recommendedId = null
+                    onDownload(recommended.url)
+                }) {
+                    Text(stringResource(R.string.schemes_recommended_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { recommendedId = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 
     if (showWarning) {

@@ -240,7 +240,7 @@ internal class EngineFeatures(
 
     /**
      * Whether the custom file, outside our own managed blocks (which a choice writes there), picks
-     * the grammar model itself: a `grammar/language` at any depth. Tuning the model's parameters
+     * the grammar model itself: a patch of the root `grammar/language`. Tuning the model's parameters
      * (`grammar/collocation_penalty` and the like) leaves the choice of model to the settings.
      * A file that does not parse is treated as the user's.
      */
@@ -267,8 +267,26 @@ internal class EngineFeatures(
             } catch (_: Exception) {
                 return true
             }
-        return setsGrammarLanguage(root, "")
+        return patchesGrammarLanguage(root)
     }
+
+    private fun patchesGrammarLanguage(node: Any?): Boolean =
+        when (node) {
+            is Map<*, *> ->
+                node.any { (key, value) ->
+                    when (key.toString().removeSuffix("/+")) {
+                        "patch" -> setsGrammarLanguage(value, "")
+                        "__patch" -> patchesGrammarLanguage(value)
+                        else -> {
+                            val path = key.toString().removePrefix("patch/").removeSuffix("/+")
+                            key.toString().startsWith("patch/") &&
+                                (path == "grammar/language" || setsGrammarLanguage(value, path))
+                        }
+                    }
+                }
+            is List<*> -> node.any(::patchesGrammarLanguage)
+            else -> false
+        }
 
     private fun setsGrammarLanguage(
         node: Any?,
@@ -277,8 +295,9 @@ internal class EngineFeatures(
         when (node) {
             is Map<*, *> ->
                 node.any { (key, value) ->
-                    val child = if (path.isEmpty()) key.toString() else "$path/$key"
-                    child.endsWith("grammar/language") || setsGrammarLanguage(value, child)
+                    val part = key.toString().removeSuffix("/+")
+                    val child = if (path.isEmpty()) part else "$path/$part"
+                    child == "grammar/language" || setsGrammarLanguage(value, child)
                 }
             is List<*> -> node.any { setsGrammarLanguage(it, path) }
             else -> false

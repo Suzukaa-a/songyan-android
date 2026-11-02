@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import app.songyan.ime.BuildConfig
 import app.songyan.ime.SongyanApplication
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.InputSchemeSetup
 import app.songyan.ime.storage.SourceIds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,13 +34,30 @@ object DeploymentStarter {
 
     /**
      * Makes some current generation active: the deploy process reuses one that is, rebuilds the
-     * active source when it is stale and installs the bundled package on first run.
+     * active source when it is stale. Fresh installs wait for a user-chosen scheme.
      */
-    fun requestEnsureDeployed(context: Context) =
-        start(context, DeployContract.builtinIntent(context, force = false), jobFallback = true)
+    fun requestEnsureDeployed(context: Context) {
+        val app = context.applicationContext as SongyanApplication
+        scope.launch {
+            val needsDownload = InputSchemeSetup.needsDownload(app.storage)
+            // Performance journeys use the same offline fixture on every clean emulator.
+            val benchmark =
+                BuildConfig.BUILD_TYPE == "benchmarkRelease" || BuildConfig.BUILD_TYPE == "nonMinifiedRelease"
+            if (!needsDownload || benchmark) {
+                start(app, DeployContract.builtinIntent(app, force = needsDownload && benchmark), jobFallback = true)
+            }
+        }
+    }
 
     /** Rebuilds whatever source is active (the keyboard's retry; never silently the built-in one). */
-    fun requestRedeployActive(context: Context) = start(context, DeployContract.redeployActiveIntent(context))
+    fun requestRedeployActive(context: Context) {
+        val app = context.applicationContext as SongyanApplication
+        scope.launch {
+            if (!InputSchemeSetup.needsDownload(app.storage)) {
+                start(app, DeployContract.redeployActiveIntent(app))
+            }
+        }
+    }
 
     /** Makes the built-in source active, reusing its generation when one is current (crash-loop fallback). */
     fun requestActivateBuiltin(context: Context) =

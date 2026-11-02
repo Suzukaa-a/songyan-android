@@ -146,6 +146,152 @@ class EngineSwitchesDeviceTest {
         }
     }
 
+    @Test
+    fun nativeCharacterChoicesAndCustomNamedEmojiWorkThroughThePanelAndSurviveRestart() {
+        val radio =
+            DeployedEngine("radio-switches", english = false) { source ->
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                val opencc = File(source, "opencc")
+                copyTree(context.assets, "rime/opencc", opencc)
+                File(opencc, "custom_faces.txt").writeText("国\t😀\n")
+                File(opencc, "custom_faces.json").writeText(
+                    """{"name":"Emoji","segmentation":{"type":"mmseg","dict":{"type":"text","file":"custom_faces.txt"}},"conversion_chain":[{"dict":{"type":"text","file":"custom_faces.txt"}}]}""",
+                )
+                val schema = File(source, "songyan_quanpin.schema.yaml")
+                schema.writeText(
+                    schema.readText().replace(
+                        "  filters:\n    - uniquifier",
+                        "  filters:\n    - simplifier@emoji\n    - simplifier@traditional\n    - simplifier@hongkong\n    - simplifier@taiwan\n    - uniquifier",
+                    ) + """
+
+switches:
+  - options: [original, traditional, hongkong, taiwan]
+    reset: 0
+    states: [简体, 繁体, 香港, 臺灣]
+  - name: emoji
+    reset: 0
+    states: [关, 开]
+traditional:
+  option_name: traditional
+  opencc_config: s2t.json
+hongkong:
+  option_name: hongkong
+  opencc_config: s2hk.json
+taiwan:
+  option_name: taiwan
+  opencc_config: s2tw.json
+emoji:
+  option_name: emoji
+  opencc_config: custom_faces.json
+  tips: all
+""",
+                )
+            }
+        val options = File(radio.root, "choices")
+
+        fun run(block: (FeatureHost) -> Unit) {
+            val host = FeatureHost(radio.backend(options))
+            try {
+                block(host)
+            } finally {
+                host.close()
+                kotlinx.coroutines.runBlocking { host.backend.shutdown() }
+            }
+        }
+        try {
+            run { host ->
+                host.start()
+                host.tapToolbar(host.string(R.string.ime_menu_keyboard_settings))
+                host.tap(
+                    host.string(R.string.ime_qs_engine_emoji),
+                    KeyboardSettingsPanelView::class.java,
+                    prefix = true,
+                )
+                assertTrue(
+                    host.await {
+                        host.main2 {
+                            host.controller.session!!
+                                .options
+                                .first {
+                                    it.descriptor.name ==
+                                        "emoji"
+                                }.value
+                        }
+                    },
+                )
+                host.main2 { host.controller.closePanels() }
+                assertTrue(host.await { host.labelsOf(KeyboardView::class.java).isNotEmpty() })
+                host.awaitIdle()
+                val emojiCandidates = host.candidatesFor("guo")
+                assertTrue(
+                    "custom named emoji conversion: $emojiCandidates",
+                    emojiCandidates.any {
+                        it.substringBefore(" ") ==
+                            "😀"
+                    },
+                )
+                host.tapToolbar(host.string(R.string.ime_menu_keyboard_settings))
+                host.tap(
+                    host.string(R.string.ime_qs_engine_emoji),
+                    KeyboardSettingsPanelView::class.java,
+                    prefix = true,
+                )
+                assertTrue(
+                    host.await {
+                        host.main2 {
+                            !host.controller.session!!
+                                .options
+                                .first {
+                                    it.descriptor.name ==
+                                        "emoji"
+                                }.value
+                        }
+                    },
+                )
+                host.main2 { host.controller.closePanels() }
+                assertTrue(host.await { host.labelsOf(KeyboardView::class.java).isNotEmpty() })
+                host.awaitIdle()
+                for (label in listOf("繁体", "香港", "臺灣")) {
+                    host.tapToolbar(host.string(R.string.ime_menu_keyboard_settings))
+                    host.tap(
+                        host.string(R.string.ime_qs_engine_character_form),
+                        KeyboardSettingsPanelView::class.java,
+                        prefix = true,
+                    )
+                    host.tap(label, KeyboardSettingsPanelView::class.java)
+                    host.main2 { host.controller.closePanels() }
+                    host.awaitIdle()
+                    val selected =
+                        host.main2 {
+                            host.controller.session!!.options.filter {
+                                it.descriptor.choiceGroup.isNotEmpty() &&
+                                    it.value
+                            }
+                        }
+                    assertEquals(listOf(label), selected.map { it.descriptor.choiceLabel })
+                    assertTrue("$label candidates", "國" in host.candidatesFor("guo"))
+                }
+                host.type("guo")
+                host.tap("國", CandidateBarView::class.java)
+                host.assertText("國")
+            }
+            run { host ->
+                host.start()
+                val selected =
+                    host.main2 {
+                        host.controller.session!!.options.filter {
+                            it.descriptor.choiceGroup.isNotEmpty() &&
+                                it.value
+                        }
+                    }
+                assertEquals(listOf("taiwan"), selected.map { it.descriptor.name })
+                assertTrue("saved character form", "國" in host.candidatesFor("guo"))
+            }
+        } finally {
+            radio.delete()
+        }
+    }
+
     private companion object {
         private lateinit var engine: DeployedEngine
 

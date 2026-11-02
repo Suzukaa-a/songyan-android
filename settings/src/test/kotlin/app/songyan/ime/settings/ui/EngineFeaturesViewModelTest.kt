@@ -49,6 +49,61 @@ class EngineFeaturesViewModelTest {
         }
 
     @Test
+    fun reopeningTheSameInputMethodReadsOwnershipAfterConfigurationWasAppliedElsewhere() =
+        runTest(dispatcher) {
+            val gateway = FakeGateway()
+            gateway.grammar = Availability.SCHEME
+            val viewModel = EngineFeaturesViewModel(gateway)
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+            assertEquals(
+                Availability.SCHEME,
+                viewModel.uiState.value.snapshot
+                    ?.grammar,
+            )
+
+            gateway.grammar = Availability.AVAILABLE
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+
+            assertEquals(
+                Availability.AVAILABLE,
+                viewModel.uiState.value.snapshot
+                    ?.grammar,
+            )
+        }
+
+    @Test
+    fun anEarlierReadCannotReplaceTheOwnershipReadWhenThePageReopens() =
+        runTest(dispatcher) {
+            val first = CompletableDeferred<EngineFeaturesSnapshot>()
+            var waitingForFirst = true
+            val gateway =
+                object : EngineFeaturesGateway by FakeGateway() {
+                    override suspend fun load(schemaId: String): EngineFeaturesSnapshot {
+                        if (waitingForFirst) {
+                            waitingForFirst = false
+                            return first.await()
+                        }
+                        return EngineFeaturesSnapshot(schemaId = schemaId, grammar = Availability.AVAILABLE)
+                    }
+                }
+            val viewModel = EngineFeaturesViewModel(gateway)
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+            first.complete(EngineFeaturesSnapshot(schemaId = "quanpin", grammar = Availability.SCHEME))
+            advanceUntilIdle()
+
+            assertEquals(
+                Availability.AVAILABLE,
+                viewModel.uiState.value.snapshot
+                    ?.grammar,
+            )
+        }
+
+    @Test
     fun aChangeShowsTheRepublishedBuildAfterwards() =
         runTest(dispatcher) {
             val gateway = FakeGateway()
@@ -111,6 +166,10 @@ class EngineFeaturesViewModelTest {
             viewModel.importGrammarModelFromUrl("https://example.com/m.gram")
             advanceUntilIdle()
             assertTrue(viewModel.uiState.value.cancellable)
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.saving)
+            assertTrue(viewModel.uiState.value.cancellable)
             viewModel.cancelDownload()
             assertEquals(1, gateway.cancels)
             gate.complete(Unit)
@@ -146,6 +205,10 @@ class EngineFeaturesViewModelTest {
             var state = viewModel.uiState.value
             assertTrue(state.failed && state.retryable)
             assertEquals("No network.", state.failure)
+            viewModel.show("quanpin")
+            advanceUntilIdle()
+            assertEquals("No network.", viewModel.uiState.value.failure)
+            assertTrue(viewModel.uiState.value.retryable)
 
             viewModel.retry()
             advanceUntilIdle()
@@ -215,6 +278,7 @@ class EngineFeaturesViewModelTest {
         val calls = mutableListOf<String>()
         private var typo = true
         private var pairs = emptySet<String>()
+        var grammar = Availability.AVAILABLE
 
         override val available = true
 
@@ -225,6 +289,7 @@ class EngineFeaturesViewModelTest {
                 typoCorrectionOn = typo,
                 fuzzyPinyin = Availability.AVAILABLE,
                 fuzzyPairs = pairs,
+                grammar = grammar,
             )
 
         private suspend fun record(

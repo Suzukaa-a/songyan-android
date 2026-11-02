@@ -67,7 +67,8 @@ data class SettingsUiState(
     val onboardingShown: Boolean = false,
     val notificationRationaleShown: Boolean = false,
     val ime: ImeStatus = ImeStatus(enabled = false, selected = false),
-    val progress: OnboardingProgress = onboardingProgress(ImeStatus(false, false), hasTyped = false),
+    val progress: OnboardingProgress =
+        onboardingProgress(ImeStatus(false, false), hasTyped = false, schemeReady = false),
     /** The user-imported dictionary, when one was installed. */
     val importedDictionary: ImportedDictionaryInfo? = null,
     /** Dictionaries stacked onto imported scheme packages. */
@@ -145,7 +146,14 @@ class SettingsViewModel(
             dictionaryImportAvailable = dictionaryGateway.available,
             schemeImportAvailable = schemeGateway.available,
             ime = imeStatus.value,
-            progress = onboardingProgress(imeStatus.value, hasTyped = false),
+            progress =
+                onboardingProgress(
+                    imeStatus.value,
+                    hasTyped = false,
+                    schemeReady =
+                        appStateSource.state.value.schemes
+                            .isNotEmpty(),
+                ),
         )
 
     init {
@@ -229,7 +237,7 @@ class SettingsViewModel(
                 onboardingShown = prefs.onboardingShown,
                 notificationRationaleShown = prefs.notificationRationaleShown,
                 ime = ime,
-                progress = onboardingProgress(ime, typed),
+                progress = onboardingProgress(ime, typed, schemeReady = app.schemes.isNotEmpty()),
             )
         }
 

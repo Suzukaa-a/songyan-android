@@ -227,6 +227,16 @@ private fun NavGraphBuilder.settingsGraph(
             onRetry = viewModel::refresh,
             onTyped = viewModel::onTypedInTryOut,
             onBack = topBack(navController),
+            schemeImport = state.value.schemeImport,
+            downloadAvailable = state.value.schemeImportAvailable,
+            onDownload = viewModel::importSchemeFromLink,
+            onOtherSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+            onCancelDownload = viewModel::cancelSchemeImport,
+            onRetryDownload = viewModel::retrySchemeImport,
+            onDismissDownload = viewModel::dismissSchemeImport,
+            onAnswerSchemeLearning = { accept ->
+                if (accept) viewModel.mergePackageLearning() else viewModel.declinePackageLearning()
+            },
         )
     }
 

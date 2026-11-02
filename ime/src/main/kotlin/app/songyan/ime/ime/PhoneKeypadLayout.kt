@@ -6,6 +6,7 @@ import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
+import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutOption
@@ -25,7 +26,7 @@ import kotlin.math.max
  * [PhoneKeypadStructure], never judged by id), so a layout authored on iOS or copied and edited here
  * shows what its author made. The rails are the bundled ones while the layout still declares the
  * preset's rails ([PhoneKeypadRailPolicy.usesBundledRails]) and the declared keys otherwise. The
- * bottom row is never data: it follows the editor and the language, whatever the layout declares.
+ * bottom row uses authored keys when changed; otherwise it follows the native phone shell.
  *
  * The shell has four equal bands (three grid rows and the bottom row) of [Config.height] / 4, so
  * its rows keep exactly the 60 dp pitch of the row pages: the nine-key keyboard is never shorter
@@ -130,7 +131,15 @@ object PhoneKeypadLayout {
             } else {
                 declaredTrailingRail(definition, metrics, pitch)
             }
-        keys += if (bundledRails) phoneBottomRow(metrics, config, pitch) else bottomRow(metrics, config, pitch)
+        val authored = LayoutBottomRow.authored(definition)
+        keys +=
+            if (authored != null) {
+                authoredBottomRow(metrics, config, pitch, authored, bundledRails)
+            } else if (bundledRails) {
+                phoneBottomRow(metrics, config, pitch)
+            } else {
+                bottomRow(metrics, config, pitch)
+            }
         return Shell(metrics, keys, (pitch * BAND_COUNT).toFloat())
     }
 
@@ -547,6 +556,32 @@ object PhoneKeypadLayout {
             val width = key.widthWeight * unit
             val placed = bottomKey(key, x, top, x + width, bottom)
             x += width + gap
+            placed
+        }
+    }
+
+    private fun authoredBottomRow(
+        metrics: PhoneKeypadMetrics,
+        config: Config,
+        pitch: Double,
+        authored: List<LayoutKey>,
+        bundledRails: Boolean,
+    ): List<PlacedKey> {
+        val keys = authored.filter { config.showsGlobe || it.action.type != LayoutActionKind.GLOBE }
+        val right =
+            if (bundledRails) {
+                metrics
+                    .columnRect(
+                        PhoneKeypadMetrics.Column.Digit(2),
+                    ).maxX
+            } else {
+                metrics.contentWidth
+            }
+        val unit = right / keys.sumOf { it.widthWeight }
+        var x = 0.0
+        return keys.map { key ->
+            val placed = bottomKey(key, x, (3 * pitch).toFloat(), x + key.widthWeight * unit, (4 * pitch).toFloat())
+            x += key.widthWeight * unit
             placed
         }
     }

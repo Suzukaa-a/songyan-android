@@ -87,8 +87,6 @@ class PageEditorScreenTest {
         compose.onNodeWithContentDescription(str(R.string.layout_editor_key_description, 1, 1, "甲")).assertIsDisplayed()
         tab(2, "乙组").performClick()
         compose.onNodeWithContentDescription(str(R.string.layout_editor_key_description, 1, 1, "丙")).assertIsDisplayed()
-        // The bottom row is not edited; the page says so.
-        compose.onNodeWithText(str(R.string.layout_editor_control_row_note)).performScrollTo().assertIsDisplayed()
     }
 
     @Test

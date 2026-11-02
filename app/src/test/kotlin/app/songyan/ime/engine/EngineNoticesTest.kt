@@ -9,6 +9,14 @@ import org.junit.Test
 
 class EngineNoticesTest {
     @Test
+    fun aFreshInstallAsksForASchemeWithoutAnIneffectiveRetry() {
+        assertEquals(
+            EngineNotice(EngineNoticeKind.NEEDS_SCHEME, listOf(EngineNoticeAction.SETTINGS)),
+            engineNoticeFor(EngineRuntimeState.NEEDS_SCHEME, settingsOffered = false),
+        )
+    }
+
+    @Test
     fun readyEngineShowsNoNotice() {
         assertNull(engineNoticeFor(EngineRuntimeState.READY, settingsOffered = false))
         assertNull(engineNoticeFor(EngineRuntimeState.READY, settingsOffered = true))

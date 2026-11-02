@@ -8,6 +8,7 @@ import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.BuildStamp
 import app.songyan.ime.storage.GenerationLease
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.InputSchemeSetup
 import app.songyan.ime.storage.LearningData
 import app.songyan.ime.storage.LearningMerger
 import app.songyan.ime.storage.PublicationRecord
@@ -25,7 +26,10 @@ import java.io.File
 
 /** What the input method can do right now. */
 enum class EngineRuntimeState {
-    /** No published generation yet; first-run deployment is requested. */
+    /** A fresh install waits for the user to download an input scheme in settings. */
+    NEEDS_SCHEME,
+
+    /** No published generation yet; recovery deployment is requested. */
     NO_PUBLICATION,
 
     /** Deployment or engine start is in progress. */
@@ -183,7 +187,9 @@ class ImeEngineRuntime(
         if (closed) return
         if (active == null) {
             val status = withContext(ioDispatcher) { deployStatus.read() }
-            if (status == DeployState.FAILED) {
+            if (withContext(ioDispatcher) { InputSchemeSetup.needsDownload(storage) }) {
+                withContext(mainDispatcher) { callbacks.onState(EngineRuntimeState.NEEDS_SCHEME) }
+            } else if (status == DeployState.FAILED) {
                 withContext(mainDispatcher) { callbacks.onState(EngineRuntimeState.FAILED) }
             } else {
                 withContext(mainDispatcher) {

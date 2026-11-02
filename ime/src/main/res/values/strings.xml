@@ -51,6 +51,8 @@
     <string name="ime_menu_switch_previous">Previous input method</string>
     <string name="ime_menu_pick_input_method">Choose input method</string>
     <string name="ime_menu_voice_input">Voice input</string>
+    <string name="ime_engine_needs_scheme">Download an input scheme</string>
+    <string name="ime_engine_needs_scheme_hint">Open Settings to download an input scheme and start typing.</string>
     <string name="ime_engine_preparing">Chinese input is getting ready…</string>
     <string name="ime_engine_preparing_hint">The keyboard appears when it is ready.\nYou can switch to another input method for now.</string>
     <string name="ime_engine_failed">Chinese input ran into a problem</string>

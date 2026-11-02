@@ -76,6 +76,6 @@ object PhoneKeypadStructure {
 
     private fun isControlRow(row: LayoutRow): Boolean =
         row.keys.all {
-            it.action.type != LayoutActionKind.CODE && it.action.type != LayoutActionKind.LITERAL
+            it.action.type != LayoutActionKind.CODE
         }
 }

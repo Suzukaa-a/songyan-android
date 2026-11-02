@@ -53,7 +53,14 @@ class EngineOptionsViewModel(
         mutable.update { state ->
             state.copy(
                 saveFailed = false,
-                options = state.options.map { if (it.name == name) it.copy(on = on) else it },
+                options =
+                    state.options.map {
+                        when {
+                            it.name == name -> it.copy(on = on)
+                            on && name in it.choiceGroup -> it.copy(on = false)
+                            else -> it
+                        }
+                    },
             )
         }
         viewModelScope.launch {

@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -66,11 +67,36 @@ class LayoutEditorScreenTest {
     ) = compose.onNodeWithContentDescription(str(R.string.layout_editor_key_description, row, key, label))
 
     @Test
-    fun theGridShowsTheLetterRowsAndTheControlRowStaysOut() {
+    fun theGridShowsTheLetterRowsAndAnEditableBottomRow() {
         show()
         keyNode(1, 1, "q").assertIsDisplayed()
         keyNode(1, 2, "w").assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.layout_editor_control_row_note)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.layout_editor_bottom_section)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun anEditedBottomKeyIsSavedAndTheEditorCloses() {
+        show()
+        keyNode(1, 3, "空格").performScrollTo().performClick()
+        compose
+            .onAllNodes(
+                hasSetTextAction() and
+                    androidx.compose.ui.test
+                        .hasText("空格"),
+            ).onFirst()
+            .performTextReplacement("空格键")
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(
+            "空格键",
+            source.registry.value!!
+                .layout("qwerty26")!!
+                .rows
+                .last()
+                .keys[2]
+                .label,
+        )
+        assertEquals(true, closed)
     }
 
     @Test
@@ -136,7 +162,7 @@ class LayoutEditorScreenTest {
     fun addingAKeyPutsItAfterTheSelectedOneInTheGrid() {
         show()
         keyNode(1, 1, "q").performClick()
-        compose.onNodeWithContentDescription(str(R.string.layout_editor_add_key)).performClick()
+        compose.onAllNodesWithContentDescription(str(R.string.layout_editor_add_key)).onFirst().performClick()
         compose.waitForIdle()
         // The new key sits second in the first row, and the old second key moved to third.
         keyNode(1, 2, "·").assertIsDisplayed()
@@ -148,6 +174,7 @@ class LayoutEditorScreenTest {
         show()
         compose.onAllNodesWithText(str(R.string.layout_editor_split_gap_automatic)).assertCountEquals(0)
         compose.onNodeWithText(str(R.string.layout_editor_split_always)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_arrangement_split)).performScrollTo().performClick()
         compose.onNodeWithText(str(R.string.layout_editor_split_gap_automatic)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(str(R.string.layout_editor_split_row, 1, 5)).performScrollTo().assertIsDisplayed()
     }
@@ -163,7 +190,7 @@ class LayoutEditorScreenTest {
     )
 
     @Test
-    fun theNineKeyGridIsFixedAndTheBottomRowIsExplainedNotEdited() {
+    fun theNineKeyGridIsFixedAndItsBottomRowCanAddKeys() {
         show("phone9")
         keyNode(1, 2, "ABC").assertIsDisplayed()
         keyNode(3, 3, "WXYZ").assertIsDisplayed()
@@ -172,9 +199,9 @@ class LayoutEditorScreenTest {
             .onAllNodesWithContentDescription(
                 str(R.string.layout_editor_key_description, 4, 1, "布局"),
             ).assertCountEquals(0)
-        compose.onNodeWithText(str(R.string.layout_editor_control_row_note)).performScrollTo().assertIsDisplayed()
-        // The structure is not editable: nothing to add, move or split.
-        compose.onAllNodesWithContentDescription(str(R.string.layout_editor_add_key)).assertCountEquals(0)
+        compose.onNodeWithText(str(R.string.layout_editor_bottom_section)).performScrollTo().assertIsDisplayed()
+        // Only the bottom row offers key insertion; the 3x3 grid cannot gain rows or split.
+        compose.onAllNodesWithContentDescription(str(R.string.layout_editor_add_key)).assertCountEquals(1)
         compose.onAllNodesWithText(str(R.string.layout_editor_add_row)).assertCountEquals(0)
         compose.onAllNodesWithText(str(R.string.layout_editor_split_section)).assertCountEquals(0)
     }

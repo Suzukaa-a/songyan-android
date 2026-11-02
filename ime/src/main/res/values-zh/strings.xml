@@ -46,6 +46,8 @@
     <string name="ime_menu_switch_previous">上一个输入法</string>
     <string name="ime_menu_pick_input_method">选择输入法</string>
     <string name="ime_menu_voice_input">语音输入</string>
+    <string name="ime_engine_needs_scheme">请先下载输入方案</string>
+    <string name="ime_engine_needs_scheme_hint">点按「设置」，下载一个输入方案开始打字。</string>
     <string name="ime_engine_preparing">中文输入正在准备…</string>
     <string name="ime_engine_preparing_hint">准备好后，键盘会自动出现。\n你可以先切换到其他输入法。</string>
     <string name="ime_engine_failed">中文输入出了问题</string>

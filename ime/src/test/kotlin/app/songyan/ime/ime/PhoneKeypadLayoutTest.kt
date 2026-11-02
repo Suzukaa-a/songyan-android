@@ -515,7 +515,7 @@ class PhoneKeypadLayoutTest {
     }
 
     @Test
-    fun theBottomRowNeverFollowsTheLayoutsDeclaredControlRow() {
+    fun theBottomRowFollowsTheLayoutsEditedControlRow() {
         val definition =
             edited(rows = { rows ->
                 rows.dropLast(1) +
@@ -524,10 +524,10 @@ class PhoneKeypadLayoutTest {
                     )
             })
         val shell = requireNotNull(PhoneKeypadLayout.build(config(definition = definition)))
-        assertEquals(
-            requireNotNull(PhoneKeypadLayout.build(config())).region(PhoneKeypadLayout.Region.BOTTOM),
-            shell.region(PhoneKeypadLayout.Region.BOTTOM),
-        )
+        assertEquals(listOf("布局"), shell.region(PhoneKeypadLayout.Region.BOTTOM).map { it.key.label })
+        val bottom = shell.region(PhoneKeypadLayout.Region.BOTTOM).single()
+        assertEquals(0f, bottom.left, 0.001f)
+        assertTrue(bottom.right <= shell.region(PhoneKeypadLayout.Region.TRAILING_RAIL).last().left)
     }
 
     @Test
@@ -567,9 +567,14 @@ class PhoneKeypadLayoutTest {
             listOf(LayoutActionKind.BACKSPACE, LayoutActionKind.CLEAR_INPUT),
             shell.region(PhoneKeypadLayout.Region.TRAILING_RAIL).map { it.key.action.type },
         )
-        // The author's edited control row is not what the bottom row draws.
-        assertTrue(shell.region(PhoneKeypadLayout.Region.BOTTOM).none { it.key.label == "空 格" })
-        // A layout with its own trailing rail keeps the row pages' footer, Return included.
-        assertEquals(5, shell.region(PhoneKeypadLayout.Region.BOTTOM).size)
+        assertTrue(shell.region(PhoneKeypadLayout.Region.BOTTOM).any { it.key.label == "空 格" })
+        assertEquals(
+            iosAuthored()
+                .rows
+                .last()
+                .keys
+                .filter { it.action.type != LayoutActionKind.GLOBE },
+            shell.region(PhoneKeypadLayout.Region.BOTTOM).map { it.key },
+        )
     }
 }

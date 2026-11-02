@@ -347,12 +347,10 @@ internal fun KeyboardController.syncToolbar() {
     keyboard.notice =
         engineNotice?.let {
             context.getString(
-                if (it.kind ==
-                    EngineNoticeKind.FAILED
-                ) {
-                    R.string.ime_engine_failed_hint
-                } else {
-                    R.string.ime_engine_preparing_hint
+                when (it.kind) {
+                    EngineNoticeKind.NEEDS_SCHEME -> R.string.ime_engine_needs_scheme_hint
+                    EngineNoticeKind.FAILED -> R.string.ime_engine_failed_hint
+                    EngineNoticeKind.PREPARING -> R.string.ime_engine_preparing_hint
                 },
             )
         }
@@ -361,12 +359,10 @@ internal fun KeyboardController.syncToolbar() {
             ToolbarView.Notice(
                 text =
                     context.getString(
-                        if (notice.kind ==
-                            EngineNoticeKind.FAILED
-                        ) {
-                            R.string.ime_engine_failed
-                        } else {
-                            R.string.ime_engine_preparing
+                        when (notice.kind) {
+                            EngineNoticeKind.NEEDS_SCHEME -> R.string.ime_engine_needs_scheme
+                            EngineNoticeKind.FAILED -> R.string.ime_engine_failed
+                            EngineNoticeKind.PREPARING -> R.string.ime_engine_preparing
                         },
                     ),
                 items =

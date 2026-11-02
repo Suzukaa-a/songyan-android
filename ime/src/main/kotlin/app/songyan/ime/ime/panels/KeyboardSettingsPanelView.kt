@@ -68,6 +68,7 @@ class KeyboardSettingsPanelView(
 
     private var state = QuickSettingsState()
     private var openSetting: QuickSetting? = null
+    private var openChoiceGroup: List<String>? = null
     private var cells: List<Cell> = emptyList()
 
     /** Where the input method's own switches begin on the grid; they sit under their own heading. */
@@ -76,13 +77,24 @@ class KeyboardSettingsPanelView(
 
     override val titleText: String
         get() =
-            openSetting?.let { context.getString(labelOf(it)) }
+            openSetting?.let {
+                context.getString(
+                    if (it ==
+                        QuickSetting.ENGINE_OPTION
+                    ) {
+                        R.string.ime_qs_engine_character_form
+                    } else {
+                        labelOf(it)
+                    },
+                )
+            }
                 ?: context.getString(R.string.ime_panel_settings_title)
 
     /** Pushes the current values and shows the grid. */
     fun update(newState: QuickSettingsState) {
         state = newState
         openSetting = null
+        openChoiceGroup = null
         rebuild()
     }
 
@@ -90,13 +102,20 @@ class KeyboardSettingsPanelView(
     fun backToGrid(): Boolean {
         if (openSetting == null) return false
         openSetting = null
+        openChoiceGroup = null
         rebuild()
         return true
     }
 
     private fun rebuild() {
         val tiles = QuickSettingsModel.tiles(state)
-        val open = openSetting?.let { setting -> tiles.first { it.setting == setting } }
+        val open =
+            openSetting?.let { setting ->
+                tiles.firstOrNull {
+                    it.setting == setting &&
+                        (setting != QuickSetting.ENGINE_OPTION || it.engineOption?.choiceGroup == openChoiceGroup)
+                }
+            }
         cells = if (open == null) tiles.map(::tileCell) else open.options.map { optionCell(open.setting, it) }
         switchesStart = if (open == null) tiles.indexOfFirst { it.setting == QuickSetting.ENGINE_OPTION } else -1
         resetScroll()
@@ -106,13 +125,24 @@ class KeyboardSettingsPanelView(
     private fun apply(change: QuickSettingChange) {
         state = state.apply(change)
         openSetting = null
+        openChoiceGroup = null
         rebuild()
         onChange(change)
     }
 
     private fun tileCell(tile: QuickTile): Cell {
         val label =
-            tile.engineOption?.let { context.getString(engineOptionLabel(it.kind)) }
+            tile.engineOption?.let {
+                context.getString(
+                    if (it.choiceGroup.isNotEmpty()) {
+                        R.string.ime_qs_engine_character_form
+                    } else {
+                        engineOptionLabel(
+                            it.kind,
+                        )
+                    },
+                )
+            }
                 ?: context.getString(labelOf(tile.setting))
         val spokenLabel =
             if (tile.setting == QuickSetting.PHRASES) context.getString(R.string.ime_panel_quick_content) else label
@@ -136,6 +166,7 @@ class KeyboardSettingsPanelView(
                     QuickTile.Kind.TOGGLE -> QuickSettingsModel.toggled(tile)?.let(::apply)
                     QuickTile.Kind.CHOICE -> {
                         openSetting = tile.setting
+                        openChoiceGroup = tile.engineOption?.choiceGroup
                         rebuild()
                     }
                     QuickTile.Kind.ACTION ->
@@ -149,9 +180,16 @@ class KeyboardSettingsPanelView(
         setting: QuickSetting,
         option: QuickOption,
     ): Cell {
-        val label = context.getString(optionLabel(setting, option.key))
+        val label = option.label ?: context.getString(optionLabel(setting, option.key))
         return Cell(
-            icon = optionIcon(setting, option.key),
+            icon =
+                if (setting ==
+                    QuickSetting.ENGINE_OPTION
+                ) {
+                    R.drawable.ic_qs_engine_option
+                } else {
+                    optionIcon(setting, option.key)
+                },
             iconDp = if (setting == QuickSetting.KEY_HEIGHT) heightIconDp(option.key) else OPTION_ICON_DP,
             label = label,
             value = null,
@@ -189,7 +227,13 @@ class KeyboardSettingsPanelView(
                         else -> R.string.ime_qs_off
                     },
                 )
-            QuickSetting.KEY_HAPTICS, QuickSetting.KEY_PREVIEW, QuickSetting.ENGINE_OPTION ->
+            QuickSetting.ENGINE_OPTION ->
+                if (tile.kind == QuickTile.Kind.CHOICE) {
+                    tile.options.firstOrNull { it.selected }?.label
+                } else {
+                    context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
+                }
+            QuickSetting.KEY_HAPTICS, QuickSetting.KEY_PREVIEW ->
                 context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
             QuickSetting.PHRASES -> context.getString(R.string.ime_qs_phrases_more)
         }

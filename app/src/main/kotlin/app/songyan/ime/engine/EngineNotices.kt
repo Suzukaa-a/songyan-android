@@ -20,6 +20,8 @@ fun engineNoticeFor(
 ): EngineNotice? =
     when (state) {
         EngineRuntimeState.READY -> null
+        EngineRuntimeState.NEEDS_SCHEME ->
+            EngineNotice(EngineNoticeKind.NEEDS_SCHEME, listOf(EngineNoticeAction.SETTINGS))
         EngineRuntimeState.FAILED ->
             EngineNotice(EngineNoticeKind.FAILED, listOf(EngineNoticeAction.RETRY, EngineNoticeAction.SETTINGS))
         EngineRuntimeState.NO_PUBLICATION ->

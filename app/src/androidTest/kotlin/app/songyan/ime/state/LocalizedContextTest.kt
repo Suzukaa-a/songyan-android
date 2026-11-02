@@ -24,6 +24,29 @@ class LocalizedContextTest {
     }
 
     @Test
+    fun anUnsupportedFirstLanguageUsesTheNextSupportedLanguage() {
+        for (tags in listOf("ja-JP,zh-CN", "fr-FR,zh-Hans-CN", "de-DE,zh-CN,en-US")) {
+            val configuration = android.content.res.Configuration(context.resources.configuration)
+            configuration.setLocales(LocaleList.forLanguageTags(tags))
+            val translated = context.createConfigurationContext(configuration)
+            assertEquals(tags, "松烟内置", translated.getString(R.string.source_builtin_name))
+            assertEquals(tags, "键盘布局", translated.getString(app.songyan.ime.settings.R.string.layouts_title))
+        }
+    }
+
+    @Test
+    fun aSupportedFirstLanguageWinsAndEnglishIsTheFallback() {
+        for (tags in listOf("en-US,zh-CN", "ja-JP,fr-FR")) {
+            val configuration = android.content.res.Configuration(context.resources.configuration)
+            configuration.setLocales(LocaleList.forLanguageTags(tags))
+            assertEquals(
+                "Songyan built-in",
+                context.createConfigurationContext(configuration).getString(R.string.source_builtin_name),
+            )
+        }
+    }
+
+    @Test
     fun theBuiltInSourceIsNamedInTheAppsLanguage() {
         assumeTrue(Build.VERSION.SDK_INT >= 33)
         manager.applicationLocales = LocaleList.forLanguageTags("zh-CN")

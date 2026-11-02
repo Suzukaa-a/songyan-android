@@ -63,7 +63,7 @@ object PhoneKeypadRailPolicy {
         val last = definition.rows.lastOrNull() ?: return null
         val isControl =
             last.keys.all {
-                it.action.type != LayoutActionKind.CODE && it.action.type != LayoutActionKind.LITERAL
+                it.action.type != LayoutActionKind.CODE
             }
         return if (isControl) last.keys else null
     }

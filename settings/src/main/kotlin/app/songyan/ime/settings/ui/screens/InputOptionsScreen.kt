@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -17,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -174,12 +176,45 @@ private fun EngineOptionsSection(
 ) {
     if (state.options.isEmpty()) return
     SectionHeader(stringResource(R.string.options_engine_section))
-    state.options.forEach { option ->
-        SwitchRow(
-            title = stringResource(engineOptionTitle(option.kind)),
-            subtitle = null,
-            checked = option.on,
-            onCheckedChange = { onChange(option.name, it) },
+    var openGroupName by rememberSaveable { mutableStateOf<String?>(null) }
+    state.options.distinctBy { it.choiceGroup.firstOrNull() ?: it.name }.forEach { option ->
+        if (option.choiceGroup.isEmpty()) {
+            SwitchRow(
+                title = stringResource(engineOptionTitle(option.kind)),
+                subtitle = null,
+                checked = option.on,
+                onCheckedChange = { onChange(option.name, it) },
+            )
+        } else {
+            SettingsRow(
+                title = stringResource(R.string.options_engine_character_form),
+                subtitle = state.options.firstOrNull { it.name in option.choiceGroup && it.on }?.choiceLabel,
+                onClick = { openGroupName = option.choiceGroup.first() },
+            )
+        }
+    }
+    state.options.firstOrNull { it.name == openGroupName }?.choiceGroup?.let { group ->
+        AlertDialog(
+            onDismissRequest = { openGroupName = null },
+            title = { Text(stringResource(R.string.options_engine_character_form)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
+                    group.mapNotNull { name -> state.options.find { it.name == name } }.forEach { option ->
+                        RadioRow(
+                            title = option.choiceLabel ?: option.name,
+                            selected = option.on,
+                            onClick = {
+                                onChange(option.name, true)
+                                openGroupName = null
+                            },
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { openGroupName = null }) { Text(stringResource(R.string.action_cancel)) }
+            },
         )
     }
     Text(

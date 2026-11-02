@@ -542,8 +542,8 @@ class SongyanInputMethodService : InputMethodService() {
     }
 
     /**
-     * Android 15+: the system hides its own switcher button in the navigation bar when it can, and tells the
-     * keyboard to draw one when that bar is not there. The toolbar then carries the same button.
+     * When the IME explicitly hides the system IME navigation bar, the system can request a replacement
+     * switcher. This callback does not report whether a vendor provides a switcher in its navigation bar.
      */
     override fun onCustomImeSwitcherButtonRequestedVisible(visible: Boolean) {
         customSwitcherRequested = visible

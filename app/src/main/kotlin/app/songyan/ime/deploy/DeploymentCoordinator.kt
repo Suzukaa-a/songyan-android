@@ -15,6 +15,7 @@ import app.songyan.ime.storage.BuildStamp
 import app.songyan.ime.storage.BuiltinSchemes
 import app.songyan.ime.storage.EngineFeatureStore
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.InputSchemeSetup
 import app.songyan.ime.storage.PublicationRecord
 import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
@@ -81,7 +82,7 @@ class DeploymentCoordinator(
 
     /**
      * Makes sure some current generation is active: reuses it when it is, rebuilds the active
-     * source when it is stale or incomplete, and installs the built-in package on first run.
+     * source when it is stale or incomplete. Fresh installs wait for a user-chosen scheme.
      */
     suspend fun ensureDeployed(): Result<PublicationRecord> =
         locked {
@@ -410,6 +411,9 @@ class DeploymentCoordinator(
     }
 
     private suspend fun redeployActiveLocked(): PublicationRecord {
+        if (InputSchemeSetup.needsDownload(storage)) {
+            throw DeployException("download an input scheme before starting the keyboard")
+        }
         val sourceId = publisher.readActive()?.sourceId
         if (sourceId == null || sourceId == SourceIds.BUILTIN || !storage.sourceDir(sourceId).isDirectory) {
             return deployBuiltinLocked()
@@ -467,6 +471,8 @@ class DeploymentCoordinator(
         manifest.schemaIds.forEach { requireIdentifier("schema", it, SCHEMA_ID_PATTERN) }
         validateStagedSource(staged.directory)
         SourceCatalog.write(staged.directory, manifest)
+        // A first install killed after the move must not be mistaken for a restored, previously used source.
+        File(staged.directory, InputSchemeSetup.INSTALLING).writeText("")
         CompiledReuse.stampConfigTimes(staged.directory)
         purgeStaleSourceBackups()
         // Installing the package again supersedes its undo copy.
@@ -636,6 +642,7 @@ class DeploymentCoordinator(
                         companionsPending = companionsPending,
                     )
                 }
+            File(sourceDir, InputSchemeSetup.INSTALLING).delete()
             Log.i(TAG, "published generation " + record.generation + " of " + record.sourceId)
             if (companionsPending) {
                 PendingWork.write(workDir, record.generation, companionSchemas)

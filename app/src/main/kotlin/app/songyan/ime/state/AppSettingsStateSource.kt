@@ -140,7 +140,11 @@ class AppSettingsStateSource(
             currentKeyboardId = DEFAULT_KEYBOARD_ID,
             importedDictionary = importedDictionary(stored, usable),
             stackedDictionaries = stackedDictionaries(stored, usable),
-            sources = stored.map { sourceInfo(it, usable, activeSchemaId) } + damaged.map(::damagedInfo),
+            sources =
+                stored
+                    .filter { it.kind != SourceKind.BUILTIN || active?.sourceId == it.sourceId }
+                    .map { sourceInfo(it, if (it.kind == SourceKind.BUILTIN) active else usable, activeSchemaId) } +
+                    damaged.map(::damagedInfo),
         )
     }
 

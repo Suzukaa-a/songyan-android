@@ -82,6 +82,47 @@ class ImeEngineRuntimeTest {
     }
 
     @Test
+    fun aFreshInstallWaitsForASchemeAndStartsAfterItIsPublished() =
+        runBlocking {
+            val storage =
+                AppStorage(
+                    Files.createTempDirectory("fresh-files").toFile(),
+                ).also { it.ensureBaseDirectories() }
+            app.songyan.ime.deploy
+                .DeployStatusStore(storage)
+                .write(app.songyan.ime.deploy.DeployState.PREPARING)
+            val callbacks = RecordingCallbacks()
+            val created = java.util.Collections.synchronizedList(mutableListOf<File>())
+            val rebuilds = AtomicInteger()
+            val runtime =
+                ImeEngineRuntime(
+                    storage = storage,
+                    publisher = GenerationPublisher(storage),
+                    deployStatus = DeployStatusStore(storage),
+                    factory = countingFactory(created),
+                    appName = "rime.songyan",
+                    appVersion = "test/1",
+                    callbacks = callbacks,
+                    requestFirstDeploy = { rebuilds.incrementAndGet() },
+                    ioDispatcher = Dispatchers.Default,
+                    mainDispatcher = Dispatchers.Default,
+                )
+            try {
+                runtime.ensureStarted()
+                withTimeout(10_000) { while ("NEEDS_SCHEME" !in callbacks.events) delay(10) }
+                assertTrue(created.isEmpty())
+                assertEquals(0, rebuilds.get())
+                val published = storageWithPublishedGeneration()
+                published.rimeRoot.copyRecursively(storage.rimeRoot, overwrite = true)
+                runtime.refreshIfChanged()
+                withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
+                assertEquals(1, created.size)
+            } finally {
+                runtime.close()
+            }
+        }
+
+    @Test
     fun overlappingTriggersCreateExactlyOneEngine() =
         runBlocking {
             val storage = storageWithPublishedGeneration()

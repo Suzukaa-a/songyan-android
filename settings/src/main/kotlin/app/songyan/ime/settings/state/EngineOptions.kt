@@ -8,6 +8,8 @@ data class EngineOptionSetting(
     val kind: EngineOptionKind,
     /** The user's choice, or the schema's own default when they never chose. */
     val on: Boolean,
+    val choiceGroup: List<String> = emptyList(),
+    val choiceLabel: String? = null,
 )
 
 /**

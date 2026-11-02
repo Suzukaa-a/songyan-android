@@ -47,6 +47,32 @@ class KeyboardPagesCatalogTest {
     private fun key(label: String) = LayoutKey(label, action = LayoutAction.literal(label))
 
     @Test
+    fun anEditedMainFooterIsDrawnEvenAfterItsSpaceKeyIsRemoved() {
+        val footer = listOf(key("底行"), LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)))
+        val mine =
+            BuiltinLayouts.qwerty26.copyWithId("mine", "我的").let {
+                it.copy(rows = it.rows.dropLast(1) + LayoutRow(footer))
+            }
+        KeyboardLayoutCatalog.install(LayoutRegistry.create().install(mine.encoded()))
+        val pairing = KeyboardComposition(mainLayoutID = "mine")
+        val definition = KeyboardPages.definition(null, config(pairing))
+        assertEquals(4, definition.rows.size)
+        assertEquals(footer, definition.rows.last().keys)
+        assertEquals(
+            "q",
+            definition.rows
+                .first()
+                .keys
+                .first()
+                .label,
+        )
+        for (field in listOf(FieldKind.EMAIL, FieldKind.URL, FieldKind.PASSWORD)) {
+            val native = KeyboardPages.definition(null, config(null).copy(field = field)).rows.last()
+            assertEquals(native, KeyboardPages.definition(null, config(pairing).copy(field = field)).rows.last())
+        }
+    }
+
+    @Test
     fun aUserLayoutProvidesTheLetterRowsAndKeepsTheNativeFooter() {
         val mine =
             BuiltinLayouts.qwerty26.copyWithId("mine", "我的").let { layout ->

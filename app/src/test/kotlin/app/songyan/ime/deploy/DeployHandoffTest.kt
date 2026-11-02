@@ -7,6 +7,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeployHandoffTest {
+    @Test
+    fun anIdleJobDoesNotBootstrapAFreshInstallWithTheBuiltInScheme() {
+        assertNull(DeployHandoff.recoveredWork(ready = false, followUpPending = false, needsDownload = true))
+    }
+
     /** Without the job, a follow-up queued once the dataSync time was used up waited for the next keyboard start. */
     @Test
     fun workLeftWithoutTheForegroundGoesToTheJob() {

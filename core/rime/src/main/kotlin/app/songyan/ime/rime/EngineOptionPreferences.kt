@@ -20,7 +20,9 @@ class EngineOptionPreferences(
     fun read(option: EngineOptionDescriptor): Boolean? {
         val file = fileOf(option)
         if (!file.isFile) return null
-        return when (file.readText(Charsets.UTF_8).trim()) {
+        val text = file.readText(Charsets.UTF_8).trim()
+        if (option.choiceGroup.isNotEmpty()) return text.takeIf { it in option.choiceGroup }?.let { it == option.name }
+        return when (text) {
             "true" -> true
             "false" -> false
             else -> null
@@ -32,11 +34,12 @@ class EngineOptionPreferences(
         option: EngineOptionDescriptor,
         value: Boolean,
     ) {
+        if (option.choiceGroup.isNotEmpty() && !value) throw IOException("choose a group member instead of clearing it")
         val file = fileOf(option)
         file.parentFile?.mkdirs()
         val temp = File(file.parentFile, ".${file.name}.${System.nanoTime()}.tmp")
         try {
-            temp.writeText(value.toString(), Charsets.UTF_8)
+            temp.writeText(if (option.choiceGroup.isEmpty()) value.toString() else option.name, Charsets.UTF_8)
             Files.move(
                 temp.toPath(),
                 file.toPath(),
@@ -49,7 +52,10 @@ class EngineOptionPreferences(
     }
 
     private fun fileOf(option: EngineOptionDescriptor): File =
-        File(File(File(directory, hex(option.resourceID)), hex(option.schemaID)), hex(option.name) + ".txt")
+        File(
+            File(File(directory, hex(option.resourceID)), hex(option.schemaID)),
+            hex(option.choiceGroup.firstOrNull() ?: option.name) + ".txt",
+        )
 
     // Ids are arbitrary scheme-author text; hex keeps them out of the path syntax.
     private fun hex(text: String): String = text.toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) }

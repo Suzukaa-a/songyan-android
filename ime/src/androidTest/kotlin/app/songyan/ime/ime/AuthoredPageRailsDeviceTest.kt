@@ -1,16 +1,20 @@
 package app.songyan.ime.ime
 
+import android.view.inputmethod.EditorInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutOption
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutRow
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -119,6 +123,62 @@ class AuthoredPageRailsDeviceTest {
                         .map { it.label }
                 }
             assertEquals(listOf("丁"), options)
+        }
+
+    private fun withFooter(block: (FeatureHost) -> Unit) {
+        val footer =
+            listOf(
+                LayoutKey("自定义", action = LayoutAction.literal("底行")),
+                LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE)),
+                LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)),
+            )
+        val layout = BuiltinLayouts.qwerty26.copy(rows = BuiltinLayouts.qwerty26.rows.dropLast(1) + LayoutRow(footer))
+        KeyboardLayoutCatalog.install(LayoutRegistry.create().replace(layout))
+        val host = FeatureHost(engine.backend())
+        try {
+            block(host)
+        } finally {
+            host.close()
+            runBlocking { host.backend.shutdown() }
+        }
+    }
+
+    @Test
+    fun aSavedBottomKeyTypesItsText() =
+        withFooter { host ->
+            host.start()
+            host.tap("自定义")
+            host.awaitIdle()
+            assertEquals("底行", host.text())
+        }
+
+    @Test
+    fun theEditedFooterKeepsTheEditorsSendAction() =
+        withFooter { host ->
+            host.start(imeOptions = EditorInfo.IME_ACTION_SEND)
+            var action = EditorInfo.IME_ACTION_NONE
+            host.main {
+                host.field.setOnEditorActionListener { _, id, _ ->
+                    action = id
+                    true
+                }
+            }
+            host.tap(host.string(R.string.ime_send))
+            host.awaitIdle()
+            assertEquals(EditorInfo.IME_ACTION_SEND, action)
+            assertEquals("", host.text())
+        }
+
+    @Test
+    fun noEnterActionStillInsertsANewlineFromTheEditedFooter() =
+        withFooter { host ->
+            host.start(
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+                imeOptions = EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION,
+            )
+            host.tap(host.string(R.string.ime_enter))
+            host.awaitIdle()
+            assertEquals("\n", host.text())
         }
 
     companion object {

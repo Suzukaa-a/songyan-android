@@ -18,23 +18,48 @@ class OnboardingScreenTest {
     val compose = createComposeRule()
 
     private var openedSystemSettings = 0
+    private val downloads = mutableListOf<String>()
 
     private fun show(
         status: ImeStatus,
         typed: Boolean = false,
+        schemeReady: Boolean = true,
     ) {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 OnboardingScreen(
-                    progress = onboardingProgress(status, typed),
+                    progress = onboardingProgress(status, typed, schemeReady),
                     onOpenInputMethodSettings = { openedSystemSettings++ },
                     onShowPicker = {},
                     onRetry = {},
                     onTyped = {},
                     onBack = {},
+                    downloadAvailable = true,
+                    onDownload = { downloads += it },
                 )
             }
         }
+    }
+
+    @Test
+    fun firstRunDownloadsOnlyAfterConfirmationAndOffersNoSystemShortcut() {
+        show(ImeStatus(enabled = false, selected = false), schemeReady = false)
+        compose.onNodeWithText(str(R.string.onboarding_step_enable_action)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.tryout_hint)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.schemes_recommended_rime_ice_name)).performClick()
+        assertEquals(emptyList<String>(), downloads)
+        compose.onNodeWithText(str(R.string.action_cancel)).performClick()
+        assertEquals(emptyList<String>(), downloads)
+        compose.onNodeWithText(str(R.string.schemes_recommended_rime_ice_name)).performClick()
+        compose.onNodeWithText(str(R.string.schemes_recommended_confirm)).performClick()
+        assertEquals(
+            listOf(
+                app.songyan.ime.settings.state.RecommendedSchemes.catalog
+                    .first()
+                    .url,
+            ),
+            downloads,
+        )
     }
 
     @Test

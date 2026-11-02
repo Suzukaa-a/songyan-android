@@ -388,7 +388,7 @@ fun SchemesScreen(
                     )
                 }
             }
-            if (sources.size > 1) {
+            if (sources.isNotEmpty()) {
                 item { SectionHeader(stringResource(R.string.schemes_sources_section)) }
                 items(sources.size, key = { "source_" + sources[it].id }) { index ->
                     val source = sources[index]

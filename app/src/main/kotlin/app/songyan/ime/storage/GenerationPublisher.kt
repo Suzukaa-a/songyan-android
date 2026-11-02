@@ -74,7 +74,7 @@ class GenerationPublisher(
                 File(temp, RESOURCES),
                 RESOURCES,
                 files,
-                skipNames = setOf("build"),
+                skipNames = setOf("build", InputSchemeSetup.INSTALLING),
                 skipPaths = skipPaths,
             )
             for ((path, extra) in extraResources) {

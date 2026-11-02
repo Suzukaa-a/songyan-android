@@ -206,6 +206,60 @@ class EngineFeaturesTest {
         }
 
     @Test
+    fun unrelatedGrammarFieldsDoNotGiveTheSchemeControlOfTheModel() =
+        runBlocking {
+            val own =
+                "patch:\n  translator/grammar/language: translator_value\n" +
+                    "  my_grammar/language: unrelated\n" +
+                    "metadata:\n  grammar/language: example\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings()).apply(engine)
+
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+        }
+
+    @Test
+    fun aPatchDirectiveCanSetTheGrammarModel() =
+        runBlocking {
+            val own = "__patch:\n  - patch/+:\n      grammar/+:\n        language: upstream\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings()).apply(engine)
+
+            assertEquals(Availability.SCHEME, report(dirs).grammar)
+        }
+
+    @Test
+    fun aPathInAPatchDirectiveCanSetTheGrammarModel() =
+        runBlocking {
+            val own = "__patch:\n  - patch/grammar/language: upstream\n"
+            val (dirs, engine) = setUp(packageCustom = own)
+
+            features(dirs, EngineFeatureSettings()).apply(engine)
+
+            assertEquals(Availability.SCHEME, report(dirs).grammar)
+        }
+
+    @Test
+    fun removingTheUsersModelPatchLeavesTheAppsGeneratedBlocksAvailable() =
+        runBlocking {
+            val (dirs, engine) = setUp()
+            val custom = File(dirs.work, "$id.custom.yaml")
+            custom.writeText("patch:\n  grammar/language: upstream\n")
+            features(dirs, EngineFeatureSettings()).apply(engine)
+            assertEquals(Availability.SCHEME, report(dirs).grammar)
+
+            custom.delete()
+            features(dirs, EngineFeatureSettings()).apply(engine)
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+            assertTrue(custom.isFile)
+
+            features(dirs, EngineFeatureSettings()).apply(engine)
+            assertEquals(Availability.AVAILABLE, report(dirs).grammar)
+        }
+
+    @Test
     fun aPatchedInputMethodLibrimeRefusesFailsTheDeployment() {
         val (dirs, engine) = setUp()
         engine.compiles = false

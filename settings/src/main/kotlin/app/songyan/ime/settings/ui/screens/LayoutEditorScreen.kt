@@ -150,12 +150,9 @@ fun LayoutEditorScreen(
                 }
             },
         )
-        Text(
-            text = stringResource(R.string.layout_editor_control_row_note),
-            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        BottomRowEditor(current.bottomKeys, allowEmpty = false) { keys ->
+            viewModel.update { it.withBottomKeys(keys) }
+        }
     }
 }
 
@@ -265,12 +262,11 @@ fun PageEditorScreen(
                 },
             )
         }
-        Text(
-            text = stringResource(R.string.layout_editor_control_row_note),
-            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        if (!current.isCategorized) {
+            BottomRowEditor(current.bottomKeys) { keys ->
+                viewModel.update { it.withBottomKeys(keys) }
+            }
+        }
     }
 }
 
@@ -529,5 +525,64 @@ private fun OpeningMarksSection(
             onClick = { onPreview(true) },
             label = { Text(stringResource(R.string.page_editor_marks_english)) },
         )
+    }
+}
+
+@Composable
+private fun BottomRowEditor(
+    keys: List<LayoutKey>,
+    allowEmpty: Boolean = true,
+    onChange: (List<LayoutKey>) -> Unit,
+) {
+    var selected by remember { mutableStateOf<KeySelection?>(null) }
+    val rows = listOf(LayoutRow(keys))
+    SectionHeader(stringResource(R.string.layout_editor_bottom_section))
+    KeyGrid(rows = rows, selection = selected, onSelect = { selected = it })
+    val template = LayoutKey("·", action = LayoutAction.literal("·"))
+    GridToolbar(
+        actions =
+            GridActions.of(rows, selected).copy(
+                canAddKey = keys.size < app.songyan.ime.layout.LayoutResourceBudget.KEYS_PER_REGION,
+                canRemoveKey = selected != null && (allowEmpty || keys.size > 1),
+            ),
+        onMoveKey = { delta ->
+            selected?.let { at ->
+                KeyGridEditing.moveKey(rows, at, delta)?.let {
+                    onChange(it.rows.single().keys)
+                    selected = it.selection
+                }
+            }
+        },
+        onMoveRow = {},
+        onAddKey = {
+            val at = selected
+            if (at == null) {
+                onChange(keys + template)
+                selected = KeySelection(0, keys.size)
+            } else {
+                KeyGridEditing.addKeyAfter(rows, at, template)?.let {
+                    onChange(it.rows.single().keys)
+                    selected = it.selection
+                }
+            }
+        },
+        onRemoveKey = {
+            selected?.let { at ->
+                onChange(keys.filterIndexed { index, _ -> index != at.key })
+                selected = null
+            }
+        },
+    )
+    selected?.let { at ->
+        keys.getOrNull(at.key)?.let { key ->
+            androidx.compose.runtime.key(at) {
+                KeyFields(
+                    key = key,
+                    allowCode = false,
+                    onChange = { replacement -> onChange(keys.toMutableList().also { it[at.key] = replacement }) },
+                    allowJump = true,
+                )
+            }
+        }
     }
 }

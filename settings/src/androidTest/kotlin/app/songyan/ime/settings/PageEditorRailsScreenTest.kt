@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
@@ -55,6 +56,27 @@ class PageEditorRailsScreenTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun aBottomKeyCanBeEditedAndSavedWithThePage() {
+        show()
+        val index = page.chrome!!.bottom.indexOfFirst { it.label == "空格" }
+        compose
+            .onNodeWithContentDescription(str(R.string.layout_editor_key_description, 1, index + 1, "空格"))
+            .performScrollTo()
+            .performClick()
+        compose.onAllNodes(hasSetTextAction() and hasText("空格")).onFirst().performTextReplacement("空格键")
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(
+            "空格键",
+            source.registry.value!!
+                .page(page.id)!!
+                .chrome!!
+                .bottom[index]
+                .label,
+        )
     }
 
     @Test

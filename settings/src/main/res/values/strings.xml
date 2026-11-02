@@ -46,7 +46,10 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title">Enable Songyan</string>
-    <string name="onboarding_intro">Three steps and you can start typing.</string>
+    <string name="onboarding_intro">Download an input scheme, then enable Songyan to start typing.</string>
+    <string name="onboarding_step_download_title">Download an input scheme</string>
+    <string name="onboarding_step_download_body">Choose an input scheme to start with.</string>
+    <string name="onboarding_other_schemes">Other input schemes and files</string>
     <string name="onboarding_step_enable_title">Enable Songyan Keyboard</string>
     <string name="onboarding_step_enable_body">Enable the Songyan keyboard in System Settings.</string>
     <string name="onboarding_step_enable_action">Open system settings</string>
@@ -293,4 +296,5 @@
     <string name="search_empty_body">Try another word.</string>
     <string name="search_keywords_haptics">vibrate vibration haptic feedback</string>
     <string name="search_keywords_switch_key">globe switch input method keyboard</string>
+    <string name="options_engine_character_form">Character form</string>
 </resources>

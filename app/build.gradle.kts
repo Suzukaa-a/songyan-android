@@ -78,6 +78,10 @@ android {
         compose = true
         buildConfig = true
     }
+    androidResources {
+        // Dependency translations must not claim languages the app does not translate.
+        localeFilters += listOf("en", "zh")
+    }
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The deploy benchmark takes minutes and needs a scheme package pushed to the device, so

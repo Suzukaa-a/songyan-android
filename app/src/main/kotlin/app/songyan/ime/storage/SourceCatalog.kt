@@ -22,6 +22,22 @@ object BuiltinSchemes {
     val IDS: List<String> = listOf(QUANPIN, FLYPY)
 }
 
+/** Fresh installs wait for a scheme; existing and restored data retain the bundled recovery path. Read on IO. */
+object InputSchemeSetup {
+    const val INSTALLING = ".songyan-installing"
+
+    fun needsDownload(storage: AppStorage): Boolean =
+        !storage.activeFile.exists() &&
+            storage.sourcesDir.listFiles().orEmpty().none {
+                it.isDirectory && SourceIds.isValid(it.name) && !File(it, INSTALLING).exists()
+            } &&
+            GenerationPublisher(storage).publishedRecords().isEmpty() &&
+            storage.userRoot
+                .listFiles()
+                .orEmpty()
+                .none { it.isDirectory }
+}
+
 /** What kind of content a stored source holds. */
 enum class SourceKind { BUILTIN, DICTIONARY, SCHEME }
 

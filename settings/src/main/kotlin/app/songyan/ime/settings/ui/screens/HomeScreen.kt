@@ -289,6 +289,15 @@ private fun HomeStatus(
                     icon = Icons.Outlined.ErrorOutline,
                 )
 
+            !state.progress.schemeDone ->
+                StatusCard(
+                    headline = stringResource(R.string.onboarding_step_download_title),
+                    body = stringResource(R.string.onboarding_step_download_body),
+                    actionLabel = stringResource(R.string.onboarding_step_download_title),
+                    onAction = onOpenOnboarding,
+                    icon = Icons.Outlined.Info,
+                )
+
             !state.ime.enabled ->
                 StatusCard(
                     headline = stringResource(R.string.home_enable_title),

@@ -58,6 +58,8 @@ data class EngineOptionTile(
     val name: String,
     val kind: EngineOptionKind,
     val on: Boolean,
+    val choiceGroup: List<String> = emptyList(),
+    val choiceLabel: String? = null,
 )
 
 /**
@@ -89,7 +91,16 @@ data class QuickSettingsState(
             is QuickSettingChange.Haptics -> copy(hapticsOn = change.on)
             is QuickSettingChange.Preview -> copy(previewOn = change.on)
             is QuickSettingChange.EngineOption ->
-                copy(engineOptions = engineOptions.map { if (it.name == change.name) it.copy(on = change.on) else it })
+                copy(
+                    engineOptions =
+                        engineOptions.map {
+                            when {
+                                it.name == change.name -> it.copy(on = change.on)
+                                change.on && change.name in it.choiceGroup -> it.copy(on = false)
+                                else -> it
+                            }
+                        },
+                )
         }
 }
 
@@ -100,6 +111,7 @@ data class QuickOption(
     val selected: Boolean,
     /** What choosing it asks for. */
     val change: QuickSettingChange,
+    val label: String? = null,
 )
 
 /** One tile of the grid. */
@@ -170,9 +182,38 @@ object QuickSettingsModel {
             QuickTile(QuickSetting.KEY_PREVIEW, QuickTile.Kind.TOGGLE, on = state.previewOn),
             QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
         ) +
-            state.engineOptions.map {
-                QuickTile(QuickSetting.ENGINE_OPTION, QuickTile.Kind.TOGGLE, on = it.on, engineOption = it)
-            }
+            state.engineOptions
+                .distinctBy { it.choiceGroup.firstOrNull() ?: it.name }
+                .map { option ->
+                    if (option.choiceGroup.isEmpty()) {
+                        QuickTile(
+                            QuickSetting.ENGINE_OPTION,
+                            QuickTile.Kind.TOGGLE,
+                            on = option.on,
+                            engineOption = option,
+                        )
+                    } else {
+                        val choices =
+                            option.choiceGroup.mapNotNull { name ->
+                                state.engineOptions.find { it.name == name }
+                            }
+                        QuickTile(
+                            QuickSetting.ENGINE_OPTION,
+                            QuickTile.Kind.CHOICE,
+                            valueKey = choices.firstOrNull { it.on }?.name,
+                            engineOption = option,
+                            options =
+                                choices.map {
+                                    QuickOption(
+                                        it.name,
+                                        it.on,
+                                        QuickSettingChange.EngineOption(it.name, true),
+                                        it.choiceLabel,
+                                    )
+                                },
+                        )
+                    }
+                }
 
     /** What a tap on a toggle asks for; null for tiles that are not toggles or are unavailable. */
     fun toggled(tile: QuickTile): QuickSettingChange? {

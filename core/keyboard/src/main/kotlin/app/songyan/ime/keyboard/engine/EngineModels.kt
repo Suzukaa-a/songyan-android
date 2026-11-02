@@ -206,7 +206,7 @@ enum class EngineOptionKind {
 }
 
 /**
- * A verified binary schema switch. [resourceID] scopes the saved choice to the installed scheme
+ * A verified schema switch or native radio-group member. [resourceID] scopes the saved choice to the installed scheme
  * source, [schemaID] to the input method it belongs to.
  */
 data class EngineOptionDescriptor(
@@ -216,6 +216,8 @@ data class EngineOptionDescriptor(
     val kind: EngineOptionKind,
     /** The schema's own reset value: what the switch is when the user never chose. */
     val defaultValue: Boolean = false,
+    val choiceGroup: List<String> = emptyList(),
+    val choiceLabel: String? = null,
 ) {
     val id: String get() = name
 }

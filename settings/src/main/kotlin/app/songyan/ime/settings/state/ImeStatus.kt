@@ -18,7 +18,7 @@ fun interface ImeStatusSource {
 }
 
 /** Ordered onboarding steps; each one is either done or the current action. */
-enum class OnboardingStep { ENABLE_IME, SELECT_IME, TRY_OUT }
+enum class OnboardingStep { DOWNLOAD_SCHEME, ENABLE_IME, SELECT_IME, TRY_OUT }
 
 /** Step completion derived from system state, so the guidance never claims something untrue. */
 data class OnboardingProgress(
@@ -26,14 +26,16 @@ data class OnboardingProgress(
     val selectDone: Boolean,
     val tryOutDone: Boolean,
     val readFailed: Boolean,
+    val schemeDone: Boolean = true,
 ) {
-    val allDone: Boolean get() = enableDone && selectDone && tryOutDone
+    val allDone: Boolean get() = schemeDone && enableDone && selectDone && tryOutDone
 
     /** The first step that still needs an action; null when the flow is complete or the read failed. */
     val nextStep: OnboardingStep?
         get() =
             when {
                 readFailed -> null
+                !schemeDone -> OnboardingStep.DOWNLOAD_SCHEME
                 !enableDone -> OnboardingStep.ENABLE_IME
                 !selectDone -> OnboardingStep.SELECT_IME
                 !tryOutDone -> OnboardingStep.TRY_OUT
@@ -51,6 +53,7 @@ data class OnboardingProgress(
 fun onboardingProgress(
     status: ImeStatus,
     hasTyped: Boolean,
+    schemeReady: Boolean = true,
 ): OnboardingProgress {
     if (status.readFailed) {
         return OnboardingProgress(
@@ -58,13 +61,15 @@ fun onboardingProgress(
             selectDone = false,
             tryOutDone = hasTyped,
             readFailed = true,
+            schemeDone = schemeReady,
         )
     }
     val enabled = status.enabled || status.selected
     return OnboardingProgress(
         enableDone = enabled,
         selectDone = status.selected,
-        tryOutDone = hasTyped && status.selected,
+        tryOutDone = hasTyped && status.selected && schemeReady,
         readFailed = false,
+        schemeDone = schemeReady,
     )
 }

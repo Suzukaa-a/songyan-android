@@ -132,7 +132,7 @@
     <string name="layout_editor_long_press">长按选项</string>
     <string name="layout_editor_long_press_add">添加选项</string>
     <string name="layout_editor_long_press_remove">删除这个选项</string>
-    <string name="layout_editor_control_row_note">底部一行随输入框自动变化，不在这里编辑。</string>
+    <string name="layout_editor_bottom_section">底部一行</string>
     <string name="layout_editor_split_section">大屏拆分</string>
     <string name="layout_editor_split_off">不拆分</string>
     <string name="layout_editor_split_automatic">大屏上拆分</string>

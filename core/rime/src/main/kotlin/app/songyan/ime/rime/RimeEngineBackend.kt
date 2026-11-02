@@ -283,12 +283,16 @@ class RimeEngineBackend(
     ): EngineSnapshot {
         // A refused write is an error, never a successful snapshot of the old state: reporting
         // success would show the switch as applied while the engine still holds the old value.
-        if (!engine.setOption(name, value)) {
+        val descriptor = activeOptionDescriptors().firstOrNull { it.name == name }
+        if (descriptor?.choiceGroup?.isNotEmpty() == true) {
+            if (!value) throw EngineBackendError.OperationFailed("choose a group member instead of clearing it")
+            applyChoice(descriptor)
+        } else if (!engine.setOption(name, value)) {
             throw EngineBackendError.OperationFailed("option was refused: " + name)
         }
         val snapshot = publish(engine.readSnapshot())
         val support = optionSupport ?: return snapshot
-        val descriptor = activeOptionDescriptors().firstOrNull { it.name == name } ?: return snapshot
+        if (descriptor == null) return snapshot
         try {
             withContext(Dispatchers.IO) { support.preferences.write(descriptor, value) }
         } catch (e: java.io.IOException) {
@@ -308,11 +312,28 @@ class RimeEngineBackend(
         val descriptors = activeOptionDescriptors()
         if (descriptors.isEmpty()) return emptyList()
         val saved = withContext(Dispatchers.IO) { descriptors.map { support.preferences.read(it) } }
-        return descriptors.mapIndexed { index, descriptor ->
-            var value = engine.option(descriptor.name)
-            val wanted = saved[index]
-            if (wanted != null && wanted != value && engine.setOption(descriptor.name, wanted)) value = wanted
-            EngineOptionState(descriptor, value)
+        for ((index, descriptor) in descriptors.withIndex()) {
+            val wanted = saved[index] ?: continue
+            if (descriptor.choiceGroup.isNotEmpty()) {
+                if (wanted) applyChoice(descriptor)
+            } else if (wanted != engine.option(descriptor.name)) {
+                engine.setOption(descriptor.name, wanted)
+            }
+        }
+        for (group in descriptors.filter { it.choiceGroup.isNotEmpty() }.distinctBy { it.choiceGroup }) {
+            val selected = group.choiceGroup.firstOrNull { engine.option(it) } ?: group.choiceGroup.first()
+            applyChoice(descriptors.first { it.name == selected })
+        }
+        return descriptors.map { EngineOptionState(it, engine.option(it.name)) }
+    }
+
+    private suspend fun applyChoice(descriptor: EngineOptionDescriptor) {
+        // Match librime key_binder radio_select_option, including schema order and unchanged values.
+        for (member in descriptor.choiceGroup) {
+            val selected = member == descriptor.name
+            if (engine.option(member) != selected && !engine.setOption(member, selected)) {
+                throw EngineBackendError.OperationFailed("option was refused: " + member)
+            }
         }
     }
 

@@ -1,5 +1,7 @@
 package app.songyan.ime.deploy
 
+import app.songyan.ime.packages.EngineFeatureReport
+import app.songyan.ime.packages.EngineFeatureReport.Availability
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.userconfig.UserConfigFiles
@@ -202,6 +204,7 @@ class UserConfigDeployTest {
     @Test
     fun editsWaitForApplyingAndThenReachEveryLaterDeployment() =
         runTest {
+            pipeline.run(DeployRequest("prepare", DeployMode.BUILTIN, force = true))
             edit("songyan_quanpin.custom.yaml", PATCH)
 
             run(DeployMode.REDEPLOY_ACTIVE)
@@ -216,6 +219,42 @@ class UserConfigDeployTest {
                 PATCH,
                 runner.overlays.last()["songyan_quanpin.custom.yaml"],
             )
+        }
+
+    @Test
+    fun aDeletedModelPatchStopsControllingTheModelAfterApplying() =
+        runTest {
+            val name = "songyan_quanpin.custom.yaml"
+            runner.compiledYaml["songyan_quanpin.schema.yaml"] =
+                "schema:\n  schema_id: songyan_quanpin\nengine:\n  translators: [script_translator]\n"
+            val patch = "patch:\n  grammar/language: \"\"\n"
+            edit(name, patch)
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+
+            fun grammarAvailability(): Availability {
+                val active = publisher.readActive()!!
+                val report = File(storage.generationDir(active.generation), "build/" + EngineFeatureReport.FILE_NAME)
+                return EngineFeatureReport
+                    .decode(report.readText())!!
+                    .schemas
+                    .getValue("songyan_quanpin")
+                    .grammar
+            }
+
+            assertEquals(Availability.SCHEME, grammarAvailability())
+            File(storage.userConfigDir, name).delete()
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
+            assertEquals(patch, runner.overlays.last()[name])
+            assertEquals(Availability.SCHEME, grammarAvailability())
+
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            assertFalse(runner.overlays.last().containsKey(name))
+            assertFalse(File(storage.appliedConfigDir, name).exists())
+            assertEquals(Availability.AVAILABLE, grammarAvailability())
+
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
+            assertFalse(runner.overlays.last().containsKey(name))
+            assertEquals(Availability.AVAILABLE, grammarAvailability())
         }
 
     @Test

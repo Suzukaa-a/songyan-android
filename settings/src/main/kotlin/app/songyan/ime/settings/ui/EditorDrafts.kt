@@ -7,8 +7,8 @@ import app.songyan.ime.layout.KeyboardPageChrome
 import app.songyan.ime.layout.KeyboardPageDefinition
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.KeyboardSymbolPresentation
-import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
+import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutResourceBudget
@@ -27,11 +27,8 @@ private fun firstKey(rows: List<LayoutRow>): KeySelection? =
 /**
  * A main layout being edited. Nothing is written until it is saved.
  *
- * The control row (the row with the space bar) is drawn by the keyboard from the editor and the
- * language, so the editor shows and edits the letter rows only and keeps the control row as it is.
- * A nine-key layout is a fixed 3x3 grid: its keys can be edited but not added, removed or moved, and
- * its side columns are edited as data once declared ([RailEditing]); everything below the grid is the
- * control row and stays as it was.
+ * The footer and side columns are edited separately from the encoding rows.
+ * A nine-key layout keeps its fixed 3x3 encoding grid.
  */
 data class LayoutDraft(
     val original: LayoutDefinition,
@@ -55,8 +52,21 @@ data class LayoutDraft(
                     PhoneKeypadMetrics.MAIN_ROW_COUNT,
                 )
             } else {
-                layout.rows.filter(::isControlRow)
+                LayoutBottomRow.index(layout)?.let { listOf(layout.rows[it]) }.orEmpty()
             }
+
+    val bottomKeys: List<LayoutKey> get() = LayoutBottomRow.preview(layout)
+
+    fun withBottomKeys(keys: List<LayoutKey>): LayoutDraft {
+        val index = LayoutBottomRow.index(layout)
+        val rows =
+            if (index == null) {
+                layout.rows + LayoutRow(keys)
+            } else {
+                layout.rows.toMutableList().also { it[index] = LayoutRow(keys) }
+            }
+        return copy(layout = layout.copy(rows = rows))
+    }
 
     val hasChanges: Boolean get() = layout != original
 
@@ -73,7 +83,7 @@ data class LayoutDraft(
             if (isNineKey) {
                 (0 until PhoneKeypadMetrics.MAIN_ROW_COUNT).toList()
             } else {
-                layout.rows.indices.filterNot { isControlRow(layout.rows[it]) }
+                layout.rows.indices.filterNot { it == LayoutBottomRow.index(layout) }
             }
 
     /** The user saved a split arrangement of their own; without one it follows the rows and the row cuts. */
@@ -264,22 +274,19 @@ data class LayoutDraft(
     }
 
     companion object {
-        private fun isControlRow(row: LayoutRow) = row.keys.any { it.action.type == LayoutActionKind.SPACE }
-
         private fun mainRowsOf(
             layout: LayoutDefinition,
             nineKey: Boolean = PhoneKeypadStructure.matches(layout),
         ) = if (nineKey) {
             layout.rows.take(PhoneKeypadMetrics.MAIN_ROW_COUNT)
         } else {
-            layout.rows.filterNot(::isControlRow)
+            layout.rows.filterIndexed { index, _ -> index != LayoutBottomRow.index(layout) }
         }
     }
 }
 
 /**
- * A page being edited: its content rows, or the categories of a categorized symbol page. The footer
- * and the rails the page carries are kept as they are; the keyboard draws them as data.
+ * A page draft keeps content rows, footer keys and side columns separate so each keeps its geometry.
  */
 data class PageDraft(
     val original: KeyboardPageDefinition,
@@ -292,6 +299,18 @@ data class PageDraft(
     val rail: RailSelection? = null,
 ) {
     val rows: List<LayoutRow> get() = page.rows
+
+    val bottomKeys: List<LayoutKey> get() =
+        page
+            .materialized()
+            .chrome
+            ?.bottom
+            .orEmpty()
+
+    fun withBottomKeys(keys: List<LayoutKey>): PageDraft {
+        val explicit = page.materialized()
+        return copy(page = explicit.withChrome((explicit.chrome ?: KeyboardPageChrome()).copy(bottom = keys)))
+    }
 
     /**
      * Side columns are authored on a page the keyboard draws from rows. The categorized page is drawn

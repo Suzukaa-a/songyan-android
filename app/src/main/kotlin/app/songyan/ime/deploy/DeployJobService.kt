@@ -10,6 +10,7 @@ import android.os.Build
 import android.util.Log
 import app.songyan.ime.SongyanApplication
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.InputSchemeSetup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,8 +38,10 @@ object DeployHandoff {
     fun recoveredWork(
         ready: Boolean,
         followUpPending: Boolean,
+        needsDownload: Boolean = false,
     ): DeployMode? =
         when {
+            needsDownload -> null
             !ready -> DeployMode.BUILTIN
             followUpPending -> DeployMode.COMPLETE_COMPANIONS
             else -> null
@@ -69,6 +72,7 @@ class DeployJobService : JobService() {
             val work =
                 DeployHandoff.recoveredWork(
                     ready = DeploymentStarter.isReady(app),
+                    needsDownload = InputSchemeSetup.needsDownload(app.storage),
                     followUpPending =
                         runCatching { GenerationPublisher(app.storage).usablePublication()?.companionsPending == true }
                             .getOrDefault(false),

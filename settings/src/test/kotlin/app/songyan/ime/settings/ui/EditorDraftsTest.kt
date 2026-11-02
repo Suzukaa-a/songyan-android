@@ -22,6 +22,47 @@ class EditorDraftsTest {
     private fun labels(rows: List<LayoutRow>) = rows.map { row -> row.keys.joinToString("") { it.label } }
 
     @Test
+    fun theBottomRowCanBeReplacedWithoutChangingTheLetterRows() {
+        for (layout in listOf(
+            BuiltinLayouts.qwerty26,
+            BuiltinLayouts.merged14,
+            BuiltinLayouts.merged18,
+            BuiltinLayouts.phone9,
+        )) {
+            val draft = LayoutDraft(layout)
+            val footer = listOf(key("常用"), LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE)))
+            val edited = draft.withBottomKeys(footer)
+            assertTrue(edited.hasChanges)
+            assertEquals(footer, edited.bottomKeys)
+            assertEquals(draft.letterRows, edited.letterRows)
+            assertEquals(
+                footer,
+                edited.layout.rows
+                    .last()
+                    .keys,
+            )
+        }
+    }
+
+    @Test
+    fun aPageFooterIsAuthoredDataAndCanBeReorderedOrCleared() {
+        val page = KeyboardPagePresets.numericAutomatic.duplicated("mine", "我的")
+        val draft = PageDraft(page)
+        val keys = draft.bottomKeys.reversed() + key("常用")
+        val edited = draft.withBottomKeys(keys)
+        assertEquals(keys, edited.page.chrome!!.bottom)
+        assertEquals(page.rows, edited.page.rows)
+        assertTrue(edited.hasChanges)
+        assertEquals(
+            emptyList<LayoutKey>(),
+            edited
+                .withBottomKeys(emptyList())
+                .page.chrome!!
+                .bottom,
+        )
+    }
+
+    @Test
     fun aLayoutDraftEditsTheLetterRowsAndKeepsTheControlRow() {
         val draft = LayoutDraft(BuiltinLayouts.qwerty26)
         assertEquals(3, draft.letterRows.size)

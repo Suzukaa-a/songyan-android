@@ -54,6 +54,39 @@ class EngineOptionsViewModelTest {
     }
 
     @Test
+    fun selectingACharacterFormShowsOnlyThatChoiceAndRestoresItIfSavingFails() =
+        runTest(dispatcher) {
+            val names = listOf("s2s", "s2t")
+            val original =
+                names.mapIndexed { index, name ->
+                    EngineOptionSetting(name, EngineOptionKind.TRADITIONAL, index == 0, names, name)
+                }
+            val gateway =
+                object : EngineOptionsGateway {
+                    override suspend fun load(schemaId: String) = original
+
+                    override suspend fun set(
+                        schemaId: String,
+                        name: String,
+                        on: Boolean,
+                    ) = false
+                }
+            val model = EngineOptionsViewModel(gateway)
+            model.show("pinyin")
+            advanceUntilIdle()
+            model.set("s2t", true)
+            assertEquals(
+                listOf("s2t"),
+                model.uiState.value.options
+                    .filter { it.on }
+                    .map { it.name },
+            )
+            advanceUntilIdle()
+            assertEquals(original, model.uiState.value.options)
+            assertTrue(model.uiState.value.saveFailed)
+        }
+
+    @Test
     fun showingAnInputMethodListsItsSwitches() =
         runTest(dispatcher) {
             val model = EngineOptionsViewModel(Fake())

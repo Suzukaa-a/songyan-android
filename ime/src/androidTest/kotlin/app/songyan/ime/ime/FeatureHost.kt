@@ -362,7 +362,16 @@ internal class FeatureHost(
                     context,
                     scope,
                     editor.keyboardCallbacks(
-                        action = { editor.sendReturn(false) },
+                        action = {
+                            val policy = EditorPolicy.from(info)
+                            if (policy.action == EditorInfo.IME_ACTION_NONE ||
+                                policy.action == EditorInfo.IME_ACTION_UNSPECIFIED
+                            ) {
+                                editor.sendReturn(policy.returnsNewline)
+                            } else {
+                                connection.performEditorAction(if (info.actionId != 0) info.actionId else policy.action)
+                            }
+                        },
                         onCommitted = { controller.onTextInserted() },
                         panelsChanged = { backOwned = it },
                         openSettings = { settingsOpened++ },

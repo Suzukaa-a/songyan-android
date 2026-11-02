@@ -106,7 +106,10 @@ private suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget):
     return true
 }
 
-internal suspend fun KeyboardController.dispatch(action: LayoutAction) {
+internal suspend fun KeyboardController.dispatch(
+    action: LayoutAction,
+    t9FirstKey: Boolean = false,
+) {
     ImePerf.keyDispatchStart()
     val traceCookie = System.identityHashCode(action)
     if (android.os.Build.VERSION.SDK_INT >= 29) Trace.beginAsyncSection("Songyan.keyDispatch", traceCookie)
@@ -194,14 +197,13 @@ internal suspend fun KeyboardController.dispatch(action: LayoutAction) {
             }
             LayoutActionKind.LITERAL -> {
                 val text = action.literalValue(asciiMarksNow) ?: return
-                val marksAscii = asciiMarksNow
-                if (layoutKind == KeyboardLayoutKind.PHONE9 &&
+                if (t9FirstKey &&
+                    layoutKind == KeyboardLayoutKind.PHONE9 &&
                     t9FirstKeyCycles &&
                     page == null &&
-                    active?.snapshot?.isComposing != true &&
-                    text == PhoneKeypadLayout.firstKeyLiteral(false, t9QuickSymbols, marksAscii)
+                    active?.snapshot?.isComposing != true
                 ) {
-                    handleT9FirstKey(text)
+                    handleT9FirstKey()
                     return
                 }
                 if (active != null) {

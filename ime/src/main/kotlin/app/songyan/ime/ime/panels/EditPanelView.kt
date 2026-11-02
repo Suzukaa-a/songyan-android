@@ -23,8 +23,8 @@ private const val ICON_GAP_DP = 2f
 private const val DISABLED_ALPHA = 97
 
 /**
- * The edit panel: a D-pad with a Select toggle, line start, select all and line end under it, and a
- * column of delete, copy, cut and paste beside it, plus undo in the pad's top left corner.
+ * The edit panel uses tall left/right targets, a central selection pad, and editing actions on the right.
+ * The bottom row holds line start, Select All (or Cut when selected), line end and Delete.
  *
  * It only reports what was pressed ([onEdit]); the editor work happens behind that callback. The
  * Select key is a mode ([EditPadState]): while it is on, the keys that move the caret extend the
@@ -43,11 +43,15 @@ class EditPanelView(
     /** Whether the arrow keys extend the selection. */
     val selecting: Boolean get() = state.selecting
 
-    private val keys: List<EditPadKey> = EditPadKey.entries
+    private val keys: List<EditPadKey> = EditPadKey.layoutKeys
+
+    private fun keyAt(index: Int): EditPadKey? = keys.getOrNull(index)?.let(state::displayedKey)
 
     // Inflated on first draw: the panel is built with the keyboard, and the icons are only needed once it opens.
     private val icons: List<Lazy<PanelIcon>?> =
-        keys.map { key -> iconRes(key)?.let { res -> lazy(LazyThreadSafetyMode.NONE) { PanelIcon(context, res) } } }
+        EditPadKey.entries.map { key ->
+            iconRes(key)?.let { res -> lazy(LazyThreadSafetyMode.NONE) { PanelIcon(context, res) } }
+        }
 
     override val titleText: String get() = context.getString(R.string.ime_panel_edit_title)
 
@@ -75,9 +79,9 @@ class EditPanelView(
     override fun fixedCellBoxes(): List<PanelBox> =
         EditPadGeometry.cells(contentWidthDp(), contentHeightDp(), railWidthDp(), contentTopDp())
 
-    override fun cellRepeatsWhenHeld(index: Int): Boolean = keys.getOrNull(index)?.repeats == true
+    override fun cellRepeatsWhenHeld(index: Int): Boolean = keyAt(index)?.repeats == true
 
-    override fun cellEnabled(index: Int): Boolean = keys.getOrNull(index)?.let(state::isEnabled) ?: true
+    override fun cellEnabled(index: Int): Boolean = keyAt(index)?.let(state::isEnabled) ?: true
 
     override fun cellRepeatDelayMs(): Long =
         EditPadGeometry.repeatDelayMs(
@@ -88,7 +92,7 @@ class EditPanelView(
     override fun cellRepeatIntervalMs(): Long = KeyboardView.BACKSPACE_REPEAT_MS
 
     override fun cellAccessibilityLabel(index: Int): String {
-        val key = keys.getOrNull(index) ?: return ""
+        val key = keyAt(index) ?: return ""
         return context.getString(
             if (key == EditPadKey.SELECT &&
                 state.selecting
@@ -101,7 +105,7 @@ class EditPanelView(
     }
 
     override fun onCellActivated(index: Int) {
-        val key = keys.getOrNull(index) ?: return
+        val key = keyAt(index) ?: return
         val action = key.action
         if (action == null) {
             state.toggleSelect()
@@ -119,7 +123,7 @@ class EditPanelView(
         cell: PanelBox,
         index: Int,
     ) {
-        val key = keys.getOrNull(index) ?: return
+        val key = keyAt(index) ?: return
         val on = key == EditPadKey.SELECT && state.selecting
         val enabled = state.isEnabled(key)
         val radius = metrics.keyRadiusDp * density

@@ -95,6 +95,7 @@ fun LayoutsScreen(
     showSwitchKey: Boolean = false,
     onShowSwitchKeyChange: (Boolean) -> Unit = {},
     switchKeyEnabled: Boolean = true,
+    onUse: (String) -> Unit = {},
     viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
 ) {
     val registry by viewModel.registry.collectAsStateWithLifecycle()
@@ -162,6 +163,7 @@ fun LayoutsScreen(
                             canCopy = true,
                             canDelete = !builtIn,
                             canRestore = edited,
+                            onUse = { onUse(layout.id) },
                             onEdit = { onEdit(layout.id) },
                             onCopy = { viewModel.duplicateLayout(layout.id, layout.name + copySuffix) },
                             onExport = {
@@ -224,6 +226,7 @@ private fun LayoutMenu(
     canCopy: Boolean,
     canDelete: Boolean,
     canRestore: Boolean,
+    onUse: () -> Unit,
     onEdit: () -> Unit,
     onCopy: () -> Unit,
     onExport: () -> Unit,
@@ -236,6 +239,7 @@ private fun LayoutMenu(
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.layouts_more_actions, name))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            MenuItem(R.string.layouts_action_use, onUse) { open = false }
             if (canEdit) MenuItem(R.string.layouts_action_edit, onEdit) { open = false }
             if (canCopy) MenuItem(R.string.layouts_action_copy, onCopy) { open = false }
             MenuItem(R.string.layouts_action_export, onExport) { open = false }
@@ -270,6 +274,7 @@ fun PagesScreen(
     onEdit: (String) -> Unit,
     /** Names of the input methods a pairing may belong to, by id; one without a name is named by its layout. */
     inputMethodNames: Map<String, String> = BuiltinTemplateSchemas.NAMES,
+    onUse: (String) -> Unit = {},
     viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
 ) {
     val registry by viewModel.registry.collectAsStateWithLifecycle()
@@ -322,6 +327,7 @@ fun PagesScreen(
                                 canEdit = !preset && page.isEditablePage,
                                 canCopy = page.symbolPresentation != KeyboardSymbolPresentation.AUTOMATIC,
                                 canDelete = !preset,
+                                onUse = { onUse(page.id) },
                                 onEdit = { onEdit(page.id) },
                                 onCopy = { viewModel.duplicatePage(page.id, page.name + copySuffix) },
                                 onDelete = { deleting = page },
@@ -405,17 +411,18 @@ private fun PageMenu(
     canEdit: Boolean,
     canCopy: Boolean,
     canDelete: Boolean,
+    onUse: () -> Unit,
     onEdit: () -> Unit,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    if (!canEdit && !canCopy && !canDelete) return
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.layouts_more_actions, name))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            MenuItem(R.string.layouts_action_use, onUse) { open = false }
             if (canEdit) MenuItem(R.string.layouts_action_edit, onEdit) { open = false }
             if (canCopy) MenuItem(R.string.layouts_action_copy, onCopy) { open = false }
             if (canDelete) MenuItem(R.string.layouts_action_delete, onDelete) { open = false }

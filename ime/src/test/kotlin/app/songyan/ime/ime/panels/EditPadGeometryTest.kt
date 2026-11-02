@@ -19,12 +19,18 @@ class EditPadGeometryTest {
     private fun box(
         key: EditPadKey,
         cells: List<PanelBox> = cells(),
-    ) = cells[key.ordinal]
+    ) = cells[EditPadKey.layoutKeys.indexOf(key)]
 
     @Test
     fun everyKeyOfThePadHasABoxAndEveryActionIsReachable() {
-        assertEquals(EditPadKey.entries.size, cells().size)
-        val actions = EditPadKey.entries.mapNotNull { it.action }.toSet()
+        assertEquals(EditPadKey.layoutKeys.size, cells().size)
+        val state = EditPadState()
+        val actions =
+            listOf(false, true)
+                .flatMap { selected ->
+                    state.availability = EditAvailability(hasSelection = selected, canPaste = true)
+                    EditPadKey.layoutKeys.mapNotNull { state.displayedKey(it).action }
+                }.toSet()
         assertEquals(EditAction.entries.toSet(), actions)
         assertNull(EditPadKey.SELECT.action)
     }
@@ -47,26 +53,21 @@ class EditPadGeometryTest {
                             b.right <= a.left + EPS ||
                             a.bottom <= b.top + EPS ||
                             b.bottom <= a.top + EPS
-                    assertTrue("${EditPadKey.entries[i]} overlaps ${EditPadKey.entries[j]}", apart)
+                    assertTrue("${EditPadKey.layoutKeys[i]} overlaps ${EditPadKey.layoutKeys[j]}", apart)
                 }
             }
         }
     }
 
     @Test
-    fun onlyTheThreeCornersOfTheCrossAreLeftEmpty() {
+    fun thePadUsesTheFullAreaForTouchTargets() {
         val (w, h) = 360.0 to 180.0
         val covered = cells(w, h).sumOf { it.width * it.height }
-        val corner = w / EditPadKey.COLUMNS * (h / EditPadKey.ROWS)
-        assertEquals(w * h - 3 * corner, covered, 1e-6)
-        val occupied = EditPadKey.entries.map { it.column to it.row }.toSet()
-        val empty =
-            (0 until EditPadKey.COLUMNS).flatMap { c -> (0 until EditPadKey.ROWS).map { r -> c to r } } - occupied
-        assertEquals(setOf(2 to 0, 0 to 2, 2 to 2), empty.toSet())
+        assertEquals(w * h, covered, EPS)
     }
 
     @Test
-    fun theArrowsFormACrossAroundSelectWithUndoInTheTopLeftCorner() {
+    fun tallHorizontalArrowsFlankTheThreeCentralKeys() {
         val cells = cells()
         val select = box(EditPadKey.SELECT, cells)
         val up = box(EditPadKey.UP, cells)
@@ -79,9 +80,10 @@ class EditPadGeometryTest {
         assertEquals(select.centerY, right.centerY, EPS)
         assertTrue(up.bottom <= select.top + EPS && select.bottom <= down.top + EPS)
         assertTrue(left.right <= select.left + EPS && select.right <= right.left + EPS)
-        val undo = box(EditPadKey.UNDO, cells)
-        assertEquals(0.0, undo.left, EPS)
-        assertEquals(0.0, undo.top, EPS)
+        assertEquals(up.top, left.top, EPS)
+        assertEquals(down.bottom, left.bottom, EPS)
+        assertEquals(up.top, right.top, EPS)
+        assertEquals(down.bottom, right.bottom, EPS)
     }
 
     @Test
@@ -100,9 +102,15 @@ class EditPadGeometryTest {
     }
 
     @Test
-    fun theEditingColumnIsDeleteCopyCutPasteTopToBottomRightOfThePad() {
+    fun theEditingColumnIsUndoCopyPasteDeleteTopToBottomRightOfThePad() {
         val cells = cells()
-        val column = listOf(EditPadKey.DELETE, EditPadKey.COPY, EditPadKey.CUT, EditPadKey.PASTE).map { box(it, cells) }
+        val column =
+            listOf(
+                EditPadKey.UNDO,
+                EditPadKey.COPY,
+                EditPadKey.PASTE,
+                EditPadKey.DELETE,
+            ).map { box(it, cells) }
         column.zipWithNext { a, b -> assertTrue(a.bottom <= b.top + EPS) }
         val right = box(EditPadKey.RIGHT, cells)
         column.forEach {
@@ -117,8 +125,8 @@ class EditPadGeometryTest {
     fun keysKeepTouchableSizesAtPhoneAndOneHandedWidths() {
         for ((w, h) in listOf(360.0 to 180.0, 280.0 to 176.0, 412.0 to 220.0)) {
             cells(w, h).forEachIndexed { i, it ->
-                assertTrue("${EditPadKey.entries[i]} ${it.width}dp wide", it.width >= 64.0)
-                assertTrue("${EditPadKey.entries[i]} ${it.height}dp tall", it.height >= 44.0)
+                assertTrue("${EditPadKey.layoutKeys[i]} ${it.width}dp wide", it.width >= 64.0)
+                assertTrue("${EditPadKey.layoutKeys[i]} ${it.height}dp tall", it.height >= 44.0)
             }
         }
     }

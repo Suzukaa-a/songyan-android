@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class InstalledScheme(
     val id: String,
     val name: String,
+    val supportedLayouts: Set<String> = setOf("qwerty26"),
 )
 
 /** One keyboard the user added: an input method plus a keyboard layout, both display names. */
@@ -20,6 +21,7 @@ data class AppKeyboardInfo(
 /** Everything the settings UI shows about the app. Populated by the app module. */
 data class SettingsAppState(
     val engine: EngineStatus = EngineStatus.Unknown,
+    val sourcesLoaded: Boolean = false,
     val schemes: List<InstalledScheme> = emptyList(),
     val inUseSchemeId: String? = null,
     val keyboards: List<AppKeyboardInfo> = emptyList(),

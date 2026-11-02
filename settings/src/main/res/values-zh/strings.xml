@@ -297,4 +297,20 @@
     <string name="search_keywords_haptics">震动 触感 震感</string>
     <string name="search_keywords_switch_key">地球键 切换 输入法 切换键盘</string>
     <string name="options_engine_character_form">字形</string>
+    <string name="composition_needs_scheme">请先下载或导入输入方案。</string>
+    <string name="composition_get_scheme">下载或导入输入方案</string>
+    <string name="layouts_action_use">使用</string>
+    <string name="content_use_title">使用「%1$s」</string>
+    <string name="content_use_target">选择键盘</string>
+    <string name="content_use_on">在「%1$s」上使用</string>
+    <string name="content_used_on">已在「%1$s」上使用。</string>
+    <string name="schemes_detail_models">所需语法模型</string>
+    <string name="t9_first_quick">快捷符号与分词</string>
+    <string name="t9_first_custom">自定义按键</string>
+    <string name="t9_first_quick_note">空闲时连续点按切换符号，组字时点按分词。</string>
+    <string name="t9_symbols_empty_default">留空使用内置顺序。</string>
+    <string name="t9_symbols_inherited">沿用已保存的符号顺序。</string>
+    <string name="t9_symbols_inherit">使用继承的顺序</string>
+    <string name="layout_error_t9_behavior">这种首键行为需要九键布局。</string>
+    <string name="layout_error_t9_symbols">快捷符号需要九键布局，最多 12 个不重复的字符，不能包含空格。</string>
 </resources>

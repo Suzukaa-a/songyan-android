@@ -1,7 +1,9 @@
 package app.songyan.ime.settings
 
 import android.app.Application
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -74,6 +76,7 @@ class SchemeDetailScreenTest {
         )
 
     private val used = mutableListOf<String>()
+    private val selectedMethods = mutableListOf<String>()
     private val updated = mutableListOf<String>()
     private val deleted = mutableListOf<String>()
     private val cancelled = mutableListOf<ImportKind>()
@@ -84,6 +87,7 @@ class SchemeDetailScreenTest {
         sources: List<StoredSourceInfo>,
         schemeImport: SchemeImportUiState = SchemeImportUiState.Idle,
         sourceAction: StoredSourceUiState = StoredSourceUiState.Idle,
+        grammarModel: app.songyan.ime.settings.ui.screens.GrammarModelCardInput? = null,
     ) {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
@@ -94,6 +98,7 @@ class SchemeDetailScreenTest {
                     schemeImport = schemeImport,
                     dictionaryImport = DictionaryImportUiState.Idle,
                     onUse = { used += it },
+                    onSelectMethod = { selectedMethods += it },
                     onUpdate = { updated += it },
                     onDelete = { deleted += it },
                     onDismissSourceAction = {},
@@ -102,6 +107,7 @@ class SchemeDetailScreenTest {
                     onDismissSchemeImport = {},
                     onAnswerSchemeLearning = { learningAnswers += it },
                     onBack = null,
+                    grammarModel = grammarModel,
                 )
             }
         }
@@ -168,8 +174,9 @@ class SchemeDetailScreenTest {
         show("scheme-1", listOf(builtin, ice))
         scrollTo("自然码双拼")
         compose.onNodeWithText("自然码双拼").assertExists()
-        // The status line and the marked input method.
-        assertEquals(2, count(str(R.string.schemes_status_in_use)))
+        compose.onNodeWithText("自然码双拼").assertIsSelected()
+        compose.onNode(hasText("雾凇拼音") and hasClickAction()).performClick()
+        assertEquals(listOf("rime_ice"), selectedMethods)
     }
 
     @Test
@@ -179,6 +186,42 @@ class SchemeDetailScreenTest {
         compose.onNodeWithText(str(R.string.schemes_detail_from_link, "github.com")).assertExists()
         compose.onNodeWithText(str(R.string.schemes_source_update)).performClick()
         assertEquals(listOf("scheme-1"), updated)
+    }
+
+    @Test
+    fun anInstalledPackagesModelCanBeFoundAgainAfterLaterWithoutAnImportResult() {
+        var downloads = 0
+        show(
+            "scheme-2",
+            listOf(other.copy(requiredModels = listOf("wanxiang-lts-zh-hans.gram"))),
+            grammarModel =
+                app.songyan.ime.settings.ui.screens.GrammarModelCardInput(
+                    state =
+                        app.songyan.ime.settings.ui
+                            .EngineFeaturesUiState(),
+                    actions =
+                        app.songyan.ime.settings.ui.components.GrammarModelActions(
+                            onDownload = { downloads++ },
+                            onPickFile = {},
+                            onCancel = {},
+                            onRetry = {},
+                            onDismissFailure = {},
+                            onOpenFeatures = {},
+                            onDismiss = {},
+                        ),
+                    onImportFile = {},
+                ),
+        )
+        scrollTo(str(R.string.schemes_detail_models))
+        compose.onNodeWithText(str(R.string.schemes_detail_models)).performClick()
+        scrollTo(str(R.string.schemes_grammar_later))
+        compose.onNodeWithText(str(R.string.schemes_grammar_later)).performClick()
+        compose.onNodeWithText(str(R.string.schemes_grammar_download, 420)).assertDoesNotExist()
+        scrollTo(str(R.string.schemes_detail_models))
+        compose.onNodeWithText(str(R.string.schemes_detail_models)).performClick()
+        scrollTo(str(R.string.schemes_grammar_download, 420))
+        compose.onNodeWithText(str(R.string.schemes_grammar_download, 420)).performClick()
+        assertEquals(1, downloads)
     }
 
     @Test

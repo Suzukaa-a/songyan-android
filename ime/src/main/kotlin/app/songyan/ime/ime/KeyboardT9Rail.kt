@@ -17,14 +17,15 @@ import kotlinx.coroutines.CancellationException
  * previous tap typed (never appends), and the engine/editor context decides whether that write
  * actually landed.
  */
-internal suspend fun KeyboardController.handleT9FirstKey(symbol: String) {
+internal suspend fun KeyboardController.handleT9FirstKey() {
     val active = session
     val revision = active?.compositionRevision ?: 0
     val marksAscii = asciiMarksNow
     val context = callbacks.contextBeforeCursor(T9PunctuationCycle.CONTEXT_LIMIT)
     // The shared cycle is expressed in seconds; uptimeMillis is milliseconds.
     val now = uptimeSeconds()
-    val decision = t9FirstKey.tap(false, t9QuickSymbols, marksAscii, context, now, revision)
+    val symbols = mainDefinition()?.effectiveT9QuickSymbols(t9QuickSymbols) ?: t9QuickSymbols
+    val decision = t9FirstKey.tap(false, symbols, marksAscii, context, now, revision)
     if (decision !is T9FirstKeyState.Decision.Cycle) return
     val edit = decision.edit
     if (edit.replacing != null) callbacks.delete()

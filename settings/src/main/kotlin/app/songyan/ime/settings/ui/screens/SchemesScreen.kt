@@ -175,6 +175,7 @@ fun SchemesScreen(
             choosingFor = action
         }
     }
+    var acquiring by rememberSaveable(sources.isEmpty()) { mutableStateOf(sources.isEmpty()) }
     val snackbarHostState = remember { SnackbarHostState() }
     val importCard = importCardOf(dictionaryImport, schemeImport)
 
@@ -240,6 +241,38 @@ fun SchemesScreen(
                     .padding(innerPadding),
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {
+            if (sources.isNotEmpty()) {
+                item { SectionHeader(stringResource(R.string.schemes_sources_section)) }
+                items(sources.size, key = { "source_" + sources[it].id }) { index ->
+                    val source = sources[index]
+                    StoredSourceRow(
+                        source = source,
+                        working = (sourceAction as? StoredSourceUiState.Running)?.sourceId == source.id,
+                        onOpen = { onOpenSource(source.id) },
+                    )
+                }
+            }
+            item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
+            if (schemes.isEmpty()) {
+                item {
+                    StateMessage(
+                        title = stringResource(R.string.schemes_empty_title),
+                        body = stringResource(R.string.schemes_empty_body),
+                        icon = Icons.Outlined.Book,
+                    )
+                }
+            } else {
+                items(schemes.size) { index ->
+                    val scheme = schemes[index]
+                    // The selected radio is the state; repeating 正在使用/未使用 under every name
+                    // would only add noise.
+                    RadioRow(
+                        title = scheme.name,
+                        selected = scheme.id == inUseSchemeId,
+                        onClick = { onUseScheme(scheme.id) },
+                    )
+                }
+            }
             if (importCard != null) {
                 item(key = "import_card") {
                     ImportStatusCard(
@@ -276,6 +309,69 @@ fun SchemesScreen(
                             ),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                }
+            }
+            item {
+                app.songyan.ime.settings.ui.components.SettingsRow(
+                    title = stringResource(R.string.composition_get_scheme),
+                    subtitle = null,
+                    onClick = { acquiring = !acquiring },
+                )
+            }
+            if (acquiring) {
+                item { SectionHeader(stringResource(R.string.row_schemes_title)) }
+                if (!schemeImportAvailable) {
+                    item { BodyText(stringResource(R.string.schemes_scheme_import_unavailable)) }
+                } else {
+                    item {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            // One deploy at a time: a dictionary import may still be running.
+                            val idle = !schemeRunning && !running
+                            Button(
+                                onClick = { schemePicker.launch(SCHEME_ARCHIVE_MIME_TYPES) },
+                                enabled = idle,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.schemes_scheme_import_file))
+                            }
+                            OutlinedButton(
+                                onClick = { folderPicker.launch(null) },
+                                enabled = idle,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.schemes_scheme_import_folder))
+                            }
+                            OutlinedButton(
+                                onClick = { showSchemeLinkDialog = true },
+                                enabled = idle,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.schemes_scheme_import_link))
+                            }
+                        }
+                    }
+                    item { BodyText(stringResource(R.string.schemes_scheme_import_note)) }
+                    item { SectionHeader(stringResource(R.string.schemes_recommended_section)) }
+                    items(
+                        RecommendedSchemes.catalog.size,
+                        key = { "recommended_" + RecommendedSchemes.catalog[it].id },
+                    ) {
+                        val recommended = RecommendedSchemes.catalog[it]
+                        ListItem(
+                            headlineContent = { Text(stringResource(recommended.nameRes)) },
+                            supportingContent = { Text(stringResource(recommended.detailRes)) },
+                            modifier =
+                                Modifier.clickable(enabled = !schemeRunning && !running, role = Role.Button) {
+                                    recommendedId = recommended.id
+                                },
+                        )
+                    }
                 }
             }
             item { SectionHeader(stringResource(R.string.schemes_dictionary_section)) }
@@ -337,89 +433,6 @@ fun SchemesScreen(
                 item { BodyText(stringResource(R.string.schemes_dictionary_note)) }
             }
 
-            item { SectionHeader(stringResource(R.string.row_schemes_title)) }
-            if (!schemeImportAvailable) {
-                item { BodyText(stringResource(R.string.schemes_scheme_import_unavailable)) }
-            } else {
-                item {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // One deploy at a time: a dictionary import may still be running.
-                        val idle = !schemeRunning && !running
-                        Button(
-                            onClick = { schemePicker.launch(SCHEME_ARCHIVE_MIME_TYPES) },
-                            enabled = idle,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.schemes_scheme_import_file))
-                        }
-                        OutlinedButton(
-                            onClick = { folderPicker.launch(null) },
-                            enabled = idle,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.schemes_scheme_import_folder))
-                        }
-                        OutlinedButton(
-                            onClick = { showSchemeLinkDialog = true },
-                            enabled = idle,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(stringResource(R.string.schemes_scheme_import_link))
-                        }
-                    }
-                }
-                item { BodyText(stringResource(R.string.schemes_scheme_import_note)) }
-                item { SectionHeader(stringResource(R.string.schemes_recommended_section)) }
-                items(RecommendedSchemes.catalog.size, key = { "recommended_" + RecommendedSchemes.catalog[it].id }) {
-                    val recommended = RecommendedSchemes.catalog[it]
-                    ListItem(
-                        headlineContent = { Text(stringResource(recommended.nameRes)) },
-                        supportingContent = { Text(stringResource(recommended.detailRes)) },
-                        modifier =
-                            Modifier.clickable(enabled = !schemeRunning && !running, role = Role.Button) {
-                                recommendedId = recommended.id
-                            },
-                    )
-                }
-            }
-            if (sources.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.schemes_sources_section)) }
-                items(sources.size, key = { "source_" + sources[it].id }) { index ->
-                    val source = sources[index]
-                    StoredSourceRow(
-                        source = source,
-                        working = (sourceAction as? StoredSourceUiState.Running)?.sourceId == source.id,
-                        onOpen = { onOpenSource(source.id) },
-                    )
-                }
-            }
-            item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
-            if (schemes.isEmpty()) {
-                item {
-                    StateMessage(
-                        title = stringResource(R.string.schemes_empty_title),
-                        body = stringResource(R.string.schemes_empty_body),
-                        icon = Icons.Outlined.Book,
-                    )
-                }
-            } else {
-                items(schemes.size) { index ->
-                    val scheme = schemes[index]
-                    // The selected radio is the state; repeating 正在使用/未使用 under every name
-                    // would only add noise.
-                    RadioRow(
-                        title = scheme.name,
-                        selected = scheme.id == inUseSchemeId,
-                        onClick = { onUseScheme(scheme.id) },
-                    )
-                }
-            }
             if (rimeConfig.available) {
                 rimeConfigRows(
                     state = rimeConfig,

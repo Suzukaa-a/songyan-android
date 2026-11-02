@@ -6,11 +6,9 @@ private const val PAD_COLUMNS = 4
 private const val PAD_ROWS = 4
 
 /**
- * The keys of the edit pad and where they sit on a grid of [COLUMNS] by [ROWS] units: a D-pad cross
- * in the first three columns and rows (Up on top, Left and Right beside Select, Down below), a row of
- * line start, select all and line end under it, and a column of editing keys on the right. The cross
- * leaves its corners empty, as text editors with a pad do, except Undo, which keeps the top left.
- * The uniform grid of the other panels cannot express that shape, so the pad has its own.
+ * The edit pad fills a four-column grid. Tall horizontal arrows flank the vertical arrows and Select;
+ * Undo, Copy and Paste sit on the right. Cut shares Select All's bottom-row position when text is selected.
+ * The uniform grid of the other panels cannot express the tall arrow targets.
  */
 enum class EditPadKey(
     val column: Int,
@@ -19,20 +17,21 @@ enum class EditPadKey(
     val action: EditAction?,
     /** Held, the key repeats the way the keyboard's Backspace does. */
     val repeats: Boolean = false,
+    val rowSpan: Int = 1,
 ) {
-    UNDO(0, 0, EditAction.UNDO),
+    UNDO(3, 0, EditAction.UNDO),
     UP(1, 0, EditAction.UP, repeats = true),
-    LEFT(0, 1, EditAction.LEFT, repeats = true),
+    LEFT(0, 0, EditAction.LEFT, repeats = true, rowSpan = 3),
     SELECT(1, 1, null),
-    RIGHT(2, 1, EditAction.RIGHT, repeats = true),
+    RIGHT(2, 0, EditAction.RIGHT, repeats = true, rowSpan = 3),
     DOWN(1, 2, EditAction.DOWN, repeats = true),
     LINE_START(0, 3, EditAction.LINE_START),
     SELECT_ALL(1, 3, EditAction.SELECT_ALL),
     LINE_END(2, 3, EditAction.LINE_END),
-    DELETE(3, 0, EditAction.DELETE, repeats = true),
+    DELETE(3, 3, EditAction.DELETE, repeats = true),
     COPY(3, 1, EditAction.COPY),
-    CUT(3, 2, EditAction.CUT),
-    PASTE(3, 3, EditAction.PASTE),
+    CUT(1, 3, EditAction.CUT),
+    PASTE(3, 2, EditAction.PASTE),
     ;
 
     /** Moves the caret, so it extends the selection while Select is on. */
@@ -56,6 +55,7 @@ enum class EditPadKey(
     companion object {
         const val COLUMNS = PAD_COLUMNS
         const val ROWS = PAD_ROWS
+        val layoutKeys = entries.filter { it != CUT }
     }
 }
 
@@ -75,6 +75,10 @@ class EditPadState {
         private set
 
     var availability = EditAvailability(hasSelection = false, canPaste = true)
+
+    /** The bottom-row action follows the actual editor selection, independently of Select mode. */
+    fun displayedKey(key: EditPadKey): EditPadKey =
+        if (key == EditPadKey.SELECT_ALL && availability.hasSelection) EditPadKey.CUT else key
 
     /** Select toggles the mode and keeps whatever is selected, so turning it off collapses nothing. */
     fun toggleSelect() {
@@ -118,9 +122,8 @@ object EditPadGeometry {
     const val STACKED_MIN_HEIGHT_DP = 40.0
 
     /**
-     * The box of every [EditPadKey] (same order as [EditPadKey.entries]) in a pad of [widthDp] by
-     * [heightDp] whose top left is ([leftDp], [topDp]). The boxes never overlap; the three empty
-     * corners of the cross are the only part of the pad no key covers.
+     * Boxes in [EditPadKey.layoutKeys] order fill the pad without overlaps or empty corners.
+     * Cut uses the same target as Select All, so changing selection never moves the surrounding keys.
      */
     fun cells(
         widthDp: Double,
@@ -130,12 +133,12 @@ object EditPadGeometry {
     ): List<PanelBox> {
         val unitWidth = widthDp / EditPadKey.COLUMNS
         val unitHeight = heightDp / EditPadKey.ROWS
-        return EditPadKey.entries.map { key ->
+        return EditPadKey.layoutKeys.map { key ->
             PanelBox(
                 left = leftDp + key.column * unitWidth,
                 top = topDp + key.row * unitHeight,
                 right = leftDp + (key.column + 1) * unitWidth,
-                bottom = topDp + (key.row + 1) * unitHeight,
+                bottom = topDp + (key.row + key.rowSpan) * unitHeight,
             )
         }
     }

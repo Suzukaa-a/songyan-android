@@ -2,7 +2,10 @@ package app.songyan.ime.settings
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -37,6 +40,7 @@ class LayoutEditorScreenTest {
 
     private val source = InMemoryLayoutLibrarySource(LayoutRegistry.create())
     private var closed = false
+    private var used = false
 
     private fun show(layoutId: String = "qwerty26") {
         compose.setContent {
@@ -44,6 +48,7 @@ class LayoutEditorScreenTest {
                 LayoutEditorScreen(
                     layoutId = layoutId,
                     onClose = { closed = true },
+                    onUse = { used = true },
                     viewModel =
                         viewModel(
                             factory =
@@ -128,6 +133,24 @@ class LayoutEditorScreenTest {
                 .label,
         )
         assertEquals(false, closed)
+        compose.onNode(hasSetTextAction() and hasText("qq")).performTextReplacement("qqq")
+        compose
+            .onNode(
+                hasText(str(R.string.layouts_action_use)) and hasAnyAncestor(hasTestTag("editor_snackbar")),
+            ).performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_discard_title)).assertIsDisplayed()
+        assertEquals(false, used)
+        compose.onNodeWithText(str(R.string.layout_editor_keep_editing)).performClick()
+        compose.onNode(hasSetTextAction() and hasText("qqq")).assertExists()
+        assertEquals(false, used)
+        assertEquals(
+            "qq",
+            source.registry.value!!
+                .layout("qwerty26")!!
+                .rows[0]
+                .keys[0]
+                .label,
+        )
     }
 
     @Test
@@ -211,19 +234,8 @@ class LayoutEditorScreenTest {
         show("phone9")
         keyNode(2, 2, "JKL").performClick()
         compose
-            .onAllNodes(
-                hasSetTextAction() and
-                    androidx.compose.ui.test
-                        .hasText("JKL"),
-            ).onFirst()
-            .performTextClearance()
-        compose
-            .onAllNodes(
-                hasSetTextAction() and
-                    androidx.compose.ui.test
-                        .hasText(""),
-            ).onFirst()
-            .performTextInput("我的")
+            .onNode(hasSetTextAction() and hasText(str(R.string.layout_editor_key_label)))
+            .performTextReplacement("我的")
         compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val stored = source.registry.value!!.layout("phone9")!!

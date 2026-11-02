@@ -31,6 +31,7 @@ data class StoredSourceInfo(
     val schemes: List<InstalledScheme> = emptyList(),
     /** The input method the keyboard types with; only set while this package is in use. */
     val inUseSchemeId: String? = null,
+    val requiredModels: List<String> = emptyList(),
 ) {
     /** The bundled package is never deleted: it is what the keyboard falls back to. */
     val deletable: Boolean get() = kind != StoredSourceKind.BUILTIN

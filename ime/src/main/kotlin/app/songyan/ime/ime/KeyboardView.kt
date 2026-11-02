@@ -212,6 +212,8 @@ class KeyboardView(
         }
 
     var onAction: (LayoutAction) -> Unit = {}
+    var onT9FirstKey: (LayoutAction) -> Unit = { onAction(it) }
+    internal var t9FirstKeyIndex = -1
     var onCursor: (Int) -> Unit = {}
 
     /** What a key event feels like: [FeedbackKind] says which tick, the action picks the sound. */
@@ -345,6 +347,7 @@ class KeyboardView(
             return
         }
         shell = null
+        t9FirstKeyIndex = -1
         railIndices = emptySet()
         railChoices = emptyList()
         railSelectedCount = 0

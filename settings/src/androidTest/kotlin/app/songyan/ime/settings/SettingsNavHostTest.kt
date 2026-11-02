@@ -76,6 +76,23 @@ class SettingsNavHostTest {
         compose.onAllNodes(hasText(str(R.string.onboarding_intro))).fetchSemanticsNodes().isNotEmpty()
 
     @Test
+    fun aSettledEmptyCompositionOffersSchemeAcquisition() {
+        lateinit var navigation: androidx.navigation.NavHostController
+        val model = viewModel(ImeStatus(true, true), SettingsAppState(sourcesLoaded = true))
+        compose.setContent {
+            navigation = androidx.navigation.compose.rememberNavController()
+            SongyanTheme(dynamicColor = false) {
+                SettingsNavHost(viewModel = model, versionName = "1", navController = navigation)
+            }
+        }
+        compose.runOnIdle { navigation.navigate(app.songyan.ime.settings.ui.SettingsRoutes.COMPOSITION) }
+        compose.onNodeWithText(str(R.string.composition_needs_scheme)).assertExists()
+        compose.onNodeWithText(str(R.string.composition_get_scheme)).performClick()
+        compose.waitForIdle()
+        assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.SCHEMES, navigation.currentDestination?.route)
+    }
+
+    @Test
     fun theGuideOpensByItselfOnTheFirstLaunch() {
         show(ImeStatus(enabled = false, selected = false))
         compose.waitUntil(5_000) { onOnboarding() }

@@ -19,6 +19,7 @@ import app.songyan.ime.settings.state.EngineFeaturesSnapshot
 import app.songyan.ime.settings.state.FeatureChangeResult
 import app.songyan.ime.settings.state.GrammarSelection
 import app.songyan.ime.settings.state.LuaComponentInfo
+import app.songyan.ime.settings.state.SettingsAppStateHolder
 import app.songyan.ime.settings.state.StoredFeatureFile
 import app.songyan.ime.settings.state.TransferProgress
 import app.songyan.ime.storage.AppStorage
@@ -167,6 +168,8 @@ internal class EngineFeaturesGatewayImpl(
                         grammarModels =
                             settings.grammarModels.filter { it.name != imported.file.name } + imported.file,
                     )
+                }.also { result ->
+                    if (result is FeatureChangeResult.Success) SettingsAppStateHolder.current.refresh()
                 }
         }
 

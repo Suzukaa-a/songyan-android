@@ -55,7 +55,10 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     syncMenu()
     render()
     ImePerf.ready()
-    while (heldKeys.isNotEmpty() && ready) dispatch(heldKeys.removeFirst())
+    while (heldKeys.isNotEmpty() && ready) {
+        val (action, t9FirstKey) = heldKeys.removeFirst()
+        dispatch(action, t9FirstKey)
+    }
 }
 
 /**

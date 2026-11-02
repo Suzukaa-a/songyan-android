@@ -132,19 +132,29 @@ class EditorDraftsTest {
 
     @Test
     fun layoutSnapshotRestoresInvalidIntermediateTextSplitAndSelection() {
-        val draft =
-            LayoutDraft(BuiltinLayouts.qwerty26).rename("").copy(
-                selection = KeySelection(1, 2),
-                splitView = true,
+        val drafts =
+            listOf(
+                LayoutDraft(BuiltinLayouts.qwerty26).rename("").copy(selection = KeySelection(1, 2), splitView = true),
+                LayoutDraft(BuiltinLayouts.phone9).copy(
+                    layout =
+                        BuiltinLayouts.phone9.copy(
+                            name = "",
+                            t9QuickSymbols = "；；",
+                            t9FirstKeyBehavior = app.songyan.ime.layout.T9FirstKeyBehavior.CUSTOM,
+                        ),
+                    selection = KeySelection(1, 2),
+                ),
             )
-        val bytes =
-            ByteArrayOutputStream()
-                .also { buffer ->
-                    DataOutputStream(buffer).use { it.writeLayoutDraft(draft) }
-                }.toByteArray()
-        val restored = DataInputStream(ByteArrayInputStream(bytes)).use { it.readLayoutDraft() }
-        assertEquals(draft, restored)
-        assertTrue(restored.hasChanges)
+        for (draft in drafts) {
+            val bytes =
+                ByteArrayOutputStream()
+                    .also { buffer ->
+                        DataOutputStream(buffer).use { it.writeLayoutDraft(draft) }
+                    }.toByteArray()
+            val restored = DataInputStream(ByteArrayInputStream(bytes)).use { it.readLayoutDraft() }
+            assertEquals(draft, restored)
+            assertTrue(restored.hasChanges)
+        }
     }
 
     @Test

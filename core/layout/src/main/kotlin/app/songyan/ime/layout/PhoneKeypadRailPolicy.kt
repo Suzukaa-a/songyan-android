@@ -101,16 +101,33 @@ object PhoneKeypadRailPolicy {
      * (quick symbols on the left, Delete and 重输 on the right) becomes editable keys. The engine's
      * reading areas and any other areas are kept as they are.
      */
-    fun withDeclaredRails(definition: LayoutDefinition): LayoutDefinition {
+    fun withDeclaredRails(
+        definition: LayoutDefinition,
+        savedQuickSymbols: String = "",
+    ): LayoutDefinition {
         if (!usesBundledRails(definition)) return definition
         val kept =
             (definition.auxiliaryAreas ?: emptyList()).filter {
                 it.role == LayoutAuxiliaryArea.Role.DISAMBIGUATION
             }
+        val symbols = definition.effectiveT9QuickSymbols(savedQuickSymbols)
         val leading =
             BuiltinLayouts
-                .t9QuickRailValues("", ascii = false)
-                .map { LayoutKey(it, action = LayoutAction.literal(it)) }
+                .t9QuickRailValues(symbols, ascii = false)
+                .zip(BuiltinLayouts.t9QuickRailValues(symbols, ascii = true)) { value, asciiValue ->
+                    LayoutKey(
+                        value,
+                        action =
+                            LayoutAction.literal(
+                                value,
+                                asciiValue =
+                                    asciiValue.takeIf {
+                                        it != value
+                                    },
+                            ),
+                        titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                    )
+                }
         val trailing =
             listOf(
                 LayoutKey("⌫", action = LayoutAction(LayoutActionKind.BACKSPACE)),

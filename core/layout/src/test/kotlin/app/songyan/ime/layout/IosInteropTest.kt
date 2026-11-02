@@ -129,6 +129,9 @@ class IosInteropTest {
         // It is a telephone keypad the shell can draw, and it is not the built-in one.
         assertTrue(PhoneKeypadStructure.matches(layout))
         assertTrue(BuiltinLayouts.matchesPhone9PrimarySemantics(layout))
+        assertEquals(T9FirstKeyBehavior.CUSTOM, layout.t9FirstKeyBehavior)
+        assertFalse(BuiltinLayouts.usesT9QuickFirstKey(layout))
+        assertEquals("。？！", layout.effectiveT9QuickSymbols("旧"))
         assertEquals("我的", layout.rows[1].keys[1].label)
         assertEquals(
             "5",
@@ -200,7 +203,13 @@ class IosInteropTest {
                 .duplicated("android-abc", "我的 ABC")
                 .withSplit(LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF))
         // A nine-key copy the way the editor leaves it: its rails declared as data, the control row as it was.
-        val nine = PhoneKeypadRailPolicy.withDeclaredRails(BuiltinLayouts.phone9.copyWithId("android-nine", "我的九键"))
+        val nine =
+            PhoneKeypadRailPolicy.withDeclaredRails(
+                BuiltinLayouts.phone9.copyWithId("android-nine", "我的九键").copy(
+                    t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS,
+                    t9QuickSymbols = "，。？",
+                ),
+            )
         return LayoutRegistry
             .create()
             .install(mine.encoded())

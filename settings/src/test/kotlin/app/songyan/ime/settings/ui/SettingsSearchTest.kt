@@ -57,11 +57,14 @@ class SettingsSearchTest {
                 SettingsRoutes.CANDIDATE_BAR,
                 SettingsRoutes.SHUANGPIN,
                 SettingsRoutes.KEYBOARD_MENU,
-                SettingsRoutes.T9_SYMBOLS,
+                SettingsRoutes.NINE_KEY_EDITOR,
                 SettingsRoutes.TRY_OUT,
                 SettingsRoutes.SCHEMES,
                 SettingsRoutes.KEYBOARDS,
                 SettingsRoutes.LAYOUTS,
+                SettingsRoutes.PAGES,
+                SettingsRoutes.COMPOSITION,
+                SettingsRoutes.LEARNING,
                 SettingsRoutes.quickContent(),
                 SettingsRoutes.ONBOARDING,
                 SettingsRoutes.ABOUT,
@@ -72,8 +75,9 @@ class SettingsSearchTest {
 
     @Test
     fun theNineKeyQuickSymbolsAreFoundUnderMyKeyboards() {
-        val entry = SettingsSearch.entries.single { it.route == SettingsRoutes.T9_SYMBOLS }
+        val entry = SettingsSearch.entries.single { it.route == SettingsRoutes.NINE_KEY_EDITOR }
         assertEquals(SettingsRoutes.KEYBOARDS, SettingsRoutes.topLevelOf(entry.route))
+        assertEquals(R.string.layouts_title, entry.section)
     }
 
     @Test

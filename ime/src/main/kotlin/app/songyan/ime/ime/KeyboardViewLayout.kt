@@ -479,6 +479,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
     val boxes = mutableListOf<KeyBounds>()
     val rails = mutableSetOf<Int>()
     var railIndex = 0
+    var firstKeyIndex = -1
     for (placed in built.keys) {
         if (!showsGlobe && placed.key.action.type == LayoutActionKind.GLOBE) continue
         if (placed.region == PhoneKeypadLayout.Region.LEADING_RAIL && railChoices.isNotEmpty()) {
@@ -495,6 +496,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
         } else {
             keys += placed.key
         }
+        if (placed.t9FirstKey) firstKeyIndex = keys.lastIndex
         boxes +=
             KeyBounds(
                 placed.left * density + shellInset,
@@ -504,6 +506,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
             )
     }
     this.keys = keys
+    t9FirstKeyIndex = firstKeyIndex
     bounds = boxes
     railIndices = rails
     applyKeyFaces()
@@ -780,6 +783,7 @@ internal fun KeyboardView.keySnapshot(index: Int): KeyPressSnapshot =
     KeyPressSnapshot(
         identity = identities.getOrNull(index).orEmpty(),
         action = keys[index].action,
+        t9FirstKey = index == t9FirstKeyIndex,
         railLabel = if (index in railIndices) labels.getOrNull(index) else null,
         railPosition = if (index in railIndices) railPosition(index) else -1,
         railApplied = index in railIndices && railPosition(index) < railSelectedCount,

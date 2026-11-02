@@ -114,6 +114,16 @@ object BuiltinLayouts {
                 note = PHONE9_NOTE,
             )
 
+    /** Explicit behavior wins; older definitions retain their inferred first-key behavior. */
+    fun usesT9QuickFirstKey(definition: LayoutDefinition): Boolean {
+        if (!PhoneKeypadStructure.matches(definition)) return false
+        return when (definition.t9FirstKeyBehavior) {
+            T9FirstKeyBehavior.QUICK_SYMBOLS -> true
+            T9FirstKeyBehavior.CUSTOM -> false
+            null -> matchesPhone9PrimarySemantics(definition)
+        }
+    }
+
     /**
      * Primary-gesture identity of the bundled 9-key: the known input metadata and the three main rows'
      * key counts, widths and primary actions. Labels, corner hints, title modes and long-press menus,

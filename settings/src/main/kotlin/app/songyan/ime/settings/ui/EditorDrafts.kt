@@ -222,7 +222,8 @@ data class LayoutDraft(
         copy(layout = layout.withSplit(split?.let { LayoutRowsEditing.adjusted(it, layout.rows) }))
 
     /** Turns the keyboard's own side columns into keys the user can edit; the layout looks the same. */
-    fun declareRails(): LayoutDraft = copy(layout = PhoneKeypadRailPolicy.withDeclaredRails(layout), rail = null)
+    fun declareRails(inheritedSymbols: String = ""): LayoutDraft =
+        copy(layout = PhoneKeypadRailPolicy.withDeclaredRails(layout, inheritedSymbols), rail = null)
 
     /** Gives the side columns back to the keyboard. The keys the user declared are dropped. */
     fun useBundledRails(): LayoutDraft =

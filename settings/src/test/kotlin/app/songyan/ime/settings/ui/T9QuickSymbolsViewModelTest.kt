@@ -1,6 +1,7 @@
 package app.songyan.ime.settings.ui
 
-import app.songyan.ime.layout.T9QuickSymbolStore
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.state.InMemorySettingsPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -20,19 +21,16 @@ import org.junit.Test
 class T9QuickSymbolsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
-    @Before
-    fun setUp() {
+    @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
     }
 
-    @After
-    fun tearDown() {
+    @After fun tearDown() {
         Dispatchers.resetMain()
     }
 
-    @Test
-    fun theRulesMatchTheIosEditor() {
-        assertEquals(T9QuickSymbolsProblem.INVALID, T9QuickSymbolsDraft.check(""))
+    @Test fun theRulesMatchTheLayoutFieldAndAllowEmptyForBuiltinDefaults() {
+        assertNull(T9QuickSymbolsDraft.check(""))
         assertEquals(T9QuickSymbolsProblem.INVALID, T9QuickSymbolsDraft.check("，。 ？"))
         assertEquals(T9QuickSymbolsProblem.INVALID, T9QuickSymbolsDraft.check("一二三四五六七八九十甲乙丙"))
         assertEquals(T9QuickSymbolsProblem.DUPLICATE, T9QuickSymbolsDraft.check("，。，"))
@@ -40,49 +38,81 @@ class T9QuickSymbolsViewModelTest {
         assertNull(T9QuickSymbolsDraft.check("，"))
     }
 
-    @Test
-    fun thePreviewSplitsTheListIntoTheSideRailAndTheFirstKeyCycle() {
+    @Test fun thePreviewSplitsTheListIntoTheSideRailAndTheFirstKeyCycle() {
         val (rail, cycle) = T9QuickSymbolsDraft.preview("；：")
         assertEquals(listOf("；", "：", "，"), rail)
         assertEquals("。？！、…", cycle.take(5).joinToString(""))
     }
 
-    @Test
-    fun aValidListIsStoredAndAnInvalidOneIsNot() =
+    @Test fun quickSymbolsArePartOfTheLayoutDraftAndInvalidOnesNeverReplaceTheSavedLayout() =
         runTest(dispatcher) {
             val preferences = InMemorySettingsPreferences()
-            val viewModel = T9QuickSymbolsViewModel(preferences)
+            preferences.setT9QuickSymbols("！")
+            val source = InMemoryLayoutLibrarySource()
+            val model = LayoutEditorViewModel(source, "phone9", preferences = preferences)
             advanceUntilIdle()
-
-            assertTrue(viewModel.save("；：，"))
+            assertEquals("！", model.inheritedQuickSymbols.value)
+            model.update { it.copy(layout = it.layout.copy(t9QuickSymbols = "；：，")) }
+            assertNull(
+                source.registry.value!!
+                    .layout("phone9")!!
+                    .t9QuickSymbols,
+            )
+            assertTrue(model.draft.value!!.hasChanges)
+            model.save()
             advanceUntilIdle()
-            assertEquals("；：，", preferences.t9QuickSymbols.first())
-            assertEquals("；：，", viewModel.uiState.value.effective)
-
-            assertFalse(viewModel.save("，，"))
+            assertEquals(
+                "；：，",
+                source.registry.value!!
+                    .layout("phone9")!!
+                    .t9QuickSymbols,
+            )
+            assertEquals("！", preferences.t9QuickSymbols.first())
+            assertFalse(model.draft.value!!.hasChanges)
+            model.update { it.copy(layout = it.layout.copy(t9QuickSymbols = "，，")) }
+            model.save()
             advanceUntilIdle()
-            assertEquals("；：，", preferences.t9QuickSymbols.first())
+            assertTrue(model.outcome.value is SaveOutcome.Failed)
+            assertEquals(
+                "；：，",
+                source.registry.value!!
+                    .layout("phone9")!!
+                    .t9QuickSymbols,
+            )
+            assertTrue(model.draft.value!!.hasChanges)
         }
 
-    @Test
-    fun savingTheDefaultSequenceStoresNothingAndRestoreClearsTheChoice() =
+    @Test fun restoringDefaultsWritesOnlyTheLayoutAndDeclaringRailsFreezesItsEffectiveSymbols() =
         runTest(dispatcher) {
             val preferences = InMemorySettingsPreferences()
-            val viewModel = T9QuickSymbolsViewModel(preferences)
+            preferences.setT9QuickSymbols("；：")
+            val source = InMemoryLayoutLibrarySource()
+            val model = LayoutEditorViewModel(source, "phone9", preferences = preferences)
             advanceUntilIdle()
-            assertEquals(T9QuickSymbolStore.DEFAULT_SYMBOLS, viewModel.uiState.value.effective)
-
-            viewModel.save("；")
+            model.update { it.declareRails(model.inheritedQuickSymbols.value.orEmpty()) }
+            assertEquals(
+                "；",
+                model.draft.value!!
+                    .railKeys(app.songyan.ime.layout.LayoutAuxiliaryArea.Position.LEADING)
+                    .first()
+                    .label,
+            )
+            model.update { it.copy(layout = it.layout.copy(t9QuickSymbols = "")) }
+            model.save()
             advanceUntilIdle()
-            viewModel.save(T9QuickSymbolStore.DEFAULT_SYMBOLS)
-            advanceUntilIdle()
-            assertEquals("", preferences.t9QuickSymbols.first())
-
-            viewModel.save("；")
-            advanceUntilIdle()
-            viewModel.restoreDefault()
-            advanceUntilIdle()
-            assertEquals("", preferences.t9QuickSymbols.first())
-            assertEquals(T9QuickSymbolStore.DEFAULT_SYMBOLS, viewModel.uiState.value.effective)
+            assertEquals(
+                "",
+                source.registry.value!!
+                    .layout("phone9")!!
+                    .t9QuickSymbols,
+            )
+            assertEquals("；：", preferences.t9QuickSymbols.first())
+            assertEquals(
+                BuiltinLayouts.t9QuickSymbolValues("", false),
+                T9QuickSymbolsDraft.preview("").let {
+                    it.first +
+                        it.second
+                },
+            )
         }
 }

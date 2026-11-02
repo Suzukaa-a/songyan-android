@@ -54,7 +54,7 @@ internal fun KeyboardView.activate(snapshot: KeyPressSnapshot) {
         }
         lastShift = now
     }
-    onAction(action)
+    if (snapshot.t9FirstKey) onT9FirstKey(action) else onAction(action)
 }
 
 internal fun KeyboardView.handleDown(

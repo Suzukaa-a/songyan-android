@@ -10,6 +10,11 @@ import app.songyan.ime.content.ImportedDictionaryMetadataReader
 import app.songyan.ime.deploy.DeployContract
 import app.songyan.ime.deploy.DeployState
 import app.songyan.ime.deploy.DeployStatusStore
+import app.songyan.ime.ime.KeyboardResourceSets
+import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
+import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.packages.SchemeGrammarRequirements
 import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
@@ -23,6 +28,7 @@ import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.state.StoredSourceKind
 import app.songyan.ime.settings.state.StoredSourceStatus
 import app.songyan.ime.storage.AppStorage
+import app.songyan.ime.storage.EngineFeatureStore
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.PublicationRecord
 import app.songyan.ime.storage.SourceCatalog
@@ -37,6 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.File
 import java.net.URI
 
 /**
@@ -127,6 +134,7 @@ class AppSettingsStateSource(
             }
         return SettingsAppState(
             engine = engine,
+            sourcesLoaded = true,
             schemes = schemes,
             inUseSchemeId = schemes.firstOrNull { it.id == activeSchemaId }?.id ?: schemes.firstOrNull()?.id,
             keyboards =
@@ -158,7 +166,19 @@ class AppSettingsStateSource(
         stored: List<SourceManifest>,
     ): List<InstalledScheme> {
         val manifest = stored.firstOrNull { it.sourceId == active.sourceId }
-        return schemesNamed(manifest, active.schemaIds.ifEmpty { listOf(active.schemaId) })
+        val ids = active.schemaIds.ifEmpty { listOf(active.schemaId) }
+        val build = File(storage.generationDir(active.generation), "build")
+        val adapters = EncodingAdapterRegistry.read(build, ids.toSet())
+        val resources = KeyboardResourceSets.forEngineSchemas(ids.map { KeyboardSchemaDescriptor(it, it) }, adapters)
+        return schemesNamed(manifest, ids).map { scheme ->
+            scheme.copy(
+                supportedLayouts =
+                    KeyboardLayoutKind.entries
+                        .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }
+                        .map { it.wire }
+                        .toSet(),
+            )
+        }
     }
 
     private fun schemesNamed(
@@ -201,6 +221,12 @@ class AppSettingsStateSource(
             updatable = manifest.kind == SourceKind.SCHEME && manifest.origin != null,
             originHost = manifest.origin?.let { runCatching { URI(it).host }.getOrNull() },
             schemes = schemes,
+            requiredModels =
+                if (manifest.kind == SourceKind.SCHEME && catalog.isIntact(manifest)) {
+                    missingGrammarModels(storage, storage.sourceDir(manifest.sourceId))
+                } else {
+                    emptyList()
+                },
             inUseSchemeId =
                 if (inUse) {
                     schemes
@@ -274,6 +300,18 @@ class AppSettingsStateSource(
                 "songyan_flypy" to R.string.scheme_builtin_flypy,
             )
     }
+}
+
+internal fun missingGrammarModels(
+    storage: AppStorage,
+    source: File,
+): List<String> {
+    val features = EngineFeatureStore(storage)
+    val settings = features.read()
+    val storedModels = settings.grammarModels.filter { features.grammarModel(settings, it.name) != null }
+    return SchemeGrammarRequirements
+        .missingModels(source)
+        .filterNot { path -> storedModels.any { it.displayName == path || it.name == path } }
 }
 
 /**

@@ -62,6 +62,7 @@ internal data class KeyPressSnapshot(
     val railPosition: Int = -1,
     /** Whether this rail choice is already applied (drawn as chosen, not tappable). */
     val railApplied: Boolean = false,
+    val t9FirstKey: Boolean = false,
 ) {
     val isBackspace: Boolean get() = action.type == LayoutActionKind.BACKSPACE
 

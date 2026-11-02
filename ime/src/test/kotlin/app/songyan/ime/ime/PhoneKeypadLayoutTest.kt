@@ -133,6 +133,38 @@ class PhoneKeypadLayoutTest {
         val composing = PhoneKeypadLayout.firstKey(composing = true, savedQuickSymbols = "", asciiPunctuation = false)
         assertEquals(LayoutActionKind.CODE, composing.action.type)
         assertEquals("'", composing.action.value)
+        val local =
+            BuiltinLayouts.phone9.copy(
+                t9QuickSymbols = "；：！、",
+                t9FirstKeyBehavior = app.songyan.ime.layout.T9FirstKeyBehavior.QUICK_SYMBOLS,
+            )
+        val shell = requireNotNull(PhoneKeypadLayout.build(config(saved = "？", definition = local)))
+        assertEquals(listOf("；", "：", "！"), shell.region(PhoneKeypadLayout.Region.LEADING_RAIL).map { it.key.label })
+        assertEquals(
+            "、",
+            shell.keys
+                .single { it.t9FirstKey }
+                .key.action.value,
+        )
+        val custom =
+            requireNotNull(
+                PhoneKeypadLayout.build(
+                    config(
+                        definition =
+                            local.copy(
+                                t9FirstKeyBehavior = app.songyan.ime.layout.T9FirstKeyBehavior.CUSTOM,
+                            ),
+                    ),
+                ),
+            )
+        assertTrue(custom.keys.none { it.t9FirstKey })
+        assertEquals(
+            "，",
+            custom
+                .region(PhoneKeypadLayout.Region.MAIN)
+                .first()
+                .key.action.value,
+        )
     }
 
     @Test

@@ -92,10 +92,36 @@ import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
 import app.songyan.ime.settings.ui.screens.SchemeDetailScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
-import app.songyan.ime.settings.ui.screens.T9QuickSymbolsScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
 import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
+
+@Composable
+private fun grammarModelInput(navController: NavHostController): GrammarModelCardInput {
+    val owner = LocalActivity.current as? ComponentActivity
+    val model: EngineFeaturesViewModel =
+        if (owner != null) {
+            viewModel(viewModelStoreOwner = owner, factory = EngineFeaturesViewModel.Factory())
+        } else {
+            viewModel(factory = EngineFeaturesViewModel.Factory())
+        }
+    val state by model.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { model.reload() }
+    return GrammarModelCardInput(
+        state = state,
+        actions =
+            GrammarModelActions(
+                onDownload = model::importGrammarModelFromUrl,
+                onPickFile = {},
+                onCancel = model::cancelDownload,
+                onRetry = model::retry,
+                onDismissFailure = model::consumeFailure,
+                onOpenFeatures = { navController.navigate(SettingsRoutes.FEATURES) },
+                onDismiss = model::consumeGrammarModelImported,
+            ),
+        onImportFile = model::importGrammarModel,
+    )
+}
 
 /** Routes; plain strings keep the graph readable and the back stack debuggable. */
 object SettingsRoutes {
@@ -110,12 +136,20 @@ object SettingsRoutes {
     const val CANDIDATE_BAR = "candidateBar"
     const val SHUANGPIN = "shuangpinHints"
     const val T9_SYMBOLS = "t9QuickSymbols"
+    const val NINE_KEY_EDITOR = "nineKeyEditor"
     const val KEYBOARD_MENU = "keyboardMenu"
     const val LAYOUTS = "layouts"
     const val LAYOUT_EDITOR = "layouts/edit/{id}"
     const val PAGES = "pages"
     const val PAGE_EDITOR = "pages/edit/{id}"
     const val COMPOSITION = "composition"
+    const val USE_CONTENT = "useContent/{kind}/{id}"
+
+    fun useContent(
+        id: String,
+        page: Boolean = false,
+    ): String = "useContent/" + (if (page) "page" else "layout") + "/" + Uri.encode(id)
+
     const val QUICK_CONTENT = "quickContent?addPhrase={addPhrase}"
     const val TRY_OUT = "tryOut"
     const val LEARNING = "learning"
@@ -129,7 +163,16 @@ object SettingsRoutes {
         when (route) {
             null, HOME -> null
             FEATURES, CANDIDATE_BAR, SHUANGPIN -> OPTIONS
-            LAYOUTS, LAYOUT_EDITOR, PAGES, PAGE_EDITOR, COMPOSITION, KEYBOARD_MENU, T9_SYMBOLS -> KEYBOARDS
+            LAYOUTS,
+            LAYOUT_EDITOR,
+            PAGES,
+            PAGE_EDITOR,
+            COMPOSITION,
+            USE_CONTENT,
+            KEYBOARD_MENU,
+            T9_SYMBOLS,
+            NINE_KEY_EDITOR,
+            -> KEYBOARDS
             SCHEME_DETAIL -> SCHEMES
             LICENSES, LICENSE_DETAIL -> ABOUT
             else -> route
@@ -335,6 +378,9 @@ private fun NavGraphBuilder.settingsGraph(
             schemeImport = state.value.schemeImport,
             dictionaryImport = state.value.dictionaryImport,
             onUse = viewModel::useSource,
+            onSelectMethod = viewModel::useScheme,
+            onImportScheme = viewModel::importScheme,
+            grammarModel = grammarModelInput(navController),
             onUpdate = viewModel::updateScheme,
             onDelete = viewModel::deleteSource,
             onDismissSourceAction = viewModel::dismissSourceAction,
@@ -359,8 +405,8 @@ private fun NavGraphBuilder.settingsGraph(
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
                 onOpenComposition = { navController.navigate(SettingsRoutes.COMPOSITION) },
+                onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
                 onOpenMenu = { navController.navigate(SettingsRoutes.KEYBOARD_MENU) },
-                onOpenQuickSymbols = { navController.navigate(SettingsRoutes.T9_SYMBOLS) },
                 onBack = topBack(navController),
             )
         }
@@ -370,6 +416,7 @@ private fun NavGraphBuilder.settingsGraph(
         LayoutsScreen(
             onBack = { navController.popBackStack() },
             onEdit = { id -> navController.navigate(SettingsRoutes.layoutEditor(id)) },
+            onUse = { id -> navController.navigate(SettingsRoutes.useContent(id)) },
             onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
             showSwitchKey = state.value.keyboardFeel.showSwitchKey,
             onShowSwitchKeyChange = viewModel::setShowSwitchKey,
@@ -383,6 +430,7 @@ private fun NavGraphBuilder.settingsGraph(
     ) { entry ->
         LayoutEditorScreen(
             layoutId = entry.arguments?.getString("id").orEmpty(),
+            onUse = { id -> navController.navigate(SettingsRoutes.useContent(id)) },
             onClose = { navController.popBackStack() },
         )
     }
@@ -418,6 +466,7 @@ private fun NavGraphBuilder.settingsGraph(
         PagesScreen(
             onBack = { navController.popBackStack() },
             onEdit = { id -> navController.navigate(SettingsRoutes.pageEditor(id)) },
+            onUse = { id -> navController.navigate(SettingsRoutes.useContent(id, page = true)) },
             inputMethodNames = BuiltinTemplateSchemas.NAMES + state.value.schemes.associate { it.id to it.name },
         )
     }
@@ -428,18 +477,52 @@ private fun NavGraphBuilder.settingsGraph(
     ) { entry ->
         PageEditorScreen(
             pageId = entry.arguments?.getString("id").orEmpty(),
+            onUse = { id -> navController.navigate(SettingsRoutes.useContent(id, page = true)) },
             onClose = { navController.popBackStack() },
+        )
+    }
+
+    composable(
+        SettingsRoutes.USE_CONTENT,
+        arguments =
+            listOf(
+                navArgument("kind") { type = NavType.StringType },
+                navArgument("id") {
+                    type =
+                        NavType.StringType
+                },
+            ),
+    ) { entry ->
+        app.songyan.ime.settings.ui.screens.UseContentScreen(
+            contentId = entry.arguments?.getString("id").orEmpty(),
+            isPage = entry.arguments?.getString("kind") == "page",
+            schemes = state.value.schemes,
+            sourcesLoaded = state.value.sourcesLoaded,
+            onActivate = viewModel::activateKeyboard,
+            onTryOut = { navController.navigate(SettingsRoutes.TRY_OUT) },
+            onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+            onBack = { navController.popBackStack() },
         )
     }
 
     composable(SettingsRoutes.COMPOSITION) {
         val key = compositionKeyOf(state.value.inUseSchemeId, state.value.layoutId)
-        if (key == null) {
+        if (!state.value.sourcesLoaded && key == null) {
             LoadingScreen(stringResource(R.string.composition_title), topBack(navController))
+        } else if (key == null) {
+            app.songyan.ime.settings.ui.screens.CompositionEmptyScreen(
+                onBack = topBack(navController),
+                onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+            )
         } else {
             CompositionScreen(
                 key = key,
-                keyboardName = state.value.inUseScheme?.name,
+                keyboardName =
+                    stringResource(
+                        R.string.keyboard_title,
+                        state.value.inUseScheme?.name ?: key.inputMethodId,
+                        stringResource(state.value.currentLayout.nameRes),
+                    ),
                 onBack = { navController.popBackStack() },
             )
         }
@@ -521,7 +604,38 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.T9_SYMBOLS) {
-        T9QuickSymbolsScreen(onBack = { navController.popBackStack() })
+        LaunchedEffect(Unit) {
+            navController.navigate(SettingsRoutes.NINE_KEY_EDITOR) {
+                popUpTo(SettingsRoutes.T9_SYMBOLS) {
+                    inclusive =
+                        true
+                }
+            }
+        }
+    }
+    composable(SettingsRoutes.NINE_KEY_EDITOR) {
+        val library: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory())
+        val registry by library.registry.collectAsStateWithLifecycle()
+        LaunchedEffect(Unit) { library.refresh() }
+        LaunchedEffect(registry, state.value.inUseSchemeId, state.value.sourcesLoaded) {
+            if (!state.value.sourcesLoaded && state.value.inUseSchemeId == null) return@LaunchedEffect
+            val catalog = registry ?: return@LaunchedEffect
+            val key = compositionKeyOf(state.value.inUseSchemeId, "phone9")
+            val paired = key?.let { catalog.resolvedLayout(catalog.composition(it).mainLayoutID) }
+            val id =
+                paired
+                    ?.takeIf {
+                        app.songyan.ime.layout.PhoneKeypadStructure
+                            .matches(it)
+                    }?.id ?: "phone9"
+            navController.navigate(SettingsRoutes.layoutEditor(id)) {
+                popUpTo(SettingsRoutes.NINE_KEY_EDITOR) {
+                    inclusive =
+                        true
+                }
+            }
+        }
+        LoadingScreen(stringResource(R.string.layout_editor_title), { navController.popBackStack() })
     }
 
     composable(SettingsRoutes.SHUANGPIN) {

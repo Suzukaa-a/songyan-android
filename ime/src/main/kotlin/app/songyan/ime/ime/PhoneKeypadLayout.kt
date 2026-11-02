@@ -51,6 +51,7 @@ object PhoneKeypadLayout {
          * every time and the key set never changes under a held finger.
          */
         val readingSlot: Boolean = false,
+        val t9FirstKey: Boolean = false,
     )
 
     /** User-visible labels, resolved by the caller so this model stays platform-free. */
@@ -115,6 +116,19 @@ object PhoneKeypadLayout {
     fun draws(definition: LayoutDefinition): Boolean = PhoneKeypadStructure.matches(definition)
 
     fun build(config: Config): Shell? {
+        val symbols = config.definition.effectiveT9QuickSymbols(config.savedQuickSymbols)
+        return buildEffective(
+            if (symbols ==
+                config.savedQuickSymbols
+            ) {
+                config
+            } else {
+                config.copy(savedQuickSymbols = symbols)
+            },
+        )
+    }
+
+    private fun buildEffective(config: Config): Shell? {
         val metrics = PhoneKeypadMetrics.resolve(config.width.toDouble(), config.height.toDouble())
         val pitch = bandPitch(config)
         if (config.numeric) return buildNumeric(config, metrics, pitch)
@@ -322,9 +336,8 @@ object PhoneKeypadLayout {
         }
 
     /**
-     * The symbol an idle first-key tap types right now, or null while composing. The controller
-     * compares the dispatched literal with this value to recognise a repeat tap that must replace
-     * the previously typed symbol instead of appending another one.
+     * The symbol an idle first-key tap types right now, or null while composing. Dispatch uses
+     * captured key identity so authored literals with this same text remain ordinary literals.
      */
     fun firstKeyLiteral(
         composing: Boolean,
@@ -383,14 +396,15 @@ object PhoneKeypadLayout {
                     } else {
                         key
                     }
-                result += placed(Region.MAIN, placedKey, slot)
+                result +=
+                    placed(Region.MAIN, placedKey, slot).copy(t9FirstKey = cycles && rowIndex == 0 && columnIndex == 0)
             }
         }
         return result
     }
 
     /** Whether the first key of [definition] is the live punctuation-cycling key rather than authored data. */
-    fun cyclesFirstKey(definition: LayoutDefinition): Boolean = BuiltinLayouts.matchesPhone9PrimarySemantics(definition)
+    fun cyclesFirstKey(definition: LayoutDefinition): Boolean = BuiltinLayouts.usesT9QuickFirstKey(definition)
 
     /**
      * The live first key wearing the author's own face: an edited title shows, and the corner hint

@@ -266,6 +266,7 @@ fun KeyFields(
     literalOnly: Boolean = false,
     /** The key may jump to another layout's page (a page's key, not a main layout's). */
     allowJump: Boolean = false,
+    editPrimaryAction: Boolean = true,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
@@ -284,7 +285,7 @@ fun KeyFields(
             modifier = Modifier.fillMaxWidth(),
         )
         WidthField(key.width, span) { onChange(key.copy(width = it)) }
-        ActionFields(key, allowCode, literalOnly, allowJump, onChange)
+        if (editPrimaryAction) ActionFields(key, allowCode, literalOnly, allowJump, onChange)
         LongPressFields(key, onChange)
     }
 }

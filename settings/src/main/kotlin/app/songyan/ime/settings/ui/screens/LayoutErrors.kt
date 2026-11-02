@@ -22,6 +22,8 @@ internal fun layoutErrorRes(error: LayoutException): Int =
 @StringRes
 private fun codeRes(code: LayoutInvalidCode): Int =
     when (code) {
+        LayoutInvalidCode.T9_FIRST_KEY_BEHAVIOR_REQUIRES_PHONE -> R.string.layout_error_t9_behavior
+        LayoutInvalidCode.T9_QUICK_SYMBOLS_INVALID -> R.string.layout_error_t9_symbols
         LayoutInvalidCode.ASCII_VALUE_ONLY_ON_LITERAL -> R.string.layout_error_ascii_only_literal
         LayoutInvalidCode.CODE_REQUIRES_ONE_PRINTABLE_ASCII_CHARACTER -> R.string.layout_error_code_char
         LayoutInvalidCode.LITERAL_REQUIRES_NONEMPTY_VALUE -> R.string.layout_error_literal_empty

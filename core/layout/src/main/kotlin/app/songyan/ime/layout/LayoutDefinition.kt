@@ -29,6 +29,8 @@ enum class LayoutInvalidCode {
     ROWS_MUST_CONTAIN_KEYS,
     READING_ROW_REQUIRES_CANDIDATE_AREA,
     PHONE_LAYOUT_USES_LEADING_READING_RAIL,
+    T9_FIRST_KEY_BEHAVIOR_REQUIRES_PHONE,
+    T9_QUICK_SYMBOLS_INVALID,
     CODE_KEYS_REQUIRE_CANDIDATE_AREA,
     DISAMBIGUATION_KEYS_MUST_BE_ENGINE_SUPPLIED,
     KEY_REQUIRES_LABEL_AND_POSITIVE_FINITE_WIDTH,
@@ -474,6 +476,15 @@ data class LayoutAuxiliaryArea(
     val reading: Boolean,
 )
 
+@Serializable
+enum class T9FirstKeyBehavior {
+    @SerialName("quickSymbols")
+    QUICK_SYMBOLS,
+
+    @SerialName("custom")
+    CUSTOM,
+}
+
 /**
  * A physical keyboard definition. Pure data: it never reads or writes files; see [LayoutStore]
  * for persistence.
@@ -491,7 +502,14 @@ data class LayoutDefinition(
     val note: String? = null,
     /** Seconds until the alternate picker opens. Release commits one selected alternate only. */
     val longPressDelay: Double? = null,
+    /** Null preserves the primary-action inference used by older layouts. */
+    val t9FirstKeyBehavior: T9FirstKeyBehavior? = null,
+    /** Null inherits the shared preference; empty selects the builtin sequence. */
+    val t9QuickSymbols: String? = null,
 ) {
+    fun effectiveT9QuickSymbols(inherited: String): String =
+        if (PhoneKeypadStructure.matches(this)) t9QuickSymbols ?: inherited else inherited
+
     val effectiveLongPressDelay: Double get() = longPressDelay ?: DEFAULT_LONG_PRESS_DELAY
 
     val sendsEngineCode: Boolean
@@ -586,6 +604,18 @@ data class LayoutDefinition(
         }
         if (rows.isEmpty() || rows.any { it.keys.isEmpty() }) {
             throw LayoutException.Invalid(LayoutInvalidCode.ROWS_MUST_CONTAIN_KEYS)
+        }
+        val isPhone = PhoneKeypadStructure.matches(this)
+        if (t9FirstKeyBehavior != null && !isPhone) {
+            throw LayoutException.Invalid(LayoutInvalidCode.T9_FIRST_KEY_BEHAVIOR_REQUIRES_PHONE)
+        }
+        if (t9QuickSymbols != null) {
+            val validSymbols =
+                t9QuickSymbols.isEmpty() ||
+                    (T9QuickSymbolStore.isValid(t9QuickSymbols) && t9QuickSymbols.toSet().size == t9QuickSymbols.length)
+            if (!isPhone || !validSymbols) {
+                throw LayoutException.Invalid(LayoutInvalidCode.T9_QUICK_SYMBOLS_INVALID)
+            }
         }
         val area = effectiveCandidateArea
         if (area.reading && !area.candidates) {

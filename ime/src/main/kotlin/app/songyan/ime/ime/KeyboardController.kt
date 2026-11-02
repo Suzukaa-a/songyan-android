@@ -395,7 +395,7 @@ class KeyboardController(
      * They are typed, in order, as soon as it is ready: a press is never dropped because the editor
      * restarted its input or the keyboard was still binding.
      */
-    internal val heldKeys = ArrayDeque<LayoutAction>()
+    internal val heldKeys = ArrayDeque<Pair<LayoutAction, Boolean>>()
     private val worker =
         scope.launch {
             for ((token, operation) in operations) {
@@ -528,7 +528,10 @@ class KeyboardController(
     }
 
     /** Key presses outlive an input restart: they belong to whatever editor is current when they run. */
-    internal fun enqueueKey(action: LayoutAction) {
+    internal fun enqueueKey(
+        action: LayoutAction,
+        t9FirstKey: Boolean = false,
+    ) {
         // No engine, no typing: a press here would reach the editor as raw text.
         if (engineNotice != null) return
         if (retired) {
@@ -537,7 +540,7 @@ class KeyboardController(
             }
             return
         }
-        operations.trySend(ANY_GENERATION to { dispatchOrHold(action) })
+        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey) })
     }
 
     /**
@@ -552,10 +555,13 @@ class KeyboardController(
         drained.await()
     }
 
-    private suspend fun dispatchOrHold(action: LayoutAction) {
+    private suspend fun dispatchOrHold(
+        action: LayoutAction,
+        t9FirstKey: Boolean,
+    ) {
         if (!ready && pendingBackend != null) {
             val held = heldKeys.size < MAX_HELD_KEYS
-            if (held) heldKeys.addLast(action)
+            if (held) heldKeys.addLast(action to t9FirstKey)
             if (action.type == LayoutActionKind.BACKSPACE) {
                 BackspaceTrace.record(
                     if (held) {
@@ -567,7 +573,7 @@ class KeyboardController(
             }
             return
         }
-        dispatch(action)
+        dispatch(action, t9FirstKey)
     }
 
     /** Confirms the composition through the engine before a quick insert; true when nothing remains. */

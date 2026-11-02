@@ -19,6 +19,8 @@ import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.state.LayoutImportOutcome
 import app.songyan.ime.settings.state.LayoutLibraryHolder
 import app.songyan.ime.settings.state.LayoutLibrarySource
+import app.songyan.ime.settings.state.SettingsPreferences
+import app.songyan.ime.settings.state.SettingsPreferencesHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -137,7 +139,19 @@ class LayoutLibraryViewModel(
     fun saveComposition(
         key: KeyboardCompositionKey,
         composition: KeyboardComposition,
-    ) = edit { it.withComposition(composition, key.rawValue) }
+        onRejected: () -> Unit = {},
+        onSaved: () -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            when (val result = source.edit { it.withComposition(composition, key.rawValue) }) {
+                is LayoutEditResult.Saved -> onSaved()
+                is LayoutEditResult.Rejected -> {
+                    mutableEvent.value = LibraryEvent.Failed(result.error)
+                    onRejected()
+                }
+            }
+        }
+    }
 
     private fun edit(change: (LayoutRegistry) -> LayoutRegistry) {
         viewModelScope.launch {
@@ -176,10 +190,13 @@ class LayoutEditorViewModel(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     savedStateHandle: SavedStateHandle = SavedStateHandle(),
     draftDirectory: File? = null,
+    private val preferences: SettingsPreferences = SettingsPreferencesHolder.current,
 ) : ViewModel() {
     private val storage = draftDirectory?.let { EditorDraftStore(it, savedStateHandle) }
     private val mutableDraft = MutableStateFlow<LayoutDraft?>(null)
     val draft: StateFlow<LayoutDraft?> = mutableDraft.asStateFlow()
+    private val mutableInheritedSymbols = MutableStateFlow<String?>(null)
+    val inheritedQuickSymbols: StateFlow<String?> = mutableInheritedSymbols.asStateFlow()
     private val mutableOutcome = MutableStateFlow<SaveOutcome?>(null)
     val outcome: StateFlow<SaveOutcome?> = mutableOutcome.asStateFlow()
     private val mutableSaving = MutableStateFlow(false)
@@ -191,6 +208,7 @@ class LayoutEditorViewModel(
             val registry = source.registry.first { it != null }
             mutableDraft.value = restored ?: registry?.resolvedLayout(layoutId)?.let { LayoutDraft(it) }
         }
+        viewModelScope.launch { preferences.t9QuickSymbols.collect { mutableInheritedSymbols.value = it } }
     }
 
     fun update(change: (LayoutDraft) -> LayoutDraft) {

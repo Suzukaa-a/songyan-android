@@ -2,6 +2,7 @@ package app.songyan.ime.settings
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
@@ -12,6 +13,8 @@ import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.screens.CompositionScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -42,6 +45,64 @@ class CompositionScreenTest {
                 CompositionScreen(key = key, keyboardName = "全拼", onBack = null, viewModel = viewModel)
             }
         }
+    }
+
+    @Test
+    fun aSavedPageIsOnlyAppliedAfterChoosingANamedKeyboardAndCanBeTried() {
+        val source = InMemoryLayoutLibrarySource(LayoutRegistry.create().withPage(mine))
+        val model = LayoutLibraryViewModel(source)
+        var activated: KeyboardCompositionKey? = null
+        var tried = false
+        val activation = kotlinx.coroutines.CompletableDeferred<Unit>()
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                app.songyan.ime.settings.ui.screens.UseContentScreen(
+                    contentId = mine.id,
+                    isPage = true,
+                    schemes =
+                        listOf(
+                            app.songyan.ime.settings.state
+                                .InstalledScheme("test_ime", "全拼"),
+                        ),
+                    sourcesLoaded = true,
+                    onActivate = {
+                        activated = it
+                        activation.await()
+                    },
+                    onTryOut = { tried = true },
+                    onOpenSchemes = {},
+                    onBack = {},
+                    viewModel = model,
+                )
+            }
+        }
+        val target = str(R.string.keyboard_title, "全拼", str(R.string.layout_name_26))
+        listOf(R.string.layout_name_14, R.string.layout_name_18, R.string.layout_name_9).forEach { layoutName ->
+            compose.onNodeWithText(str(R.string.keyboard_title, "全拼", str(layoutName))).assertDoesNotExist()
+        }
+        assertNull(activated)
+        assertEquals(
+            false,
+            source.registry.value!!
+                .composition(key)
+                .symbolPageID == mine.id,
+        )
+        compose.onNodeWithText(target).performClick()
+        assertNull(activated)
+        compose.onNodeWithText(str(R.string.content_use_on, target)).performClick()
+        compose.waitForIdle()
+        assertEquals(key, activated)
+        assertEquals(
+            mine.id,
+            source.registry.value!!
+                .composition(key)
+                .symbolPageID,
+        )
+        compose.onNodeWithText(str(R.string.row_tryout_title)).assertDoesNotExist()
+        activation.complete(Unit)
+        compose.waitForIdle()
+        compose.onNodeWithText(str(R.string.row_tryout_title)).performScrollTo().performClick()
+        assertEquals(true, tried)
     }
 
     private val keypadMisses =

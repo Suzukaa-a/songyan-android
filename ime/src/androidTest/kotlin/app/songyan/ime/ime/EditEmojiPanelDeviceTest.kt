@@ -90,19 +90,26 @@ class EditEmojiPanelDeviceTest {
             assertEquals(select.centerY(), right.centerY())
             assertTrue(up.bottom <= select.top && select.bottom <= down.top)
             assertTrue(left.right <= select.left && select.right <= right.left)
-            val undo = key(R.string.ime_edit_undo)
-            assertTrue("Undo keeps the top left", undo.left <= left.left && undo.top <= up.top)
+            assertEquals(up.top, left.top)
+            assertEquals(down.bottom, left.bottom)
+            assertEquals(up.top, right.top)
+            assertEquals(down.bottom, right.bottom)
             val lineStart = key(R.string.ime_edit_line_start)
             val all = key(R.string.ime_edit_select_all)
             val lineEnd = key(R.string.ime_edit_line_end)
             assertTrue(down.bottom <= lineStart.top && lineStart.top == all.top && all.top == lineEnd.top)
             assertTrue(lineStart.right <= all.left && all.right <= lineEnd.left)
             val column =
-                listOf(R.string.ime_edit_delete, R.string.ime_edit_copy, R.string.ime_edit_cut, R.string.ime_edit_paste)
+                listOf(
+                    R.string.ime_edit_undo,
+                    R.string.ime_edit_copy,
+                    R.string.ime_edit_paste,
+                    R.string.ime_edit_delete,
+                )
             val boxes = column.map { key(it) }
             boxes.zipWithNext { a, b -> assertTrue(a.bottom <= b.top) }
             assertTrue(boxes.all { it.left >= right.right && it.left == boxes[0].left })
-            assertTrue("Paste is bottom right", boxes.last().bottom >= lineEnd.bottom)
+            assertTrue("Delete is bottom right", boxes.last().bottom >= lineEnd.bottom)
         }
 
     @Test
@@ -184,8 +191,15 @@ class EditEmojiPanelDeviceTest {
             host.start()
             host.setText("alpha", 2)
             host.tapToolbar(host.string(R.string.ime_toolbar_edit))
-            host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
-            host.tap(host.string(R.string.ime_edit_cut), EditPanelView::class.java)
+            val all = host.string(R.string.ime_edit_select_all)
+            val cut = host.string(R.string.ime_edit_cut)
+            val target = editKeyBounds(host).getValue(all)
+            host.tap(all, EditPanelView::class.java)
+            assertFalse(all in host.labelsOf(EditPanelView::class.java))
+            assertEquals(target, editKeyBounds(host).getValue(cut))
+            host.tap(cut, EditPanelView::class.java)
+            assertFalse(cut in host.labelsOf(EditPanelView::class.java))
+            assertEquals(target, editKeyBounds(host).getValue(all))
             host.assertText("")
             assertFalse(host.main2 { host.find(EditPanelView::class.java).selecting })
         }
@@ -202,7 +216,7 @@ class EditEmojiPanelDeviceTest {
         }
 
     @Test
-    fun copyAndCutAreDimmedAndInertWithoutASelectionAndLightUpWhenOneIsMade() =
+    fun copyAndTheContextualCutActionFollowTheActualSelection() =
         withHost { host ->
             host.allowClipboardReads()
             host.start()
@@ -211,7 +225,7 @@ class EditEmojiPanelDeviceTest {
             val copy = host.string(R.string.ime_edit_copy)
             val cut = host.string(R.string.ime_edit_cut)
             assertFalse(editKeyEnabled(host, copy))
-            assertFalse(editKeyEnabled(host, cut))
+            assertFalse(cut in host.labelsOf(EditPanelView::class.java))
             assertFalse("a dimmed key takes no click", editKeyClick(host, copy))
             assertEquals("nothing was copied or cut", "alpha beta", host.text())
             host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
@@ -223,7 +237,8 @@ class EditEmojiPanelDeviceTest {
             host.tap(host.string(R.string.ime_edit_select_all), EditPanelView::class.java)
             assertTrue(editKeyEnabled(host, cut))
             host.tap(host.string(R.string.ime_edit_delete), EditPanelView::class.java)
-            assertFalse("a deleted selection dims them", editKeyEnabled(host, cut))
+            assertFalse(cut in host.labelsOf(EditPanelView::class.java))
+            assertTrue(host.string(R.string.ime_edit_select_all) in host.labelsOf(EditPanelView::class.java))
         }
 
     @Test
@@ -265,7 +280,7 @@ class EditEmojiPanelDeviceTest {
             host.setText("secret", 0, 6)
             host.tapToolbar(host.string(R.string.ime_toolbar_edit))
             assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_copy)))
-            assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_cut)))
+            assertFalse(host.string(R.string.ime_edit_cut) in host.labelsOf(EditPanelView::class.java))
             host.main { host.controller.onEditorSelectionChanged(0, 6) }
             assertFalse(editKeyEnabled(host, host.string(R.string.ime_edit_copy)))
         }

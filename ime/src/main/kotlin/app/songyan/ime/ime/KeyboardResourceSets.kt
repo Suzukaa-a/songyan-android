@@ -14,7 +14,7 @@ import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
  * them as unknown input methods; here a source scheme runs on the 26-key layout its own speller is
  * written for, and on 14, 18 or 9 keys only through a companion its generation compiled for it.
  */
-internal object KeyboardResourceSets {
+object KeyboardResourceSets {
     /** The resource set for one running engine, or null when the engine reports no schemas. */
     fun forEngineSchemas(
         schemas: List<KeyboardSchemaDescriptor>,

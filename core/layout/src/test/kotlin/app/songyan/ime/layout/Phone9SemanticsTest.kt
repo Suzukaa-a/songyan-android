@@ -2,6 +2,8 @@ package app.songyan.ime.layout
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,6 +59,77 @@ class Phone9SemanticsTest {
 
     private fun assertVisualBroken(definition: LayoutDefinition) =
         assertFalse(BuiltinLayouts.matchesPhone9VisualShell(definition))
+
+    @Test
+    fun explicitCustomKeepsTheAuthoredComma() {
+        val custom = clone().copy(t9FirstKeyBehavior = T9FirstKeyBehavior.CUSTOM)
+        custom.validate()
+        assertEquals(LayoutAction.literal("，"), custom.rows[0].keys[0].action)
+        assertTrue(BuiltinLayouts.matchesPhone9PrimarySemantics(custom))
+        assertFalse(BuiltinLayouts.usesT9QuickFirstKey(custom))
+    }
+
+    @Test
+    fun explicitQuickSymbolsWorksForStructuralPhoneLayouts() {
+        val phone =
+            clone(rows = replacingKey(preset.rows, 0, 0) { it.withAction(LayoutAction.literal("！")) })
+                .copy(
+                    input = LayoutInput(schemaID = "custom_t9"),
+                    t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS,
+                )
+        phone.validate()
+        assertFalse(BuiltinLayouts.matchesPhone9PrimarySemantics(phone))
+        assertTrue(BuiltinLayouts.usesT9QuickFirstKey(phone))
+        val nonPhone = BuiltinLayouts.qwerty26.copy(t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS)
+        assertFalse(BuiltinLayouts.usesT9QuickFirstKey(nonPhone))
+    }
+
+    @Test
+    fun missingBehaviorPreservesLegacyInference() {
+        val legacy = LayoutJson.decode(clone().encoded())
+        assertNull(legacy.t9FirstKeyBehavior)
+        assertTrue(BuiltinLayouts.usesT9QuickFirstKey(legacy))
+        val edited = legacy.copy(rows = replacingKey(legacy.rows, 0, 0) { it.withAction(LayoutAction.literal("！")) })
+        assertFalse(BuiltinLayouts.usesT9QuickFirstKey(edited))
+        assertFalse(BuiltinLayouts.usesT9QuickFirstKey(BuiltinLayouts.qwerty26))
+    }
+
+    @Test
+    fun t9FieldsRoundTripWithSharedWireNames() {
+        val behaviors =
+            listOf(T9FirstKeyBehavior.QUICK_SYMBOLS to "quickSymbols", T9FirstKeyBehavior.CUSTOM to "custom")
+        for ((behavior, wire) in behaviors) {
+            for (symbols in listOf(null, "", "！；…")) {
+                val definition = clone().copy(t9FirstKeyBehavior = behavior, t9QuickSymbols = symbols)
+                val encoded = definition.encoded()
+                assertTrue(encoded.contains("\"t9FirstKeyBehavior\": \"$wire\""))
+                assertEquals(definition, LayoutJson.decode(encoded))
+                assertEquals(symbols ?: "@/:", definition.effectiveT9QuickSymbols("@/:"))
+            }
+        }
+        assertNull(LayoutJson.decode(preset.encoded()).t9QuickSymbols)
+    }
+
+    @Test
+    fun t9FieldsRejectNonPhoneLayoutsAndInvalidSymbols() {
+        val nonPhone = BuiltinLayouts.qwerty26
+        val behaviorError =
+            assertThrows(LayoutException.Invalid::class.java) {
+                nonPhone.copy(t9FirstKeyBehavior = T9FirstKeyBehavior.CUSTOM).validate()
+            }
+        assertEquals(LayoutInvalidCode.T9_FIRST_KEY_BEHAVIOR_REQUIRES_PHONE, behaviorError.code)
+        for (symbols in listOf("", "！")) {
+            val invalid = nonPhone.copy(t9QuickSymbols = symbols)
+            assertEquals("@/:", invalid.effectiveT9QuickSymbols("@/:"))
+            val error = assertThrows(LayoutException.Invalid::class.java) { invalid.validate() }
+            assertEquals(LayoutInvalidCode.T9_QUICK_SYMBOLS_INVALID, error.code)
+        }
+        for (symbols in listOf("！！", " ", "\n", "😀", "abcdefghijklmn")) {
+            val error =
+                assertThrows(LayoutException.Invalid::class.java) { clone().copy(t9QuickSymbols = symbols).validate() }
+            assertEquals(LayoutInvalidCode.T9_QUICK_SYMBOLS_INVALID, error.code)
+        }
+    }
 
     @Test
     fun bundledAndRenamedCloneMatchBoth() {
@@ -163,16 +236,27 @@ class Phone9SemanticsTest {
     @Test
     fun theBundledRailsAreTheDefaultAndDeclaringThemKeepsTheReadingArea() {
         assertTrue(PhoneKeypadRailPolicy.usesBundledRails(preset))
-        val declared = PhoneKeypadRailPolicy.withDeclaredRails(preset)
+        val saved = "、，；…！"
+        val declared = PhoneKeypadRailPolicy.withDeclaredRails(preset, savedQuickSymbols = saved)
         assertFalse(PhoneKeypadRailPolicy.usesBundledRails(declared))
         declared.validate()
         val leading = PhoneKeypadRailPolicy.declaredKeys(declared, LayoutAuxiliaryArea.Position.LEADING)
         val trailing = PhoneKeypadRailPolicy.declaredKeys(declared, LayoutAuxiliaryArea.Position.TRAILING)
-        assertEquals(BuiltinLayouts.t9QuickRailValues("", false), leading.map { it.label })
+        assertEquals(BuiltinLayouts.t9QuickRailValues(saved, false), leading.map { it.label })
+        assertEquals(BuiltinLayouts.t9QuickRailValues(saved, false), leading.map { it.action.literalValue(false) })
+        assertEquals(BuiltinLayouts.t9QuickRailValues(saved, true), leading.map { it.action.literalValue(true) })
+        assertEquals(BuiltinLayouts.t9QuickRailValues(saved, true), leading.map { it.face(true) })
+        assertEquals(declared, LayoutJson.decode(declared.encoded()))
+        for (local in listOf("", "！；…")) {
+            val snapshot = PhoneKeypadRailPolicy.withDeclaredRails(preset.copy(t9QuickSymbols = local), saved)
+            val keys = PhoneKeypadRailPolicy.declaredKeys(snapshot, LayoutAuxiliaryArea.Position.LEADING)
+            assertEquals(BuiltinLayouts.t9QuickRailValues(local, false), keys.map { it.action.literalValue(false) })
+            assertEquals(BuiltinLayouts.t9QuickRailValues(local, true), keys.map { it.action.literalValue(true) })
+        }
         assertEquals(listOf(LayoutActionKind.BACKSPACE, LayoutActionKind.CLEAR_INPUT), trailing.map { it.action.type })
         assertTrue(declared.auxiliaryAreas!!.any { it.role == LayoutAuxiliaryArea.Role.DISAMBIGUATION })
         // A layout that already declares its rails is left as it is.
-        assertEquals(declared, PhoneKeypadRailPolicy.withDeclaredRails(declared))
+        assertEquals(declared, PhoneKeypadRailPolicy.withDeclaredRails(declared, savedQuickSymbols = "@/:"))
     }
 
     @Test

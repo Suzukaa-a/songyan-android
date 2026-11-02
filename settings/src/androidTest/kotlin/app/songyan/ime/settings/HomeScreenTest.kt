@@ -163,18 +163,24 @@ class HomeScreenTest {
     @Test
     fun searchFindsASettingInsideAPageAndOpensThatPage() {
         showSearchable()
-        // A prefix shorter than the title (a fixed three characters is the whole title in Chinese), so
-        // the typed text itself is never mistaken for the result.
-        compose
-            .onNodeWithText(
-                str(R.string.search_placeholder),
-            ).performTextInput(str(R.string.features_fuzzy_title).dropLast(1))
-
-        // The result names the page it lives on; the home rows are hidden while searching.
-        compose.onNodeWithText(str(R.string.features_fuzzy_title)).assertExists()
-        assertEquals(0, count(str(R.string.section_keyboard)))
-        compose.onNodeWithText(str(R.string.features_fuzzy_title)).performClick()
-        assertEquals(listOf(SettingsRoutes.FEATURES), opened)
+        val destinations =
+            listOf(
+                Triple(R.string.features_fuzzy_title, R.string.features_title, SettingsRoutes.FEATURES),
+                Triple(R.string.row_learning_title, R.string.section_content, SettingsRoutes.LEARNING),
+                Triple(R.string.layouts_title, R.string.row_keyboards_title, SettingsRoutes.LAYOUTS),
+                Triple(R.string.pages_title, R.string.row_keyboards_title, SettingsRoutes.PAGES),
+                Triple(R.string.composition_title, R.string.row_keyboards_title, SettingsRoutes.COMPOSITION),
+                Triple(R.string.options_bottom_gap_title, R.string.row_options_title, SettingsRoutes.OPTIONS),
+                Triple(R.string.options_engine_section, R.string.row_options_title, SettingsRoutes.OPTIONS),
+                Triple(R.string.rime_config_section, R.string.row_schemes_title, SettingsRoutes.SCHEMES),
+            )
+        destinations.forEach { (title, section, route) ->
+            // A title prefix keeps the query field distinct from the matching result.
+            compose.onNodeWithText(str(R.string.search_placeholder)).performTextInput(str(title).dropLast(1))
+            compose.onNode(hasText(str(title)) and hasText(str(section))).performClick()
+            assertEquals(route, opened.last())
+            compose.onNodeWithContentDescription(str(R.string.search_clear)).performClick()
+        }
     }
 
     @Test

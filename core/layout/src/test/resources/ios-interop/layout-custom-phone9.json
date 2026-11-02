@@ -252,5 +252,7 @@
         }
       ]
     }
-  ]
+  ],
+  "t9FirstKeyBehavior" : "custom",
+  "t9QuickSymbols" : "。？！"
 }

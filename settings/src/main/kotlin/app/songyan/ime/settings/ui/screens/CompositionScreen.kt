@@ -13,7 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -29,6 +33,8 @@ import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
+import kotlinx.coroutines.launch
+import java.io.IOException
 
 /**
  * 页面搭配: which main layout and which 123, symbol and ABC pages one keyboard uses. A choice is
@@ -117,7 +123,140 @@ fun CompositionScreen(
     }
 }
 
-/** The pairing key of the keyboard in use, or null when the input method is not known yet. */
+@Composable
+fun CompositionEmptyScreen(
+    onBack: (() -> Unit)?,
+    onOpenSchemes: () -> Unit,
+) {
+    SettingsScaffold(title = stringResource(R.string.composition_title), onBack = onBack) { padding ->
+        Column(Modifier.padding(padding).padding(16.dp)) {
+            Text(stringResource(R.string.composition_needs_scheme))
+            androidx.compose.material3.Button(onClick = onOpenSchemes) {
+                Text(stringResource(R.string.composition_get_scheme))
+            }
+        }
+    }
+}
+
+@Composable
+fun UseContentScreen(
+    contentId: String,
+    isPage: Boolean,
+    schemes: List<app.songyan.ime.settings.state.InstalledScheme>,
+    sourcesLoaded: Boolean,
+    onActivate: suspend (KeyboardCompositionKey) -> Unit,
+    onTryOut: () -> Unit,
+    onOpenSchemes: () -> Unit,
+    onBack: () -> Unit,
+    viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
+) {
+    val registry by viewModel.registry.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.refresh() }
+    val current = registry
+    if (current == null || !sourcesLoaded) {
+        LoadingScreen(stringResource(R.string.layouts_action_use), onBack)
+        return
+    }
+    if (schemes.isEmpty()) {
+        CompositionEmptyScreen(onBack, onOpenSchemes)
+        return
+    }
+    val page = if (isPage) current.page(contentId) else null
+    val name = page?.name ?: current.resolvedLayout(contentId)?.name
+    if (name == null) {
+        CompositionEmptyScreen(onBack, onOpenSchemes)
+        return
+    }
+    val targets =
+        schemes
+            .flatMap { scheme ->
+                LayoutInput.Builtin.entries
+                    .filter { it.wire in scheme.supportedLayouts }
+                    .map { KeyboardCompositionKey(scheme.id, it) }
+            }.filter { key -> isPage || current.mainLayoutCandidates(key).any { it.id == contentId } }
+    var selected by rememberSaveable(contentId) { mutableStateOf<String?>(null) }
+    var applied by rememberSaveable(contentId) { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    LibraryEvents(viewModel, snackbar)
+    val scope = rememberCoroutineScope()
+    val failureText = stringResource(R.string.features_error_generic)
+    val targetName: @Composable (KeyboardCompositionKey) -> String = { key ->
+        val method = schemes.first { it.id == key.inputMethodId }.name
+        val layout =
+            app.songyan.ime.settings.state.KeyboardLayoutOption
+                .fromId(key.layout.wire)
+        stringResource(R.string.keyboard_title, method, stringResource(layout.nameRes))
+    }
+    SettingsScaffold(
+        title = stringResource(R.string.content_use_title, name),
+        onBack = onBack,
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 16.dp),
+        ) {
+            Text(stringResource(R.string.content_use_target), modifier = Modifier.padding(16.dp))
+            targets.forEach { key ->
+                RadioRow(
+                    title = targetName(key),
+                    selected = key.rawValue == selected,
+                    enabled = !saving,
+                    onClick = {
+                        selected = key.rawValue
+                        applied = null
+                    },
+                )
+            }
+            val key = targets.firstOrNull { it.rawValue == selected }
+            if (key != null) {
+                androidx.compose.material3.Button(
+                    enabled = !saving && applied != key.rawValue,
+                    onClick = {
+                        saving = true
+                        val before = current.composition(key)
+                        val composition =
+                            if (page !=
+                                null
+                            ) {
+                                before.withPageId(page.id, page.kind)
+                            } else {
+                                before.withMainLayoutId(contentId)
+                            }
+                        viewModel.saveComposition(key, composition, onRejected = { saving = false }) {
+                            scope.launch {
+                                try {
+                                    onActivate(key)
+                                    applied = key.rawValue
+                                } catch (_: IOException) {
+                                    snackbar.showSnackbar(failureText)
+                                } finally {
+                                    saving = false
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) { Text(stringResource(R.string.content_use_on, targetName(key))) }
+                if (applied == key.rawValue) {
+                    Text(stringResource(R.string.content_used_on, targetName(key)), modifier = Modifier.padding(16.dp))
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onTryOut,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        Text(stringResource(R.string.row_tryout_title))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The pairing key of the keyboard in use, or null when no input method is available. */
 fun compositionKeyOf(
     inputMethodId: String?,
     layoutId: String,

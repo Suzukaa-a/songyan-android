@@ -297,4 +297,20 @@
     <string name="search_keywords_haptics">vibrate vibration haptic feedback</string>
     <string name="search_keywords_switch_key">globe switch input method keyboard</string>
     <string name="options_engine_character_form">Character form</string>
+    <string name="composition_needs_scheme">Download or import an input scheme first.</string>
+    <string name="composition_get_scheme">Get an input scheme</string>
+    <string name="layouts_action_use">Use</string>
+    <string name="content_use_title">Use %1$s</string>
+    <string name="content_use_target">Choose a keyboard</string>
+    <string name="content_use_on">Use on %1$s</string>
+    <string name="content_used_on">Now using this on %1$s.</string>
+    <string name="schemes_detail_models">Required grammar models</string>
+    <string name="t9_first_quick">Quick symbols and word separator</string>
+    <string name="t9_first_custom">Custom key</string>
+    <string name="t9_first_quick_note">Tap repeatedly to cycle symbols while idle. While composing, tap to separate words.</string>
+    <string name="t9_symbols_empty_default">Leave empty to use the built-in order.</string>
+    <string name="t9_symbols_inherited">Using your saved symbol order.</string>
+    <string name="t9_symbols_inherit">Use inherited order</string>
+    <string name="layout_error_t9_behavior">This first-key behavior needs a 9-key layout.</string>
+    <string name="layout_error_t9_symbols">Quick symbols need a 9-key layout and up to 12 distinct characters, with no spaces.</string>
 </resources>

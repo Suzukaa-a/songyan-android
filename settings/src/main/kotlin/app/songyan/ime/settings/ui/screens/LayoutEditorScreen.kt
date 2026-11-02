@@ -1,6 +1,7 @@
 package app.songyan.ime.settings.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,34 +18,47 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.T9FirstKeyBehavior
+import app.songyan.ime.layout.T9QuickSymbolStore
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.ui.EditorNavigationConfirmation
+import app.songyan.ime.settings.ui.EditorNavigationController
 import app.songyan.ime.settings.ui.EditorNavigationGuard
 import app.songyan.ime.settings.ui.GridEdit
 import app.songyan.ime.settings.ui.KeyGridEditing
 import app.songyan.ime.settings.ui.KeySelection
 import app.songyan.ime.settings.ui.LayoutEditorViewModel
+import app.songyan.ime.settings.ui.LocalEditorNavigationGuard
 import app.songyan.ime.settings.ui.PageEditorViewModel
 import app.songyan.ime.settings.ui.SaveOutcome
+import app.songyan.ime.settings.ui.T9QuickSymbolsDraft
+import app.songyan.ime.settings.ui.T9QuickSymbolsProblem
 import app.songyan.ime.settings.ui.components.LoadingScreen
+import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 
@@ -53,14 +67,16 @@ import app.songyan.ime.settings.ui.components.SettingsScaffold
 fun LayoutEditorScreen(
     layoutId: String,
     onClose: () -> Unit,
+    onUse: (String) -> Unit = {},
     viewModel: LayoutEditorViewModel =
         viewModel(key = "layout-$layoutId", factory = LayoutEditorViewModel.Factory(layoutId)),
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val outcome by viewModel.outcome.collectAsStateWithLifecycle()
     val saving by viewModel.saving.collectAsStateWithLifecycle()
+    val inheritedSymbols by viewModel.inheritedQuickSymbols.collectAsStateWithLifecycle()
     val current = draft
-    if (current == null) {
+    if (current == null || (current.isNineKey && inheritedSymbols == null)) {
         LoadingScreen(stringResource(R.string.layout_editor_title), onClose)
         return
     }
@@ -79,10 +95,40 @@ fun LayoutEditorScreen(
         onRename = { name -> viewModel.update { it.rename(name) } },
         onSave = viewModel::save,
         onSaveAsCopy = { viewModel.saveAsCopy(current.layout.name + copySuffix) },
+        onUse = { onUse(current.layout.id) },
     ) {
         val inSplit = current.splitView && !current.isNineKey
+        val liveFirst = BuiltinLayouts.usesT9QuickFirstKey(current.layout)
+        val selectingFirst = current.isNineKey && current.rail == null && current.selection == KeySelection(0, 0)
+        val previewRows =
+            if (liveFirst) {
+                val first = current.editRows[0].keys[0]
+                val live =
+                    BuiltinLayouts.t9CycleKey(
+                        BuiltinLayouts.t9QuickCycleValues(
+                            current.layout.effectiveT9QuickSymbols(inheritedSymbols.orEmpty()),
+                            false,
+                        ),
+                    )
+                if (first.label ==
+                    BuiltinLayouts.phone9.rows[0]
+                        .keys[0]
+                        .label &&
+                    live != null
+                ) {
+                    current.editRows.toMutableList().also { rows ->
+                        rows[0] =
+                            LayoutRow(rows[0].keys.toMutableList().also { it[0] = first.copy(label = live.label) })
+                    }
+                } else {
+                    current.editRows
+                }
+            } else {
+                current.editRows
+            }
         GridSections(
-            rows = current.editRows,
+            editPrimaryAction = !selectingFirst || !liveFirst,
+            rows = previewRows,
             selection = current.selection,
             selectedKey = current.selectedKey,
             allowCode = true,
@@ -98,6 +144,17 @@ fun LayoutEditorScreen(
                     }
                 },
             beforeGrid = {
+                if (current.isNineKey && (current.usesBundledRails || liveFirst)) {
+                    NineKeySymbolsSection(
+                        saved = current.layout.t9QuickSymbols,
+                        inherited = inheritedSymbols.orEmpty(),
+                        showsRail = current.usesBundledRails,
+                        showsCycle = liveFirst,
+                        onChange = { symbols ->
+                            viewModel.update { it.copy(layout = it.layout.copy(t9QuickSymbols = symbols)) }
+                        },
+                    )
+                }
                 if (!current.isNineKey) {
                     ArrangementChoice(
                         split = inSplit,
@@ -127,6 +184,37 @@ fun LayoutEditorScreen(
             selectionToken = current.rail ?: current.selection,
             spanKey = current.rail != null,
             beforeFields = {
+                if (selectingFirst) {
+                    SectionHeader(stringResource(R.string.layout_editor_key_action))
+                    RadioRow(
+                        title = stringResource(R.string.t9_first_quick),
+                        selected = liveFirst,
+                        onClick = {
+                            viewModel.update {
+                                it.copy(
+                                    layout = it.layout.copy(t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS),
+                                )
+                            }
+                        },
+                    )
+                    RadioRow(
+                        title = stringResource(R.string.t9_first_custom),
+                        selected = !liveFirst,
+                        onClick = {
+                            viewModel.update {
+                                it.copy(
+                                    layout = it.layout.copy(t9FirstKeyBehavior = T9FirstKeyBehavior.CUSTOM),
+                                )
+                            }
+                        },
+                    )
+                    if (liveFirst) {
+                        Text(
+                            stringResource(R.string.t9_first_quick_note),
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
                 if (current.isNineKey) {
                     Text(
                         text = stringResource(R.string.layout_editor_nine_grid_note),
@@ -140,7 +228,7 @@ fun LayoutEditorScreen(
                         trailing = current.railKeys(LayoutAuxiliaryArea.Position.TRAILING),
                         selected = current.rail,
                         onSelect = { at -> viewModel.update { it.selectRail(at) } },
-                        onDeclare = { viewModel.update { it.declareRails() } },
+                        onDeclare = { viewModel.update { it.declareRails(inheritedSymbols.orEmpty()) } },
                         onUseBundled = { viewModel.update { it.useBundledRails() } },
                         onAdd = { position ->
                             viewModel.update {
@@ -167,6 +255,7 @@ fun LayoutEditorScreen(
 fun PageEditorScreen(
     pageId: String,
     onClose: () -> Unit,
+    onUse: (String) -> Unit = {},
     viewModel: PageEditorViewModel = viewModel(key = "page-$pageId", factory = PageEditorViewModel.Factory(pageId)),
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
@@ -190,6 +279,7 @@ fun PageEditorScreen(
         onRename = { name -> viewModel.update { it.rename(name) } },
         onSave = viewModel::save,
         onSaveAsCopy = { viewModel.saveAsCopy(current.page.name + copySuffix) },
+        onUse = { onUse(current.page.id) },
     ) {
         if (current.isCategorized) {
             val newName = stringResource(R.string.page_editor_category_new)
@@ -279,6 +369,80 @@ fun PageEditorScreen(
     }
 }
 
+@Composable
+private fun NineKeySymbolsSection(
+    saved: String?,
+    inherited: String,
+    showsRail: Boolean,
+    showsCycle: Boolean,
+    onChange: (String?) -> Unit,
+) {
+    val value = saved ?: inherited
+    val problem = T9QuickSymbolsDraft.check(value)
+    val (rail, cycle) = T9QuickSymbolsDraft.preview(value)
+    SectionHeader(stringResource(R.string.t9_symbols_title))
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(stringResource(R.string.t9_symbols_field)) },
+        isError = problem != null,
+        supportingText = {
+            Text(
+                when (problem) {
+                    T9QuickSymbolsProblem.DUPLICATE -> stringResource(R.string.t9_symbols_error_duplicate)
+                    T9QuickSymbolsProblem.INVALID ->
+                        stringResource(
+                            R.string.t9_symbols_error_invalid,
+                            T9QuickSymbolStore.MAXIMUM_SLOTS,
+                        )
+                    null -> stringResource(R.string.t9_symbols_empty_default)
+                },
+            )
+        },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    )
+    if (saved == null && inherited.isNotEmpty() && inherited != T9QuickSymbolStore.DEFAULT_SYMBOLS) {
+        Text(
+            stringResource(R.string.t9_symbols_inherited),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+    if (showsRail) NineKeySymbolsPreview(stringResource(R.string.t9_symbols_rail), rail)
+    if (showsCycle) NineKeySymbolsPreview(stringResource(R.string.t9_symbols_cycle), cycle)
+    Row(Modifier.padding(horizontal = 16.dp)) {
+        TextButton(onClick = { onChange("") }) { Text(stringResource(R.string.t9_symbols_restore)) }
+        if (saved !=
+            null
+        ) {
+            TextButton(onClick = { onChange(null) }) { Text(stringResource(R.string.t9_symbols_inherit)) }
+        }
+    }
+}
+
+@Composable
+private fun NineKeySymbolsPreview(
+    label: String,
+    values: List<String>,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(
+                    rememberScrollState(),
+                ).padding(horizontal = 16.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, maxLines = 1)
+        Text(
+            values.joinToString(" "),
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+        )
+    }
+}
+
 /**
  * The frame both editors share: the name, the save buttons, the discard question and the reason a
  * save was refused. Saving keeps the editor open so newer edits remain available.
@@ -296,96 +460,114 @@ private fun EditorFrame(
     onRename: (String) -> Unit,
     onSave: () -> Unit,
     onSaveAsCopy: () -> Unit,
+    onUse: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    EditorNavigationGuard(hasChanges, onDiscard = onDiscard, saving = saving)
-    val snackbar = remember { SnackbarHostState() }
-    var confirmingDiscard by remember { mutableStateOf(false) }
-    val failureText = (outcome as? SaveOutcome.Failed)?.let { layoutErrorMessage(it.error) }
-    val savedText = stringResource(R.string.t9_symbols_saved)
-    LaunchedEffect(outcome) {
-        when (outcome) {
-            is SaveOutcome.Saved -> {
-                snackbar.showSnackbar(savedText)
+    val hostGuard = LocalEditorNavigationGuard.current
+    val navigationGuard = hostGuard ?: remember { EditorNavigationController() }
+    val currentOnUse by rememberUpdatedState(onUse)
+    CompositionLocalProvider(LocalEditorNavigationGuard provides navigationGuard) {
+        EditorNavigationGuard(hasChanges, onDiscard = onDiscard, saving = saving)
+        val snackbar = remember { SnackbarHostState() }
+        var confirmingDiscard by remember { mutableStateOf(false) }
+        val failureText = (outcome as? SaveOutcome.Failed)?.let { layoutErrorMessage(it.error) }
+        val savedText = stringResource(R.string.t9_symbols_saved)
+        val useText = stringResource(R.string.layouts_action_use)
+        LaunchedEffect(outcome) {
+            when (outcome) {
+                is SaveOutcome.Saved -> {
+                    if (snackbar.showSnackbar(savedText, actionLabel = useText) == SnackbarResult.ActionPerformed) {
+                        navigationGuard.request { currentOnUse() }
+                    }
+                    onOutcomeShown()
+                }
+                else -> Unit
+            }
+        }
+        LaunchedEffect(failureText) {
+            if (failureText != null) {
+                snackbar.showSnackbar(failureText)
                 onOutcomeShown()
             }
-            else -> Unit
         }
-    }
-    LaunchedEffect(failureText) {
-        if (failureText != null) {
-            snackbar.showSnackbar(failureText)
-            onOutcomeShown()
-        }
-    }
-    val back = {
-        if (!saving) {
-            if (hasChanges) {
-                confirmingDiscard = true
-            } else {
-                onClose()
-            }
-        }
-    }
-    BackHandler(onBack = back)
-    SettingsScaffold(
-        title = title,
-        modifier = Modifier.imePadding(),
-        onBack = back,
-        snackbarHost = { SnackbarHost(snackbar) },
-        actions = {
-            TextButton(onClick = onSave, enabled = hasChanges && !saving) {
-                Text(stringResource(if (saving) R.string.features_saving else R.string.layout_editor_save))
-            }
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-        ) {
-            if (saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                value = name,
-                onValueChange = onRename,
-                label = { Text(stringResource(R.string.layout_editor_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-            content()
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-                OutlinedButton(
-                    onClick = onSaveAsCopy,
-                    enabled = !saving,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                ) {
-                    Text(stringResource(R.string.layout_editor_save_copy))
-                }
-            }
-        }
-    }
-    if (confirmingDiscard) {
-        AlertDialog(
-            onDismissRequest = { confirmingDiscard = false },
-            title = { Text(stringResource(R.string.layout_editor_discard_title)) },
-            text = { Text(stringResource(R.string.layout_editor_discard_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDiscard()
+        val back = {
+            if (!saving) {
+                if (hasChanges) {
+                    confirmingDiscard = true
+                } else {
                     onClose()
-                }, enabled = !saving) {
-                    Text(stringResource(R.string.layout_editor_discard))
+                }
+            }
+        }
+        BackHandler(onBack = back)
+        SettingsScaffold(
+            title = title,
+            modifier = Modifier.imePadding(),
+            onBack = back,
+            snackbarHost = { SnackbarHost(snackbar, Modifier.testTag("editor_snackbar")) },
+            actions = {
+                TextButton(onClick = onSave, enabled = hasChanges && !saving) {
+                    Text(stringResource(if (saving) R.string.features_saving else R.string.layout_editor_save))
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { confirmingDiscard = false },
-                ) { Text(stringResource(R.string.layout_editor_keep_editing)) }
-            },
-        )
+        ) { padding ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 24.dp),
+            ) {
+                if (saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onRename,
+                    label = { Text(stringResource(R.string.layout_editor_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                content()
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+                    OutlinedButton(
+                        onClick = { navigationGuard.request { currentOnUse() } },
+                        enabled =
+                            !hasChanges && !saving,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.layouts_action_use))
+                    }
+                    OutlinedButton(
+                        onClick = onSaveAsCopy,
+                        enabled = !saving,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    ) {
+                        Text(stringResource(R.string.layout_editor_save_copy))
+                    }
+                }
+            }
+        }
+        if (confirmingDiscard) {
+            AlertDialog(
+                onDismissRequest = { confirmingDiscard = false },
+                title = { Text(stringResource(R.string.layout_editor_discard_title)) },
+                text = { Text(stringResource(R.string.layout_editor_discard_body)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDiscard()
+                        onClose()
+                    }, enabled = !saving) {
+                        Text(stringResource(R.string.layout_editor_discard))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { confirmingDiscard = false },
+                    ) { Text(stringResource(R.string.layout_editor_keep_editing)) }
+                },
+            )
+        }
+        if (hostGuard == null) EditorNavigationConfirmation(navigationGuard)
     }
 }
 
@@ -465,6 +647,7 @@ private fun GridSections(
     asciiPreview: Boolean? = null,
     /** The gap and the cuts are edited elsewhere (a main layout's split view); only the activation shows here. */
     activationOnly: Boolean = false,
+    editPrimaryAction: Boolean = true,
 ) {
     val template = LayoutKey("·", action = LayoutAction.literal("·"))
     beforeGrid()
@@ -499,7 +682,14 @@ private fun GridSections(
         SectionHeader(stringResource(R.string.layout_editor_selected_section, selectedKey.label))
         // The key's own state is keyed by its place, so moving the selection resets the text fields.
         androidx.compose.runtime.key(selectionToken) {
-            KeyFields(key = selectedKey, allowCode = allowCode, onChange = onKey, span = spanKey, allowJump = allowJump)
+            KeyFields(
+                key = selectedKey,
+                allowCode = allowCode,
+                onChange = onKey,
+                span = spanKey,
+                allowJump = allowJump,
+                editPrimaryAction = editPrimaryAction,
+            )
         }
     }
     if (!fixedStructure) {

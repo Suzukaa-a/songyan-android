@@ -76,6 +76,8 @@ func export(to out: URL) throws {
     var phone = try JSONSerialization.jsonObject(with: BuiltinLayouts.phone9.encoded()) as! [String: Any]
     phone["id"] = "custom-phone9"
     phone["name"] = "我的九键"
+    phone["t9QuickSymbols"] = "。？！"
+    phone["t9FirstKeyBehavior"] = "custom"
     var phoneRows = phone["rows"] as! [[String: Any]]
     var gridKeys = phoneRows[1]["keys"] as! [[String: Any]]
     gridKeys[1]["label"] = "我的"
@@ -107,9 +109,8 @@ func export(to out: URL) throws {
             ],
         ],
     ]
-    let customPhone = try JSONSerialization.data(withJSONObject: phone, options: [.sortedKeys, .prettyPrinted])
-    _ = try LayoutDefinition.decode(customPhone)
-    try write(customPhone, out, "layout-custom-phone9.json")
+    let customPhone = try LayoutDefinition.decode(try JSONSerialization.data(withJSONObject: phone))
+    try write(customPhone.encoded(), out, "layout-custom-phone9.json")
 
     var registry = try LayoutRegistry()
     try registry.install(customLayout)
@@ -142,6 +143,14 @@ func verify(in dir: URL) throws -> Bool {
             } else if name.hasPrefix("catalog-") {
                 let registry = try JSONDecoder().decode(LayoutRegistry.self, from: data)
                 try registry.validate()
+                if name == "catalog-android-authored.json" {
+                    let nine = registry.layouts.first { $0.id == "android-nine" }
+                    guard nine?.t9FirstKeyBehavior == .quickSymbols, nine?.t9QuickSymbols == "，。？" else {
+                        throw NSError(domain: "Interop", code: 1, userInfo: [
+                            NSLocalizedDescriptionKey: "Nine-key behavior or shortcut order changed during import"
+                        ])
+                    }
+                }
             } else {
                 continue
             }

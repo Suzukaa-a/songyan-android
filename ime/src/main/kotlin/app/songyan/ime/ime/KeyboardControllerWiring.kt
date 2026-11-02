@@ -61,6 +61,10 @@ internal fun KeyboardController.wireViews() {
         candidates.dismissPopup()
         enqueueKey(action)
     }
+    keyboard.onT9FirstKey = { action ->
+        candidates.dismissPopup()
+        enqueueKey(action, t9FirstKey = true)
+    }
     keyboard.onPopupChanged = { syncBackOwnership() }
     candidates.onPopupChanged = { syncBackOwnership() }
     keyboard.onDoubleShift = {

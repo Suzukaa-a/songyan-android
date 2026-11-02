@@ -34,7 +34,7 @@ fun KeyboardsScreen(
     onOpenPages: () -> Unit = {},
     onOpenComposition: () -> Unit = {},
     onOpenMenu: () -> Unit = {},
-    onOpenQuickSymbols: () -> Unit = {},
+    onOpenSchemes: () -> Unit = {},
 ) {
     val selected = KeyboardLayoutOption.fromId(layoutId)
     SettingsScaffold(
@@ -79,8 +79,17 @@ fun KeyboardsScreen(
             SectionHeader(stringResource(R.string.keyboards_pages_section))
             SettingsRow(
                 title = stringResource(R.string.composition_title),
-                subtitle = stringResource(R.string.composition_entry_body),
-                onClick = onOpenComposition,
+                subtitle =
+                    stringResource(
+                        if (inputMethod ==
+                            null
+                        ) {
+                            R.string.composition_needs_scheme
+                        } else {
+                            R.string.composition_entry_body
+                        },
+                    ),
+                onClick = if (inputMethod == null) onOpenSchemes else onOpenComposition,
             )
             SettingsRow(
                 title = stringResource(R.string.layouts_title),
@@ -96,11 +105,6 @@ fun KeyboardsScreen(
                 title = stringResource(R.string.keyboard_menu_title),
                 subtitle = stringResource(R.string.keyboard_menu_entry_body),
                 onClick = onOpenMenu,
-            )
-            SettingsRow(
-                title = stringResource(R.string.t9_symbols_title),
-                subtitle = stringResource(R.string.t9_symbols_entry_body),
-                onClick = onOpenQuickSymbols,
             )
         }
     }

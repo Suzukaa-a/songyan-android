@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.ime.panels.SymbolPagePanelView
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -116,6 +117,83 @@ class NineKeyDeviceTest {
             // Idle again: the declared symbol types itself.
             host.tap("@")
             host.assertText("@")
+        }
+
+    @Test
+    fun anExplicitCustomFirstKeyTypesItsCommaInsteadOfCycling() =
+        withHost { host ->
+            install(customNine().copy(t9FirstKeyBehavior = app.songyan.ime.layout.T9FirstKeyBehavior.CUSTOM))
+            host.start()
+            host.tap("，。？")
+            host.tap("，。？")
+            host.assertText("，，")
+        }
+
+    @Test
+    fun onlyTheDynamicFirstKeysPrimaryTapCyclesTheLocalSymbols() =
+        withHost { host ->
+            val base = customNine()
+            val rows = base.rows.toMutableList()
+            val firstRow = rows[0].keys.toMutableList()
+            firstRow[0] =
+                firstRow[0].copy(
+                    label = "首键",
+                    longPress =
+                        listOf(
+                            app.songyan.ime.layout
+                                .LayoutOption("1", LayoutAction.literal("1")),
+                            app.songyan.ime.layout
+                                .LayoutOption("同符号", LayoutAction.literal("、")),
+                        ),
+                )
+            rows[0] = LayoutRow(firstRow)
+            val areas =
+                base.auxiliaryAreas!!.map { area ->
+                    if (area.role == LayoutAuxiliaryArea.Role.PUNCTUATION) {
+                        area.copy(
+                            keys =
+                                listOf(
+                                    LayoutKey("栏键", action = LayoutAction.literal("、")),
+                                ),
+                        )
+                    } else {
+                        area
+                    }
+                }
+            install(
+                base.copy(
+                    rows = rows,
+                    auxiliaryAreas = areas,
+                    t9FirstKeyBehavior = app.songyan.ime.layout.T9FirstKeyBehavior.QUICK_SYMBOLS,
+                    t9QuickSymbols = "；：！、",
+                ),
+            )
+            host.quickSymbolsFlow.value = "？"
+            host.start()
+            host.tap("首键")
+            host.assertText("、")
+            host.tap("首键")
+            host.assertText("，")
+            host.setText("")
+            host.tap("栏键")
+            host.tap("栏键")
+            host.assertText("、、")
+            host.setText("")
+            repeat(2) {
+                host.main {
+                    val keyboard = host.find(KeyboardView::class.java)
+                    val index = keyboard.spokenLabels.indexOf("首键")
+                    val provider = keyboard.accessibilityNodeProvider
+                    assertTrue(provider.performAction(index, AccessibilityNodeInfo.ACTION_LONG_CLICK, null))
+                    val option =
+                        provider.createAccessibilityNodeInfo(index)!!.actionList.single {
+                            it.label?.toString() == "同符号"
+                        }
+                    assertTrue(provider.performAction(index, option.id, null))
+                }
+                host.awaitIdle()
+            }
+            host.assertText("、、")
         }
 
     @Test

@@ -53,6 +53,7 @@ import kotlinx.coroutines.withContext
 /** Everything the settings UI renders, derived from app state plus the system IME state. */
 data class SettingsUiState(
     val engine: EngineStatus = EngineStatus.Unknown,
+    val sourcesLoaded: Boolean = false,
     val schemes: List<InstalledScheme> = emptyList(),
     val inUseSchemeId: String? = null,
     val currentKeyboard: AppKeyboardInfo? = null,
@@ -137,6 +138,7 @@ class SettingsViewModel(
     private val initialState =
         SettingsUiState(
             engine = appStateSource.state.value.engine,
+            sourcesLoaded = appStateSource.state.value.sourcesLoaded,
             schemes = appStateSource.state.value.schemes,
             inUseSchemeId = appStateSource.state.value.inUseSchemeId,
             currentKeyboard = appStateSource.state.value.currentKeyboard,
@@ -226,6 +228,7 @@ class SettingsViewModel(
         ) { app, ime, typed, prefs ->
             SettingsUiState(
                 engine = app.engine,
+                sourcesLoaded = app.sourcesLoaded,
                 schemes = app.schemes,
                 inUseSchemeId = app.inUseSchemeId,
                 currentKeyboard = app.currentKeyboard,
@@ -365,6 +368,12 @@ class SettingsViewModel(
             preferences.setActiveSchemaId(schemeId)
             appStateSource.refresh()
         }
+    }
+
+    suspend fun activateKeyboard(key: app.songyan.ime.layout.KeyboardCompositionKey) {
+        preferences.setActiveSchemaId(key.inputMethodId)
+        preferences.setLayoutId(key.layout.wire)
+        appStateSource.refresh()
     }
 
     /** Switches the keyboard layout. */

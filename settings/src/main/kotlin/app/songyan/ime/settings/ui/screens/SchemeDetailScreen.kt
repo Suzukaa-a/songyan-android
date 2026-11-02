@@ -1,5 +1,8 @@
 package app.songyan.ime.settings.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,8 +39,10 @@ import app.songyan.ime.settings.state.StoredSourceStatus
 import app.songyan.ime.settings.ui.DictionaryImportUiState
 import app.songyan.ime.settings.ui.SchemeImportUiState
 import app.songyan.ime.settings.ui.StoredSourceUiState
+import app.songyan.ime.settings.ui.components.GrammarModelCard
 import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.ImportStatusCard
+import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
@@ -65,7 +70,18 @@ fun SchemeDetailScreen(
     onDismissSchemeImport: () -> Unit,
     onAnswerSchemeLearning: (Boolean) -> Unit,
     onBack: (() -> Unit)?,
+    onSelectMethod: (String) -> Unit = {},
+    onImportScheme: (Uri) -> Unit = {},
+    grammarModel: GrammarModelCardInput? = null,
 ) {
+    val schemePicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) onImportScheme(uri)
+        }
+    val grammarPicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) grammarModel?.onImportFile?.invoke(uri)
+        }
     val source = sources.firstOrNull { it.id == sourceId }
     // A package that was here and is gone was deleted: there is nothing left to show.
     var seen by remember { mutableStateOf(false) }
@@ -95,6 +111,7 @@ fun SchemeDetailScreen(
             schemeImport !is SchemeImportUiState.MergingLearning &&
             dictionaryImport !is DictionaryImportUiState.Running
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var showModels by rememberSaveable(sourceId) { mutableStateOf(false) }
 
     SettingsScaffold(
         title = source?.name ?: stringResource(R.string.row_schemes_title),
@@ -126,8 +143,38 @@ fun SchemeDetailScreen(
                     }
                 }
                 statusItems(source, working, idle, onUse)
-                methodItems(source)
-                if (source.kind == StoredSourceKind.SCHEME && source.usable) updateItems(source, idle, onUpdate)
+                methodItems(source, idle, onSelectMethod)
+                if (source.kind == StoredSourceKind.SCHEME && source.usable) {
+                    updateItems(source, idle, onUpdate) { schemePicker.launch(arrayOf("*/*")) }
+                }
+                if (grammarModel != null && source.requiredModels.isNotEmpty()) {
+                    item(key = "models_entry") {
+                        app.songyan.ime.settings.ui.components.SettingsRow(
+                            title = stringResource(R.string.schemes_detail_models),
+                            subtitle = stringResource(R.string.schemes_grammar_needed),
+                            onClick = { showModels = !showModels },
+                        )
+                    }
+                }
+                if (grammarModel != null &&
+                    ((showModels && source.requiredModels.isNotEmpty()) || grammarModel.state.grammarModelImported)
+                ) {
+                    item(key = "required_models") {
+                        GrammarModelCard(
+                            paths = source.requiredModels,
+                            state = grammarModel.state,
+                            actions =
+                                grammarModel.actions.copy(
+                                    onPickFile = { grammarPicker.launch(arrayOf("*/*")) },
+                                    onDismiss = {
+                                        showModels = false
+                                        grammarModel.actions.onDismiss()
+                                    },
+                                ),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
                 manageItems(source, sources, idle, onUse, onDelete = { confirmDelete = true })
             }
         }
@@ -219,23 +266,36 @@ private fun LazyListScope.statusItems(
 }
 
 /** The input methods the package contains; the one the keyboard types with is marked. */
-private fun LazyListScope.methodItems(source: StoredSourceInfo) {
+private fun LazyListScope.methodItems(
+    source: StoredSourceInfo,
+    idle: Boolean,
+    onSelect: (String) -> Unit,
+) {
     if (source.schemes.isEmpty()) return
     item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
     items(source.schemes.size, key = { "method_" + source.schemes[it].id }) { index ->
         val method = source.schemes[index]
-        ListItem(
-            headlineContent = { Text(method.name) },
-            trailingContent = {
-                if (method.id == source.inUseSchemeId) {
-                    Text(
-                        stringResource(R.string.schemes_status_in_use),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            },
-        )
+        if (source.inUse) {
+            RadioRow(
+                title = method.name,
+                selected = method.id == source.inUseSchemeId,
+                enabled = idle,
+                onClick = { onSelect(method.id) },
+            )
+        } else {
+            ListItem(
+                headlineContent = { Text(method.name) },
+                trailingContent = {
+                    if (method.id == source.inUseSchemeId) {
+                        Text(
+                            stringResource(R.string.schemes_status_in_use),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -243,6 +303,7 @@ private fun LazyListScope.updateItems(
     source: StoredSourceInfo,
     idle: Boolean,
     onUpdate: (String) -> Unit,
+    onReimport: () -> Unit,
 ) {
     item { SectionHeader(stringResource(R.string.schemes_detail_update_section)) }
     item(key = "origin") {
@@ -266,7 +327,14 @@ private fun LazyListScope.updateItems(
             }
         }
     } else {
-        item(key = "reimport_note") { DetailNote(stringResource(R.string.schemes_detail_reimport_note)) }
+        item(key = "reimport_note") {
+            OutlinedButton(
+                onClick = onReimport,
+                enabled = idle,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            ) { Text(stringResource(R.string.schemes_scheme_import_file)) }
+            DetailNote(stringResource(R.string.schemes_detail_reimport_note))
+        }
     }
 }
 

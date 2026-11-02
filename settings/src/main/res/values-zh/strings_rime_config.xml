@@ -42,4 +42,8 @@
     <string name="rime_editor_discard_body">你改的内容还没有保存。</string>
     <string name="rime_config_edit_grammar">调整语法模型参数</string>
     <string name="rime_config_edit_grammar_body">用文件写法调整整句排序的细节。</string>
+    <string name="rime_editor_external_changed">文件已在其他应用中修改</string>
+    <string name="rime_editor_external_changed_body">载入文件会替换当前编辑。保留编辑后，再次保存会覆盖文件。</string>
+    <string name="rime_editor_load_file">载入文件</string>
+    <string name="rime_editor_keep_edits">保留编辑</string>
 </resources>

@@ -100,7 +100,7 @@ class LayoutsScreenTest {
     }
 
     @Test
-    fun theNineKeyEditEntryOpensTheEditor() {
+    fun tappingTheNineKeyLayoutOpensTheEditor() {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 LayoutsScreen(
@@ -111,11 +111,7 @@ class LayoutsScreenTest {
                 )
             }
         }
-        compose
-            .onNodeWithContentDescription(
-                str(R.string.layouts_more_actions, BuiltinLayouts.phone9.name),
-            ).performClick()
-        compose.onNodeWithText(str(R.string.layouts_action_edit)).performClick()
+        compose.onNodeWithText(BuiltinLayouts.phone9.name).performClick()
         assertEquals("phone9", edited)
     }
 

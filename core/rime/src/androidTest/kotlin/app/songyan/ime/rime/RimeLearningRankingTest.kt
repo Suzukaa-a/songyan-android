@@ -4,14 +4,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.rime.EngineTestSupport.candidateTexts
 import app.songyan.ime.rime.EngineTestSupport.type
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
 
 /**
  * Learning changes what the engine ranks first: committing a lower-ranked candidate repeatedly
@@ -92,6 +96,56 @@ class RimeLearningRankingTest {
                 repeat(3) { commitByText(engine, KEYS, chosen) }
                 assertEquals(other, candidatesFor(engine, OTHER_KEYS))
             }
+        }
+
+    @Test
+    fun aCancelledPrivatePickStillDeliversTextWithoutLearningAfterReopening() =
+        runBlocking {
+            var baseline = emptyList<String>()
+            withEngine { engine ->
+                baseline = candidatesFor(engine, KEYS)
+                assertTrue("need a lower-ranked candidate", baseline.size >= 3)
+                repeat(3) {
+                    val backend = RimeEngineBackend(engine)
+                    assertTrue(backend.setLearningSuppressed(true))
+                    for (key in KEYS) backend.processKey(key.toString())
+                    val hold = CountDownLatch(1)
+                    RimeDispatcher.shared().post { hold.await() }
+                    // UNDISPATCHED queues the native pick before cancellation, without a timing sleep.
+                    val caller = launch(start = CoroutineStart.UNDISPATCHED) { backend.selectCandidate(2) }
+                    caller.cancel()
+                    hold.countDown()
+                    caller.join()
+                    assertEquals(baseline[2], engine.readSnapshot().commitText)
+                    assertTrue(engine.readSnapshot().commitText.isEmpty())
+                    // Preparing the replacement controller must not flush the cancelled pick's learning.
+                    assertTrue(RimeEngineBackend(engine).setLearningSuppressed(true))
+                    assertEquals(baseline, candidatesFor(engine, KEYS))
+                }
+            }
+            withEngine { engine -> assertEquals(baseline, candidatesFor(engine, KEYS)) }
+        }
+
+    @Test
+    fun anUnreadablePrivateCommitStopsProtectionWithoutLearning() =
+        runBlocking {
+            var baseline = emptyList<String>()
+            withEngine { engine ->
+                baseline = candidatesFor(engine, KEYS)
+                val backend = RimeEngineBackend(engine)
+                assertTrue(backend.setLearningSuppressed(true))
+                for (key in KEYS) backend.processKey(key.toString())
+                engine.failNextSnapshotReads(1)
+                runCatching { backend.selectCandidate(2) }
+                assertFalse(backend.learningSuppressionIntact)
+                engine.cancelComposition()
+                // No-suggestions fields may keep composing after a fault; keep attempting rollback.
+                for (key in KEYS) backend.processKey(key.toString())
+                backend.selectCandidate(2)
+                assertTrue(backend.setLearningSuppressed(false))
+                assertEquals(baseline, candidatesFor(engine, KEYS))
+            }
+            withEngine { engine -> assertEquals(baseline, candidatesFor(engine, KEYS)) }
         }
 
     private suspend fun withEngine(block: suspend (RimeEngine) -> Unit) {

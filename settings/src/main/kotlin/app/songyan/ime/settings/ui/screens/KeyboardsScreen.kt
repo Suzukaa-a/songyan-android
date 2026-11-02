@@ -78,11 +78,6 @@ fun KeyboardsScreen(
 
             SectionHeader(stringResource(R.string.keyboards_pages_section))
             SettingsRow(
-                title = stringResource(R.string.keyboard_menu_title),
-                subtitle = stringResource(R.string.keyboard_menu_entry_body),
-                onClick = onOpenMenu,
-            )
-            SettingsRow(
                 title = stringResource(R.string.composition_title),
                 subtitle = stringResource(R.string.composition_entry_body),
                 onClick = onOpenComposition,
@@ -96,6 +91,11 @@ fun KeyboardsScreen(
                 title = stringResource(R.string.pages_title),
                 subtitle = stringResource(R.string.pages_entry_body),
                 onClick = onOpenPages,
+            )
+            SettingsRow(
+                title = stringResource(R.string.keyboard_menu_title),
+                subtitle = stringResource(R.string.keyboard_menu_entry_body),
+                onClick = onOpenMenu,
             )
             SettingsRow(
                 title = stringResource(R.string.t9_symbols_title),

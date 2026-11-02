@@ -98,11 +98,11 @@ class PageEditorScreenTest {
             .onFirst()
             .performTextClearance()
         compose.onAllNodes(hasSetTextAction() and hasText("")).onFirst().performTextInput("新分类")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         assertEquals(listOf("甲组", "乙组", "新分类"), stored().categories!!.map { it.name })
         assertEquals("new-id", stored().categories!!.last().id)
-        assertEquals(true, closed)
+        assertEquals(false, closed)
     }
 
     @Test
@@ -119,7 +119,7 @@ class PageEditorScreenTest {
             .onFirst()
             .performTextClearance()
         compose.onAllNodes(hasSetTextAction() and hasText("")).onFirst().performTextInput("壹")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val first = stored().categories!!.first()
         assertEquals(3, first.columns)
@@ -131,7 +131,7 @@ class PageEditorScreenTest {
         show()
         compose.onNodeWithText(str(R.string.page_editor_category_recent)).performScrollTo().performClick()
         compose.onNodeWithText(str(R.string.page_editor_category_recent_body)).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val first = stored().categories!!.first()
         assertEquals(KeyboardPageCategory.Source.RECENT, first.source)

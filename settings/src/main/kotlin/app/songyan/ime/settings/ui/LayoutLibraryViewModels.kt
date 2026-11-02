@@ -1,8 +1,10 @@
 package app.songyan.ime.settings.ui
 
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.layout.BuiltinLayouts
@@ -10,6 +12,7 @@ import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPageDefinition
 import app.songyan.ime.layout.KeyboardSymbolPresentation
+import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutException
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.state.LayoutEditResult
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 
 /** What a library action did, shown once; the screen maps it onto copy. */
@@ -170,21 +174,38 @@ class LayoutEditorViewModel(
     private val source: LayoutLibrarySource,
     private val layoutId: String,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    draftDirectory: File? = null,
 ) : ViewModel() {
+    private val storage = draftDirectory?.let { EditorDraftStore(it, savedStateHandle) }
     private val mutableDraft = MutableStateFlow<LayoutDraft?>(null)
     val draft: StateFlow<LayoutDraft?> = mutableDraft.asStateFlow()
-
     private val mutableOutcome = MutableStateFlow<SaveOutcome?>(null)
     val outcome: StateFlow<SaveOutcome?> = mutableOutcome.asStateFlow()
+    private val mutableSaving = MutableStateFlow(false)
+    val saving: StateFlow<Boolean> = mutableSaving.asStateFlow()
 
     init {
         viewModelScope.launch {
+            val restored = storage?.restore { it.readLayoutDraft() }
             val registry = source.registry.first { it != null }
-            mutableDraft.value = registry?.resolvedLayout(layoutId)?.let { LayoutDraft(it) }
+            mutableDraft.value = restored ?: registry?.resolvedLayout(layoutId)?.let { LayoutDraft(it) }
         }
     }
 
-    fun update(change: (LayoutDraft) -> LayoutDraft) = mutableDraft.update { it?.let(change) }
+    fun update(change: (LayoutDraft) -> LayoutDraft) {
+        mutableDraft.update { it?.let(change) }
+        persistDraft()
+    }
+
+    private fun persistDraft() {
+        val current = mutableDraft.value ?: return
+        storage?.persist { it.writeLayoutDraft(current) }
+    }
+
+    fun discardDraft() {
+        storage?.clear()
+    }
 
     fun consumeOutcome() {
         mutableOutcome.value = null
@@ -192,23 +213,77 @@ class LayoutEditorViewModel(
 
     fun save() {
         val current = mutableDraft.value ?: return
-        saveWith { registry -> registry.replace(current.layout) }
+        if (!current.hasChanges) return
+        saveWith(current.layout, false)
     }
 
-    /** Stores the draft as a new layout named [name] and leaves the original as it was. */
     fun saveAsCopy(name: String) {
+        if (mutableSaving.value) return
         val current = mutableDraft.value ?: return
-        saveWith { registry -> registry.copy(BuiltinLayouts.persistingHandCuts(current.layout), newId(), name).first }
+        saveWith(BuiltinLayouts.persistingHandCuts(current.layout).copy(id = newId(), name = name), true)
     }
 
-    private fun saveWith(change: (LayoutRegistry) -> LayoutRegistry) {
+    private fun saveWith(
+        submitted: LayoutDefinition,
+        asCopy: Boolean,
+    ) {
+        if (mutableSaving.value) return
+        val before = mutableDraft.value ?: return
+        mutableSaving.value = true
+        mutableOutcome.value = null
         viewModelScope.launch {
-            mutableOutcome.value =
-                when (val result = source.edit(change)) {
-                    is LayoutEditResult.Saved -> SaveOutcome.Saved
-                    is LayoutEditResult.Rejected -> SaveOutcome.Failed(result.error)
-                }
+            try {
+                mutableOutcome.value =
+                    when (
+                        val result =
+                            source.edit { registry ->
+                                if (asCopy) registry.install(submitted.encoded()) else registry.replace(submitted)
+                            }
+                    ) {
+                        is LayoutEditResult.Saved -> {
+                            // Advance only the submitted baseline; typing during IO belongs to the next save.
+                            mutableDraft.update { latest ->
+                                latest?.let {
+                                    val edited =
+                                        if (asCopy) {
+                                            it.layout.copy(
+                                                id = submitted.id,
+                                                name =
+                                                    if (it.layout.name ==
+                                                        before.layout.name
+                                                    ) {
+                                                        submitted.name
+                                                    } else {
+                                                        it.layout.name
+                                                    },
+                                                split =
+                                                    if (it.layout.split ==
+                                                        before.layout.split
+                                                    ) {
+                                                        submitted.split
+                                                    } else {
+                                                        it.layout.split
+                                                    },
+                                            )
+                                        } else {
+                                            it.layout
+                                        }
+                                    it.copy(original = submitted, layout = edited)
+                                }
+                            }
+                            persistDraft()
+                            SaveOutcome.Saved
+                        }
+                        is LayoutEditResult.Rejected -> SaveOutcome.Failed(result.error)
+                    }
+            } finally {
+                mutableSaving.value = false
+            }
         }
+    }
+
+    override fun onCleared() {
+        storage?.close()
     }
 
     class Factory(
@@ -218,8 +293,14 @@ class LayoutEditorViewModel(
             modelClass: Class<T>,
             extras: CreationExtras,
         ): T {
+            val application = checkNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
             @Suppress("UNCHECKED_CAST")
-            return LayoutEditorViewModel(LayoutLibraryHolder.current, layoutId) as T
+            return LayoutEditorViewModel(
+                LayoutLibraryHolder.current,
+                layoutId,
+                savedStateHandle = extras.createSavedStateHandle(),
+                draftDirectory = File(application.applicationInfo.dataDir, "no_backup"),
+            ) as T
         }
     }
 }
@@ -229,23 +310,39 @@ class PageEditorViewModel(
     private val source: LayoutLibrarySource,
     private val pageId: String,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    draftDirectory: File? = null,
 ) : ViewModel() {
+    private val storage = draftDirectory?.let { EditorDraftStore(it, savedStateHandle) }
     private val mutableDraft = MutableStateFlow<PageDraft?>(null)
     val draft: StateFlow<PageDraft?> = mutableDraft.asStateFlow()
-
     private val mutableOutcome = MutableStateFlow<SaveOutcome?>(null)
     val outcome: StateFlow<SaveOutcome?> = mutableOutcome.asStateFlow()
+    private val mutableSaving = MutableStateFlow(false)
+    val saving: StateFlow<Boolean> = mutableSaving.asStateFlow()
 
     init {
         viewModelScope.launch {
+            val restored = storage?.restore { it.readPageDraft() }
             val registry = source.registry.first { it != null }
-            mutableDraft.value = registry?.page(pageId)?.let { PageDraft(it) }
+            mutableDraft.value = restored ?: registry?.page(pageId)?.let { PageDraft(it) }
         }
     }
 
-    fun update(change: (PageDraft) -> PageDraft) = mutableDraft.update { it?.let(change) }
+    fun update(change: (PageDraft) -> PageDraft) {
+        mutableDraft.update { it?.let(change) }
+        persistDraft()
+    }
 
-    /** A fresh id for a category the user adds or duplicates. */
+    private fun persistDraft() {
+        val current = mutableDraft.value ?: return
+        storage?.persist { it.writePageDraft(current) }
+    }
+
+    fun discardDraft() {
+        storage?.clear()
+    }
+
     fun newCategoryId(): String = newId()
 
     fun consumeOutcome() {
@@ -254,22 +351,64 @@ class PageEditorViewModel(
 
     fun save() {
         val current = mutableDraft.value ?: return
-        saveWith { registry -> registry.withPage(current.page) }
+        if (!current.hasChanges) return
+        saveWith(current.page, false)
     }
 
     fun saveAsCopy(name: String) {
+        if (mutableSaving.value) return
         val current = mutableDraft.value ?: return
-        saveWith { registry -> registry.withPage(current.page.copy(id = newId(), name = name)) }
+        saveWith(current.page.copy(id = newId(), name = name), true)
     }
 
-    private fun saveWith(change: (LayoutRegistry) -> LayoutRegistry) {
+    private fun saveWith(
+        submitted: KeyboardPageDefinition,
+        asCopy: Boolean,
+    ) {
+        if (mutableSaving.value) return
+        val before = mutableDraft.value ?: return
+        mutableSaving.value = true
+        mutableOutcome.value = null
         viewModelScope.launch {
-            mutableOutcome.value =
-                when (val result = source.edit(change)) {
-                    is LayoutEditResult.Saved -> SaveOutcome.Saved
-                    is LayoutEditResult.Rejected -> SaveOutcome.Failed(result.error)
-                }
+            try {
+                mutableOutcome.value =
+                    when (val result = source.edit { registry -> registry.withPage(submitted) }) {
+                        is LayoutEditResult.Saved -> {
+                            // Advance only the submitted baseline; typing during IO belongs to the next save.
+                            mutableDraft.update { latest ->
+                                latest?.let {
+                                    val edited =
+                                        if (asCopy) {
+                                            it.page.copy(
+                                                id = submitted.id,
+                                                name =
+                                                    if (it.page.name ==
+                                                        before.page.name
+                                                    ) {
+                                                        submitted.name
+                                                    } else {
+                                                        it.page.name
+                                                    },
+                                            )
+                                        } else {
+                                            it.page
+                                        }
+                                    it.copy(original = submitted, page = edited)
+                                }
+                            }
+                            persistDraft()
+                            SaveOutcome.Saved
+                        }
+                        is LayoutEditResult.Rejected -> SaveOutcome.Failed(result.error)
+                    }
+            } finally {
+                mutableSaving.value = false
+            }
         }
+    }
+
+    override fun onCleared() {
+        storage?.close()
     }
 
     class Factory(
@@ -279,8 +418,14 @@ class PageEditorViewModel(
             modelClass: Class<T>,
             extras: CreationExtras,
         ): T {
+            val application = checkNotNull(extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
             @Suppress("UNCHECKED_CAST")
-            return PageEditorViewModel(LayoutLibraryHolder.current, pageId) as T
+            return PageEditorViewModel(
+                LayoutLibraryHolder.current,
+                pageId,
+                savedStateHandle = extras.createSavedStateHandle(),
+                draftDirectory = File(application.applicationInfo.dataDir, "no_backup"),
+            ) as T
         }
     }
 }

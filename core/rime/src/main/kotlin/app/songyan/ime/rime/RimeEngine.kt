@@ -131,6 +131,19 @@ class RimeEngine private constructor(
 
     // ---- input -------------------------------------------------------------
 
+    private var learningSuppressed = false
+
+    @Volatile
+    internal var learningSuppressionIntact = true
+        private set
+
+    /** The backend probes the schema before enabling rollback; the policy lives with native commits. */
+    internal suspend fun setLearningSuppressed(suppressed: Boolean) =
+        dispatcher.onEngine {
+            learningSuppressed = suppressed
+            learningSuppressionIntact = true
+        }
+
     /** Feeds one key; the result says whether the engine consumed it. */
     suspend fun processKey(key: RimeKey): RimeActionResult =
         dispatcher.onEngine(onLost = { keepUndelivered(it.snapshot.commitText) }) {
@@ -698,10 +711,38 @@ class RimeEngine private constructor(
                 read
             }
         if (fields == null) {
+            if (learningSuppressed) {
+                // Snapshot construction may have consumed the commit already. Drop its pending
+                // learning before recovery clears the context, and stop private composition.
+                learningSuppressionIntact = false
+                runCatching {
+                    RimeNative.nativeProcessKey(
+                        engine,
+                        session,
+                        RimeKey.BACKSPACE.keycode,
+                        RimeKey.BACKSPACE.modifiers,
+                    )
+                }
+            }
             snapshotRecoveryRequired = true
             return null
         }
         val decoded = RimeNative.decodeSnapshot(ints, fields)
+        // Roll back learning before returning across the cancellable dispatcher boundary. The
+        // caller may disappear, but onLost must retain only the text, never its pending learning.
+        if (learningSuppressed && decoded.commitText.isNotEmpty()) {
+            val rolledBack =
+                !decoded.isComposing &&
+                    runCatching {
+                        !RimeNative.nativeProcessKey(
+                            engine,
+                            session,
+                            RimeKey.BACKSPACE.keycode,
+                            RimeKey.BACKSPACE.modifiers,
+                        )
+                    }.getOrDefault(false)
+            learningSuppressionIntact = learningSuppressionIntact && rolledBack
+        }
         mutableSnapshot.value = decoded.copy(commitText = "")
         if (undeliveredCommit.isEmpty()) return decoded
         val withEarlier = decoded.copy(commitText = undeliveredCommit + decoded.commitText)

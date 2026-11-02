@@ -1,19 +1,16 @@
 package app.songyan.ime.settings.ui.screens
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -96,10 +93,7 @@ private fun TryOutHint(
     }
 }
 
-/**
- * Six kinds do not fit a phone-width segmented row, so the row scrolls sideways instead of
- * squeezing the labels; each segment keeps the 48 dp touch height.
- */
+/** Keep all field kinds discoverable on narrow screens and at larger font sizes. */
 @Composable
 private fun TryOutKindPicker(
     selected: TryOutKind,
@@ -112,16 +106,13 @@ private fun TryOutKindPicker(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            TryOutKind.entries.forEachIndexed { index, kind ->
-                SegmentedButton(
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TryOutKind.entries.forEach { kind ->
+                FilterChip(
                     selected = kind == selected,
                     onClick = { onSelect(kind) },
-                    shape = SegmentedButtonDefaults.itemShape(index, TryOutKind.entries.size),
-                    modifier = Modifier.widthIn(min = 72.dp),
-                ) {
-                    Text(stringResource(kind.labelRes), maxLines = 1)
-                }
+                    label = { Text(stringResource(kind.labelRes)) },
+                )
             }
         }
     }

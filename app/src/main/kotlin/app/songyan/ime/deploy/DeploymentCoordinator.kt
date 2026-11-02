@@ -31,6 +31,8 @@ import app.songyan.ime.userconfig.UserScripts
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -38,6 +40,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import kotlin.coroutines.coroutineContext
 
 /**
  * Owns the deploy side of the publication protocol: keep the stored sources under
@@ -267,17 +270,9 @@ class DeploymentCoordinator(
             if (before == null || before.sourceId == staged.manifest.sourceId) return@locked record
             // The update must not switch the keyboard to another package; the previous source's
             // generation is still stored, so this is a reactivation, not a deploy.
-            val manifest = if (before.sourceId == SourceIds.BUILTIN) null else catalog.read(before.sourceId)
             try {
-                when {
-                    before.sourceId == SourceIds.BUILTIN ->
-                        reusable(SourceIds.BUILTIN, effectiveRevision(builtinManifest())) ?: deployBuiltinLocked()
-                    manifest != null ->
-                        reusable(before.sourceId, before.revision) ?: redeploySourceLocked(before.sourceId)
-                    else -> record
-                }
-            } catch (e: CancellationException) {
-                throw e
+                // Publishing committed the update; a late cancellation must not prevent restoring the selection.
+                publisher.reactivate(before.generation) ?: record
             } catch (e: Exception) {
                 Log.e(TAG, "cannot put the keyboard back on " + before.sourceId + " after an update", e)
                 record
@@ -317,30 +312,31 @@ class DeploymentCoordinator(
             if (applied.exists()) moveDirectory(applied, previous) else previous.mkdirs()
             moveDirectory(staging, applied)
             strictConfig = true
-            try {
-                val active = publisher.readActive()?.sourceId
-                val record =
+            val record =
+                try {
+                    val active = publisher.readActive()?.sourceId
                     if (active == null || active == SourceIds.BUILTIN || catalog.read(active) == null) {
                         deployBuiltinLocked()
                     } else {
                         redeploySourceLocked(active)
                     }
-                previous.deleteRecursively()
-                configStatus.write(UserConfigStatus.applied(UserConfigFiles.digest(applied)))
-                record
-            } catch (e: Throwable) {
-                applied.deleteRecursively()
-                moveDirectory(previous, applied)
-                if (e is UserConfigException) {
-                    configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
-                } else if (e !is CancellationException) {
-                    configStatus.write(UserConfigStatus.failed(null, DEPLOY_PROBLEM))
+                } catch (e: Throwable) {
+                    applied.deleteRecursively()
+                    moveDirectory(previous, applied)
+                    if (e is UserConfigException) {
+                        configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
+                    } else if (e !is CancellationException) {
+                        configStatus.write(UserConfigStatus.failed(null, DEPLOY_PROBLEM))
+                    }
+                    throw e
+                } finally {
+                    strictConfig = false
+                    staging.deleteRecursively()
                 }
-                throw e
-            } finally {
-                strictConfig = false
-                staging.deleteRecursively()
-            }
+            // Activation committed these files; a status write failure must not roll them back.
+            configStatus.write(UserConfigStatus.applied(UserConfigFiles.digest(applied)))
+            previous.deleteRecursively()
+            record
         }
 
     private suspend fun <T> locked(block: suspend () -> T): Result<T> =
@@ -351,6 +347,7 @@ class DeploymentCoordinator(
                     recoverStackedDictionaries()
                     purgeOldTrash()
                     purgeStaleWorkDirs()
+                    checkCancellation()
                     block()
                 }
             }
@@ -393,7 +390,7 @@ class DeploymentCoordinator(
         )
 
     /** The newest complete generation of [sourceId] at [revision] built by this stamp, made active. */
-    private fun reusable(
+    private suspend fun reusable(
         sourceId: String,
         revision: String,
     ): PublicationRecord? {
@@ -407,6 +404,7 @@ class DeploymentCoordinator(
                 .publishedRecords()
                 .filter { it.sourceId == sourceId && it.revision == revision && it.stamp == stamp }
                 .minByOrNull { it.companionsPending } ?: return null
+        checkCancellation()
         return publisher.reactivate(stored.generation)
     }
 
@@ -578,22 +576,26 @@ class DeploymentCoordinator(
             val companionsPending = companionSchemas.toSet() != manifest.schemaIds.toSet()
             val engineStart = SystemClock.elapsedRealtime()
             var afterDeployStart = 0L
+            // Native maintenance and engine teardown must finish before rollback can remove their files.
             val outcome =
-                runner.deployFull(
-                    sharedDataDir = sourceDir,
-                    userDataDir = workDir,
-                    appName = appName,
-                    appVersion = stamp.app + "+" + revision,
-                    afterDeploy = { engine ->
-                        afterDeployStart = SystemClock.elapsedRealtime()
-                        timer.add("engine", afterDeployStart - engineStart)
-                        afterDeploy(
-                            engine,
-                            DeployScope(sourceDir, workDir, manifest, features, companionSchemas, timer),
-                            reuseCompanions = if (resumed) done.orEmpty() else null,
-                        )
-                    },
-                )
+                withContext(NonCancellable) {
+                    runner.deployFull(
+                        sharedDataDir = sourceDir,
+                        userDataDir = workDir,
+                        appName = appName,
+                        appVersion = stamp.app + "+" + revision,
+                        afterDeploy = { engine ->
+                            afterDeployStart = SystemClock.elapsedRealtime()
+                            timer.add("engine", afterDeployStart - engineStart)
+                            afterDeploy(
+                                engine,
+                                DeployScope(sourceDir, workDir, manifest, features, companionSchemas, timer),
+                                reuseCompanions = if (resumed) done.orEmpty() else null,
+                            )
+                        },
+                    )
+                }
+            checkCancellation()
             if (afterDeployStart == 0L) timer.add("engine", SystemClock.elapsedRealtime() - engineStart)
             if (!outcome.success) {
                 throw DeployException("deployment failed: " + (outcome.lastError ?: "unknown error"))
@@ -628,6 +630,7 @@ class DeploymentCoordinator(
                     manifest.schemaIds.filter { deployed.isEmpty() || it in deployed }
                 }
             if (schemaIds.isEmpty()) throw DeployException("none of the source's input methods deployed")
+            val context = coroutineContext
             val record =
                 timer.phase("publish") {
                     publisher.publish(
@@ -640,6 +643,11 @@ class DeploymentCoordinator(
                         stamp = stamp,
                         extraResources = features.files.associateBy { it.name } + configured,
                         companionsPending = companionsPending,
+                        configDigest = config?.let { UserConfigFiles.digest(it) } ?: "",
+                        beforeActivate = {
+                            context.ensureActive()
+                            context[DeployCancellation]?.check()
+                        },
                     )
                 }
             File(sourceDir, InputSchemeSetup.INSTALLING).delete()
@@ -801,6 +809,11 @@ class DeploymentCoordinator(
         return inUse?.takeIf { it in manifest.schemaIds } ?: manifest.schemaIds.first()
     }
 
+    private suspend fun checkCancellation() {
+        coroutineContext.ensureActive()
+        coroutineContext[DeployCancellation]?.check()
+    }
+
     private suspend fun <T> withDeployLock(block: suspend () -> T): T {
         storage.ensureBaseDirectories()
         FileChannel
@@ -875,18 +888,20 @@ class DeploymentCoordinator(
         }
     }
 
-    /**
-     * An application of the configuration that died before its generation was published leaves the
-     * earlier configuration set aside; it is the one the running generation was built with, so it
-     * comes back. Half-made copies are dropped.
-     */
+    /** The active publication decides whether an interrupted configuration application committed. */
     private fun recoverAppliedConfig() {
         val entries = storage.configRoot.listFiles().orEmpty()
         for (entry in entries.filter { it.name.startsWith(CONFIG_STAGING_PREFIX) }) entry.deleteRecursively()
         val previous = entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) }.maxByOrNull { it.name } ?: return
-        storage.appliedConfigDir.deleteRecursively()
-        moveDirectory(previous, storage.appliedConfigDir)
-        for (entry in entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) && it != previous }) {
+        val applied = storage.appliedConfigDir
+        val digest = UserConfigFiles.digest(applied)
+        if (applied.isDirectory && publisher.usablePublication()?.configDigest == (digest ?: "")) {
+            configStatus.write(UserConfigStatus.applied(digest))
+        } else {
+            applied.deleteRecursively()
+            moveDirectory(previous, applied)
+        }
+        for (entry in entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) }) {
             entry.deleteRecursively()
         }
     }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="import_cancelling">正在取消…</string>
     <!-- 输入方案 · 方案包 -->
     <string name="schemes_scheme_import_file">导入输入方案</string>
     <string name="schemes_scheme_import_note">支持 .zip 文件、文件夹，或 ZIP 下载链接与 GitHub 仓库地址。导入已有方案的新版本会替换旧版本，学到的词和语法模型都保留。</string>

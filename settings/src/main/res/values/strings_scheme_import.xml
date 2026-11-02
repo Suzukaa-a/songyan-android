@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="import_cancelling">Cancelling…</string>
     <!-- Input schemes · scheme package -->
     <string name="schemes_scheme_import_file">Import input scheme</string>
     <string name="schemes_scheme_import_note">Supports .zip files, folders, ZIP download links and GitHub repository addresses. A newer version of a scheme you already have replaces it and keeps the words it learned and its grammar model.</string>

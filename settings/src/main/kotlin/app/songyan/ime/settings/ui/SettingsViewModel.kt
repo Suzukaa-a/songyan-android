@@ -37,7 +37,9 @@ import app.songyan.ime.settings.state.TransferProgress
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.screens.KeyboardFeelState
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -108,9 +110,7 @@ private data class StoredPreferences(
  * choices from [preferences]; the system input-method state is re-read on every resume because
  * the user changes it outside the app.
  *
- * Dictionary and scheme package import are the requests the UI starts itself: both are slow
- * deploys, so their state stays local to the view model and the app state is re-read once the
- * gateway reports success.
+ * Import requests belong to the process so a replacement screen observes the same work.
  */
 class SettingsViewModel(
     application: Application,
@@ -121,6 +121,8 @@ class SettingsViewModel(
     private val schemeGateway: SchemeImportGateway = SchemeImportHolder.current,
     private val sourcesGateway: StoredSourcesGateway = StoredSourcesHolder.current,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val importTasks: SettingsImportTasks =
+        SettingsImportTasks(appStateSource, dictionaryGateway, schemeGateway, sourcesGateway, ioDispatcher),
 ) : AndroidViewModel(application) {
     private val imeStatus = MutableStateFlow(imeStatusSource.read())
     private val hasTyped = MutableStateFlow(false)
@@ -128,11 +130,9 @@ class SettingsViewModel(
 
     // Collected only once every reader is registered, so the pending count is always the real one.
     private val preferenceReaders = mutableListOf<() -> Unit>()
-    private var lastDictionaryRequest: (() -> Unit)? = null
-    private var lastSchemeRequest: (() -> Unit)? = null
-    private val dictionaryImport = MutableStateFlow<DictionaryImportUiState>(DictionaryImportUiState.Idle)
-    private val schemeImport = MutableStateFlow<SchemeImportUiState>(SchemeImportUiState.Idle)
-    private val sourceAction = MutableStateFlow<StoredSourceUiState>(StoredSourceUiState.Idle)
+    private val dictionaryImport = importTasks.dictionaryImport
+    private val schemeImport = importTasks.schemeImport
+    private val sourceAction = importTasks.sourceAction
 
     private val initialState =
         SettingsUiState(
@@ -143,6 +143,9 @@ class SettingsViewModel(
             importedDictionary = appStateSource.state.value.importedDictionary,
             stackedDictionaries = appStateSource.state.value.stackedDictionaries,
             sources = appStateSource.state.value.sources,
+            dictionaryImport = dictionaryImport.value,
+            schemeImport = schemeImport.value,
+            sourceAction = sourceAction.value,
             dictionaryImportAvailable = dictionaryGateway.available,
             schemeImportAvailable = schemeGateway.available,
             ime = imeStatus.value,
@@ -381,6 +384,101 @@ class SettingsViewModel(
         viewModelScope.launch { preferences.setKeyFeedback(value) }
     }
 
+    fun importDictionary(
+        uris: List<Uri>,
+        target: String? = null,
+    ) = importTasks.importDictionary(uris, target)
+
+    fun useSource(sourceId: String) = importTasks.useSource(sourceId)
+
+    fun deleteSource(sourceId: String) = importTasks.deleteSource(sourceId)
+
+    fun dismissSourceAction() = importTasks.dismissSourceAction()
+
+    internal fun runSourceAction(
+        sourceId: String,
+        done: StoredSourceUiState? = null,
+        request: suspend () -> StoredSourceResult,
+    ) = importTasks.runSourceAction(sourceId, done, request)
+
+    fun importDictionaryFromUrl(
+        url: String,
+        target: String? = null,
+    ) = importTasks.importDictionaryFromUrl(url, target)
+
+    fun cancelDictionaryImport() = importTasks.cancelDictionaryImport()
+
+    fun retryDictionaryImport() = importTasks.retryDictionaryImport()
+
+    fun cancelSchemeImport() = importTasks.cancelSchemeImport()
+
+    fun retrySchemeImport() = importTasks.retrySchemeImport()
+
+    fun removeImportedDictionary(target: String? = null) = importTasks.removeImportedDictionary(target)
+
+    fun dismissDictionaryImport() = importTasks.dismissDictionaryImport()
+
+    fun importScheme(uri: Uri) = importTasks.importScheme(uri)
+
+    fun importSchemeFolder(uri: Uri) = importTasks.importSchemeFolder(uri)
+
+    fun importSchemeFromLink(url: String) = importTasks.importSchemeFromLink(url)
+
+    fun updateScheme(sourceId: String) = importTasks.updateScheme(sourceId)
+
+    fun importIncomingPackage() = importTasks.importIncomingPackage()
+
+    fun dismissIncomingPackage() = importTasks.dismissIncomingPackage()
+
+    fun restoreSource(sourceId: String) = importTasks.restoreSource(sourceId)
+
+    fun dismissSchemeImport() = importTasks.dismissSchemeImport()
+
+    fun mergePackageLearning() = importTasks.mergePackageLearning()
+
+    fun declinePackageLearning() = importTasks.declinePackageLearning()
+
+    internal fun runSchemeImport(
+        updated: Boolean = false,
+        request: suspend (progress: (TransferProgress) -> Unit) -> SchemeImportResult,
+    ) = importTasks.runSchemeImport(updated, request)
+
+    /** Builds the view model against the process-wide holders. */
+    class Factory(
+        private val application: Application,
+        private val imeStatusSource: ImeStatusSource,
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            @Suppress("UNCHECKED_CAST")
+            return SettingsViewModel(
+                application = application,
+                appStateSource = SettingsAppStateHolder.current,
+                imeStatusSource = imeStatusSource,
+                preferences = SettingsPreferencesHolder.current,
+                importTasks = ProcessSettingsImportTasks.current,
+            ) as T
+        }
+    }
+}
+
+/** Owns requests and their last result while settings screens come and go. */
+class SettingsImportTasks(
+    private val appStateSource: SettingsAppStateSource,
+    private val dictionaryGateway: DictionaryImportGateway,
+    private val schemeGateway: SchemeImportGateway,
+    private val sourcesGateway: StoredSourcesGateway,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+) {
+    private var lastDictionaryRequest: (() -> Unit)? = null
+    private var lastSchemeRequest: (() -> Unit)? = null
+    internal val dictionaryImport = MutableStateFlow<DictionaryImportUiState>(DictionaryImportUiState.Idle)
+    internal val schemeImport = MutableStateFlow<SchemeImportUiState>(SchemeImportUiState.Idle)
+    internal val sourceAction = MutableStateFlow<StoredSourceUiState>(StoredSourceUiState.Idle)
+
     /**
      * Imports a dictionary made of the files the user picked with the system file picker, stacked
      * onto the scheme package [target] or, when null, added to the built-in input methods.
@@ -400,7 +498,9 @@ class SettingsViewModel(
 
     /** Deletes a stored input scheme; its learning data stays for a later re-import. */
     fun deleteSource(sourceId: String) {
-        val source = uiState.value.sources.firstOrNull { it.id == sourceId }
+        val source =
+            appStateSource.state.value.sources
+                .firstOrNull { it.id == sourceId }
         // A damaged scheme is removed for good; only a usable one can be taken back.
         val done =
             if (source != null && source.usable) StoredSourceUiState.Deleted(sourceId, source.name) else null
@@ -423,7 +523,7 @@ class SettingsViewModel(
             return
         }
         sourceAction.value = StoredSourceUiState.Running(sourceId)
-        viewModelScope.launch {
+        scope.launch {
             val result = withContext(ioDispatcher) { request() }
             appStateSource.refresh()
             sourceAction.value =
@@ -439,6 +539,7 @@ class SettingsViewModel(
         url: String,
         target: String? = null,
     ) {
+        if (dictionaryImport.value is DictionaryImportUiState.Running) return
         val normalized = normalizeDictionaryUrl(url)
         if (normalized == null) {
             dictionaryImport.value =
@@ -453,20 +554,32 @@ class SettingsViewModel(
     }
 
     /** Stops the running dictionary import or removal. */
-    fun cancelDictionaryImport() = dictionaryGateway.cancelRunning()
+    fun cancelDictionaryImport() {
+        val current = dictionaryImport.value as? DictionaryImportUiState.Running ?: return
+        if (current.cancelling) return
+        dictionaryImport.value = current.copy(cancelling = true)
+        dictionaryGateway.cancelRunning()
+    }
 
     /** Runs the failed dictionary request again. */
     fun retryDictionaryImport() {
+        if ((dictionaryImport.value as? DictionaryImportUiState.Failed)?.retryable != true) return
         val again = lastDictionaryRequest ?: return
         dictionaryImport.value = DictionaryImportUiState.Idle
         again()
     }
 
     /** Stops the running scheme package import. */
-    fun cancelSchemeImport() = schemeGateway.cancelRunning()
+    fun cancelSchemeImport() {
+        val current = schemeImport.value as? SchemeImportUiState.Running ?: return
+        if (current.cancelling) return
+        schemeImport.value = current.copy(cancelling = true)
+        schemeGateway.cancelRunning()
+    }
 
     /** Runs the failed scheme package import again. */
     fun retrySchemeImport() {
+        if ((schemeImport.value as? SchemeImportUiState.Failed)?.retryable != true) return
         val again = lastSchemeRequest ?: return
         schemeImport.value = SchemeImportUiState.Idle
         again()
@@ -496,6 +609,11 @@ class SettingsViewModel(
 
     /** Downloads and imports a scheme package from an https link. */
     fun importSchemeFromLink(url: String) {
+        if (schemeImport.value is SchemeImportUiState.Running ||
+            schemeImport.value is SchemeImportUiState.MergingLearning
+        ) {
+            return
+        }
         val link = normalizeSchemeUrl(url)
         if (link == null) {
             schemeImport.value = SchemeImportUiState.Failed(null)
@@ -538,7 +656,7 @@ class SettingsViewModel(
         val current = schemeImport.value as? SchemeImportUiState.Succeeded ?: return
         val id = current.info?.sourceId?.takeIf { current.offersLearning } ?: return
         schemeImport.value = SchemeImportUiState.MergingLearning
-        viewModelScope.launch {
+        scope.launch {
             val result = withContext(ioDispatcher) { schemeGateway.mergePackageLearning(id) }
             // The package may have been put in use on the way.
             appStateSource.refresh()
@@ -560,7 +678,7 @@ class SettingsViewModel(
 
     private fun discardPackageLearning(state: SchemeImportUiState.Succeeded) {
         val id = state.info?.sourceId ?: return
-        viewModelScope.launch { withContext(ioDispatcher) { schemeGateway.discardPackageLearning(id) } }
+        scope.launch { withContext(ioDispatcher) { schemeGateway.discardPackageLearning(id) } }
     }
 
     /**
@@ -572,14 +690,18 @@ class SettingsViewModel(
         request: suspend (progress: (TransferProgress) -> Unit) -> SchemeImportResult,
     ) {
         // A second tap while the deploy runs would stage the same source twice.
-        if (schemeImport.value is SchemeImportUiState.Running) return
+        if (schemeImport.value is SchemeImportUiState.Running ||
+            schemeImport.value is SchemeImportUiState.MergingLearning
+        ) {
+            return
+        }
         lastSchemeRequest = { runSchemeImport(updated, request) }
         if (!schemeGateway.available) {
             schemeImport.value = SchemeImportUiState.Failed(null)
             return
         }
         schemeImport.value = SchemeImportUiState.Running()
-        viewModelScope.launch {
+        scope.launch {
             val result =
                 withContext(ioDispatcher) {
                     request { transfer ->
@@ -625,7 +747,7 @@ class SettingsViewModel(
             return
         }
         dictionaryImport.value = DictionaryImportUiState.Running(action)
-        viewModelScope.launch {
+        scope.launch {
             val result = withContext(ioDispatcher) { request() }
             dictionaryImport.value =
                 when (result) {
@@ -644,23 +766,15 @@ class SettingsViewModel(
                 }
         }
     }
+}
 
-    /** Builds the view model against the process-wide holders. */
-    class Factory(
-        private val application: Application,
-        private val imeStatusSource: ImeStatusSource,
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(
-            modelClass: Class<T>,
-            extras: CreationExtras,
-        ): T {
-            @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(
-                application = application,
-                appStateSource = SettingsAppStateHolder.current,
-                imeStatusSource = imeStatusSource,
-                preferences = SettingsPreferencesHolder.current,
-            ) as T
-        }
+private object ProcessSettingsImportTasks {
+    val current: SettingsImportTasks by lazy {
+        SettingsImportTasks(
+            SettingsAppStateHolder.current,
+            DictionaryImportHolder.current,
+            SchemeImportHolder.current,
+            StoredSourcesHolder.current,
+        )
     }
 }

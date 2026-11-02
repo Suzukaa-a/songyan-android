@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.ui
 
+import androidx.lifecycle.SavedStateHandle
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutAction
@@ -8,15 +9,168 @@ import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutPageJump
 import app.songyan.ime.layout.LayoutPageTarget
+import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
+import app.songyan.ime.settings.state.LayoutEditResult
+import app.songyan.ime.settings.state.LayoutLibrarySource
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.nio.file.Files
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class EditorDraftsTest {
+    private class DelayedSource(
+        val backing: InMemoryLayoutLibrarySource = InMemoryLayoutLibrarySource(),
+    ) : LayoutLibrarySource by backing {
+        val gate = CompletableDeferred<Unit>()
+
+        override suspend fun edit(change: (LayoutRegistry) -> LayoutRegistry): LayoutEditResult {
+            gate.await()
+            return backing.edit(change)
+        }
+    }
+
+    @Test
+    fun layoutSaveKeepsLaterEditsAndIgnoresDuplicateSaveRequests() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val source = DelayedSource()
+                val model = LayoutEditorViewModel(source, BuiltinLayouts.qwerty26.id)
+                runCurrent()
+                model.update { it.rename("submitted") }
+                model.save()
+                assertTrue(model.saving.value)
+                model.saveAsCopy("duplicate")
+                model.update { it.rename("later") }
+                source.gate.complete(Unit)
+                advanceUntilIdle()
+                assertFalse(model.saving.value)
+                assertEquals(
+                    "submitted",
+                    source.registry.value!!
+                        .layout(BuiltinLayouts.qwerty26.id)!!
+                        .name,
+                )
+                val draft = model.draft.value!!
+                assertEquals("submitted", draft.original.name)
+                assertEquals("later", draft.layout.name)
+                assertTrue(model.draft.value!!.hasChanges)
+                assertFalse(
+                    source.registry.value!!
+                        .layouts
+                        .any { it.name == "duplicate" },
+                )
+                model.save()
+                advanceUntilIdle()
+                assertFalse(model.draft.value!!.hasChanges)
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+
+    @Test
+    fun pageCopyKeepsLaterEditsAndSubsequentSaveTargetsTheCopy() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val source = DelayedSource()
+                val id = KeyboardPagePresets.numericAutomatic.id
+                val model = PageEditorViewModel(source, id, newId = { "copy" })
+                runCurrent()
+                model.saveAsCopy("saved copy")
+                model.saveAsCopy("duplicate")
+                model.update { it.rename("later") }
+                source.gate.complete(Unit)
+                advanceUntilIdle()
+                assertEquals(
+                    "saved copy",
+                    source.registry.value!!
+                        .page("copy")!!
+                        .name,
+                )
+                val draft = model.draft.value!!
+                assertEquals("copy", draft.page.id)
+                assertEquals("later", draft.page.name)
+                assertTrue(model.draft.value!!.hasChanges)
+                model.save()
+                advanceUntilIdle()
+                assertEquals(
+                    "later",
+                    source.registry.value!!
+                        .page("copy")!!
+                        .name,
+                )
+                assertEquals(
+                    KeyboardPagePresets.numericAutomatic.name,
+                    source.registry.value!!
+                        .page(id)!!
+                        .name,
+                )
+                assertFalse(model.draft.value!!.hasChanges)
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+
+    @Test
+    fun layoutSnapshotRestoresInvalidIntermediateTextSplitAndSelection() {
+        val draft =
+            LayoutDraft(BuiltinLayouts.qwerty26).rename("").copy(
+                selection = KeySelection(1, 2),
+                splitView = true,
+            )
+        val bytes =
+            ByteArrayOutputStream()
+                .also { buffer ->
+                    DataOutputStream(buffer).use { it.writeLayoutDraft(draft) }
+                }.toByteArray()
+        val restored = DataInputStream(ByteArrayInputStream(bytes)).use { it.readLayoutDraft() }
+        assertEquals(draft, restored)
+        assertTrue(restored.hasChanges)
+    }
+
+    @Test
+    fun privateDiskSnapshotRecoversLargePageAndDiscardRemovesIt() =
+        runTest {
+            val directory = Files.createTempDirectory("page-draft").toFile()
+            try {
+                val state = SavedStateHandle()
+                val page = KeyboardPagePresets.numericAutomatic
+                val draft = PageDraft(page).rename("草稿".repeat(40_000)).copy(categoryIndex = 2, categoryKey = 3)
+                val first = EditorDraftStore(directory, state)
+                first.persist { it.writePageDraft(draft) }
+                first.close().join()
+                val restoredState = SavedStateHandle(state.keys().associateWith { state.get<Any?>(it) })
+                val restored = EditorDraftStore(directory, restoredState)
+                assertEquals(draft, restored.restore { it.readPageDraft() })
+                restored.clear()
+                restored.close().join()
+                val oldState = EditorDraftStore(directory, state)
+                assertNull(oldState.restore { it.readPageDraft() })
+                oldState.close().join()
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+
     private fun key(label: String) = LayoutKey(label, action = LayoutAction.literal(label))
 
     private fun labels(rows: List<LayoutRow>) = rows.map { row -> row.keys.joinToString("") { it.label } }

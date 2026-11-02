@@ -10,6 +10,7 @@ sealed interface SchemeImportUiState {
     /** [transfer] is how much of a downloaded package has arrived; null for a picked file. */
     data class Running(
         val transfer: TransferProgress? = null,
+        val cancelling: Boolean = false,
     ) : SchemeImportUiState
 
     data class Succeeded(

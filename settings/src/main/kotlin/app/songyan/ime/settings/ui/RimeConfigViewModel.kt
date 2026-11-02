@@ -112,7 +112,7 @@ class RimeConfigViewModel(
     fun cancelScripts() = mutable.update { it.copy(scriptConfirmation = null) }
 
     private fun applyWith(confirmed: List<String>) {
-        if (!mutable.value.canApply) return
+        if (!gateway.available || mutable.value.applying) return
         mutable.update { it.copy(applying = true, message = null) }
         viewModelScope.launch {
             val result = gateway.apply(confirmed)

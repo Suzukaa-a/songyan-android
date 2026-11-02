@@ -1,8 +1,10 @@
 package app.songyan.ime.settings.ui
 
 import android.content.Intent
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.settings.state.RimeConfigEditResult
@@ -10,11 +12,15 @@ import app.songyan.ime.settings.state.RimeConfigFileResult
 import app.songyan.ime.settings.state.RimeConfigGateway
 import app.songyan.ime.settings.state.RimeConfigHolder
 import app.songyan.ime.settings.state.RimeConfigSaveResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 /** Why a save did not happen; the text stays as typed. */
 sealed interface RimeFileSaveError {
@@ -48,6 +54,7 @@ data class RimeFileEditorState(
     val externalIntents: List<Intent>? = null,
     /** Something said once: no app to open the file with, or why it could not be made ready. */
     val notice: EditorNotice? = null,
+    val externalConflict: String? = null,
 ) {
     val dirty: Boolean get() = text != baseline
 }
@@ -69,12 +76,21 @@ class RimeFileEditorViewModel(
     private val gateway: RimeConfigGateway,
     private val key: String,
     private val grammarExample: Boolean,
+    private val savedState: SavedStateHandle = SavedStateHandle(),
+    private val drafts: EditorDraftStore? = null,
 ) : ViewModel() {
     private val mutable = MutableStateFlow(RimeFileEditorState())
     val uiState: StateFlow<RimeFileEditorState> = mutable.asStateFlow()
 
+    private var externalPending: Boolean
+        get() = savedState["externalPending"] ?: false
+        set(value) {
+            savedState["externalPending"] = value
+        }
+
     init {
         viewModelScope.launch {
+            val restored = drafts?.restore { it.readConfigDraft() }
             when (val result = gateway.loadFile(key, grammarExample)) {
                 is RimeConfigFileResult.Loaded ->
                     mutable.update {
@@ -82,20 +98,90 @@ class RimeFileEditorViewModel(
                             loading = false,
                             title = result.title,
                             fileName = result.fileName,
-                            text = result.text,
+                            text = restored ?: result.text,
                             baseline = result.text,
                         )
                     }
                 is RimeConfigFileResult.Failure ->
                     mutable.update { it.copy(loading = false, failed = true, loadFailure = result.message) }
             }
+            onResume()
+        }
+        viewModelScope.launch {
+            mutable.distinctUntilChangedBy { Triple(it.loading, it.text, it.baseline) }.collectLatest { state ->
+                if (!state.loading) {
+                    delay(250)
+                    writeDraft(state)
+                }
+            }
         }
     }
 
     fun edit(text: String) = mutable.update { it.copy(text = text, error = null, saved = false) }
 
+    fun discardDraft() {
+        mutable.update { it.copy(text = it.baseline) }
+        persistDraft()
+    }
+
+    fun persistDraft() {
+        val state = mutable.value
+        if (!state.loading) writeDraft(state)
+    }
+
+    private fun writeDraft(state: RimeFileEditorState) {
+        drafts?.persist { it.writeConfigDraft(state.text.takeIf { state.dirty }) }
+    }
+
+    override fun onCleared() {
+        persistDraft()
+        drafts?.close()
+    }
+
+    fun onResume() {
+        if (!externalPending || mutable.value.loading) return
+        externalPending = false
+        viewModelScope.launch {
+            when (val result = gateway.loadFile(key, false)) {
+                is RimeConfigFileResult.Loaded ->
+                    mutable.update {
+                        if (it.dirty && result.text != it.baseline && result.text != it.text) {
+                            it.copy(externalConflict = result.text, saved = false)
+                        } else {
+                            it.copy(
+                                text = if (it.dirty) it.text else result.text,
+                                baseline = result.text,
+                                saved = false,
+                            )
+                        }
+                    }
+                is RimeConfigFileResult.Failure ->
+                    mutable.update {
+                        it.copy(
+                            notice = EditorNotice.Failure(result.message),
+                        )
+                    }
+            }
+        }
+    }
+
+    fun resolveExternalConflict(loadFile: Boolean) {
+        mutable.update { state ->
+            val external = state.externalConflict ?: return@update state
+            state.copy(
+                text = if (loadFile) external else state.text,
+                baseline = external,
+                externalConflict = null,
+                error = null,
+                saved = false,
+            )
+        }
+        persistDraft()
+    }
+
     fun save() {
         val current = mutable.value
+        if (current.externalConflict != null) return
         if (current.loading || current.failed || current.saving || !current.dirty) return
         mutable.update { it.copy(saving = true, error = null) }
         val text = current.text
@@ -103,7 +189,7 @@ class RimeFileEditorViewModel(
             val result = gateway.saveFile(key, text)
             mutable.update {
                 when (result) {
-                    RimeConfigSaveResult.Saved -> it.copy(saving = false, baseline = text, saved = true)
+                    RimeConfigSaveResult.Saved -> it.copy(saving = false, baseline = text, saved = it.text == text)
                     is RimeConfigSaveResult.Invalid ->
                         it.copy(saving = false, error = RimeFileSaveError.Invalid(result.line))
                     is RimeConfigSaveResult.Failure ->
@@ -115,6 +201,7 @@ class RimeFileEditorViewModel(
 
     /** Opens the file in another app; the saved file is what opens, not the unsaved text. */
     fun openElsewhere() {
+        if (mutable.value.dirty || mutable.value.saving || mutable.value.externalConflict != null) return
         viewModelScope.launch {
             when (val result = gateway.externalEditIntents(key)) {
                 is RimeConfigEditResult.Ready -> mutable.update { it.copy(externalIntents = result.intents) }
@@ -125,10 +212,12 @@ class RimeFileEditorViewModel(
     }
 
     /** The screen tried the intents; [opened] says whether one worked. */
-    fun externalLaunched(opened: Boolean) =
+    fun externalLaunched(opened: Boolean) {
+        externalPending = opened
         mutable.update {
             it.copy(externalIntents = null, notice = if (opened) it.notice else EditorNotice.NoEditor)
         }
+    }
 
     fun noticeShown() = mutable.update { it.copy(notice = null) }
 
@@ -142,7 +231,17 @@ class RimeFileEditorViewModel(
             extras: CreationExtras,
         ): T {
             @Suppress("UNCHECKED_CAST")
-            return RimeFileEditorViewModel(gateway, key, grammarExample) as T
+            val application = extras[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]
+            val savedState = extras.createSavedStateHandle()
+            return RimeFileEditorViewModel(
+                gateway,
+                key,
+                grammarExample,
+                savedState,
+                application?.let {
+                    EditorDraftStore(File(it.applicationInfo.dataDir, "no_backup"), savedState)
+                },
+            ) as T
         }
     }
 }

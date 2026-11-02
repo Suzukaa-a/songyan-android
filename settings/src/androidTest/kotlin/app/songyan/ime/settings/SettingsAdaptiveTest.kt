@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -15,10 +16,14 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
+import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.ImeStatus
 import app.songyan.ime.settings.state.InMemorySettingsAppStateSource
@@ -27,6 +32,7 @@ import app.songyan.ime.settings.state.SettingsAppState
 import app.songyan.ime.settings.state.UnavailableDictionaryImportGateway
 import app.songyan.ime.settings.state.UnavailableSchemeImportGateway
 import app.songyan.ime.settings.ui.SettingsHost
+import app.songyan.ime.settings.ui.SettingsRoutes
 import app.songyan.ime.settings.ui.SettingsViewModel
 import app.songyan.ime.settings.ui.theme.SongyanTheme
 import org.junit.Assert.assertEquals
@@ -197,6 +203,42 @@ class SettingsAdaptiveTest {
             compose.onAllNodes(tryOutField and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText(str(R.string.search_placeholder)).assertIsNotFocused()
+    }
+
+    @Test
+    fun sidebarAndKeyboardTargetBothAskBeforeLeavingADirtyEditor() {
+        val model = model()
+        val target = mutableStateOf<SettingsTarget?>(null)
+        lateinit var navigation: NavHostController
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                navigation = rememberNavController()
+                SettingsHost(
+                    viewModel = model,
+                    versionName = "1",
+                    adaptiveInfo = adaptiveInfo(EXPANDED_DP),
+                    navController = navigation,
+                    target = target.value,
+                    onTargetHandled = { target.value = null },
+                )
+            }
+        }
+        waitFor(str(R.string.detail_empty_title))
+        compose.runOnIdle { navigation.navigate(SettingsRoutes.layoutEditor("qwerty26")) }
+        waitFor(str(R.string.layout_editor_name))
+        compose.onNodeWithText(str(R.string.layout_editor_name)).performTextInput("edited")
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(str(R.string.row_schemes_title)))
+        compose.onNodeWithText(str(R.string.row_schemes_title)).performClick()
+        waitFor(str(R.string.layout_editor_discard_title))
+        compose.onNodeWithText(str(R.string.layout_editor_keep_editing)).performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_name)).assertExists()
+        compose.runOnIdle { target.value = SettingsTarget.QUICK_CONTENT }
+        waitFor(str(R.string.layout_editor_discard_title))
+        compose.onNodeWithText(str(R.string.layout_editor_discard)).performClick()
+        compose.waitUntil(5_000) { count(str(R.string.layout_editor_name)) == 0 }
+        compose.runOnIdle {
+            assertEquals(SettingsRoutes.QUICK_CONTENT, navigation.currentDestination?.route)
+        }
     }
 
     private companion object {

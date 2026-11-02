@@ -160,6 +160,13 @@ fun HomeScreen(
             item {
                 Column {
                     SettingsRow(
+                        title = stringResource(R.string.row_keyboards_title),
+                        subtitle = keyboardSummary(state),
+                        icon = Icons.Outlined.Keyboard,
+                        onClick = { onOpen(SettingsRoutes.KEYBOARDS) },
+                        selected = selectedRoute == SettingsRoutes.KEYBOARDS,
+                    )
+                    SettingsRow(
                         title = stringResource(R.string.row_appearance_title),
                         subtitle = stringResource(R.string.row_appearance_subtitle),
                         icon = Icons.Outlined.Palette,
@@ -192,13 +199,6 @@ fun HomeScreen(
                         icon = Icons.Outlined.Book,
                         onClick = { onOpen(SettingsRoutes.SCHEMES) },
                         selected = selectedRoute == SettingsRoutes.SCHEMES,
-                    )
-                    SettingsRow(
-                        title = stringResource(R.string.row_keyboards_title),
-                        subtitle = keyboardSummary(state),
-                        icon = Icons.Outlined.Keyboard,
-                        onClick = { onOpen(SettingsRoutes.KEYBOARDS) },
-                        selected = selectedRoute == SettingsRoutes.KEYBOARDS,
                     )
                     SettingsRow(
                         title = stringResource(R.string.row_quick_content_title),

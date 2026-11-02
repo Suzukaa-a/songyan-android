@@ -58,17 +58,26 @@ internal class ImportDeployClient(
 ) {
     private val requests = DeployRequestStore(storage)
 
-    @Volatile
-    private var currentRequestId: String? = null
+    private val cancellation =
+        ImportRequestCancellation { id ->
+            runCatching { appContext.startService(DeployContract.cancelIntent(appContext, id)) }
+        }
 
     /** Asks the :deploy process to stop the request this client is waiting for, if any. */
-    fun cancelCurrent() {
-        val id = currentRequestId ?: return
-        runCatching { appContext.startService(DeployContract.cancelIntent(appContext, id)) }
-    }
+    fun cancelCurrent() = cancellation.cancel()
 
     /** Runs [block] to completion even when the caller (a screen) is cancelled meanwhile. */
-    suspend fun <T> detached(block: suspend () -> T): T = processScope.async { block() }.await()
+    suspend fun <T> detached(block: suspend () -> T): T {
+        cancellation.beginTask()
+        return processScope
+            .async {
+                try {
+                    block()
+                } finally {
+                    cancellation.endTask()
+                }
+            }.await()
+    }
 
     /** Starts [request] and waits for its terminal status; [progress] hears a download's progress. */
     suspend fun await(
@@ -102,7 +111,7 @@ internal class ImportDeployClient(
         requestId: String,
         progress: (TransferProgress) -> Unit,
     ): DeployWait {
-        currentRequestId = requestId
+        cancellation.attachRequest(requestId)
         val announced = AtomicBoolean(false)
         val died = AtomicBoolean(false)
         val watch =
@@ -157,7 +166,6 @@ internal class ImportDeployClient(
             runCatching { appContext.startService(DeployContract.cancelIntent(appContext, requestId)) }
             return DeployWait.TimedOut
         } finally {
-            if (currentRequestId == requestId) currentRequestId = null
             runCatching { appContext.unregisterReceiver(receiver) }
             if (bound) runCatching { appContext.unbindService(watch) }
         }
@@ -191,5 +199,39 @@ internal class ImportDeployClient(
 
         /** Outlives every screen; requests are user actions, so there are only ever a few. */
         private val processScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    }
+}
+
+/** Keeps a cancellation made during file preparation attached to that operation. */
+internal class ImportRequestCancellation(
+    private val send: (String) -> Unit,
+) {
+    private var running = false
+    private var requested = false
+    private var requestId: String? = null
+
+    @Synchronized
+    fun beginTask() {
+        running = true
+    }
+
+    @Synchronized
+    fun attachRequest(id: String) {
+        requestId = id
+        if (requested) send(id)
+    }
+
+    @Synchronized
+    fun cancel() {
+        if (!running) return
+        requested = true
+        requestId?.let(send)
+    }
+
+    @Synchronized
+    fun endTask() {
+        running = false
+        requested = false
+        requestId = null
     }
 }

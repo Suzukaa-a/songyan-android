@@ -90,6 +90,56 @@ class DeployPipelineTest {
         }
 
     @Test
+    fun cancellationDuringNativeDeploymentFinishesSafelyAndRestoresTheSourceWithoutPublishing() =
+        runTest {
+            val old = dictionary("main", "你好\tni hao\t1\n")
+            importDictionary("old", mapOf("main.dict.yaml" to old))
+            val before = publisher.readActive()!!
+            val stored = File(storage.sourceDir(SourceIds.DICTIONARY), "songyan_imported.dict.yaml").readText()
+            var cancelled = false
+            var finished = false
+            val cancellingRunner =
+                object : RimeDeployRunner by runner {
+                    override suspend fun deployFull(
+                        sharedDataDir: File,
+                        userDataDir: File,
+                        appName: String,
+                        appVersion: String,
+                        afterDeploy: (suspend (DeployedEngine) -> Unit)?,
+                    ): DeployOutcome {
+                        runner.failIf = {
+                            cancelled = true
+                            false
+                        }
+                        return runner.deployFull(sharedDataDir, userDataDir, appName, appVersion, afterDeploy).also {
+                            assertTrue(it.success)
+                            assertTrue(userDataDir.isDirectory)
+                            finished = true
+                        }
+                    }
+                }
+            DeployFixtures.pickDictionaries(
+                storage,
+                "cancel",
+                mapOf("main.dict.yaml" to dictionary("main", "世界\tshi jie\t1\n")),
+            )
+
+            val result =
+                DeployFixtures.pipeline(storage, cancellingRunner).run(
+                    DeployRequest("cancel", DeployMode.IMPORT_DICTIONARY),
+                    cancelled = { cancelled },
+                )
+
+            assertTrue(finished)
+            assertEquals(RequestState.FAILED, result.state)
+            assertEquals(DeployPipeline.CANCELLED, result.problem)
+            assertEquals(before, publisher.readActive())
+            assertEquals(1, publisher.publishedRecords().size)
+            assertEquals(stored, File(storage.sourceDir(SourceIds.DICTIONARY), "songyan_imported.dict.yaml").readText())
+            assertFalse(storage.incomingDir("cancel").exists())
+        }
+
+    @Test
     fun aMissingImportedTableNamesTheFileItNeeds() =
         runTest {
             val status =

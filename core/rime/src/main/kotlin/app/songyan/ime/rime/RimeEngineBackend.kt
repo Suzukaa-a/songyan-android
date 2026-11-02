@@ -20,7 +20,6 @@ import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.TextSelection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 
@@ -118,7 +117,6 @@ class RimeEngineBackend(
                 throw e.asBackendError()
             }
         val snapshot = publish(result.snapshot)
-        forgetCommitIfSuppressed(result.snapshot)
         if (result.consumed || result.snapshot.isComposing) return snapshot
         if (snapshot.committed.isNotEmpty()) {
             // A capital the speller refused: the editor confirmed the composition and handed the
@@ -157,9 +155,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        val published = publish(snapshot)
-        forgetCommitIfSuppressed(snapshot)
-        return published
+        return publish(snapshot)
     }
 
     override suspend fun selectCandidateAbsolute(index: Int): EngineSnapshot {
@@ -169,9 +165,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        val published = publish(snapshot)
-        forgetCommitIfSuppressed(snapshot)
-        return published
+        return publish(snapshot)
     }
 
     override suspend fun deleteCandidate(index: Int): EngineSnapshot? {
@@ -376,27 +370,22 @@ class RimeEngineBackend(
      */
     override val supportsLearningSuppression: Boolean = true
 
-    private var learningSuppressed = false
-    private var suppressionIntact = true
-
     /** The `prediction` switch this backend turned off, to restore when learning resumes. */
     private var predictionWasOn = false
 
     override val learningSuppressionIntact: Boolean
-        get() = !learningSuppressed || suppressionIntact
+        get() = engine.learningSuppressionIntact
 
     override suspend fun setLearningSuppressed(suppressed: Boolean): Boolean {
         if (!suppressed) {
-            learningSuppressed = false
-            suppressionIntact = true
+            engine.setLearningSuppressed(false)
             if (predictionWasOn) {
                 predictionWasOn = false
                 catchingNonCancellation { engine.setOption(PREDICTION_OPTION, true) }
             }
             return true
         }
-        learningSuppressed = false
-        suppressionIntact = true
+        engine.setLearningSuppressed(false)
         // The probe below must reach an idle engine: during a composition BackSpace edits it.
         if (mutableSnapshot.value.isComposing) return false
         // librime-predict turns every commit into a prediction composition, which would take the
@@ -419,30 +408,8 @@ class RimeEngineBackend(
             probe?.let { publish(it.snapshot) }
             return false
         }
-        learningSuppressed = true
+        engine.setLearningSuppressed(true)
         return true
-    }
-
-    /**
-     * Drops the learning of the commit [raw] carries while learning is suppressed. Runs even when the
-     * caller is cancelled: the commit already happened, and its learning must not outlive it.
-     */
-    private suspend fun forgetCommitIfSuppressed(raw: RimeSnapshot) {
-        if (!learningSuppressed || raw.commitText.isEmpty()) return
-        if (raw.isComposing) {
-            // A BackSpace would edit the composition that is still open, and the next translation
-            // writes the commit's transaction anyway.
-            suppressionIntact = false
-            return
-        }
-        val result =
-            withContext(NonCancellable) {
-                catchingNonCancellation { engine.sendUnhandledKey(RimeKey.BACKSPACE) }.getOrNull()
-            }
-        if (result == null || result.consumed) {
-            suppressionIntact = false
-            result?.let { publish(it.snapshot) }
-        }
     }
 
     /**

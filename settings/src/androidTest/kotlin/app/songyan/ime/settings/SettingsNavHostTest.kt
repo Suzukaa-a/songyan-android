@@ -87,7 +87,7 @@ class SettingsNavHostTest {
         runBlocking { preferences.setOnboardingShown() }
         show(ImeStatus(enabled = false, selected = false))
         compose.waitForIdle()
-        compose.onNodeWithText(str(R.string.home_enable_title)).assertExists()
+        compose.onNodeWithText(str(R.string.search_placeholder)).assertExists()
         assertEquals(false, onOnboarding())
     }
 

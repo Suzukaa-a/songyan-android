@@ -14,6 +14,7 @@ sealed interface DictionaryImportUiState {
 
     data class Running(
         val action: DictionaryImportAction,
+        val cancelling: Boolean = false,
     ) : DictionaryImportUiState
 
     data class Succeeded(

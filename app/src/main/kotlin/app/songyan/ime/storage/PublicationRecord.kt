@@ -46,6 +46,8 @@ data class PublicationRecord(
      * builds a complete generation of the same source right after.
      */
     val companionsPending: Boolean = false,
+    /** Applied configuration identity; empty for none, null for publications predating this field. */
+    val configDigest: String? = null,
 ) {
     fun toJson(): String =
         buildJsonObject {
@@ -68,6 +70,7 @@ data class PublicationRecord(
                 )
             }
             if (companionsPending) put("companionsPending", true)
+            configDigest?.let { put("configDigest", it) }
         }.toString()
 
     companion object {
@@ -101,6 +104,7 @@ data class PublicationRecord(
                         .orEmpty(),
                 stamp = stamp,
                 companionsPending = (root["companionsPending"] as? JsonPrimitive)?.booleanOrNull == true,
+                configDigest = root.string("configDigest"),
             )
         }
 

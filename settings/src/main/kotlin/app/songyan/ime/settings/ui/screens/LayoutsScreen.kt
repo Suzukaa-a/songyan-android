@@ -2,6 +2,7 @@ package app.songyan.ime.settings.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -138,6 +139,10 @@ fun LayoutsScreen(
                 val builtIn = BuiltinLayouts.byId(layout.id) != null
                 val edited = builtIn && layout != BuiltinLayouts.byId(layout.id)
                 ListItem(
+                    modifier =
+                        Modifier.clickable(onClickLabel = stringResource(R.string.layouts_action_edit)) {
+                            onEdit(layout.id)
+                        },
                     headlineContent = { Text(layout.name) },
                     supportingContent = {
                         Text(

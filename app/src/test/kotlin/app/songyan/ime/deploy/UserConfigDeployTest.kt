@@ -385,6 +385,46 @@ class UserConfigDeployTest {
             assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
         }
 
+    @Test
+    fun anApplicationThatDiedAfterActivationKeepsThePublishedConfigurationIncludingAnEmptyOne() =
+        runTest {
+            importPackage()
+            edit("rime_ice.custom.yaml", PATCH)
+            run(DeployMode.APPLY_USER_CONFIG)
+            for (next in listOf("patch:\n  menu/page_size: 9\n", "")) {
+                val old = File(storage.appliedConfigDir, "rime_ice.custom.yaml").readText()
+                if (next.isEmpty()) {
+                    File(storage.userConfigDir, "rime_ice.custom.yaml").delete()
+                } else {
+                    edit("rime_ice.custom.yaml", next)
+                }
+                assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+                val committed = publisher.readActive()!!
+                // The process died after activation, before deleting the backup or updating the status.
+                File(storage.configRoot, ".previous-1")
+                    .also { it.mkdirs() }
+                    .resolve("rime_ice.custom.yaml")
+                    .writeText(old)
+                status.write(UserConfigStatus.failed(null, DeploymentCoordinator.DEPLOY_PROBLEM))
+
+                val recovered =
+                    DeployFixtures
+                        .pipeline(
+                            storage,
+                            runner,
+                        ).run(DeployRequest("recover" + System.nanoTime(), DeployMode.BUILTIN))
+
+                assertEquals(RequestState.SUCCEEDED, recovered.state)
+                assertEquals(committed, publisher.readActive())
+                assertEquals(
+                    next.takeIf { it.isNotEmpty() },
+                    File(storage.appliedConfigDir, "rime_ice.custom.yaml").takeIf { it.isFile }?.readText(),
+                )
+                assertEquals(UserConfigStatus.applied(UserConfigFiles.digest(storage.appliedConfigDir)), status.read())
+                assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
+            }
+        }
+
     private companion object {
         const val PATCH = "patch:\n  menu/page_size: 7\n"
     }

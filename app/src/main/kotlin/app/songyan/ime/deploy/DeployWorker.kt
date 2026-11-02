@@ -168,7 +168,7 @@ class DeployWorker private constructor(
         val runStart = SystemClock.elapsedRealtime()
         val status =
             try {
-                if (request.requestId in cancelled) {
+                if (queued.requestIds.any { it in cancelled }) {
                     RequestStatus(RequestState.FAILED, problem = DeployPipeline.CANCELLED)
                 } else {
                     queued.requestIds.forEach { requests.write(it, RequestStatus(RequestState.RUNNING)) }
@@ -180,7 +180,7 @@ class DeployWorker private constructor(
                     } else {
                         pipeline(runner).run(
                             request,
-                            cancelled = { request.requestId in cancelled },
+                            cancelled = { queued.requestIds.any { it in cancelled } },
                             progress = DownloadStatusWriter(requests, queued.requestIds),
                         )
                     }
@@ -198,7 +198,7 @@ class DeployWorker private constructor(
                 (SystemClock.elapsedRealtime() - runStart) +
                 " ms",
         )
-        cancelled -= request.requestId
+        cancelled.removeAll(queued.requestIds.toSet())
         synchronized(lock) { current = null }
         finish(queued, status)
         return status.state == RequestState.SUCCEEDED

@@ -32,13 +32,14 @@ class RimeConfigViewModelTest {
         var applyResult: RimeConfigApplyResult = RimeConfigApplyResult.Applied
         var scripts = emptyList<String>()
         var firstTime = true
+        var pending = true
         val applyCalls = mutableListOf<List<String>>()
 
         override val available = true
 
         override fun openFolderIntents(): List<Intent> = emptyList()
 
-        override suspend fun info() = RimeConfigInfo(fileCount = 1, pending = true, unacknowledged = unacknowledged)
+        override suspend fun info() = RimeConfigInfo(fileCount = 1, pending = pending, unacknowledged = unacknowledged)
 
         override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult {
             applyCalls.add(confirmed)
@@ -81,6 +82,19 @@ class RimeConfigViewModelTest {
     }
 
     private val gateway = FakeGateway()
+
+    @Test
+    fun applyAfterEditorSaveDoesNotDependOnCachedPending() =
+        runTest(dispatcher) {
+            gateway.pending = false
+            val model = RimeConfigViewModel(gateway)
+            model.refresh()
+            advanceUntilIdle()
+            gateway.pending = true
+            model.apply()
+            advanceUntilIdle()
+            assertEquals(RimeConfigMessage.Applied, model.uiState.value.message)
+        }
 
     @Before
     fun setUp() {

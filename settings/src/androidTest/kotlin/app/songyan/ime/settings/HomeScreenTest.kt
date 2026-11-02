@@ -8,6 +8,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.ImeStatus
+import app.songyan.ime.settings.state.InstalledScheme
+import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.DictionaryImportAction
 import app.songyan.ime.settings.ui.DictionaryImportFailure
 import app.songyan.ime.settings.ui.DictionaryImportUiState
@@ -68,7 +70,15 @@ class HomeScreenTest {
 
     @Test
     fun notEnabledAndReadyAreNeverShownTogether() {
-        show(SettingsUiState(engine = EngineStatus.Ready, ime = ImeStatus(enabled = false, selected = false)))
+        val ime = ImeStatus(enabled = false, selected = false)
+        show(
+            SettingsUiState(
+                engine = EngineStatus.Ready,
+                ime = ime,
+                schemes = listOf(InstalledScheme("test", "Test input scheme")),
+                progress = onboardingProgress(ime, hasTyped = false, schemeReady = true),
+            ),
+        )
         compose.onNodeWithText(str(R.string.home_enable_title)).assertExists()
         assertEquals(0, count(str(R.string.home_engine_ready)))
     }

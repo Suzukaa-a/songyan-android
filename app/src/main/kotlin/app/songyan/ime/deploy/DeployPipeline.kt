@@ -22,7 +22,10 @@ import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.userconfig.UserConfigException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Runs one deploy request to its terminal status in the :deploy process: the import steps
@@ -47,10 +50,17 @@ class DeployPipeline(
         request: DeployRequest,
         progress: DownloadProgress = DownloadProgress.NONE,
         cancelled: () -> Boolean = { false },
+    ): RequestStatus = withContext(DeployCancellation(cancelled)) { runRequest(request, progress, cancelled) }
+
+    private suspend fun runRequest(
+        request: DeployRequest,
+        progress: DownloadProgress,
+        cancelled: () -> Boolean,
     ): RequestStatus {
         val incoming = storage.incomingDir(request.requestId)
         val staged = File(storage.importStagingDir, STAGED_PREFIX + request.requestId)
         return try {
+            if (cancelled()) return failed(CANCELLED)
             when (request.mode) {
                 DeployMode.BUILTIN ->
                     published(
@@ -62,6 +72,7 @@ class DeployPipeline(
                     coordinator.applyUserConfig().fold(
                         onSuccess = { RequestStatus(RequestState.SUCCEEDED, sourceId = it.sourceId) },
                         onFailure = { error ->
+                            if (error is DeployCancelledException) return@fold failed(CANCELLED)
                             if (error is CancellationException) throw error
                             Log.i(TAG, "user configuration not applied: " + error.message)
                             if (error is UserConfigException) {
@@ -144,6 +155,8 @@ class DeployPipeline(
                         onFailure = { failure(it, DictionaryImportProblemKind.REMOVE_FAILED.name) },
                     )
             }
+        } catch (e: DeployCancelledException) {
+            failed(CANCELLED)
         } catch (e: CancellationException) {
             throw e
         } catch (e: DictionaryImportProblemException) {
@@ -334,6 +347,7 @@ class DeployPipeline(
         problem: String = DEPLOY_FAILED,
         mode: DeployMode? = null,
     ): RequestStatus {
+        if (error is DeployCancelledException) return failed(CANCELLED)
         if (error is CancellationException) throw error
         Log.e(TAG, "deploy failed: " + error.message, error)
         return when (error) {
@@ -410,3 +424,16 @@ class DeployPipeline(
         const val STAGED_PREFIX = "staged-"
     }
 }
+
+/** Request cancellation waits for native work to finish before the publication boundary. */
+internal class DeployCancellation(
+    private val cancelled: () -> Boolean,
+) : AbstractCoroutineContextElement(Key) {
+    fun check() {
+        if (cancelled()) throw DeployCancelledException()
+    }
+
+    companion object Key : CoroutineContext.Key<DeployCancellation>
+}
+
+internal class DeployCancelledException : CancellationException("deployment cancelled")

@@ -32,6 +32,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -624,10 +625,15 @@ private fun SettingsEffects(
     // settings, so the home banner never keeps an outdated "not the default keyboard" state.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
+    val editorNavigation = LocalEditorNavigationGuard.current
     LaunchedEffect(target) {
         if (target != null) {
-            navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
-            if (target != SettingsTarget.HOME) navController.navigate(SettingsRoutes.of(target))
+            val navigate = {
+                navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
+                if (target != SettingsTarget.HOME) navController.navigate(SettingsRoutes.of(target))
+                Unit
+            }
+            if (editorNavigation != null) editorNavigation.request(navigate) else navigate()
             onTargetHandled()
         }
     }
@@ -635,8 +641,11 @@ private fun SettingsEffects(
     // A package another app handed over: show it on the page that asks before importing.
     LaunchedEffect(state.incomingPackage) {
         if (state.incomingPackage != null) {
-            navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
-            navController.navigate(SettingsRoutes.SCHEMES)
+            val navigate = {
+                navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
+                navController.navigate(SettingsRoutes.SCHEMES)
+            }
+            if (editorNavigation != null) editorNavigation.request(navigate) else navigate()
         }
     }
 
@@ -711,6 +720,7 @@ private fun SettingsPanes(
             )
         }
     val twoPane = directive.maxHorizontalPartitions >= 2
+    val editorNavigation = LocalEditorNavigationGuard.current
     // Home is drawn in a different place in each layout, so its search text lives here, above both.
     val homeQuery = rememberSaveable { mutableStateOf("") }
     val entry by navController.currentBackStackEntryAsState()
@@ -734,10 +744,13 @@ private fun SettingsPanes(
                         HomeScreen(
                             state = state.value,
                             onOpen = { route ->
-                                navController.navigate(route) {
-                                    popUpTo(SettingsRoutes.HOME)
-                                    launchSingleTop = true
+                                val navigate = {
+                                    navController.navigate(route) {
+                                        popUpTo(SettingsRoutes.HOME)
+                                        launchSingleTop = true
+                                    }
                                 }
+                                if (editorNavigation != null) editorNavigation.request(navigate) else navigate()
                             },
                             onRetryImeStatus = viewModel::refresh,
                             onCancelImport = { kind -> cancelImport(viewModel, kind) },
@@ -827,8 +840,12 @@ fun SettingsHost(
     navController: NavHostController = rememberNavController(),
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    SettingsEffects(viewModel, state.value, navController, target, onTargetHandled)
-    SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController)
+    val editorNavigation = remember { EditorNavigationController() }
+    CompositionLocalProvider(LocalEditorNavigationGuard provides editorNavigation) {
+        SettingsEffects(viewModel, state.value, navController, target, onTargetHandled)
+        SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController)
+        EditorNavigationConfirmation(editorNavigation)
+    }
 }
 
 private fun cancelImport(

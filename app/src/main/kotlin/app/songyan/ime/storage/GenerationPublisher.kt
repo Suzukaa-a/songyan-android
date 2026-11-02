@@ -58,6 +58,8 @@ class GenerationPublisher(
         stamp: BuildStamp? = null,
         extraResources: Map<String, File> = emptyMap(),
         companionsPending: Boolean = false,
+        configDigest: String? = null,
+        beforeActivate: () -> Unit = {},
     ): PublicationRecord {
         require(resourcesDir.isDirectory) { "resources directory missing: $resourcesDir" }
         storage.ensureBaseDirectories()
@@ -97,12 +99,19 @@ class GenerationPublisher(
                     schemaIds = schemaIds.ifEmpty { listOf(schemaId) },
                     stamp = stamp,
                     companionsPending = companionsPending,
+                    configDigest = configDigest,
                 )
             writeSynced(File(temp, MANIFEST), manifestJson(record, files).toByteArray(Charsets.UTF_8))
             syncDirectory(temp)
             val finalDir = storage.generationDir(generation)
             Files.move(temp.toPath(), finalDir.toPath(), StandardCopyOption.ATOMIC_MOVE)
             syncDirectory(storage.versionsDir)
+            try {
+                beforeActivate()
+            } catch (e: Exception) {
+                finalDir.deleteRecursively()
+                throw e
+            }
             activate(record)
             prune(record)
             return record

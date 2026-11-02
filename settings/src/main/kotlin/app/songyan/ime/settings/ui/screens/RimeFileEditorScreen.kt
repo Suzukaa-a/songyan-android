@@ -41,9 +41,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.ui.EditorNavigationGuard
 import app.songyan.ime.settings.ui.EditorNotice
 import app.songyan.ime.settings.ui.RimeFileEditorViewModel
 import app.songyan.ime.settings.ui.RimeFileSaveError
@@ -73,7 +76,16 @@ fun RimeFileEditorScreen(
     val snackbar = remember { SnackbarHostState() }
     var confirmingDiscard by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    val back = { if (state.dirty) confirmingDiscard = true else onClose() }
+    var externalHandoff by remember { mutableStateOf(false) }
+    EditorNavigationGuard(state.dirty, viewModel::discardDraft, state.saving)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.persistDraft() }
+    val back = {
+        if (!state.saving) {
+            externalHandoff = false
+            if (state.dirty) confirmingDiscard = true else onClose()
+        }
+    }
     BackHandler(onBack = back)
 
     LaunchedEffect(state.externalIntents) {
@@ -114,6 +126,7 @@ fun RimeFileEditorScreen(
     }
 
     SettingsScaffold(
+        modifier = Modifier.imePadding(),
         title = state.title ?: stringResource(R.string.rime_config_edit_global),
         onBack = back,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -122,7 +135,7 @@ fun RimeFileEditorScreen(
                 Text(stringResource(R.string.rime_editor_save))
             }
             Box {
-                IconButton(onClick = { menuOpen = true }, enabled = !state.loading && !state.failed) {
+                IconButton(onClick = { menuOpen = true }, enabled = !state.loading && !state.failed && !state.saving) {
                     Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.rime_editor_more))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -130,7 +143,12 @@ fun RimeFileEditorScreen(
                         text = { Text(stringResource(R.string.rime_editor_open_elsewhere)) },
                         onClick = {
                             menuOpen = false
-                            viewModel.openElsewhere()
+                            if (state.dirty) {
+                                externalHandoff = true
+                                confirmingDiscard = true
+                            } else {
+                                viewModel.openElsewhere()
+                            }
                         },
                     )
                 }
@@ -141,8 +159,7 @@ fun RimeFileEditorScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .imePadding(),
+                    .padding(padding),
         ) {
             if (state.loading || state.saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             if (state.failed) {
@@ -200,12 +217,36 @@ fun RimeFileEditorScreen(
         }
     }
 
+    if (state.externalConflict != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.rime_editor_external_changed)) },
+            text = { Text(stringResource(R.string.rime_editor_external_changed_body)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.resolveExternalConflict(loadFile = true) }) {
+                    Text(stringResource(R.string.rime_editor_load_file))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.resolveExternalConflict(loadFile = false) }) {
+                    Text(stringResource(R.string.rime_editor_keep_edits))
+                }
+            },
+        )
+    }
+
     if (confirmingDiscard) {
         AlertDialog(
             onDismissRequest = { confirmingDiscard = false },
             title = { Text(stringResource(R.string.rime_editor_discard_title)) },
             text = { Text(stringResource(R.string.rime_editor_discard_body)) },
-            confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.layout_editor_discard)) } },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingDiscard = false
+                    viewModel.discardDraft()
+                    if (externalHandoff) viewModel.openElsewhere() else onClose()
+                }) { Text(stringResource(R.string.layout_editor_discard)) }
+            },
             dismissButton = {
                 TextButton(onClick = { confirmingDiscard = false }) {
                     Text(stringResource(R.string.layout_editor_keep_editing))

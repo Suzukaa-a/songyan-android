@@ -75,7 +75,7 @@ class LayoutEditorScreenTest {
     }
 
     @Test
-    fun anEditedBottomKeyIsSavedAndTheEditorCloses() {
+    fun anEditedBottomKeyIsSavedAndTheEditorStaysOpen() {
         show()
         keyNode(1, 3, "空格").performScrollTo().performClick()
         compose
@@ -85,7 +85,7 @@ class LayoutEditorScreenTest {
                         .hasText("空格"),
             ).onFirst()
             .performTextReplacement("空格键")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         assertEquals(
             "空格键",
@@ -96,11 +96,11 @@ class LayoutEditorScreenTest {
                 .keys[2]
                 .label,
         )
-        assertEquals(true, closed)
+        assertEquals(false, closed)
     }
 
     @Test
-    fun anEditedTitleIsSavedIntoTheCatalogAndTheEditorCloses() {
+    fun anEditedTitleIsSavedIntoTheCatalogAndTheEditorStaysOpen() {
         show()
         keyNode(1, 1, "q").performClick()
         compose
@@ -117,7 +117,7 @@ class LayoutEditorScreenTest {
                         .hasText(""),
             ).onFirst()
             .performTextInput("qq")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         assertEquals(
             "qq",
@@ -127,7 +127,7 @@ class LayoutEditorScreenTest {
                 .keys[0]
                 .label,
         )
-        assertEquals(true, closed)
+        assertEquals(false, closed)
     }
 
     @Test
@@ -141,7 +141,7 @@ class LayoutEditorScreenTest {
                         .hasText("q"),
             ).onFirst()
             .performTextClearance()
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         compose.onNodeWithText(str(R.string.layout_error_key_label_width)).assertIsDisplayed()
         assertEquals(BuiltinLayouts.qwerty26, source.registry.value!!.layout("qwerty26"))
@@ -224,7 +224,7 @@ class LayoutEditorScreenTest {
                         .hasText(""),
             ).onFirst()
             .performTextInput("我的")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val stored = source.registry.value!!.layout("phone9")!!
         assertEquals("我的", stored.rows[1].keys[1].label)
@@ -244,7 +244,7 @@ class LayoutEditorScreenTest {
             .onNodeWithContentDescription(str(R.string.layout_editor_rail_add_leading))
             .performScrollTo()
             .performClick()
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val stored = source.registry.value!!.layout("phone9")!!
         val leading =
@@ -252,7 +252,7 @@ class LayoutEditorScreenTest {
                 .filter { it.position == LayoutAuxiliaryArea.Position.LEADING && it.keys.isNotEmpty() }
                 .flatMap { it.keys }
         assertEquals(listOf("，", "。", "？", "·"), leading.map { it.label })
-        assertEquals(true, closed)
+        assertEquals(false, closed)
     }
 
     @Test

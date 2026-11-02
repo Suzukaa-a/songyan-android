@@ -179,12 +179,15 @@ private fun dictionaryCard(state: DictionaryImportUiState): ImportCard? =
                 ImportKind.DICTIONARY,
                 ImportPhase.RUNNING,
                 stringResource(
-                    if (state.action == DictionaryImportAction.IMPORT) {
+                    if (state.cancelling) {
+                        R.string.import_cancelling
+                    } else if (state.action == DictionaryImportAction.IMPORT) {
                         R.string.schemes_dictionary_importing
                     } else {
                         R.string.schemes_dictionary_removing
                     },
                 ),
+                cancellable = !state.cancelling,
             )
 
         is DictionaryImportUiState.Succeeded ->
@@ -230,17 +233,18 @@ private fun schemeCard(state: SchemeImportUiState): ImportCard? =
                 ImportKind.SCHEME,
                 ImportPhase.RUNNING,
                 stringResource(
-                    if (state.transfer?.finished == false) {
+                    if (state.cancelling) {
+                        R.string.import_cancelling
+                    } else if (state.transfer?.finished == false) {
                         R.string.schemes_scheme_downloading
                     } else {
                         R.string.schemes_scheme_importing
                     },
                 ),
-                transfer = state.transfer,
+                transfer = state.transfer.takeUnless { state.cancelling },
+                cancellable = !state.cancelling,
                 note =
-                    if (state.transfer?.finished ==
-                        false
-                    ) {
+                    if (state.cancelling || state.transfer?.finished == false) {
                         null
                     } else {
                         stringResource(R.string.schemes_scheme_importing_note)

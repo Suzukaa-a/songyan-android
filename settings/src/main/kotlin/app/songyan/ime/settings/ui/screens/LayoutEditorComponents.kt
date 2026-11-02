@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -122,7 +124,11 @@ fun KeyGrid(
                             style = MaterialTheme.typography.labelLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
-                            modifier = Modifier.padding(horizontal = 2.dp).wrapCentre(),
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp)
+                                    .fillMaxSize()
+                                    .wrapContentSize(Alignment.Center),
                         )
                     }
                 }
@@ -149,8 +155,6 @@ internal fun keyWithAsciiText(
 
 private val KEY_HEIGHT = 44.dp
 private const val MIN_KEY_WEIGHT = 0.3f
-
-private fun Modifier.wrapCentre(): Modifier = this.fillMaxWidth().padding(top = 11.dp)
 
 /** What the grid toolbar can do for the selected key; a disabled action is greyed out. */
 data class GridActions(
@@ -980,7 +984,11 @@ private fun RailRow(
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
-                    modifier = Modifier.padding(horizontal = 2.dp).wrapCentre(),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 2.dp)
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.Center),
                 )
             }
         }

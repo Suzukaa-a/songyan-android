@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -35,6 +37,7 @@ import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.ui.EditorNavigationGuard
 import app.songyan.ime.settings.ui.GridEdit
 import app.songyan.ime.settings.ui.KeyGridEditing
 import app.songyan.ime.settings.ui.KeySelection
@@ -55,6 +58,7 @@ fun LayoutEditorScreen(
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val outcome by viewModel.outcome.collectAsStateWithLifecycle()
+    val saving by viewModel.saving.collectAsStateWithLifecycle()
     val current = draft
     if (current == null) {
         LoadingScreen(stringResource(R.string.layout_editor_title), onClose)
@@ -67,6 +71,8 @@ fun LayoutEditorScreen(
         title = stringResource(R.string.layout_editor_title),
         name = current.layout.name,
         hasChanges = current.hasChanges,
+        saving = saving,
+        onDiscard = viewModel::discardDraft,
         outcome = outcome,
         onOutcomeShown = viewModel::consumeOutcome,
         onClose = onClose,
@@ -165,6 +171,7 @@ fun PageEditorScreen(
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val outcome by viewModel.outcome.collectAsStateWithLifecycle()
+    val saving by viewModel.saving.collectAsStateWithLifecycle()
     val current = draft
     if (current == null) {
         LoadingScreen(stringResource(R.string.page_editor_title), onClose)
@@ -175,6 +182,8 @@ fun PageEditorScreen(
         title = stringResource(R.string.page_editor_title),
         name = current.page.name,
         hasChanges = current.hasChanges,
+        saving = saving,
+        onDiscard = viewModel::discardDraft,
         outcome = outcome,
         onOutcomeShown = viewModel::consumeOutcome,
         onClose = onClose,
@@ -272,13 +281,15 @@ fun PageEditorScreen(
 
 /**
  * The frame both editors share: the name, the save buttons, the discard question and the reason a
- * save was refused. A save that succeeds closes the editor; one that is refused keeps the draft.
+ * save was refused. Saving keeps the editor open so newer edits remain available.
  */
 @Composable
 private fun EditorFrame(
     title: String,
     name: String,
     hasChanges: Boolean,
+    saving: Boolean,
+    onDiscard: () -> Unit,
     outcome: SaveOutcome?,
     onOutcomeShown: () -> Unit,
     onClose: () -> Unit,
@@ -287,14 +298,16 @@ private fun EditorFrame(
     onSaveAsCopy: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    EditorNavigationGuard(hasChanges, onDiscard = onDiscard, saving = saving)
     val snackbar = remember { SnackbarHostState() }
     var confirmingDiscard by remember { mutableStateOf(false) }
     val failureText = (outcome as? SaveOutcome.Failed)?.let { layoutErrorMessage(it.error) }
+    val savedText = stringResource(R.string.t9_symbols_saved)
     LaunchedEffect(outcome) {
         when (outcome) {
             is SaveOutcome.Saved -> {
+                snackbar.showSnackbar(savedText)
                 onOutcomeShown()
-                onClose()
             }
             else -> Unit
         }
@@ -305,12 +318,26 @@ private fun EditorFrame(
             onOutcomeShown()
         }
     }
-    val back = { if (hasChanges) confirmingDiscard = true else onClose() }
+    val back = {
+        if (!saving) {
+            if (hasChanges) {
+                confirmingDiscard = true
+            } else {
+                onClose()
+            }
+        }
+    }
     BackHandler(onBack = back)
     SettingsScaffold(
         title = title,
+        modifier = Modifier.imePadding(),
         onBack = back,
         snackbarHost = { SnackbarHost(snackbar) },
+        actions = {
+            TextButton(onClick = onSave, enabled = hasChanges && !saving) {
+                Text(stringResource(if (saving) R.string.features_saving else R.string.layout_editor_save))
+            }
+        },
     ) { padding ->
         Column(
             modifier =
@@ -320,6 +347,7 @@ private fun EditorFrame(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 24.dp),
         ) {
+            if (saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = name,
                 onValueChange = onRename,
@@ -329,10 +357,11 @@ private fun EditorFrame(
             )
             content()
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-                androidx.compose.material3.Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.layout_editor_save))
-                }
-                OutlinedButton(onClick = onSaveAsCopy, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                OutlinedButton(
+                    onClick = onSaveAsCopy,
+                    enabled = !saving,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
                     Text(stringResource(R.string.layout_editor_save_copy))
                 }
             }
@@ -344,7 +373,12 @@ private fun EditorFrame(
             title = { Text(stringResource(R.string.layout_editor_discard_title)) },
             text = { Text(stringResource(R.string.layout_editor_discard_body)) },
             confirmButton = {
-                TextButton(onClick = onClose) { Text(stringResource(R.string.layout_editor_discard)) }
+                TextButton(onClick = {
+                    onDiscard()
+                    onClose()
+                }, enabled = !saving) {
+                    Text(stringResource(R.string.layout_editor_discard))
+                }
             },
             dismissButton = {
                 TextButton(

@@ -67,7 +67,7 @@ class PageEditorRailsScreenTest {
             .performScrollTo()
             .performClick()
         compose.onAllNodes(hasSetTextAction() and hasText("空格")).onFirst().performTextReplacement("空格键")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         assertEquals(
             "空格键",
@@ -93,7 +93,7 @@ class PageEditorRailsScreenTest {
             .onAllNodes(hasSetTextAction() and hasText(str(R.string.page_editor_rail_width_trailing)))
             .onFirst()
             .performTextInput("56")
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val chrome =
             source.registry.value!!
@@ -123,7 +123,7 @@ class PageEditorRailsScreenTest {
         compose.onNodeWithText(first).performScrollTo().performClick()
         compose.onNodeWithText(target).performClick()
         compose.onNodeWithText(target).performScrollTo()
-        compose.onNodeWithText(str(R.string.layout_editor_save)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_save)).performClick()
         compose.waitForIdle()
         val key =
             source.registry.value!!

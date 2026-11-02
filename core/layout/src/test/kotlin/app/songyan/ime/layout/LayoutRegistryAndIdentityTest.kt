@@ -343,6 +343,16 @@ class LayoutIdentityTest {
     }
 
     @Test
+    fun nineKeyFirstKeySettingsChangeIdentity() {
+        val preset = BuiltinLayouts.phone9
+        val custom = preset.copy(t9FirstKeyBehavior = T9FirstKeyBehavior.CUSTOM)
+        val symbols = preset.copy(t9QuickSymbols = "；：")
+        assertFalse(preset.runtimeIdentity.isProvablySameAs(custom.runtimeIdentity))
+        assertFalse(preset.runtimeIdentity.isProvablySameAs(symbols.runtimeIdentity))
+        assertTrue(preset.runtimeIdentity.isProvablySameAs(custom.copy(t9FirstKeyBehavior = null).runtimeIdentity))
+    }
+
+    @Test
     fun differentIdChangesIdentity() {
         val a =
             LayoutDefinition(

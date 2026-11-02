@@ -56,6 +56,9 @@ object LayoutIdentityEncoder {
         val candidateArea: LayoutCandidateArea?,
         val longPressDelay: Double?,
         val split: LayoutSplitConfiguration?,
+        // Null is omitted, so layouts without these settings keep their earlier identity.
+        val t9FirstKeyBehavior: T9FirstKeyBehavior? = null,
+        val t9QuickSymbols: String? = null,
     )
 
     /**
@@ -86,6 +89,8 @@ object LayoutIdentityEncoder {
                 candidateArea = definition.candidateArea,
                 longPressDelay = definition.longPressDelay,
                 split = definition.split,
+                t9FirstKeyBehavior = definition.t9FirstKeyBehavior,
+                t9QuickSymbols = definition.t9QuickSymbols,
             )
         return LayoutJson.compact.encodeToString(Canonical.serializer(), canonical)
     }

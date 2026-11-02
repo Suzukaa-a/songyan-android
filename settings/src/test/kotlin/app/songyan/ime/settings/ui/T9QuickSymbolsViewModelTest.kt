@@ -1,6 +1,10 @@
 package app.songyan.ime.settings.ui
 
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutRow
+import app.songyan.ime.layout.T9FirstKeyBehavior
 import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.state.InMemorySettingsPreferences
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +47,35 @@ class T9QuickSymbolsViewModelTest {
         assertEquals(listOf("；", "：", "，"), rail)
         assertEquals("。？！、…", cycle.take(5).joinToString(""))
     }
+
+    @Test fun aFirstKeyEditThatLeavesTheNineKeyShapeStillSaves() =
+        runTest(dispatcher) {
+            val source = InMemoryLayoutLibrarySource()
+            val model = LayoutEditorViewModel(source, "phone9", preferences = InMemorySettingsPreferences())
+            advanceUntilIdle()
+            model.update { draft ->
+                val layout = draft.layout
+                val first =
+                    layout.rows[0].keys[0].copy(action = LayoutAction(LayoutActionKind.BACKSPACE), longPress = null)
+                val rows = layout.rows.toMutableList()
+                rows[0] = LayoutRow(listOf(first) + rows[0].keys.drop(1))
+                draft.copy(
+                    layout =
+                        layout.copy(
+                            rows = rows,
+                            t9FirstKeyBehavior = T9FirstKeyBehavior.CUSTOM,
+                            t9QuickSymbols = "；：",
+                        ),
+                )
+            }
+            model.save()
+            advanceUntilIdle()
+            assertEquals(SaveOutcome.Saved, model.outcome.value)
+            val saved = source.registry.value!!.layout("phone9")!!
+            assertNull(saved.t9FirstKeyBehavior)
+            assertNull(saved.t9QuickSymbols)
+            assertFalse(model.draft.value!!.hasChanges)
+        }
 
     @Test fun quickSymbolsArePartOfTheLayoutDraftAndInvalidOnesNeverReplaceTheSavedLayout() =
         runTest(dispatcher) {

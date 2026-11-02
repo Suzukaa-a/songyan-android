@@ -15,6 +15,7 @@ import app.songyan.ime.layout.KeyboardSymbolPresentation
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutException
 import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.PhoneKeypadStructure
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.state.LayoutImportOutcome
 import app.songyan.ime.settings.state.LayoutLibraryHolder
@@ -230,15 +231,27 @@ class LayoutEditorViewModel(
     }
 
     fun save() {
-        val current = mutableDraft.value ?: return
+        if (mutableSaving.value) return
+        val current = dropT9SettingsOutsidePhone() ?: return
         if (!current.hasChanges) return
         saveWith(current.layout, false)
     }
 
     fun saveAsCopy(name: String) {
         if (mutableSaving.value) return
-        val current = mutableDraft.value ?: return
+        val current = dropT9SettingsOutsidePhone() ?: return
         saveWith(BuiltinLayouts.persistingHandCuts(current.layout).copy(id = newId(), name = name), true)
+    }
+
+    /** Key edits can leave the 9-key shape; its first-key and quick-symbol settings no longer apply. */
+    private fun dropT9SettingsOutsidePhone(): LayoutDraft? {
+        mutableDraft.update { draft ->
+            draft
+                ?.takeIf { !PhoneKeypadStructure.matches(it.layout) }
+                ?.let { it.copy(layout = it.layout.copy(t9FirstKeyBehavior = null, t9QuickSymbols = null)) }
+                ?: draft
+        }
+        return mutableDraft.value
     }
 
     private fun saveWith(

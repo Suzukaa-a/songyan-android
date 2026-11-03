@@ -3,6 +3,7 @@ package app.songyan.ime.userconfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -24,6 +25,21 @@ class UserConfigFilesTest {
         }
         fail("expected the configuration to be refused")
         throw AssertionError()
+    }
+
+    @Test
+    fun emptyTemplatesAndAppSettingsAreNotPendingEdits() {
+        File(edit, "default.custom.yaml").writeText("# template\npatch: {}\n")
+        File(edit, "main.custom.yaml").writeText(
+            "__patch:\n# Rx: app:typo {\n  - patch/+: {translator/enable_correction: true}\n# }\n",
+        )
+        assertNull(UserConfigFiles.digest(edit))
+        UserConfigFiles.snapshot(edit, target)
+        assertTrue(UserConfigFiles.files(target).isEmpty())
+        File(edit, "main.custom.yaml").writeText("patch:\n  menu/page_size: 5\n")
+        assertNotNull(UserConfigFiles.digest(edit))
+        UserConfigFiles.snapshot(edit, target)
+        assertEquals(listOf("main.custom.yaml"), UserConfigFiles.files(target).map { it.name })
     }
 
     @Test

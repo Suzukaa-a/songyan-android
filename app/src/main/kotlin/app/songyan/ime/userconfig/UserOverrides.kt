@@ -174,7 +174,7 @@ class UserOverrides(
                     }
                 if (bytes.size > UserConfigFiles.MAX_FILE_BYTES) return@filterNot false
                 val text = UserConfigFiles.decode(bytes) ?: return@filterNot false
-                UserConfigFiles.isGeneratedOnly(text)
+                UserConfigFiles.isUnmodifiedCustom(text)
             }
     }
 

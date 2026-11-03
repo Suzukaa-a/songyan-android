@@ -3,6 +3,7 @@ package app.songyan.ime.userconfig
 import app.songyan.ime.deploy.CompiledReuse
 import app.songyan.ime.packages.BoundedYaml
 import app.songyan.ime.packages.UserConfigSafety
+import app.songyan.ime.storage.readAtMost
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -240,6 +241,7 @@ object UserConfigFiles {
             val name = relativePath(edit, file)
             if (file.length() > MAX_FILE_BYTES) throw UserConfigException(name, UserConfigProblem.TOO_LARGE)
             val bytes = file.readBytes()
+            if (name.endsWith(".custom.yaml") && decode(bytes)?.let(::isUnmodifiedCustom) == true) continue
             total += bytes.size
             if (total > MAX_TOTAL_BYTES) throw UserConfigException(name, UserConfigProblem.TOO_LARGE)
             val path = relativePath(edit, file)
@@ -312,22 +314,24 @@ object UserConfigFiles {
         return lines.joinToString("\n")
     }
 
-    internal fun isGeneratedOnly(text: String): Boolean {
+    internal fun isUnmodifiedCustom(text: String): Boolean {
         var inside = false
-        var found = false
         for (line in text.lineSequence()) {
             if (inside) {
                 if (line == "# }") {
                     inside = false
-                    found = true
                 }
             } else if (line.startsWith("# Rx: ") && line.endsWith(" {")) {
                 inside = true
-            } else if (line != "__patch:" && line.isNotBlank() && !line.trimStart().startsWith("#")) {
+            } else if (line != "__patch:" &&
+                line.trim() != "patch: {}" &&
+                line.isNotBlank() &&
+                !line.trimStart().startsWith("#")
+            ) {
                 return false
             }
         }
-        return found && !inside
+        return !inside
     }
 
     /** Identity of the files of [dir], or null when it holds none. */
@@ -339,18 +343,30 @@ object UserConfigFiles {
         if (files.isEmpty()) return null
         val digest = MessageDigest.getInstance("SHA-256")
         val buffer = ByteArray(BUFFER_BYTES)
+        var hasEdits = false
         for (file in files) {
-            digest.update(relativePath(dir, file).toByteArray(Charsets.UTF_8))
-            digest.update(0)
+            val path = relativePath(dir, file)
             file.inputStream().use { input ->
+                val custom = if (path.endsWith(".custom.yaml")) input.readAtMost((MAX_FILE_BYTES + 1).toInt()) else null
+                if (custom != null &&
+                    custom.size <= MAX_FILE_BYTES &&
+                    decode(custom)?.let(::isUnmodifiedCustom) == true
+                ) {
+                    return@use
+                }
+                hasEdits = true
+                digest.update(path.toByteArray(Charsets.UTF_8))
+                digest.update(0)
+                if (custom != null) digest.update(custom)
                 while (true) {
                     val read = input.read(buffer)
                     if (read < 0) break
                     digest.update(buffer, 0, read)
                 }
+                digest.update(0)
             }
-            digest.update(0)
         }
+        if (!hasEdits) return null
         return digest.digest().joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
     }
 }

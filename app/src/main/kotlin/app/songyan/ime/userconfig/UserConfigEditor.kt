@@ -35,7 +35,11 @@ class UserConfigEditor(
         val existing = overrides.overrideFile(name)
         if (existing != null) {
             val loaded = text(existing)
-            return if (name.endsWith(".custom.yaml")) UserConfigFiles.editableCustomText(loaded) else loaded
+            return if (name.endsWith(".custom.yaml")) {
+                UserConfigFiles.editableCustomText(loaded).takeIf { it.isNotBlank() } ?: template()
+            } else {
+                loaded
+            }
         }
         val own = sourceDir?.let { UserOverrides.packageFile(it, name) }
         if (name.endsWith(".custom.yaml")) {

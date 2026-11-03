@@ -46,6 +46,8 @@ class UserConfigEditorTest {
         assertFalse(File(storage.userConfigDir, "x.custom.yaml").exists())
         val copy = File(storage.userConfigDir, "x.custom.yaml")
         copy.writeText(block)
+        assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
+        assertEquals(block, copy.readText())
         assertTrue(UserOverrides(storage).entries(source).isEmpty())
         assertTrue(UserOverrides(storage).unacknowledged(source).isEmpty())
         copy.writeText("patch:\n  menu/page_size: 5\n" + block)

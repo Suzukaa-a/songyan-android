@@ -2,6 +2,7 @@ package app.songyan.ime.userconfig
 
 import app.songyan.ime.settings.state.RimeEditTarget
 import app.songyan.ime.storage.AppStorage
+import app.songyan.ime.storage.readAtMost
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -25,18 +26,22 @@ class UserConfigEditor(
             .takeIf(UserConfigFiles::isAllowedName)
     }
 
-    /**
-     * Makes the file [name] when the user's folder has none: a copy of the file the source in use
-     * has under that name (it then replaces it, as any copy does), else [template]. Returns its text.
-     */
+    /** Custom patches stay in memory until saved so reading settings does not pin source defaults. */
     fun load(
         name: String,
         sourceDir: File?,
         template: () -> String,
     ): String {
         val existing = overrides.overrideFile(name)
-        if (existing != null) return text(existing)
+        if (existing != null) {
+            val loaded = text(existing)
+            return if (name.endsWith(".custom.yaml")) UserConfigFiles.editableCustomText(loaded) else loaded
+        }
         val own = sourceDir?.let { UserOverrides.packageFile(it, name) }
+        if (name.endsWith(".custom.yaml")) {
+            val editable = own?.let(::text)?.let(UserConfigFiles::editableCustomText)
+            return editable?.takeIf { it.isNotBlank() } ?: template()
+        }
         if (own != null) return text(overrides.copyOf(own, name))
         return text(create(name, template()))
     }
@@ -92,7 +97,14 @@ class UserConfigEditor(
         }
     }
 
-    private fun text(file: File): String =
-        UserConfigFiles.decode(file.readBytes())?.removePrefix("\uFEFF")
+    private fun text(file: File): String {
+        val bytes = file.inputStream().use { it.readAtMost((UserConfigFiles.MAX_FILE_BYTES + 1).toInt()) }
+        if (bytes.size >
+            UserConfigFiles.MAX_FILE_BYTES
+        ) {
+            throw UserConfigException(file.name, UserConfigProblem.TOO_LARGE)
+        }
+        return UserConfigFiles.decode(bytes)?.removePrefix("\uFEFF")
             ?: throw UserConfigException(file.name, UserConfigProblem.NOT_TEXT)
+    }
 }

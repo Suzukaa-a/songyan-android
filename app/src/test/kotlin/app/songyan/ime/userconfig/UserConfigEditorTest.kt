@@ -26,34 +26,35 @@ class UserConfigEditorTest {
     }
 
     @Test
-    fun aMissingFileStartsAsTheTemplateAndAnExistingOneIsKept() {
-        val text = editor.load("x.custom.yaml", source) { "patch: {}\n" }
-
-        assertEquals("patch: {}\n", text)
-        assertEquals("patch: {}\n", File(storage.userConfigDir, "x.custom.yaml").readText())
-        assertEquals("kept", editor.load("x.custom.yaml", source) { "other\n" }.let { "kept" })
-        assertEquals("patch: {}\n", File(storage.userConfigDir, "x.custom.yaml").readText())
+    fun openingACustomFileDoesNotCreateAnOverride() {
+        assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
+        assertFalse(File(storage.userConfigDir, "x.custom.yaml").exists())
+        File(source, "x.custom.yaml").writeText("patch:\n  menu/page_size: 9\n")
+        val text = editor.load("x.custom.yaml", source) { "template\n" }
+        assertEquals("patch:\n  menu/page_size: 9\n", text)
+        assertTrue(UserOverrides(storage).entries(source).isEmpty())
+        assertNull(editor.save("x.custom.yaml", "patch:\n  menu/page_size: 5\n"))
+        assertEquals(listOf("x.custom.yaml"), UserOverrides(storage).entries(source).map { it.path })
+        assertEquals("patch:\n  menu/page_size: 9\n", File(source, "x.custom.yaml").readText())
     }
 
     @Test
-    fun aFileTheSourceHasIsCopiedAndTracked() {
-        File(source, "x.custom.yaml").writeText("patch:\n  menu/page_size: 9\n")
-
-        val text = editor.load("x.custom.yaml", source) { "template\n" }
-
-        assertEquals("patch:\n  menu/page_size: 9\n", text)
-        assertEquals(text, File(storage.userConfigDir, "x.custom.yaml").readText())
+    fun generatedSettingsStayOutsideTheUsersEdits() {
+        val block = "__patch:\n# Rx: songyan:typo {\n  - patch:\n      typo: true\n# }\n"
+        File(source, "x.custom.yaml").writeText(block)
+        assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
+        assertFalse(File(storage.userConfigDir, "x.custom.yaml").exists())
+        val copy = File(storage.userConfigDir, "x.custom.yaml")
+        copy.writeText(block)
+        assertTrue(UserOverrides(storage).entries(source).isEmpty())
+        assertTrue(UserOverrides(storage).unacknowledged(source).isEmpty())
+        copy.writeText("patch:\n  menu/page_size: 5\n" + block)
         assertEquals(listOf("x.custom.yaml"), UserOverrides(storage).entries(source).map { it.path })
-        assertTrue(
-            "the source's file is not touched",
-            File(source, "x.custom.yaml").readText().contains("page_size: 9"),
-        )
+        assertEquals("patch:\n  menu/page_size: 5\n", editor.load("x.custom.yaml", source) { "" })
     }
 
     @Test
     fun aValidFileIsSavedAndReadBack() {
-        editor.load("x.custom.yaml", null) { "patch: {}\n" }
-
         assertNull(editor.save("x.custom.yaml", "patch:\n  menu/page_size: 7\n"))
 
         assertEquals("patch:\n  menu/page_size: 7\n", File(storage.userConfigDir, "x.custom.yaml").readText())
@@ -62,7 +63,7 @@ class UserConfigEditorTest {
 
     @Test
     fun anInvalidFileIsRefusedWithItsLineAndTheOldOneStays() {
-        editor.load("x.custom.yaml", null) { "patch: {}\n" }
+        editor.save("x.custom.yaml", "patch: {}\n")
 
         val refusal = editor.save("x.custom.yaml", "patch:\n  a: 1\n  b: [2\n  c: 3\n")
 
@@ -73,7 +74,7 @@ class UserConfigEditorTest {
 
     @Test
     fun aFileThatNamesOtherFoldersOrNestsDeepIsRefused() {
-        editor.load("x.custom.yaml", null) { "patch: {}\n" }
+        editor.save("x.custom.yaml", "patch: {}\n")
 
         assertEquals(
             UserConfigProblem.UNSAFE_REFERENCE,
@@ -90,19 +91,12 @@ class UserConfigEditorTest {
     @Test
     fun theFolderLimitsHoldForTheEditorToo() {
         val big = "# " + "a".repeat((UserConfigFiles.MAX_FILE_BYTES + 1).toInt()) + "\n"
-        editor.load("x.custom.yaml", null) { "patch: {}\n" }
+        editor.save("x.custom.yaml", "patch: {}\n")
         assertEquals(UserConfigProblem.TOO_LARGE, editor.save("x.custom.yaml", big)?.problem)
 
         for (i in 0 until UserConfigFiles.MAX_FILES) File(storage.userConfigDir, "f$i.txt").writeText("x")
         assertEquals(UserConfigProblem.TOO_MANY, editor.save("x.custom.yaml", "patch: {}\n")?.problem)
-        val refusal =
-            try {
-                editor.load("new.custom.yaml", null) { "patch: {}\n" }
-                null
-            } catch (e: UserConfigException) {
-                e.problem
-            }
-        assertEquals(UserConfigProblem.TOO_MANY, refusal)
+        assertEquals(UserConfigProblem.TOO_MANY, editor.save("new.custom.yaml", "patch: {}\n")?.problem)
         assertFalse(File(storage.userConfigDir, "new.custom.yaml").exists())
     }
 

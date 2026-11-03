@@ -229,6 +229,20 @@ class EditorDigitLayoutsTest {
     }
 
     @Test
+    fun widePadsStayCenteredInsideTheAvailableWidth() {
+        val pads = allPads() + requireNotNull(EditorDigitLayouts.pad(NumericEditorKind.PHONE, phoneSymbols = true))
+        for (width in listOf(360f, 480f, 600f, 840f)) {
+            for (pad in pads) {
+                val shell = EditorDigitLayouts.build(pad, width, 224f)
+                val left = shell.metrics.outerInset.toFloat() + shell.keys.minOf { it.left }
+                val right = shell.metrics.outerInset.toFloat() + shell.keys.maxOf { it.right }
+                assertTrue("right edge $right exceeds $width", right <= width + 0.01f)
+                assertEquals("equal margins", left, width - right, 0.01f)
+            }
+        }
+    }
+
+    @Test
     fun geometryTilesTheKeyAreaInFourBandsAndFourColumns() {
         val width = 400f
         val height = 224f

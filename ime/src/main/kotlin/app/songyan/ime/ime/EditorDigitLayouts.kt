@@ -184,7 +184,7 @@ object EditorDigitLayouts {
     ): PhoneKeypadLayout.Shell {
         val metrics = PhoneKeypadMetrics.resolve(widthDp.toDouble(), heightDp / ROWS.toDouble())
         val gap = metrics.spacing.toFloat()
-        val column = (widthDp - (COLUMNS - 1) * gap) / COLUMNS
+        val column = (metrics.contentWidth.toFloat() - (COLUMNS - 1) * gap) / COLUMNS
         val pitch = heightDp / ROWS
         val keys =
             pad.cells.map { cell ->

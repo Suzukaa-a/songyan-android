@@ -8,6 +8,7 @@ import android.provider.DocumentsContract
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.R
+import app.songyan.ime.SongyanApplication
 import app.songyan.ime.content.SettingsInForeground
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeKey
@@ -256,14 +257,14 @@ class RimeConfigDeviceTest {
         val file = File(storage.userConfigDir, "songyan_quanpin.custom.yaml")
         assertEquals("songyan_quanpin.custom.yaml", loaded.fileName)
         assertTrue(loaded.text.endsWith("patch: {}\n"))
-        assertEquals(loaded.text, file.readText())
+        assertFalse(file.exists())
 
         val broken = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  menu/page_size: [3\n") }
         assertTrue(broken is RimeConfigSaveResult.Invalid)
-        assertEquals("a refused save leaves the file as it was", loaded.text, file.readText())
+        assertFalse("a refused save creates no override", file.exists())
         val outside = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  translator/dictionary: ../../x\n") }
         assertTrue(outside is RimeConfigSaveResult.Failure)
-        assertEquals(loaded.text, file.readText())
+        assertFalse(file.exists())
 
         assertEquals(RimeConfigSaveResult.Saved, runBlocking { gateway.saveFile("songyan_quanpin", PAGE_SIZE_PATCH) })
         assertEquals(PAGE_SIZE_PATCH, file.readText())
@@ -285,7 +286,7 @@ class RimeConfigDeviceTest {
         assertTrue(grammar.text.contains("#   grammar/collocation_max_length: 6"))
         assertEquals(PAGE_SIZE_PATCH, file.readText())
         runBlocking { gateway.loadFile(RimeEditTarget.GLOBAL_KEY) }
-        assertTrue(File(storage.userConfigDir, "default.custom.yaml").isFile)
+        assertFalse(File(storage.userConfigDir, "default.custom.yaml").exists())
     }
 
     @Test
@@ -670,22 +671,24 @@ class RimeConfigDeviceTest {
         keys: String,
     ): List<String> =
         runBlocking {
-            val generation = storage.generationDir(record.generation)
-            val user = File(context.cacheDir, "config-test-user").also { it.deleteRecursively() }
-            val engine =
-                RimeEngine.createPrebuilt(
-                    sharedDataDir = File(generation, "resources"),
-                    userDataDir = user,
-                    appVersion = "test",
-                    compiledDir = File(generation, "build"),
-                )
-            try {
-                assertTrue(engine.selectSchema(schema))
-                for (char in keys) engine.processKey(RimeKey(requireNotNull(RimeKey.baseKeycode(char))))
-                engine.readSnapshot().candidates.map { it.text }
-            } finally {
-                engine.close()
-                user.deleteRecursively()
+            (context.applicationContext as SongyanApplication).engineOwnership.exclusive {
+                val generation = storage.generationDir(record.generation)
+                val user = File(context.cacheDir, "config-test-user").also { it.deleteRecursively() }
+                val engine =
+                    RimeEngine.createPrebuilt(
+                        sharedDataDir = File(generation, "resources"),
+                        userDataDir = user,
+                        appVersion = "test",
+                        compiledDir = File(generation, "build"),
+                    )
+                try {
+                    assertTrue(engine.selectSchema(schema))
+                    for (char in keys) engine.processKey(RimeKey(requireNotNull(RimeKey.baseKeycode(char))))
+                    engine.readSnapshot().candidates.map { it.text }
+                } finally {
+                    engine.close()
+                    user.deleteRecursively()
+                }
             }
         }
 

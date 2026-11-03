@@ -287,6 +287,49 @@ object UserConfigFiles {
         }
     }
 
+    /** Leaves generated recipe settings with the app instead of copying them into the user's patch. */
+    internal fun editableCustomText(text: String): String {
+        val lines = mutableListOf<String>()
+        var inside = false
+        for (line in text.lineSequence()) {
+            when {
+                inside -> if (line == "# }") inside = false
+                line.startsWith("# Rx: ") && line.endsWith(" {") -> inside = true
+                else -> lines.add(line)
+            }
+        }
+        if (inside) return text
+        val begin = lines.indexOf("__patch:")
+        if (begin >= 0) {
+            val end =
+                (begin + 1 until lines.size).firstOrNull {
+                    lines[it].isNotEmpty() && !lines[it].startsWith(" ") && !lines[it].startsWith("#")
+                } ?: lines.size
+            if ((begin + 1 until end).none { lines[it].isNotBlank() && !lines[it].trimStart().startsWith("#") }) {
+                lines.removeAt(begin)
+            }
+        }
+        return lines.joinToString("\n")
+    }
+
+    internal fun isGeneratedOnly(text: String): Boolean {
+        var inside = false
+        var found = false
+        for (line in text.lineSequence()) {
+            if (inside) {
+                if (line == "# }") {
+                    inside = false
+                    found = true
+                }
+            } else if (line.startsWith("# Rx: ") && line.endsWith(" {")) {
+                inside = true
+            } else if (line != "__patch:" && line.isNotBlank() && !line.trimStart().startsWith("#")) {
+                return false
+            }
+        }
+        return found && !inside
+    }
+
     /** Identity of the files of [dir], or null when it holds none. */
     fun digest(
         dir: File,

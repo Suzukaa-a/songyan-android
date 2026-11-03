@@ -2,6 +2,7 @@ package app.songyan.ime.userconfig
 
 import app.songyan.ime.packages.UserConfigSafety
 import app.songyan.ime.storage.AppStorage
+import app.songyan.ime.storage.readAtMost
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -49,9 +50,12 @@ class UserOverrides(
     }
 
     /** The shadowing files the user has not been told about yet. */
-    fun unacknowledged(sourceDir: File?): List<String> {
+    fun unacknowledged(
+        sourceDir: File?,
+        paths: List<String> = shadowed(sourceDir),
+    ): List<String> {
         val told = readMarks().acknowledged
-        return shadowed(sourceDir).filter { it !in told }
+        return paths.filter { it !in told }
     }
 
     fun acknowledge(paths: Collection<String>) =
@@ -159,6 +163,19 @@ class UserOverrides(
             .files(edit)
             .map { UserConfigFiles.relativePath(edit, it) }
             .filter { packageFile(sourceDir, it) != null }
+            .filterNot { path ->
+                if (!path.endsWith(".custom.yaml")) return@filterNot false
+                val file = overrideFile(path) ?: return@filterNot false
+                val bytes =
+                    try {
+                        file.inputStream().use { it.readAtMost((UserConfigFiles.MAX_FILE_BYTES + 1).toInt()) }
+                    } catch (_: IOException) {
+                        return@filterNot false
+                    }
+                if (bytes.size > UserConfigFiles.MAX_FILE_BYTES) return@filterNot false
+                val text = UserConfigFiles.decode(bytes) ?: return@filterNot false
+                UserConfigFiles.isGeneratedOnly(text)
+            }
     }
 
     private fun pruneEmptyFolders(start: File?) {

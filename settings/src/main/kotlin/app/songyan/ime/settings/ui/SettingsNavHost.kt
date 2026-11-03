@@ -649,7 +649,6 @@ private fun NavGraphBuilder.settingsGraph(
         EngineFeaturesScreen(
             schemaId = state.value.inUseSchemeId,
             schemaName = state.value.inUseScheme?.name,
-            onOpenGrammarParameters = { id -> navController.navigate(SettingsRoutes.rimeFile(id, grammar = true)) },
             onBack = { navController.popBackStack() },
             viewModel =
                 if (owner != null) {

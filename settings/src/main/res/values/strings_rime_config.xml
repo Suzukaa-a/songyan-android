@@ -41,8 +41,6 @@
     <string name="rime_editor_load_failed">Couldn\'t open the file.</string>
     <string name="rime_editor_discard_title">Discard your edits?</string>
     <string name="rime_editor_discard_body">What you changed hasn\'t been saved.</string>
-    <string name="rime_config_edit_grammar">Adjust grammar model parameters</string>
-    <string name="rime_config_edit_grammar_body">Fine-tune how whole sentences are ranked by editing a file.</string>
     <string name="rime_editor_external_changed">File changed in another app</string>
     <string name="rime_editor_external_changed_body">Loading the file replaces your current edits. Keeping your edits will replace the file when you save.</string>
     <string name="rime_editor_load_file">Load file</string>

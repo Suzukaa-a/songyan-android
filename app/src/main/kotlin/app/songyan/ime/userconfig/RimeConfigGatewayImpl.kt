@@ -68,9 +68,10 @@ internal class RimeConfigGatewayImpl(
             val status = statusStore.read()
             val active = GenerationPublisher(storage).readActive()?.sourceId
             val sourceDir = active?.let(storage::sourceDir)?.takeIf { it.isDirectory }
+            val editedFiles = overrides.entries(sourceDir)
             RimeConfigInfo(
-                overrides = overrides.entries(sourceDir).map { RimeOverrideFile(it.path, it.updated) },
-                unacknowledged = overrides.unacknowledged(sourceDir),
+                overrides = editedFiles.map { RimeOverrideFile(it.path, it.updated) },
+                unacknowledged = overrides.unacknowledged(sourceDir, editedFiles.map { it.path }),
                 unusedScripts =
                     scripts
                         .unconfirmed(storage.appliedConfigDir, sourceDir)
@@ -189,7 +190,16 @@ internal class RimeConfigGatewayImpl(
             try {
                 val refusal = editor.save(name, text)
                 when {
-                    refusal == null -> RimeConfigSaveResult.Saved
+                    refusal == null -> {
+                        activeSourceDir()
+                            ?.let {
+                                UserOverrides.packageFile(
+                                    it,
+                                    name,
+                                )
+                            }?.let { overrides.recordBase(name, it) }
+                        RimeConfigSaveResult.Saved
+                    }
                     refusal.problem == UserConfigProblem.INVALID_YAML -> RimeConfigSaveResult.Invalid(refusal.line)
                     else -> RimeConfigSaveResult.Failure(failureText(refusal))
                 }
@@ -202,7 +212,18 @@ internal class RimeConfigGatewayImpl(
         withContext(Dispatchers.IO) {
             val name = editor.fileName(key) ?: return@withContext RimeConfigEditResult.Failure(null)
             try {
-                editor.load(name, activeSourceDir()) { templateFor(name) }
+                val sourceDir = activeSourceDir()
+                val loaded = editor.load(name, sourceDir) { templateFor(name) }
+                if (overrides.overrideFile(name) == null) {
+                    editor.save(name, loaded)?.let { return@withContext RimeConfigEditResult.Failure(failureText(it)) }
+                    sourceDir
+                        ?.let {
+                            UserOverrides.packageFile(
+                                it,
+                                name,
+                            )
+                        }?.let { overrides.recordBase(name, it) }
+                }
             } catch (e: UserConfigException) {
                 return@withContext RimeConfigEditResult.Failure(failureText(e))
             } catch (_: IOException) {

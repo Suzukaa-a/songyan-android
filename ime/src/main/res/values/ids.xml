@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="ime_alternate_action_0" type="id" />
+    <item name="ime_alternate_action_1" type="id" />
+    <item name="ime_alternate_action_2" type="id" />
+    <item name="ime_alternate_action_3" type="id" />
+    <item name="ime_alternate_action_4" type="id" />
+    <item name="ime_alternate_action_5" type="id" />
+    <item name="ime_alternate_action_6" type="id" />
+    <item name="ime_alternate_action_7" type="id" />
+    <item name="ime_alternate_action_8" type="id" />
+    <item name="ime_alternate_action_9" type="id" />
+    <item name="ime_alternate_action_10" type="id" />
+    <item name="ime_alternate_action_11" type="id" />
+    <item name="ime_alternate_action_12" type="id" />
+    <item name="ime_alternate_action_13" type="id" />
+    <item name="ime_alternate_action_14" type="id" />
+    <item name="ime_alternate_action_15" type="id" />
+    <item name="ime_alternate_action_16" type="id" />
+    <item name="ime_alternate_action_17" type="id" />
+    <item name="ime_alternate_action_18" type="id" />
+    <item name="ime_alternate_action_19" type="id" />
+    <item name="ime_alternate_action_20" type="id" />
+    <item name="ime_alternate_action_21" type="id" />
+    <item name="ime_alternate_action_22" type="id" />
+    <item name="ime_alternate_action_23" type="id" />
+    <item name="ime_alternate_action_24" type="id" />
+    <item name="ime_alternate_action_25" type="id" />
+    <item name="ime_alternate_action_26" type="id" />
+    <item name="ime_alternate_action_27" type="id" />
+    <item name="ime_alternate_action_28" type="id" />
+    <item name="ime_alternate_action_29" type="id" />
+    <item name="ime_alternate_action_30" type="id" />
+    <item name="ime_alternate_action_31" type="id" />
+    <item name="ime_cursor_left_action" type="id" />
+    <item name="ime_cursor_right_action" type="id" />
+</resources>

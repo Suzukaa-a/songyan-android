@@ -1,7 +1,9 @@
 package app.songyan.ime.ime
 
+import android.text.InputType
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.ime.panels.SymbolPagePanelView
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.layout.BuiltinLayouts
@@ -85,6 +87,37 @@ class NineKeyDeviceTest {
                 .install(layout.encoded())
                 .withComposition(KeyboardComposition(mainLayoutID = layout.id), nineKeyPairing()),
         )
+    }
+
+    @Test
+    fun editorPadsKeepEveryKeyInsideTheKeyboardAtPhoneAndWideWidths() {
+        val density =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext.resources.displayMetrics.density
+        for (inputType in listOf(
+            InputType.TYPE_CLASS_NUMBER,
+            InputType.TYPE_CLASS_PHONE,
+            InputType.TYPE_CLASS_DATETIME,
+        )) {
+            for (widthDp in listOf(360, 600)) {
+                withHost(layout = "qwerty26") { host ->
+                    host.start(
+                        inputType = inputType,
+                        width = (widthDp * density).toInt(),
+                    )
+                    host.main {
+                        val keyboard = host.find(KeyboardView::class.java)
+                        val left = keyboard.bounds.minOf { it.left }
+                        val right = keyboard.bounds.maxOf { it.right }
+                        assertTrue("right edge $right exceeds ${keyboard.width}", right <= keyboard.width)
+                        assertEquals("equal margins", left, keyboard.width - right, 1f)
+                    }
+                    host.tap("1")
+                    host.assertText("1")
+                }
+            }
+        }
     }
 
     @Test

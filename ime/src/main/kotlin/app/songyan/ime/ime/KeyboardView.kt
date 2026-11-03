@@ -794,17 +794,17 @@ class KeyboardView(
         val key = keys.getOrNull(index) ?: return emptyList()
         if (popupKey == index) {
             return popupOptions.mapIndexed { ordinal, option ->
-                AccessibilityNodeInfo.AccessibilityAction(A11Y_ALTERNATE_ACTION_BASE + ordinal, option.label)
+                AccessibilityNodeInfo.AccessibilityAction(A11Y_ALTERNATE_ACTION_IDS[ordinal], option.label)
             }
         }
         if (accessibleCursorMode && key.action.type == LayoutActionKind.SPACE) {
             return listOf(
                 AccessibilityNodeInfo.AccessibilityAction(
-                    A11Y_CURSOR_ACTION_BASE,
+                    R.id.ime_cursor_left_action,
                     context.getString(R.string.ime_cursor_left),
                 ),
                 AccessibilityNodeInfo.AccessibilityAction(
-                    A11Y_CURSOR_ACTION_BASE + 1,
+                    R.id.ime_cursor_right_action,
                     context.getString(R.string.ime_cursor_right),
                 ),
             )
@@ -816,13 +816,13 @@ class KeyboardView(
         index: Int,
         actionId: Int,
     ): Boolean {
-        if (actionId == A11Y_CURSOR_ACTION_BASE || actionId == A11Y_CURSOR_ACTION_BASE + 1) {
+        if (actionId == R.id.ime_cursor_left_action || actionId == R.id.ime_cursor_right_action) {
             if (keys.getOrNull(index)?.action?.type != LayoutActionKind.SPACE) return false
-            onCursor(if (actionId == A11Y_CURSOR_ACTION_BASE) -1 else 1)
+            onCursor(if (actionId == R.id.ime_cursor_left_action) -1 else 1)
             return true
         }
         if (popupKey != index) return false
-        val ordinal = actionId - A11Y_ALTERNATE_ACTION_BASE
+        val ordinal = A11Y_ALTERNATE_ACTION_IDS.indexOf(actionId)
         val option = popupOptions.getOrNull(ordinal) ?: return false
         dismissPopup(animated = true)
         onFeedback(option.action, FeedbackKind.PRESS)
@@ -931,10 +931,41 @@ class KeyboardView(
         const val CURSOR_CUE_INSET_DP = 2f
         const val CURSOR_CUE_STROKE_DP = 1.5f
 
-        /** Custom accessibility action ids for the alternates popup. */
-        const val A11Y_ALTERNATE_ACTION_BASE = 0x00F00000
-
-        /** Custom accessibility action ids for one-step caret moves while cursor mode is on. */
-        const val A11Y_CURSOR_ACTION_BASE = 0x00F00100
+        // Android 10 requires resource ids; automatic punctuation can extend authored alternates.
+        private val A11Y_ALTERNATE_ACTION_IDS =
+            intArrayOf(
+                R.id.ime_alternate_action_0,
+                R.id.ime_alternate_action_1,
+                R.id.ime_alternate_action_2,
+                R.id.ime_alternate_action_3,
+                R.id.ime_alternate_action_4,
+                R.id.ime_alternate_action_5,
+                R.id.ime_alternate_action_6,
+                R.id.ime_alternate_action_7,
+                R.id.ime_alternate_action_8,
+                R.id.ime_alternate_action_9,
+                R.id.ime_alternate_action_10,
+                R.id.ime_alternate_action_11,
+                R.id.ime_alternate_action_12,
+                R.id.ime_alternate_action_13,
+                R.id.ime_alternate_action_14,
+                R.id.ime_alternate_action_15,
+                R.id.ime_alternate_action_16,
+                R.id.ime_alternate_action_17,
+                R.id.ime_alternate_action_18,
+                R.id.ime_alternate_action_19,
+                R.id.ime_alternate_action_20,
+                R.id.ime_alternate_action_21,
+                R.id.ime_alternate_action_22,
+                R.id.ime_alternate_action_23,
+                R.id.ime_alternate_action_24,
+                R.id.ime_alternate_action_25,
+                R.id.ime_alternate_action_26,
+                R.id.ime_alternate_action_27,
+                R.id.ime_alternate_action_28,
+                R.id.ime_alternate_action_29,
+                R.id.ime_alternate_action_30,
+                R.id.ime_alternate_action_31,
+            )
     }
 }

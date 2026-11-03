@@ -66,8 +66,6 @@ fun EngineFeaturesScreen(
     schemaId: String?,
     schemaName: String?,
     onBack: (() -> Unit)?,
-    /** Opens the file for the input method [schemaId]'s grammar model parameters. */
-    onOpenGrammarParameters: (String) -> Unit = {},
     viewModel: EngineFeaturesViewModel = viewModel(factory = EngineFeaturesViewModel.Factory()),
 ) {
     LaunchedEffect(schemaId) { viewModel.show(schemaId) }
@@ -155,7 +153,6 @@ fun EngineFeaturesScreen(
                         onImportDatabase = { databasePicker.launch(arrayOf("*/*")) },
                         onImportDatabaseFromLink = { linkTarget = LINK_PREDICTION },
                         onOpenGrammar = { grammarDialog = true },
-                        onOpenGrammarParameters = schemaId?.let { id -> { onOpenGrammarParameters(id) } },
                         onImportModel = { modelPicker.launch(arrayOf("*/*")) },
                         onImportModelFromLink = { linkTarget = LINK_GRAMMAR },
                         onLuaComponent = viewModel::setLuaComponent,
@@ -211,8 +208,6 @@ private fun FeatureRows(
     onImportDatabase: () -> Unit,
     onImportDatabaseFromLink: () -> Unit,
     onOpenGrammar: () -> Unit,
-    /** Null when no input method is in use. */
-    onOpenGrammarParameters: (() -> Unit)?,
     onImportModel: () -> Unit,
     onImportModelFromLink: () -> Unit,
     onLuaComponent: (String, Boolean) -> Unit,
@@ -307,7 +302,6 @@ private fun FeatureRows(
             )
         Availability.SCHEME -> {
             DetailRow(title = stringResource(R.string.features_grammar_title), body = schemeManaged)
-            GrammarParametersRow(onOpenGrammarParameters, enabled)
         }
         Availability.AVAILABLE -> {
             SettingsRow(
@@ -315,7 +309,6 @@ private fun FeatureRows(
                 subtitle = grammarLabel(snapshot),
                 onClick = { if (enabled) onOpenGrammar() },
             )
-            GrammarParametersRow(onOpenGrammarParameters, enabled)
             SettingsRow(
                 title = stringResource(R.string.features_grammar_import),
                 subtitle = stringResource(R.string.features_grammar_body),
@@ -349,19 +342,6 @@ private fun FeatureRows(
             )
         }
     }
-}
-
-@Composable
-private fun GrammarParametersRow(
-    onOpen: (() -> Unit)?,
-    enabled: Boolean,
-) {
-    if (onOpen == null) return
-    SettingsRow(
-        title = stringResource(R.string.rime_config_edit_grammar),
-        subtitle = stringResource(R.string.rime_config_edit_grammar_body),
-        onClick = { if (enabled) onOpen() },
-    )
 }
 
 @Composable

@@ -48,8 +48,8 @@ internal fun KeyboardController.openPage(target: LayoutPageTarget?) {
         return
     }
     if (target == LayoutPageTarget.SYMBOLS && page == KeyboardPageKind.SYMBOLS) {
-        // The switch on the symbol page's extra page of everyday marks turns to the usual rows.
-        everydayMarksPage = false
+        // The two row symbol pages share this switch in both directions.
+        everydayMarksPage = !everydayMarksPage
         render()
         return
     }
@@ -95,7 +95,7 @@ internal suspend fun KeyboardController.jumpToPage(jump: LayoutPageJump?) {
  * so a jump key on their symbol page and 符 on the visited page take them round in a loop. False when
  * not visiting, or when [target] is the visited layout's own page kind the user is already on.
  */
-private suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget): Boolean {
+internal suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget): Boolean {
     if (!visitingLayout) return false
     if (target == LayoutPageTarget.NUMERIC && page == KeyboardPageKind.NUMERIC) return false
     val active = session.takeIf { ready } ?: return false
@@ -206,12 +206,14 @@ internal suspend fun KeyboardController.dispatch(
                     handleT9FirstKey()
                     return
                 }
+                val delivered = deliveredCommits
                 if (active != null) {
                     active.tap(KeyAction.Literal(text))
                 } else {
                     callbacks.commit(text, selectingCandidate)
                 }
-                // The row-shaped 123 and symbol pages keep their place, as Gboard's do: marks and
+                if (page != null && deliveredCommits != delivered) typedOnSymbolPage = true
+                // The row-shaped 123 and symbol pages keep their place until space: marks and
                 // digits come in runs. Only the categorised symbol panel returns after one symbol
                 // unless locked.
             }

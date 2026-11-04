@@ -251,6 +251,13 @@ class KeyboardController(
 
     /** The page above the letter keyboard; null is the letter page itself. */
     internal var page: KeyboardPageKind? = null
+        set(value) {
+            field = value
+            typedOnSymbolPage = false
+        }
+
+    /** A delivered digit or symbol arms the next space to return to letters for this visit. */
+    internal var typedOnSymbolPage = false
 
     /** A phone field's pad is showing its page of the other dial characters. */
     internal var phoneSymbols = false

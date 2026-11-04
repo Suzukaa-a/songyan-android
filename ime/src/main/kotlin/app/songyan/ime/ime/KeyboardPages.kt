@@ -136,8 +136,7 @@ internal object KeyboardPages {
                     ?: BuiltPage(rowsPage(numericPreset(config), config, symbols = false))
             KeyboardPageKind.SYMBOLS ->
                 authoredPage(KeyboardPageKind.SYMBOLS, config)
-                    ?: everydayMarksPage(config)
-                    ?: BuiltPage(rowsPage(symbolsPreset(config), config, symbols = true))
+                    ?: symbolRowsPage(config)
             KeyboardPageKind.ENGLISH -> letters(config.copy(englishDirectInput = true))
         }
 
@@ -250,6 +249,27 @@ internal object KeyboardPages {
             mainLayoutIsPhoneKeypad = layout == KeyboardLayoutKind.PHONE9,
             ascii = ascii,
         )
+    }
+
+    private fun symbolRowsPage(config: Config): BuiltPage {
+        val extra = everydayMarksPage(config.copy(everydayMarksPage = true))
+        if (config.everydayMarksPage && extra != null) return extra
+        val shown = rowsPage(symbolsPreset(config), config, symbols = true)
+        if (extra == null) return BuiltPage(shown)
+        // Both symbol pages share the same switch; the second must not escape to the paired pad.
+        val rows =
+            shown.rows.dropLast(1).map { row ->
+                LayoutRow(
+                    row.keys.map { key ->
+                        if (key.action.pageSwitchTarget == LayoutPageTarget.NUMERIC) {
+                            key.copy(action = LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS))
+                        } else {
+                            key
+                        }
+                    },
+                )
+            }
+        return BuiltPage(shown.copy(rows = rows + shown.rows.last()))
     }
 
     /**

@@ -1131,6 +1131,35 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun spaceAfterDigitsOrSymbolsReturnsToLettersForContinuedTyping() =
+        withHost { host ->
+            host.start()
+            val space = host.string(R.string.ime_space)
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(space)
+            host.awaitField(" ")
+            assertTrue(host.keyLabels().contains("1"))
+            host.tap("1")
+            host.tap("2")
+            host.tap(space)
+            host.awaitField(" 12 ")
+            assertTrue(host.keyLabels().contains("a"))
+            host.tap("n")
+            host.tap("i")
+            host.tap(space)
+            host.awaitField(" 12 你")
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(space)
+            host.awaitField(" 12 你 ")
+            assertTrue(host.keyLabels().contains("1"))
+            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tap("【")
+            host.tap(space)
+            host.awaitField(" 12 你 【 ")
+            assertTrue(host.keyLabels().contains("a"))
+        }
+
+    @Test
     fun anEmailFieldHasTheAtSignBesideTheSpaceBarAndNoLanguageKey() =
         withHost { host ->
             host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
@@ -2872,8 +2901,13 @@ class RealEngineEditorTest {
                 instrumentation.waitForIdleSync()
                 SystemClock.sleep(POLL_MS)
                 var state = ""
-                main { state = field.text.toString() + "|" + barLabelsNow() }
-                if (state == last) stable++ else stable = 0
+                var ready = false
+                main {
+                    state = field.text.toString() + "|" + barLabelsNow()
+                    ready = controller.ready && !controller.preparing
+                }
+                // Initial engine preparation can leave the text unchanged while the layout is still pending.
+                if (ready && state == last) stable++ else stable = 0
                 last = state
             }
         }

@@ -4,6 +4,7 @@ import android.os.SystemClock
 import app.songyan.ime.keyboard.layout.KeyAction
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
+import app.songyan.ime.layout.LayoutPageTarget
 
 /**
  * The space key. After an English word, a second space within [doubleSpaceWindowMs] replaces
@@ -31,4 +32,7 @@ internal suspend fun KeyboardController.typeSpace(
     val delivered = deliveredCommits
     active.tap(KeyAction.Space)
     if (eligible && deliveredCommits != delivered) doubleSpaceArmedAt = now
+    if (page != null && typedOnSymbolPage && !policy.numeric && deliveredCommits != delivered) {
+        if (!endLayoutVisit(LayoutPageTarget.LETTERS)) openPage(LayoutPageTarget.LETTERS)
+    }
 }

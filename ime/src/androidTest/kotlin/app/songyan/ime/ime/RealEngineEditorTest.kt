@@ -318,6 +318,40 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun theExpandButtonRespondsToTheFirstTapDuringCandidateInertia() =
+        withHost(fontScale = 2f) { host ->
+            // Keep the five real candidates wider than the row even when font scaling is capped.
+            host.start(width = (200 * host.density).toInt())
+            for (key in "ji") host.tap(key.toString())
+            host.awaitComposing()
+            val expected =
+                host.backend
+                    .currentSnapshot()
+                    .candidates
+                    .first()
+                    .text
+            host.flingBarThenTap(expected)
+            host.awaitField("ji")
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("j")
+            host.tap("i")
+            host.awaitIdle()
+            host.flingBarThenTap(host.string(R.string.ime_expand))
+            host.awaitIdle()
+            assertTrue(
+                "the first tap expands the moving candidate row",
+                host.barLabels().contains(host.string(R.string.ime_candidate_back)),
+            )
+            assertEquals("ji", host.text())
+            host.tap(host.string(R.string.ime_candidate_back), bar = true)
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("j")
+            host.tap("i")
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField(expected)
+        }
+
+    @Test
     fun theExpandedColumnGoesBackDeletesAndRetypes() =
         withHost { host ->
             host.start()
@@ -2357,6 +2391,24 @@ class RealEngineEditorTest {
             }
             main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x to startY - upBy, start) }
             awaitIdle()
+        }
+
+        /** A short, fast flick followed immediately by a tap on the named candidate or control. */
+        fun flingBarThenTap(label: String) {
+            val target = barItemCenter(label)
+            main {
+                val bar = find(CandidateBarView::class.java)
+                val x = bar.width * 0.5f
+                val y = bar.height * 0.5f
+                val start = SystemClock.uptimeMillis()
+                touchBar(start, MotionEvent.ACTION_DOWN, x to y, start)
+                for (step in 1..3) {
+                    touchBar(start + step * 8, MotionEvent.ACTION_MOVE, x - step * 10 * density to y, start)
+                }
+                touchBar(start + 32, MotionEvent.ACTION_UP, x - 30 * density to y, start)
+                touchBar(start + 40, MotionEvent.ACTION_DOWN, target, start + 40)
+                touchBar(start + 56, MotionEvent.ACTION_UP, target, start + 40)
+            }
         }
 
         /** Swipes the collapsed strip toward its end by four tenths of the host's width. */

@@ -18,8 +18,9 @@ import androidx.dynamicanimation.animation.SpringForce
  * Two kinds of animation exist here and they scale differently:
  *  - Platform-driven ones ([android.animation.ValueAnimator], [android.view.ViewPropertyAnimator]):
  *    the platform already multiplies their duration by the system animator duration scale, so they
- *    take the base [CANDIDATE_MS] / [PANEL_MS] / [PAGE_MS] and must NOT pass through [duration] -
- *    doing so would scale them twice (scale 0.5 would run at 0.25).
+ *    take the base [CANDIDATE_MS] / [PANEL_MS] / [PAGE_MS] and must NOT pass through [duration].
+ *    AndroidX spring animations likewise scale their frame deltas on API 33+, so their physical
+ *    response must stay unchanged; changing stiffness would apply the speed twice.
  *  - Canvas-driven progress (a value read while drawing, e.g. the key press release): no platform
  *    scaler touches it, so it multiplies its own frame budget by [duration].
  */
@@ -74,16 +75,15 @@ object ImeMotion {
     val standard: Interpolator get() = PathInterpolator(0.2f, 0f, 0f, 1f)
 
     /**
-     * The spring of a contained reveal (the expanded candidate grid): damping ratio 0.9, stiffness
-     * 800. A physics-driven animation is not scaled by the platform, so the system animator scale
-     * is applied here: a slower system makes the spring proportionally softer.
+     * AndroidX 1.1 applies the system duration scale to spring frame deltas on API 33+. Keep the
+     * physical response unchanged so the candidate reveal follows that scale exactly once.
+     * Older platforms use the same default response; callers skip the spring when motion is off.
      */
     fun revealSpring(finalPosition: Float): SpringForce =
         SpringForce(finalPosition)
             .setDampingRatio(REVEAL_DAMPING)
-            .setStiffness(REVEAL_STIFFNESS / (scale * scale).coerceAtLeast(MIN_SPRING_SCALE))
+            .setStiffness(REVEAL_STIFFNESS)
 
     private const val REVEAL_DAMPING: Float = 0.9f
     private const val REVEAL_STIFFNESS: Float = 800f
-    private const val MIN_SPRING_SCALE: Float = 0.01f
 }

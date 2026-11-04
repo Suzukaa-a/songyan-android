@@ -71,25 +71,32 @@ internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
     // A pull still showing absorbs this touch too.
     val catchesPull = EdgeEffectCompat.getDistance(startEdge) > 0f || EdgeEffectCompat.getDistance(endEdge) > 0f
     val hit = hitTest(event.x, event.y)
+    // Only the moving candidates consume a touch to stop motion; fixed controls and the
+    // independent readings section must respond immediately, even during a fling or edge pull.
+    val catchesMotion =
+        (flinging || catchesPull) &&
+            viewport.contains(event.x.toInt(), event.y.toInt()) &&
+            !inReadings(event.x, event.y)
+    if (!catchesMotion) releaseEdges()
     downRevision = listRevision
     down = -1
     downControl = -1
-    if (hit in 0 until entries.size && !flinging && !catchesPull) {
+    if (hit in 0 until entries.size && !catchesMotion) {
         down = hit
         val entry = entries[hit]
         pressed = Press(hit, entry.absoluteIndex, entry.text, listRevision, event.x, event.y, entry.comment)
         ui.postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
-    } else if (hit >= readingBase && !flinging && !catchesPull) {
+    } else if (hit >= readingBase) {
         downReading = hit - readingBase
         if (readings[downReading].selected) downReading = -1
-    } else if (hit >= entries.size && !flinging) {
+    } else if (hit in entries.size until entries.size + controls.size) {
         downControl = hit - entries.size
     }
     if (down >= 0 || downReading >= 0 || downControl >= 0) onPressFeedback()
     // A new touch may try a read that failed before, once.
     pages.resume()
     scrollingReadings = false
-    if ((flinging || catchesPull) && !inReadings(event.x, event.y)) scrollingGesture = true
+    scrollingGesture = catchesMotion
     if (scrollingGesture) lastTouch = if (expanded) event.y else event.x
     invalidate()
     return true

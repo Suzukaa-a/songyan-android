@@ -4,9 +4,11 @@ import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -49,12 +51,11 @@ import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.EditorNavigationGuard
 import app.songyan.ime.settings.ui.EditorNotice
 import app.songyan.ime.settings.ui.RimeFileEditorViewModel
-import app.songyan.ime.settings.ui.RimeFileSaveError
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 
 /**
  * Edits one of the user's configuration files in the app, so no other app is needed. Saving checks
- * the text first and says which line is wrong instead of writing a file the next apply would
+ * the text first and preserves any validation error instead of writing a file the next apply would
  * refuse; leaving with unsaved text asks first. After a save the keyboard still uses the old
  * settings until they are applied, which the snackbar offers.
  */
@@ -155,64 +156,67 @@ fun RimeFileEditorScreen(
             }
         },
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(padding),
         ) {
-            if (state.loading || state.saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            if (state.failed) {
-                Text(
-                    text = state.loadFailure ?: stringResource(R.string.rime_editor_load_failed),
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp).testTag(RIME_EDITOR_ERROR_TAG),
-                )
-            } else if (!state.loading) {
-                if (state.fileName.endsWith(".lua") || SCRIPT_ENTRY.containsMatchIn(state.text)) {
+            val maxErrorHeight = maxHeight / 3
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (state.loading || state.saving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                if (state.failed) {
                     Text(
-                        text = stringResource(R.string.rime_editor_scripts_banner),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        text = state.loadFailure ?: stringResource(R.string.rime_editor_load_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp).testTag(RIME_EDITOR_ERROR_TAG),
+                    )
+                } else if (!state.loading) {
+                    if (state.fileName.endsWith(".lua") || SCRIPT_ENTRY.containsMatchIn(state.text)) {
+                        Text(
+                            text = stringResource(R.string.rime_editor_scripts_banner),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.errorContainer)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .testTag(RIME_EDITOR_SCRIPTS_TAG),
+                        )
+                    }
+                    val error = state.error
+                    if (error != null) {
+                        Text(
+                            text = error.text ?: stringResource(R.string.rime_config_failed),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .heightIn(max = maxErrorHeight)
+                                    .verticalScroll(rememberScrollState())
+                                    .testTag(RIME_EDITOR_ERROR_TAG),
+                        )
+                    }
+                    OutlinedTextField(
+                        value = state.text,
+                        onValueChange = viewModel::edit,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                capitalization = KeyboardCapitalization.None,
+                                autoCorrectEnabled = false,
+                            ),
+                        isError = error != null,
                         modifier =
                             Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .fillMaxSize()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .testTag(RIME_EDITOR_SCRIPTS_TAG),
+                                .verticalScroll(rememberScrollState())
+                                .testTag(RIME_EDITOR_FIELD_TAG),
                     )
                 }
-                val error = state.error
-                if (error != null) {
-                    Text(
-                        text =
-                            when (error) {
-                                is RimeFileSaveError.Invalid ->
-                                    error.line?.let { stringResource(R.string.rime_editor_invalid_line, it) }
-                                        ?: stringResource(R.string.rime_editor_invalid)
-                                is RimeFileSaveError.Failed -> error.text ?: stringResource(R.string.rime_config_failed)
-                            },
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag(RIME_EDITOR_ERROR_TAG),
-                    )
-                }
-                OutlinedTextField(
-                    value = state.text,
-                    onValueChange = viewModel::edit,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                    keyboardOptions =
-                        KeyboardOptions(
-                            capitalization = KeyboardCapitalization.None,
-                            autoCorrectEnabled = false,
-                        ),
-                    isError = error != null,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .verticalScroll(rememberScrollState())
-                            .testTag(RIME_EDITOR_FIELD_TAG),
-                )
             }
         }
     }

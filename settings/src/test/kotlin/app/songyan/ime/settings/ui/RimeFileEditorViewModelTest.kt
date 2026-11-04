@@ -112,9 +112,10 @@ class RimeFileEditorViewModelTest {
         }
 
     @Test
-    fun aRefusedSaveKeepsTheTextAndNamesTheLine() =
+    fun aRefusedSaveKeepsTheTextAndOriginalError() =
         runTest(dispatcher) {
-            gateway.save = RimeConfigSaveResult.Invalid(3)
+            val message = "songyan_quanpin.custom.yaml: expected a closing bracket\nline 3, column 1"
+            gateway.save = RimeConfigSaveResult.Failure(message)
             val model = model()
             advanceUntilIdle()
             model.edit("patch:\n  a: [\n")
@@ -123,7 +124,7 @@ class RimeFileEditorViewModelTest {
             advanceUntilIdle()
 
             val state = model.uiState.value
-            assertEquals(RimeFileSaveError.Invalid(3), state.error)
+            assertEquals(RimeFileSaveError(message), state.error)
             assertEquals("patch:\n  a: [\n", state.text)
             assertTrue(state.dirty)
             assertFalse(state.saved)

@@ -259,8 +259,14 @@ class RimeConfigDeviceTest {
         assertTrue(loaded.text.endsWith("patch: {}\n"))
         assertFalse(file.exists())
 
-        val broken = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  menu/page_size: [3\n") }
-        assertTrue(broken is RimeConfigSaveResult.Invalid)
+        val invalid = "patch:\n  menu/page_size: [3\n"
+        val original = requireNotNull(UserConfigFiles.check(loaded.fileName, invalid.toByteArray())).detail
+        val broken = runBlocking { gateway.saveFile("songyan_quanpin", invalid) }
+        assertTrue(broken is RimeConfigSaveResult.Failure)
+        assertEquals(
+            context.getString(R.string.rime_config_error_detail, loaded.fileName, original),
+            (broken as RimeConfigSaveResult.Failure).message,
+        )
         assertFalse("a refused save creates no override", file.exists())
         val outside = runBlocking { gateway.saveFile("songyan_quanpin", "patch:\n  translator/dictionary: ../../x\n") }
         assertTrue(outside is RimeConfigSaveResult.Failure)

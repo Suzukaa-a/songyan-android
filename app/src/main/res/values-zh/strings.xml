@@ -146,13 +146,9 @@
     <string name="rime_config_folder_active">正在使用：%1$s</string>
     <string name="rime_config_folder_active_none">正在使用</string>
     <string name="rime_config_folder_sources">全部输入方案</string>
-    <string name="rime_config_error_yaml">「%1$s」格式有误，改动没有应用，键盘仍用原来的设置。改好或删掉这个文件后再试。</string>
-    <string name="rime_config_error_text">「%1$s」不是 UTF-8 文本，改动没有应用，键盘仍用原来的设置。</string>
-    <string name="rime_config_error_reference">「%1$s」里有指向别处文件的写法，改动没有应用，键盘仍用原来的设置。</string>
-    <string name="rime_config_error_script">扩展脚本在你确认之后又有改动，改动没有应用。再点一次「应用更改」。</string>
     <string name="rime_editor_unsafe_reference">这个文件里有指向别处文件的写法，没有保存。</string>
-    <string name="rime_config_error_large">「%1$s」太大，改动没有应用。每个文件不超过 4 MB，全部加起来不超过 8 MB。</string>
     <string name="rime_config_error_many">文件太多，改动没有应用。最多放 100 个文件。</string>
+    <string name="rime_config_error_detail">「%1$s」：%2$s</string>
     <string name="rime_config_error_deploy">改动没能生效，键盘仍用原来的设置。检查最近改过的文件后再试。</string>
     <string name="rime_config_error_unavailable">现在没法应用更改，请稍后再试。</string>
     <string name="rime_config_skipped">你的配置不适用于正在使用的输入方案，这个方案现在按原样使用。</string>

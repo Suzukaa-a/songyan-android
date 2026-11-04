@@ -1,5 +1,7 @@
 package app.songyan.ime.userconfig
 
+import app.songyan.ime.deploy.DeploymentCoordinator
+import app.songyan.ime.packages.RecipeInstallError
 import app.songyan.ime.storage.AppStorage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -22,6 +24,7 @@ data class UserConfigStatus(
     /** A [UserConfigProblem] name, or the coordinator's deploy failure. */
     val problem: String? = null,
     val sourceId: String? = null,
+    val detail: String? = null,
 ) {
     enum class State(
         val wire: String,
@@ -38,6 +41,7 @@ data class UserConfigStatus(
             file?.let { put("file", it) }
             problem?.let { put("problem", it) }
             sourceId?.let { put("sourceId", it) }
+            detail?.let { put("detail", it) }
         }.toString()
 
     /** Reads and writes [AppStorage.configStatusFile]; a damaged file reads as no status. */
@@ -72,7 +76,16 @@ data class UserConfigStatus(
         fun failed(
             file: String?,
             problem: String,
-        ) = UserConfigStatus(State.FAILED, file = file, problem = problem)
+            detail: String? = null,
+        ) = UserConfigStatus(State.FAILED, file = file, problem = problem, detail = detail)
+
+        fun failed(error: Throwable): UserConfigStatus =
+            when (error) {
+                is UserConfigException -> failed(error.file, error.problem.name, error.detail ?: error.message)
+                is RecipeInstallError.InvalidResource ->
+                    failed(error.file, DeploymentCoordinator.DEPLOY_PROBLEM, error.detail)
+                else -> failed(null, DeploymentCoordinator.DEPLOY_PROBLEM, error.message)
+            }
 
         fun skipped(sourceId: String) = UserConfigStatus(State.SKIPPED, sourceId = sourceId)
 
@@ -82,7 +95,14 @@ data class UserConfigStatus(
 
             fun string(key: String) = (root[key] as? JsonPrimitive)?.contentOrNull
             val state = State.entries.firstOrNull { it.wire == string("state") } ?: return null
-            return UserConfigStatus(state, string("digest"), string("file"), string("problem"), string("sourceId"))
+            return UserConfigStatus(
+                state,
+                string("digest"),
+                string("file"),
+                string("problem"),
+                string("sourceId"),
+                string("detail"),
+            )
         }
     }
 }

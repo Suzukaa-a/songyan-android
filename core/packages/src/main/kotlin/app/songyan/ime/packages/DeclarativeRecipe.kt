@@ -276,7 +276,12 @@ class DeclarativeRecipe private constructor(
             ) {
                 retained.add(target)
             }
-            output[target] = RecipePlanSupport.patch(text, body, rx).toByteArray(Charsets.UTF_8)
+            output[target] =
+                try {
+                    RecipePlanSupport.patch(text, body, rx).toByteArray(Charsets.UTF_8)
+                } catch (e: RecipeInstallError.InvalidResource) {
+                    throw RecipeInstallError.InvalidResource(e.detail, target)
+                }
         }
         RecipeResourceBudget.validate(output.mapValues { it.value.size })
         val before = existingFiles.mapValues { sha256Hex(it.value) }

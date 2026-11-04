@@ -10,7 +10,6 @@ import app.songyan.ime.deploy.DeployContract
 import app.songyan.ime.deploy.DeployMode
 import app.songyan.ime.deploy.DeployPipeline
 import app.songyan.ime.deploy.DeployRequest
-import app.songyan.ime.deploy.DeploymentCoordinator
 import app.songyan.ime.deploy.RequestState
 import app.songyan.ime.settings.state.RimeConfigApplyResult
 import app.songyan.ime.settings.state.RimeConfigEditResult
@@ -121,7 +120,9 @@ internal class RimeConfigGatewayImpl(
                         RimeConfigApplyResult.Applied
                     } else {
                         val problem = outcome.status.problem?.removePrefix(DeployPipeline.CONFIG_PREFIX)
-                        RimeConfigApplyResult.Failure(message(problem, outcome.status.paths.firstOrNull()))
+                        RimeConfigApplyResult.Failure(
+                            message(problem, outcome.status.paths.firstOrNull(), outcome.status.detail),
+                        )
                     }
                 DeployWait.TimedOut, DeployWait.Unavailable ->
                     RimeConfigApplyResult.Failure(appContext.getString(R.string.rime_config_error_unavailable))
@@ -287,41 +288,21 @@ internal class RimeConfigGatewayImpl(
         when (e.problem) {
             UserConfigProblem.TOO_LARGE -> appContext.getString(R.string.rime_config_refused_large, e.file.orEmpty())
             UserConfigProblem.UNSAFE_REFERENCE -> appContext.getString(R.string.rime_editor_unsafe_reference)
-            else -> message(e.problem.name, e.file)
+            else -> message(e.problem.name, e.file, e.detail ?: e.message)
         }
 
-    private fun message(status: UserConfigStatus): String = message(status.problem, status.file)
+    private fun message(status: UserConfigStatus): String = message(status.problem, status.file, status.detail)
 
     private fun message(
         problem: String?,
         file: String?,
-    ): String {
-        val kind = UserConfigProblem.entries.firstOrNull { it.name == problem }
-        return when {
-            kind == UserConfigProblem.INVALID_YAML && file != null ->
-                appContext.getString(
-                    R.string.rime_config_error_yaml,
-                    file,
-                )
-            kind == UserConfigProblem.NOT_TEXT && file != null ->
-                appContext.getString(
-                    R.string.rime_config_error_text,
-                    file,
-                )
-            kind == UserConfigProblem.TOO_LARGE && file != null ->
-                appContext.getString(
-                    R.string.rime_config_error_large,
-                    file,
-                )
-            kind == UserConfigProblem.UNCONFIRMED_SCRIPT -> appContext.getString(R.string.rime_config_error_script)
-            kind == UserConfigProblem.UNSAFE_REFERENCE && file != null ->
-                appContext.getString(R.string.rime_config_error_reference, file)
-            kind == UserConfigProblem.TOO_MANY -> appContext.getString(R.string.rime_config_error_many)
-            problem == DeploymentCoordinator.DEPLOY_PROBLEM || kind != null ->
-                appContext.getString(
-                    R.string.rime_config_error_deploy,
-                )
-            else -> appContext.getString(R.string.rime_config_error_unavailable)
+        detail: String?,
+    ): String =
+        if (detail != null) {
+            if (file != null) appContext.getString(R.string.rime_config_error_detail, file, detail) else detail
+        } else {
+            appContext.getString(
+                if (problem != null) R.string.rime_config_error_deploy else R.string.rime_config_error_unavailable,
+            )
         }
-    }
 }

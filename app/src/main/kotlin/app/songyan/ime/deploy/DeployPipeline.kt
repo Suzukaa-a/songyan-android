@@ -20,7 +20,7 @@ import app.songyan.ime.storage.PublicationRecord
 import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceManifest
-import app.songyan.ime.userconfig.UserConfigException
+import app.songyan.ime.userconfig.UserConfigStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -75,11 +75,8 @@ class DeployPipeline(
                             if (error is DeployCancelledException) return@fold failed(CANCELLED)
                             if (error is CancellationException) throw error
                             Log.i(TAG, "user configuration not applied: " + error.message)
-                            if (error is UserConfigException) {
-                                failed(CONFIG_PREFIX + error.problem.name, listOfNotNull(error.file))
-                            } else {
-                                failed(CONFIG_PREFIX + DeploymentCoordinator.DEPLOY_PROBLEM)
-                            }
+                            val failure = UserConfigStatus.failed(error)
+                            failed(CONFIG_PREFIX + failure.problem, listOfNotNull(failure.file), failure.detail)
                         },
                     )
                 DeployMode.COMPLETE_COMPANIONS ->
@@ -385,7 +382,8 @@ class DeployPipeline(
     private fun failed(
         problem: String,
         paths: List<String> = emptyList(),
-    ) = RequestStatus(RequestState.FAILED, problem = problem, paths = paths)
+        detail: String? = null,
+    ) = RequestStatus(RequestState.FAILED, problem = problem, paths = paths, detail = detail)
 
     private fun stagingProblem(mode: DeployMode): String =
         when (mode) {

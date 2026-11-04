@@ -144,13 +144,9 @@
     <string name="rime_config_folder_active">In use: %1$s</string>
     <string name="rime_config_folder_active_none">In use</string>
     <string name="rime_config_folder_sources">All input schemes</string>
-    <string name="rime_config_error_yaml">“%1$s” has a formatting error, so nothing was applied. The keyboard keeps its previous settings. Fix or delete the file, then try again.</string>
-    <string name="rime_config_error_text">“%1$s” isn\'t UTF-8 text, so nothing was applied. The keyboard keeps its previous settings.</string>
-    <string name="rime_config_error_reference">“%1$s” points at files outside the configuration, so nothing was applied. The keyboard keeps its previous settings.</string>
-    <string name="rime_config_error_script">A script changed after you confirmed it, so nothing was applied. Tap Apply changes again.</string>
     <string name="rime_editor_unsafe_reference">This file points at files outside the configuration, so nothing was saved.</string>
-    <string name="rime_config_error_large">“%1$s” is too large, so nothing was applied. Each file can be up to 4 MB, and all of them together up to 8 MB.</string>
     <string name="rime_config_error_many">There are too many files, so nothing was applied. The folder can hold up to 100.</string>
+    <string name="rime_config_error_detail">“%1$s”: %2$s</string>
     <string name="rime_config_error_deploy">The changes didn\'t work, so the keyboard keeps its previous settings. Check the files you changed last, then try again.</string>
     <string name="rime_config_error_unavailable">Couldn\'t apply the changes right now. Try again later.</string>
     <string name="rime_config_skipped">Your configuration doesn\'t work with the input scheme in use, so the scheme is used as it comes.</string>

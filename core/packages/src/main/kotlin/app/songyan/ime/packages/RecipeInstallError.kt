@@ -19,6 +19,7 @@ sealed class RecipeInstallError(
     /** A resource, patch target or file tree failed validation; [detail] names the rule. */
     class InvalidResource(
         val detail: String,
+        val file: String? = null,
     ) : RecipeInstallError("invalid resource: " + detail)
 
     /** Schema files the package advertises or includes are missing. */

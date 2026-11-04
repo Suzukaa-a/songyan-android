@@ -41,7 +41,7 @@ enum class UserConfigProblem {
 class UserConfigException(
     val file: String?,
     val problem: UserConfigProblem,
-    detail: String? = null,
+    val detail: String? = null,
     val line: Int? = null,
 ) : IOException("user configuration " + (file ?: "folder") + ": " + problem + (detail?.let { " ($it)" } ?: ""))
 
@@ -183,7 +183,7 @@ object UserConfigFiles {
                     return UserConfigException(
                         name,
                         UserConfigProblem.INVALID_YAML,
-                        e.message?.lineSequence()?.firstOrNull(),
+                        e.message,
                         BoundedYaml.errorLine(e),
                     )
                 } catch (_: StackOverflowError) {

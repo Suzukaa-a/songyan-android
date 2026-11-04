@@ -40,6 +40,7 @@ data class RequestStatus(
     val updatedAtEpochMs: Long = 0L,
     val downloadedBytes: Long? = null,
     val totalBytes: Long? = null,
+    val detail: String? = null,
 )
 
 /** Hears how much of a download has arrived; [update] runs on the downloading thread for every chunk. */
@@ -124,6 +125,7 @@ class DeployRequestStore(
             buildJsonObject {
                 put("state", status.state.name)
                 status.problem?.let { put("problem", it) }
+                status.detail?.let { put("detail", it) }
                 if (status.paths.isNotEmpty()) put("paths", JsonArray(status.paths.map { JsonPrimitive(it) }))
                 status.sourceId?.let { put("sourceId", it) }
                 status.downloadedBytes?.let { put("downloaded", it) }
@@ -141,6 +143,7 @@ class DeployRequestStore(
             return RequestStatus(
                 state = state,
                 problem = (root["problem"] as? JsonPrimitive)?.contentOrNull,
+                detail = (root["detail"] as? JsonPrimitive)?.contentOrNull,
                 paths = (root["paths"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty(),
                 sourceId = (root["sourceId"] as? JsonPrimitive)?.contentOrNull,
                 updatedAtEpochMs = (root["updatedAt"] as? JsonPrimitive)?.longOrNull ?: 0L,

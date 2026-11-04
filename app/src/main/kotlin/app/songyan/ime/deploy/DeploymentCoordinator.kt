@@ -294,7 +294,7 @@ class DeploymentCoordinator(
                 UserConfigFiles.snapshot(storage.userConfigDir, staging)
             } catch (e: UserConfigException) {
                 staging.deleteRecursively()
-                configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
+                configStatus.write(UserConfigStatus.failed(e))
                 throw e
             }
             // The settings screen asked for the user's yes to each script before this request; the files
@@ -304,7 +304,7 @@ class DeploymentCoordinator(
             if (unconfirmed.isNotEmpty()) {
                 staging.deleteRecursively()
                 val refusal = UserConfigException(unconfirmed.first().id, UserConfigProblem.UNCONFIRMED_SCRIPT)
-                configStatus.write(UserConfigStatus.failed(refusal.file, refusal.problem.name))
+                configStatus.write(UserConfigStatus.failed(refusal))
                 throw refusal
             }
             val applied = storage.appliedConfigDir
@@ -323,10 +323,8 @@ class DeploymentCoordinator(
                 } catch (e: Throwable) {
                     applied.deleteRecursively()
                     moveDirectory(previous, applied)
-                    if (e is UserConfigException) {
-                        configStatus.write(UserConfigStatus.failed(e.file, e.problem.name))
-                    } else if (e !is CancellationException) {
-                        configStatus.write(UserConfigStatus.failed(null, DEPLOY_PROBLEM))
+                    if (e !is CancellationException) {
+                        configStatus.write(UserConfigStatus.failed(e))
                     }
                     throw e
                 } finally {

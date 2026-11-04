@@ -278,6 +278,34 @@ class UserConfigDeployTest {
         }
 
     @Test
+    fun patchFailuresPreserveTheFilenameAndOriginalError() =
+        runTest {
+            importPackage()
+            val active = publisher.readActive()!!
+            runner.compiledYaml["rime_ice.schema.yaml"] =
+                File("../core/rime/src/main/assets/rime/builtin/songyan_quanpin.schema.yaml")
+                    .readText()
+                    .replace("songyan_quanpin", "rime_ice")
+            val detail = "patch target files must use LF line endings and end with a newline"
+            for (ending in listOf("", "\r\n")) {
+                edit("rime_ice.custom.yaml", "patch: {menu/page_size: 7}" + ending)
+
+                val failed = run(DeployMode.APPLY_USER_CONFIG)
+
+                assertEquals(RequestState.FAILED, failed.state)
+                assertEquals(DeployPipeline.CONFIG_PREFIX + DeploymentCoordinator.DEPLOY_PROBLEM, failed.problem)
+                assertEquals(detail, failed.detail)
+                val requests = DeployRequestStore(storage)
+                requests.write("format-failure", failed)
+                assertEquals(detail, requests.read("format-failure")?.detail)
+                assertEquals(listOf("rime_ice.custom.yaml"), failed.paths)
+                assertEquals(detail, status.read()?.detail)
+                assertEquals("rime_ice.custom.yaml", status.read()?.file)
+                assertEquals(active.generation, publisher.readActive()!!.generation)
+            }
+        }
+
+    @Test
     fun aPatchTheEngineRejectsKeepsThePreviousGenerationAndConfiguration() =
         runTest {
             edit("songyan_quanpin.custom.yaml", PATCH)

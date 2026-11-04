@@ -34,4 +34,5 @@
     <item name="ime_alternate_action_31" type="id" />
     <item name="ime_cursor_left_action" type="id" />
     <item name="ime_cursor_right_action" type="id" />
+    <item name="ime_clipboard_delete_action" type="id" />
 </resources>

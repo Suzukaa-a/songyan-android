@@ -6,6 +6,7 @@ import app.songyan.ime.ime.panels.PanelSearchKind
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.session.InputSession
+import app.songyan.ime.keyboard.support.CaretMotion
 import kotlinx.coroutines.launch
 
 // Panel search (emoji, symbols, phrases) borrows the keyboard: while it is on, what the user types goes
@@ -84,7 +85,7 @@ internal val KeyboardController.panelSearchSink: PanelSearchSink
                     endPanelSearch()
                     return
                 }
-                state.query = state.query.dropLast(1)
+                state.query = state.query.substring(0, CaretMotion.left(state.query, state.query.length))
                 refreshPanelSearch()
             }
 
@@ -128,10 +129,16 @@ internal fun KeyboardController.beginPanelSearch(kind: PanelSearchKind) {
 }
 
 internal fun KeyboardController.endPanelSearch() {
-    if (panelSearch == null) return
-    panelSearch = null
-    render()
-    syncBackOwnership()
+    val ending = panelSearch ?: return
+    enqueue {
+        if (panelSearch !== ending) return@enqueue
+        // Keep callbacks routed to the query until its engine composition has been discarded.
+        val active = session.takeIf { ready }
+        if (active != null && !active.discardComposition()) return@enqueue
+        panelSearch = null
+        render()
+        syncBackOwnership()
+    }
 }
 
 private fun KeyboardController.refreshPanelSearch() {

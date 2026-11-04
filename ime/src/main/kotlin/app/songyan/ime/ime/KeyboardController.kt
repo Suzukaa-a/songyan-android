@@ -653,6 +653,8 @@ class KeyboardController(
         value: EditorPolicy,
         keepComposition: Boolean = false,
     ) {
+        // Search spelling belongs to the query, even when the editor itself survives a restart.
+        val keepEditorComposition = keepComposition && panelSearch == null
         generation++
         // Reads queued under the old generation are dropped without running.
         candidates.abandonLoad()
@@ -673,7 +675,7 @@ class KeyboardController(
         syncPageWithEditor()
         symbolMarksOverride = null
         closeAll()
-        enqueue { prepareSession(keepComposition) }
+        enqueue { prepareSession(keepEditorComposition) }
     }
 
     private fun syncPageWithEditor() {

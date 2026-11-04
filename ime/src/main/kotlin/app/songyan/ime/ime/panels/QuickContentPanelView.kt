@@ -128,7 +128,7 @@ abstract class QuickContentPanelView(
             override fun run() {
                 val item = pressedItem
                 if (repeatingCell < 0 || item != repeatingCell + cellItemBase()) return
-                activateItem(item)
+                activateTouchedItem(item)
                 ui.postDelayed(this, cellRepeatIntervalMs())
             }
         }
@@ -786,7 +786,7 @@ abstract class QuickContentPanelView(
                     lastTapY = event.y
                     repeatingCell = heldCell
                     longPressHandled = true
-                    activateItem(pressedItem)
+                    activateTouchedItem(pressedItem)
                     ui.postDelayed(repeatTick, cellRepeatDelayMs())
                 } else if (pressedItem in cellItemBase() until bottomItemBase()) {
                     ui.postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
@@ -826,7 +826,7 @@ abstract class QuickContentPanelView(
                     lastTapX = event.x
                     lastTapY = event.y
                     val index = itemAt(event.x, event.y)
-                    if (index >= 0) activateItem(index)
+                    if (index >= 0) activateTouchedItem(index)
                 }
                 releaseVelocityTracker()
                 dragging = false
@@ -1054,14 +1054,16 @@ abstract class QuickContentPanelView(
     }
 
     override fun activateItem(index: Int) {
+        // Accessibility and keyboard activation must not inherit a previous touch's delete zone.
+        val bounds = itemBounds(index)
+        lastTapX = bounds.centerX().toFloat()
+        lastTapY = bounds.centerY().toFloat()
+        activateTouchedItem(index)
+    }
+
+    private fun activateTouchedItem(index: Int) {
         if (!itemEnabled(index)) return
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        // TalkBack activates an item without a touch point; aim at the item's centre instead.
-        val bounds = itemBounds(index)
-        if (!bounds.contains(lastTapX.toInt(), lastTapY.toInt())) {
-            lastTapX = bounds.centerX().toFloat()
-            lastTapY = bounds.centerY().toFloat()
-        }
         val bottomIndex = index - bottomItemBase()
         if (bottomIndex in bottomKeys().indices) {
             bottomKeys()[bottomIndex].action()

@@ -602,6 +602,51 @@ class EditEmojiPanelDeviceTest {
         }
 
     @Test
+    fun leavingAnUnfinishedSearchDoesNotTypeItsSpellingIntoTheEditor() =
+        withHost { host ->
+            host.start()
+            host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
+            host.startEmojiSearch()
+            host.type("ai")
+            assertTrue(host.await { "爱" in host.barLabels() })
+            host.main { assertTrue(host.controller.closePanels()) }
+            host.awaitIdle()
+            assertEquals("", host.text())
+            assertFalse("search candidates must be discarded", "爱" in host.barLabels())
+            host.type("ni")
+            assertTrue(host.await { "你" in host.barLabels() })
+            host.tapBar("你")
+            host.assertText("你")
+        }
+
+    @Test
+    fun restartingInputDoesNotAdoptAnUnfinishedSearchAsEditorComposition() =
+        withHost { host ->
+            host.start()
+            host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
+            host.startEmojiSearch()
+            host.type("ai")
+            assertTrue(host.await { "爱" in host.barLabels() })
+            host.main { host.controller.startInput(host.controller.policy, keepComposition = true) }
+            host.awaitIdle()
+            assertEquals("", host.text())
+            assertFalse("爱" in host.barLabels())
+        }
+
+    @Test
+    fun searchBackspaceRemovesAWholeEmojiInsteadOfHalfASurrogatePair() =
+        withHost { host ->
+            host.start()
+            host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
+            host.startEmojiSearch()
+            host.main { host.controller.insertText("a😀") }
+            assertTrue(host.await { host.barLabels().firstOrNull() == "搜索：a😀" })
+            host.tap(host.string(R.string.ime_delete))
+            assertTrue("query: " + host.barLabels(), host.await { host.barLabels().firstOrNull() == "搜索：a" })
+            assertEquals("", host.text())
+        }
+
+    @Test
     fun emojiSearchOpenedFromTheNumbersPageTypesOnTheLetters() =
         withHost { host ->
             host.start()

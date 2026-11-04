@@ -214,6 +214,8 @@ internal class FeatureHost(
     /** Clipboard history as the panel stored it; off like a fresh install. */
     @Volatile var clipboardEnabled = false
 
+    @Volatile var clipboardEntries = emptyList<String>()
+
     /** What the symbol panel and the keyboard's symbol search look in; empty like a fresh install. */
     @Volatile var symbolCatalog = SymbolCatalog()
 
@@ -224,7 +226,13 @@ internal class FeatureHost(
     private val data =
         object : QuickContentPanelDataSource {
             override suspend fun loadContent() =
-                QuickContentPanelContent(symbolCatalog, recentSymbols.toList(), phrases, emptyList(), clipboardEnabled)
+                QuickContentPanelContent(
+                    symbolCatalog,
+                    recentSymbols.toList(),
+                    phrases,
+                    clipboardEntries,
+                    clipboardEnabled,
+                )
 
             override suspend fun setClipboardEnabled(enabled: Boolean) {
                 clipboardEnabled = enabled
@@ -235,7 +243,9 @@ internal class FeatureHost(
                 recentSymbols.add(0, text)
             }
 
-            override suspend fun deleteClipboardEntry(text: String) = Unit
+            override suspend fun deleteClipboardEntry(text: String) {
+                clipboardEntries = clipboardEntries.filterNot { it == text }
+            }
 
             override suspend fun clearRecentSymbols() = Unit
 

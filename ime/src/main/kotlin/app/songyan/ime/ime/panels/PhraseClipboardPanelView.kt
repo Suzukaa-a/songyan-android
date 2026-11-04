@@ -3,6 +3,7 @@ package app.songyan.ime.ime.panels
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.view.accessibility.AccessibilityNodeInfo
 import app.songyan.ime.content.QuickContentPanelLayout
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.R
@@ -28,8 +29,8 @@ private const val BOTTOM_SEARCH_WEIGHT = 4.0
  * whole-phrase cells or the clipboard rows.
  *
  * Tapping a phrase or a clipboard entry inserts it ([onInsertText]); a clipboard row has a delete
- * zone on its right edge that removes the entry instead ([onDeleteClipboard]). An entry is never
- * deleted by accident: the zone is a separate 36 dp target inside the row.
+ * zone on its right edge that removes the entry instead ([onDeleteClipboard]). Accessibility exposes
+ * deletion as a named action; ordinary activation inserts the entry.
  */
 class PhraseClipboardPanelView(
     context: Context,
@@ -189,6 +190,28 @@ class PhraseClipboardPanelView(
             return listOfNotNull(row.label, row.value).joinToString(", ")
         }
         return cells().getOrNull(index).orEmpty()
+    }
+
+    override fun cellCustomActions(index: Int): List<AccessibilityNodeInfo.AccessibilityAction> =
+        if (section() == Section.CLIPBOARD && index in clipboard.indices) {
+            listOf(
+                AccessibilityNodeInfo.AccessibilityAction(
+                    R.id.ime_clipboard_delete_action,
+                    context.getString(R.string.ime_delete),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
+    override fun performCellCustomAction(
+        index: Int,
+        actionId: Int,
+    ): Boolean {
+        if (section() != Section.CLIPBOARD || actionId != R.id.ime_clipboard_delete_action) return false
+        val text = clipboard.getOrNull(index) ?: return false
+        onDeleteClipboard(text)
+        return true
     }
 
     override fun onCellActivated(index: Int) {

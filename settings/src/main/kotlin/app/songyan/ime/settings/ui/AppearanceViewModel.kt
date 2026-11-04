@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Actions of the appearance screen. Every write goes through the app module's bridge, so the
@@ -78,9 +80,16 @@ class AppearanceViewModel(
 
     fun exportFileName(id: String): String = source.exportFileName(id)
 
-    fun updateCandidateBar(bar: CandidateBarDefinition) {
+    private val candidateBarEdits = Mutex()
+
+    fun updateCandidateBar(edit: (CandidateBarDefinition) -> CandidateBarDefinition) {
         viewModelScope.launch {
-            if (!source.updateCandidateBar(bar)) mutableFailure.value = AppearanceFailure.APPLY_FAILED
+            // Each control edits the latest saved bar, including changes still being written.
+            candidateBarEdits.withLock {
+                if (!source.updateCandidateBar(edit(uiState.value.candidateBar))) {
+                    mutableFailure.value = AppearanceFailure.APPLY_FAILED
+                }
+            }
         }
     }
 

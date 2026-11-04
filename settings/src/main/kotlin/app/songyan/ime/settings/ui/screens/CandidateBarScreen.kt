@@ -95,9 +95,9 @@ fun CandidateBarScreen(
                 range = ROW_HEIGHT_RANGE,
                 display = { it.roundToInt() + ROW_HEIGHT_DISPLAY_OFFSET },
                 onCommit = { value ->
-                    viewModel.updateCandidateBar(
-                        bar.copy(collapsed = bar.collapsed.copy(height = value.roundToInt().toDouble())),
-                    )
+                    viewModel.updateCandidateBar { current ->
+                        current.copy(collapsed = current.collapsed.copy(height = value.roundToInt().toDouble()))
+                    }
                 },
             )
             ValueSlider(
@@ -109,9 +109,9 @@ fun CandidateBarScreen(
                 range = CELL_PADDING_RANGE,
                 display = { it.roundToInt() + CELL_PADDING_DISPLAY_OFFSET },
                 onCommit = { value ->
-                    viewModel.updateCandidateBar(
-                        bar.copy(collapsed = bar.collapsed.copy(cellPaddingX = value.roundToInt().toDouble())),
-                    )
+                    viewModel.updateCandidateBar { current ->
+                        current.copy(collapsed = current.collapsed.copy(cellPaddingX = value.roundToInt().toDouble()))
+                    }
                 },
             )
             ValueSlider(
@@ -120,9 +120,9 @@ fun CandidateBarScreen(
                 range = 0f..16f,
                 display = { it.roundToInt() },
                 onCommit = { value ->
-                    viewModel.updateCandidateBar(
-                        bar.copy(collapsed = bar.collapsed.copy(cellSpacing = value.roundToInt().toDouble())),
-                    )
+                    viewModel.updateCandidateBar { current ->
+                        current.copy(collapsed = current.collapsed.copy(cellSpacing = value.roundToInt().toDouble()))
+                    }
                 },
             )
 
@@ -136,7 +136,11 @@ fun CandidateBarScreen(
                     RadioRow(
                         title = stringResource(label),
                         selected = bar.expanded.mode == mode,
-                        onClick = { viewModel.updateCandidateBar(bar.copy(expanded = bar.expanded.copy(mode = mode))) },
+                        onClick = {
+                            viewModel.updateCandidateBar { current ->
+                                current.copy(expanded = current.expanded.copy(mode = mode))
+                            }
+                        },
                     )
                 }
             }
@@ -148,9 +152,9 @@ fun CandidateBarScreen(
                     steps = 2,
                     display = { it.roundToInt() },
                     onCommit = { value ->
-                        viewModel.updateCandidateBar(
-                            bar.copy(expanded = bar.expanded.copy(columns = value.roundToInt())),
-                        )
+                        viewModel.updateCandidateBar { current ->
+                            current.copy(expanded = current.expanded.copy(columns = value.roundToInt()))
+                        }
                     },
                 )
             }
@@ -160,9 +164,9 @@ fun CandidateBarScreen(
                 range = 0f..16f,
                 display = { it.roundToInt() },
                 onCommit = { value ->
-                    viewModel.updateCandidateBar(
-                        bar.copy(expanded = bar.expanded.copy(rowSpacing = value.roundToInt().toDouble())),
-                    )
+                    viewModel.updateCandidateBar { current ->
+                        current.copy(expanded = current.expanded.copy(rowSpacing = value.roundToInt().toDouble()))
+                    }
                 },
             )
             ValueSlider(
@@ -171,9 +175,9 @@ fun CandidateBarScreen(
                 range = 0f..16f,
                 display = { it.roundToInt() },
                 onCommit = { value ->
-                    viewModel.updateCandidateBar(
-                        bar.copy(expanded = bar.expanded.copy(columnSpacing = value.roundToInt().toDouble())),
-                    )
+                    viewModel.updateCandidateBar { current ->
+                        current.copy(expanded = current.expanded.copy(columnSpacing = value.roundToInt().toDouble()))
+                    }
                 },
             )
         }

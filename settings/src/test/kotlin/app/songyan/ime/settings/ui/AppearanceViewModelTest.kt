@@ -5,6 +5,7 @@ import app.songyan.ime.settings.state.AppearanceFailure
 import app.songyan.ime.settings.state.AppearanceSettingsSource
 import app.songyan.ime.settings.state.AppearanceSettingsState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,10 +94,22 @@ class AppearanceViewModelTest {
             val source = FakeSource(candidateBarSucceeds = false)
             val viewModel = AppearanceViewModel(source)
             val bar = CandidateBarDefinition.systemDefault
-            viewModel.updateCandidateBar(bar)
+            viewModel.updateCandidateBar { bar }
             advanceUntilIdle()
             assertEquals(bar, source.candidateBar)
             assertEquals(AppearanceFailure.APPLY_FAILED, viewModel.failure.value)
+        }
+
+    @Test
+    fun consecutiveCandidateBarEditsPreserveBothChanges() =
+        runTest(dispatcher) {
+            val source = FakeSource()
+            val viewModel = AppearanceViewModel(source)
+            viewModel.updateCandidateBar { it.copy(collapsed = it.collapsed.copy(height = 56.0)) }
+            viewModel.updateCandidateBar { it.copy(expanded = it.expanded.copy(columns = 4)) }
+            advanceUntilIdle()
+            assertEquals(56.0, viewModel.uiState.value.candidateBar.collapsed.height, 0.0)
+            assertEquals(4, viewModel.uiState.value.candidateBar.expanded.columns)
         }
 
     @Test
@@ -129,6 +142,10 @@ class AppearanceViewModelTest {
 
         override suspend fun updateCandidateBar(bar: CandidateBarDefinition): Boolean {
             candidateBar = bar
+            if (candidateBarSucceeds) {
+                delay(1)
+                mutable.value = mutable.value.copy(candidateBar = bar)
+            }
             return candidateBarSucceeds
         }
 

@@ -120,8 +120,9 @@ class AppearanceScreenSettings(
     }
 
     private suspend fun load() {
-        val current = repository.state.value
         val documents = runCatching { repository.loadAppearances() }.getOrNull() ?: repository.appearances.value
+        // A slower list read must not publish controls from an older applied appearance.
+        val current = repository.state.value
         mutable.value =
             AppearanceSettingsState(
                 appearances =

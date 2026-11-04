@@ -15,6 +15,8 @@
     <string name="quick_content_clipboard_clear_title">清空剪贴板历史？</string>
     <string name="quick_content_clipboard_clear_body">清空后不能恢复。</string>
     <string name="quick_content_clipboard_delete">删除这一条</string>
+    <string name="quick_content_view_full_text">查看全文</string>
+    <string name="quick_content_clipboard_detail_title">剪贴板内容</string>
 
     <string name="quick_content_phrases_section">常用语</string>
     <string name="quick_content_phrases_counter">%1$d / %2$d</string>
@@ -60,4 +62,6 @@
     <string name="quick_content_file_unreadable">无法打开文件，请重新选择。</string>
     <string name="quick_content_file_rejected">这个文件不能用，原有内容没有改动。</string>
     <string name="quick_content_write_failed">无法保存，请检查保存位置后重试。</string>
+    <string name="quick_content_file_too_large">文件不能超过 %1$s。</string>
+    <string name="quick_content_symbols_read_failed">符号库没有读取成功，请重新导入或恢复内置符号库。</string>
 </resources>

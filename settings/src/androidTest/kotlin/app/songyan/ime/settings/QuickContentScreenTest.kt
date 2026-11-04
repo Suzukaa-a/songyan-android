@@ -7,7 +7,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -72,7 +71,7 @@ class QuickContentScreenTest {
         contentStore().savePhrase(CommonPhrase(id = id, text = "稍等", shortcut = "sd"))
         show()
         waitFor { has("稍等") }
-        compose.onNodeWithContentDescription(str(R.string.quick_content_edit)).performClick()
+        compose.onNodeWithText("稍等").performClick()
         waitFor { dialogOpen() }
         compose.onNode(hasSetTextAction() and hasText("sd")).assertExists()
         compose.onAllNodes(hasSetTextAction())[0].performTextInput("一下")
@@ -147,14 +146,73 @@ class QuickContentScreenTest {
                 text = "先别删我",
             ),
         )
+        val later =
+            CommonPhrase(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                text = "排在后面",
+            )
+        contentStore().savePhrase(later)
+        val original = contentStore().read().phrases
         show()
         waitFor { has("先别删我") }
-        compose.onNode(hasContentDescription(str(R.string.quick_content_delete))).performClick()
+        compose.onAllNodes(hasContentDescription(str(R.string.quick_content_delete)))[0].performClick()
         // No confirmation dialog: the Undo action is the way back.
         waitFor { has(str(R.string.quick_content_undo)) }
         waitFor { !has("先别删我") }
         compose.onNodeWithText(str(R.string.quick_content_undo)).performClick()
         waitFor { has("先别删我") }
+        org.junit.Assert.assertEquals(original, contentStore().read().phrases)
+    }
+
+    @Test
+    fun undoDoesNotOverwriteANewerVersionOfThePhrase() {
+        val phrase =
+            CommonPhrase(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                text = "旧内容",
+            )
+        contentStore().savePhrase(phrase)
+        show()
+        waitFor { has(phrase.text) }
+        compose.onNode(hasContentDescription(str(R.string.quick_content_delete))).performClick()
+        waitFor { has(str(R.string.quick_content_undo)) && !has(phrase.text) }
+        val updated = phrase.copy(text = "更新后的内容")
+        contentStore().savePhrase(updated)
+        compose.onNodeWithText(str(R.string.quick_content_undo)).performClick()
+        waitFor { has(updated.text) || has(phrase.text) }
+        org.junit.Assert.assertEquals(listOf(updated), contentStore().read().phrases)
+    }
+
+    @Test
+    fun aFailedPhraseDeletionDoesNotOfferUndo() {
+        val phrase =
+            CommonPhrase(
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
+                text = "保留这条",
+            )
+        contentStore().savePhrase(phrase)
+        show()
+        waitFor { has(phrase.text) }
+        val files = InstrumentationRegistry.getInstrumentation().targetContext.filesDir
+        val lock = File(files, "content/" + LocalQuickContentStore.LOCK_FILE_NAME)
+        org.junit.Assert.assertTrue(lock.setWritable(false, false))
+        try {
+            compose.onNode(hasContentDescription(str(R.string.quick_content_delete))).performClick()
+            waitFor { has(str(R.string.quick_content_error_storage)) }
+            compose.onNodeWithText(str(R.string.quick_content_undo)).assertDoesNotExist()
+            org.junit.Assert.assertEquals(listOf(phrase), contentStore().read().phrases)
+        } finally {
+            lock.setWritable(true, true)
+        }
     }
 
     @Test

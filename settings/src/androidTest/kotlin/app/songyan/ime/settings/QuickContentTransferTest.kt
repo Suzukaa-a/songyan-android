@@ -2,12 +2,18 @@ package app.songyan.ime.settings
 
 import android.app.Application
 import android.net.Uri
+import android.text.format.Formatter
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.content.CommonPhrase
 import app.songyan.ime.content.LocalQuickContentStore
+import app.songyan.ime.content.SymbolCatalog
+import app.songyan.ime.content.SymbolCatalogStore
 import app.songyan.ime.settings.ui.QuickContentMessage
 import app.songyan.ime.settings.ui.QuickContentViewModel
 import app.songyan.ime.settings.ui.screens.QuickContentScreen
@@ -109,6 +115,67 @@ class QuickContentTransferTest {
         compose.onNodeWithText(str(R.string.quick_content_symbols_restore_confirm)).performClick()
         compose.waitUntil(5_000) { model.message.value == QuickContentMessage.SymbolsRestored }
         compose.onNodeWithText(str(R.string.quick_content_symbols_builtin)).assertExists()
+    }
+
+    @Test
+    fun oversizedImportsStateTheirLimitsAndKeepExistingContent() {
+        val kept = CommonPhrase(id = "11111111-1111-1111-1111-111111111111", text = "保留的常用语")
+        contentStore().savePhrase(kept)
+        val symbols = SymbolCatalogStore(File(context.filesDir, "content/symbols").toPath())
+        symbols.importCatalog(customCatalog.toByteArray())
+        val model = viewModel()
+        compose.setContent { SongyanTheme(dynamicColor = false) { QuickContentScreen(onBack = {}, viewModel = model) } }
+        for ((name, limit) in listOf(
+            "phrases.json" to LocalQuickContentStore.MAXIMUM_FILE_BYTES,
+            "symbols.json" to SymbolCatalog.MAX_JSON_BYTES,
+        )) {
+            File(scratch, name).writeBytes(ByteArray(limit + 1) { ' '.code.toByte() })
+            if (name == "phrases.json") {
+                model.importPhrases(context.contentResolver, fileUri(name))
+            } else {
+                model.importSymbols(context.contentResolver, fileUri(name))
+            }
+            waitForMessage(model) { true }
+            compose
+                .onNodeWithText(
+                    context.getString(
+                        R.string.quick_content_file_too_large,
+                        Formatter.formatFileSize(context, limit.toLong()),
+                    ),
+                ).assertExists()
+            model.consumeMessage()
+        }
+        assertEquals(listOf(kept), contentStore().read().phrases)
+        assertEquals(
+            "→",
+            symbols
+                .loadActive()
+                .items
+                .single()
+                .text,
+        )
+    }
+
+    @Test
+    fun aDamagedSymbolLibraryShowsTheFallbackAndCanBeRestoredWithoutLosingPhrases() {
+        val kept = CommonPhrase(id = "11111111-1111-1111-1111-111111111111", text = "保留的常用语")
+        contentStore().savePhrase(kept)
+        val symbols = SymbolCatalogStore(File(context.filesDir, "content/symbols").toPath())
+        symbols.importCatalog(customCatalog.toByteArray())
+        symbols.activeFile.toFile().writeText("{broken")
+        val model = viewModel()
+        compose.setContent { SongyanTheme(dynamicColor = false) { QuickContentScreen(onBack = {}, viewModel = model) } }
+        compose.waitUntil(5_000) { !model.uiState.value.loading }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(str(R.string.quick_content_symbols_read_failed)))
+        compose.onNodeWithText(str(R.string.quick_content_symbols_read_failed)).assertExists()
+        compose.onNodeWithText(str(R.string.quick_content_symbols_builtin)).assertExists()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(str(R.string.quick_content_symbols_restore)))
+        compose.onNodeWithText(str(R.string.quick_content_symbols_restore)).performClick()
+        compose.onNodeWithText(str(R.string.quick_content_symbols_restore_confirm)).performClick()
+        waitForMessage(model) { it == QuickContentMessage.SymbolsRestored }
+        compose.onNodeWithText(str(R.string.quick_content_symbols_read_failed)).assertDoesNotExist()
+        assertEquals(listOf(kept), contentStore().read().phrases)
+        assertTrue(!symbols.hasCustomCatalog)
     }
 
     @Test

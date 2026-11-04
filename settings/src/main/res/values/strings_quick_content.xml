@@ -15,6 +15,8 @@
     <string name="quick_content_clipboard_clear_title">Clear clipboard history?</string>
     <string name="quick_content_clipboard_clear_body">This cannot be undone.</string>
     <string name="quick_content_clipboard_delete">Delete this entry</string>
+    <string name="quick_content_view_full_text">View full text</string>
+    <string name="quick_content_clipboard_detail_title">Clipboard text</string>
 
     <string name="quick_content_phrases_section">Phrases</string>
     <string name="quick_content_phrases_counter">%1$d / %2$d</string>
@@ -60,4 +62,6 @@
     <string name="quick_content_file_unreadable">Couldn\'t open the file. Pick it again.</string>
     <string name="quick_content_file_rejected">This file can\'t be used. Nothing was changed.</string>
     <string name="quick_content_write_failed">Couldn\'t save. Check the location and try again.</string>
+    <string name="quick_content_file_too_large">The file cannot exceed %1$s.</string>
+    <string name="quick_content_symbols_read_failed">The symbol library could not be read. Import it again or restore the built-in library.</string>
 </resources>

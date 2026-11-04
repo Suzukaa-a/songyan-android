@@ -154,6 +154,21 @@ class LocalQuickContentStore(
             state.copy(phrases = phrases)
         }
 
+    /** Undo restores order without overwriting a phrase another writer has already restored or edited. */
+    fun restorePhrase(
+        phrase: CommonPhrase,
+        index: Int,
+    ): QuickContentState =
+        mutate { state ->
+            if (state.phrases.any { it.id == phrase.id }) {
+                state
+            } else {
+                state.copy(
+                    phrases = state.phrases.toMutableList().also { it.add(index.coerceIn(0, it.size), phrase) },
+                )
+            }
+        }
+
     fun deletePhrase(id: String): QuickContentState =
         mutate { it.copy(phrases = it.phrases.filter { phrase -> phrase.id != id }) }
 

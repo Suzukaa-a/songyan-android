@@ -1,7 +1,9 @@
 package app.songyan.ime.settings.ui.screens
 
+import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -41,6 +45,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +85,7 @@ fun QuickContentScreen(
     var editorOpen by rememberSaveable { mutableStateOf(startWithAddPhrase) }
     var editorId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmClearClipboard by rememberSaveable { mutableStateOf(false) }
+    var clipboardPreview by rememberSaveable { mutableStateOf<String?>(null) }
     // The picked phrase file waits here for the user to confirm that it replaces the current phrases.
     var pendingPhraseImport by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmRestoreSymbols by rememberSaveable { mutableStateOf(false) }
@@ -191,11 +197,17 @@ fun QuickContentScreen(
                     items(state.clipboard, key = { it }) { entry ->
                         ListItem(
                             headlineContent = { Text(entry, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                            modifier =
+                                Modifier.clickable(
+                                    role = Role.Button,
+                                    onClickLabel = stringResource(R.string.quick_content_view_full_text),
+                                ) { clipboardPreview = entry },
                             trailingContent = {
                                 IconButton(
                                     onClick = {
-                                        viewModel.deleteClipboardEntry(entry)
-                                        undoable { viewModel.restoreClipboardEntry(entry) }
+                                        viewModel.deleteClipboardEntry(entry) {
+                                            undoable { viewModel.restoreClipboardEntry(entry) }
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -234,6 +246,14 @@ fun QuickContentScreen(
                 items(state.phrases, key = { it.id }) { phrase ->
                     ListItem(
                         headlineContent = { Text(phrase.text, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        modifier =
+                            Modifier.clickable(
+                                role = Role.Button,
+                                onClickLabel = stringResource(R.string.quick_content_edit),
+                            ) {
+                                editorId = phrase.id
+                                editorOpen = true
+                            },
                         supportingContent =
                             phrase.shortcut.takeIf { it.isNotEmpty() }?.let { term ->
                                 { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -242,19 +262,10 @@ fun QuickContentScreen(
                             Row {
                                 IconButton(
                                     onClick = {
-                                        editorId = phrase.id
-                                        editorOpen = true
-                                    },
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Edit,
-                                        contentDescription = stringResource(R.string.quick_content_edit),
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        viewModel.deletePhrase(phrase.id)
-                                        undoable { viewModel.restorePhrase(phrase) }
+                                        val index = state.phrases.indexOf(phrase)
+                                        viewModel.deletePhrase(phrase.id) {
+                                            undoable { viewModel.restorePhrase(phrase, index) }
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -299,7 +310,7 @@ fun QuickContentScreen(
                 DetailRow(
                     title =
                         stringResource(
-                            if (state.customSymbolCatalog) {
+                            if (state.customSymbolCatalog && state.symbolCatalogError == null) {
                                 R.string.quick_content_symbols_custom
                             } else {
                                 R.string.quick_content_symbols_builtin
@@ -313,6 +324,16 @@ fun QuickContentScreen(
                         ),
                 )
             }
+            if (state.symbolCatalogError != null) {
+                item {
+                    Text(
+                        text = stringResource(R.string.quick_content_symbols_read_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
             item {
                 ActionRow(
                     label = stringResource(R.string.quick_content_symbols_import),
@@ -322,6 +343,7 @@ fun QuickContentScreen(
             item {
                 ActionRow(
                     label = stringResource(R.string.quick_content_symbols_export),
+                    enabled = state.symbolCatalogError == null,
                     onClick = { symbolsExporter.launch("symbol-catalog.json") },
                 )
             }
@@ -401,6 +423,23 @@ fun QuickContentScreen(
             dismissButton = {
                 TextButton(onClick = { confirmRestoreSymbols = false }) {
                     Text(stringResource(R.string.quick_content_cancel))
+                }
+            },
+        )
+    }
+
+    clipboardPreview?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { clipboardPreview = null },
+            title = { Text(stringResource(R.string.quick_content_clipboard_detail_title)) },
+            text = {
+                SelectionContainer {
+                    Text(entry, modifier = Modifier.verticalScroll(rememberScrollState()))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { clipboardPreview = null }) {
+                    Text(stringResource(R.string.action_dismiss))
                 }
             },
         )
@@ -596,6 +635,11 @@ private fun transferMessageText(message: QuickContentMessage): String =
         QuickContentMessage.SymbolsExported -> stringResource(R.string.quick_content_symbols_exported)
         QuickContentMessage.SymbolsRestored -> stringResource(R.string.quick_content_symbols_restored)
         QuickContentMessage.FileUnreadable -> stringResource(R.string.quick_content_file_unreadable)
+        is QuickContentMessage.FileTooLarge ->
+            stringResource(
+                R.string.quick_content_file_too_large,
+                Formatter.formatFileSize(LocalContext.current, message.maximumBytes.toLong()),
+            )
         QuickContentMessage.FileRejected -> stringResource(R.string.quick_content_file_rejected)
         QuickContentMessage.WriteFailed -> stringResource(R.string.quick_content_write_failed)
     }

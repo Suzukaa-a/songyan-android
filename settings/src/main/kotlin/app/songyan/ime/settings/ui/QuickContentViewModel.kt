@@ -33,6 +33,7 @@ data class QuickContentUiState(
     val symbolItemCount: Int = 0,
     val symbolCategoryCount: Int = 0,
     val customSymbolCatalog: Boolean = false,
+    val symbolCatalogError: ContentErrorCode? = null,
     val recentSymbolCount: Int = 0,
     /** Why the last storage operation failed, or null once the next one succeeds. */
     val error: ContentErrorCode? = null,
@@ -58,6 +59,10 @@ sealed interface QuickContentMessage {
 
     /** The file cannot be read at all (revoked access, I/O error). */
     data object FileUnreadable : QuickContentMessage
+
+    data class FileTooLarge(
+        val maximumBytes: Int,
+    ) : QuickContentMessage
 
     /** The file was read but is not a file of the expected kind; nothing was changed. */
     data object FileRejected : QuickContentMessage
@@ -114,6 +119,9 @@ class QuickContentViewModel(
         val bytes =
             readBounded(resolver, uri, LocalQuickContentStore.MAXIMUM_FILE_BYTES)
                 ?: return@transfer QuickContentMessage.FileUnreadable
+        if (bytes.size > LocalQuickContentStore.MAXIMUM_FILE_BYTES) {
+            return@transfer QuickContentMessage.FileTooLarge(LocalQuickContentStore.MAXIMUM_FILE_BYTES)
+        }
         val count =
             stores.quickContent
                 .importPhrases(bytes)
@@ -138,6 +146,9 @@ class QuickContentViewModel(
         val bytes =
             readBounded(resolver, uri, SymbolCatalog.MAX_JSON_BYTES)
                 ?: return@transfer QuickContentMessage.FileUnreadable
+        if (bytes.size > SymbolCatalog.MAX_JSON_BYTES) {
+            return@transfer QuickContentMessage.FileTooLarge(SymbolCatalog.MAX_JSON_BYTES)
+        }
         val count =
             stores.symbols
                 .importCatalog(bytes)
@@ -260,11 +271,15 @@ class QuickContentViewModel(
         }
     }
 
-    fun deleteClipboardEntry(text: String) {
+    fun deleteClipboardEntry(
+        text: String,
+        onDeleted: () -> Unit,
+    ) {
         viewModelScope.launch {
             try {
                 apply(io { stores.quickContent.deleteClipboard(text) })
                 notifyContentChanged()
+                onDeleted()
             } catch (error: ContentException) {
                 report(error)
             }
@@ -318,10 +333,14 @@ class QuickContentViewModel(
         }
     }
 
-    fun deletePhrase(id: String) {
+    fun deletePhrase(
+        id: String,
+        onDeleted: () -> Unit,
+    ) {
         viewModelScope.launch {
             try {
                 apply(io { stores.quickContent.deletePhrase(id) })
+                onDeleted()
             } catch (error: ContentException) {
                 report(error)
             }
@@ -343,11 +362,14 @@ class QuickContentViewModel(
         }
     }
 
-    /** Puts a deleted phrase back under its own id. */
-    fun restorePhrase(phrase: CommonPhrase) {
+    /** Undo keeps the original order while preserving any newer version on disk. */
+    fun restorePhrase(
+        phrase: CommonPhrase,
+        index: Int,
+    ) {
         viewModelScope.launch {
             try {
-                apply(io { stores.quickContent.savePhrase(phrase) })
+                apply(io { stores.quickContent.restorePhrase(phrase, index) })
             } catch (error: ContentException) {
                 report(error)
             }
@@ -371,13 +393,15 @@ class QuickContentViewModel(
         withContext(Dispatchers.IO) {
             try {
                 val content = stores.quickContent.read()
-                val catalog = stores.symbols.loadActive()
+                var symbolError: ContentErrorCode? = null
+                val catalog = stores.symbols.loadActive { symbolError = it.code }
                 mutableState.value =
                     stateOf(content).copy(
                         loading = false,
                         symbolItemCount = catalog.items.size,
                         symbolCategoryCount = catalog.categories.size,
                         customSymbolCatalog = stores.symbols.hasCustomCatalog,
+                        symbolCatalogError = symbolError,
                         recentSymbolCount = stores.recents.read().size,
                     )
             } catch (error: ContentException) {

@@ -9,6 +9,9 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.SystemClock
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
@@ -481,18 +484,25 @@ class KeyboardView(
         canvas: Canvas,
         text: String,
     ) {
-        paint.style = Paint.Style.FILL
-        paint.color = palette.muted
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = metrics.candidateTextSizeSp * resources.configuration.fontScale * density
-        val lines = text.split('\n')
-        val lineHeight = paint.fontSpacing
-        var baseline = (height - lineHeight * lines.size) / 2f - paint.ascent()
-        for (line in lines) {
-            canvas.drawText(line, width / 2f, baseline, paint)
-            baseline += lineHeight
-        }
-        paint.textAlign = Paint.Align.LEFT
+        val noticePaint =
+            TextPaint(paint).apply {
+                style = Paint.Style.FILL
+                color = palette.muted
+                textAlign = Paint.Align.LEFT
+                textSize = metrics.candidateTextSizeSp * resources.configuration.fontScale * this@KeyboardView.density
+            }
+        val inset = 16f * density
+        val textWidth = (width - 2 * inset).toInt().coerceAtLeast(1)
+        val layout =
+            StaticLayout.Builder
+                .obtain(text, 0, text.length, noticePaint, textWidth)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setIncludePad(false)
+                .build()
+        val saved = canvas.save()
+        canvas.translate(inset, ((height - layout.height) / 2f).coerceAtLeast(0f))
+        layout.draw(canvas)
+        canvas.restoreToCount(saved)
     }
 
     override fun onDraw(canvas: Canvas) {

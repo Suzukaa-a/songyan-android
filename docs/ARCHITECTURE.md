@@ -152,6 +152,8 @@
 
 ## 7. 测试
 
+调试构建的 [KagiroiDeployProbeService](../app/src/debug/kotlin/app/songyan/ime/deploy/probe/KagiroiDeployProbeService.kt) 在 `:deploy` 进程与部署锁下比较源文件编译和预编译词典，输出耗时、进程峰值内存、目录大小与真实候选。服务只在 [debug 清单](../app/src/debug/AndroidManifest.xml) 中注册；[KagiroiDeploymentDeviceTest](../app/src/androidTest/kotlin/app/songyan/ime/deploy/KagiroiDeploymentDeviceTest.kt) 用显式 `am instrument -e class`、`-e kagiroiProbe true`、`-e fixtureRoot <目录>` 启动，默认连接测试排除它。夹具根目录有 `source/` 与 `prebuilt/`，报告位于调试应用缓存 `kagiroi-probe/<A 或 B>/report.json`。
+
 | 位置 | 覆盖 |
 | --- | --- |
 | `core/keyboard/src/test` | `InputSession`、布局折叠、显示策略、读音筛选与拼写栏（`CandidateReadingFilterTest`、`SpellingRailChoicesTest`）、筛选后的上屏目标（`ConfirmationTargetTest`）等移植自 iOS KeyboardCoreTests 的 JVM 用例 |

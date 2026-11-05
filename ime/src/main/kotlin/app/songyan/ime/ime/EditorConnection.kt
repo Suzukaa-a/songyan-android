@@ -149,9 +149,13 @@ class EditorConnection(
     /**
      * [preedit] with the composition language attached: a framework editor applies the span's
      * TextPaint locale while it measures and draws the marked range, so that language's glyph
-     * forms are used. An editor with its own text engine may drop the spans.
+     * forms are used. Only text a language's fonts render differently needs that: an ASCII
+     * spelling reads the same in every language, so it goes over as the engine's own string
+     * instead of a wrapped CharSequence built on every keystroke. An editor with its own text
+     * engine may drop the spans anyway.
      */
     private fun preeditWithLanguage(preedit: String): CharSequence {
+        if (preedit.all { it.code < 0x80 }) return preedit
         val locales = composingLocales ?: return preedit
         return SpannableString(preedit).apply {
             setSpan(LocaleSpan(locales), 0, preedit.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

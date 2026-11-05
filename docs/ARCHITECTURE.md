@@ -112,6 +112,7 @@
 | 外观 | 设置「键盘外观」→ `AppearanceSettingsHolder` → app `AppearanceRepository`（`filesDir/appearance/active.json` + DataStore 的深浅色/动态取色）→ `KeyboardAppearanceRegistry` → ime `KeyboardPalettes` 解析（动态取色 → 应用外观 → 松烟墨韵回退）；键盘显示、配置变化与 `ACTION_APPEARANCE_CHANGED` 广播时刷新 |
 | 性能探针 | [ImePerf.kt](../ime/src/main/kotlin/app/songyan/ime/ime/ImePerf.kt) 在显示/按键/上屏路径记录 Trace section 与调试日志；`benchmark` 模块在 `benchmarkRelease` 构建（release 代码与 R8、优化的引擎、不可调试，无发布密钥时用 debug 密钥签名，见 [app/build.gradle.kts](../app/build.gradle.kts)）上测量；[collect-ime-perf.sh](../scripts/collect-ime-perf.sh) 在 debug 构建上按日志采样，支持每轮指定 `--text`、可选 IME 主进程 PSS 采样与 JSON 输出；[ime-perf-summary.py](../scripts/ime-perf-summary.py) 按日志顺序取指定数量的样本后计算 p50/p95 等百分位，[test_ime_perf_summary.py](../scripts/tests/test_ime_perf_summary.py) 覆盖采样顺序与不完整数据；[KagiroiRuntimeDeviceTest](../app/src/androidTest/kotlin/app/songyan/ime/deploy/KagiroiRuntimeDeviceTest.kt) 以 `-e kagiroiRuntime true` 为真实 IME 准备 kagiroi 或恢复内置拼音，默认连接测试排除它 |
 | 系统语言观察 | [observe-ime-system-locales.sh](../scripts/observe-ime-system-locales.sh) 在 userdebug 模拟器切换系统语言并重启，以系统设置页截图、配置读回、应用语言覆盖与子类型信息记录输入法标签，结束恢复原有效系统语言；使用设备锁运行 |
+| 资源目录实验 | [probe-resource-fallback.sh](../scripts/probe-resource-fallback.sh) 用 SDK 工具生成临时 APK，真实 API 37 Activity 按应用 locale 读取字符串，对比 language 与 script 资源限定符；缺繁体目录的失败对照与两套完整目录分别输出逐项结果，退出卸载实验 APK 并删除本轮临时源码 |
 
 ## 6. 存储路径
 

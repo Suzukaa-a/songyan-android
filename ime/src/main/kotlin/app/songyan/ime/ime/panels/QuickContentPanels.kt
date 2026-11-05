@@ -130,7 +130,7 @@ class QuickContentPanels(
                     callbacks.insert(text)
                     scope.launch {
                         dataSource.recordRecentSymbol(text)
-                        refreshSymbols()
+                        refreshContent()
                     }
                 }
                 onBackspace = { callbacks.deleteBackward() }
@@ -241,6 +241,13 @@ class QuickContentPanels(
     private var shown: QuickContentPanelView? = null
     private var content: QuickContentPanelContent? = null
 
+    /**
+     * The panel actually on screen. [shown] alone is stale after a panel closes itself through the
+     * host (its own close button, a bottom key), and a hidden panel must receive nothing.
+     */
+    private val visiblePanel: QuickContentPanelView?
+        get() = if (host.isShowing) shown else null
+
     /** Whether a panel currently covers the key area. */
     val isShowing: Boolean get() = host.isShowing
 
@@ -257,8 +264,8 @@ class QuickContentPanels(
         symbolPageFresh = true
         val panel = symbolPage.value
         panel.enterLabel = request.enterLabel
-        content?.let { applySymbolPage(it) }
         show(panel)
+        content?.let { applyContent(it) }
         scope.launch { refreshContent() }
     }
 
@@ -295,7 +302,7 @@ class QuickContentPanels(
             val catalog = emojiSource.catalog(callbacks.emojiMetadataVersion())
             val recents = dataSource.loadRecentEmoji()
             // The panel may have been closed or replaced while the catalog loaded.
-            if (shown === panel) {
+            if (visiblePanel === panel) {
                 panel.lookup(catalog::find)
                 panel.update(catalog.categories, recents)
             }
@@ -312,13 +319,13 @@ class QuickContentPanels(
     /** The edit panel's live keys; ignored while another panel is showing. */
     fun updateEditAvailability(value: EditAvailability) {
         val panel = edit.initializedValue ?: return
-        if (shown === panel) panel.setAvailability(value)
+        if (visiblePanel === panel) panel.setAvailability(value)
     }
 
     /** A new selection state from the editor, for Copy and Cut. */
     fun updateEditSelection(hasSelection: Boolean) {
         val panel = edit.initializedValue ?: return
-        if (shown === panel) panel.setSelection(hasSelection)
+        if (visiblePanel === panel) panel.setSelection(hasSelection)
     }
 
     /** The emoji catalog for the editor's renderer, for the keyboard's own emoji search. */
@@ -328,7 +335,10 @@ class QuickContentPanels(
     suspend fun content(): QuickContentPanelContent = content ?: dataSource.loadContent()
 
     private suspend fun updateEmojiRecents() {
-        emoji.initializedValue?.updateRecents(dataSource.loadRecentEmoji())
+        val recents = dataSource.loadRecentEmoji()
+        val panel = emoji.initializedValue ?: return
+        // The rows are loaded again when the panel opens; a closed panel keeps none of them.
+        if (visiblePanel === panel) panel.updateRecents(recents)
     }
 
     fun openKeyboardSettings() {
@@ -349,12 +359,19 @@ class QuickContentPanels(
      */
     fun trimMemory() {
         content = null
+        val visible = visiblePanel
+        // A hidden page loads its categories again from the request of its own next opening.
+        val pagePanel = symbolPage.initializedValue
+        if (pagePanel == null || visible !== pagePanel) {
+            symbolPageRequest = null
+            symbolPageFresh = false
+        }
         for (panel in initializedPanels) {
-            if (panel === shown) panel.releaseLayoutCache() else panel.releaseData()
+            if (panel === visible) panel.releaseLayoutCache() else panel.releaseData()
         }
         // The catalog also serves the keyboard's own emoji search, so it goes unless the panel shows it.
         val emojiPanel = emoji.initializedValue
-        if (emojiPanel == null || shown !== emojiPanel) emojiSource.release()
+        if (emojiPanel == null || visible !== emojiPanel) emojiSource.release()
     }
 
     /** Leaves the keyboard surface and opens the app's settings, where the empty list is filled. */
@@ -366,13 +383,13 @@ class QuickContentPanels(
     /** After a commit the repeat preview changed while the settings panel may be open. */
     fun onTextInserted() {
         val panel = phrases.initializedValue ?: return
-        if (shown === panel) panel.updateQuickInsert(callbacks.quickInsertState())
+        if (visiblePanel === panel) panel.updateQuickInsert(callbacks.quickInsertState())
     }
 
     /** Back inside a panel that has pages (an open choice of the settings panel); false when there is none. */
     fun navigateBack(): Boolean {
         val panel = settings.initializedValue ?: return false
-        return shown === panel && panel.backToGrid()
+        return visiblePanel === panel && panel.backToGrid()
     }
 
     /** Ends a closing panel's exit at once; see [QuickContentHost.settle]. */
@@ -395,25 +412,31 @@ class QuickContentPanels(
 
     private suspend fun refreshContent() {
         val loaded = dataSource.loadContent()
+        // Closed while loading: the panel is gone, so neither it nor the owner keeps the result.
+        if (visiblePanel == null) return
         content = loaded
         applyContent(loaded)
     }
 
-    /** Re-reads the recent list after an insert; the cached snapshot still holds the old one. */
-    private suspend fun refreshSymbols() {
-        val loaded = dataSource.loadContent()
-        content = loaded
-        symbols.initializedValue?.update(loaded.catalog, loaded.recentSymbols)
-    }
-
+    /**
+     * Pushes freshly loaded content to the panel on screen only. A hidden panel was released on trim
+     * and must not be filled back by a load that finishes after it closed.
+     */
     private fun applyContent(loaded: QuickContentPanelContent) {
-        symbols.initializedValue?.update(loaded.catalog, loaded.recentSymbols)
-        applySymbolPage(loaded)
-        phrases.initializedValue?.update(
-            loaded.phrases.map { it.text },
-            loaded.clipboard,
-            loaded.clipboardEnabled,
-        )
+        val panel = visiblePanel ?: return
+        val symbolView = symbols.initializedValue
+        val phraseView = phrases.initializedValue
+        when {
+            symbolView != null && panel === symbolView ->
+                symbolView.update(loaded.catalog, loaded.recentSymbols)
+            phraseView != null && panel === phraseView ->
+                phraseView.update(
+                    loaded.phrases.map { it.text },
+                    loaded.clipboard,
+                    loaded.clipboardEnabled,
+                )
+            panel === symbolPage.initializedValue -> applySymbolPage(loaded)
+        }
     }
 
     private fun applySymbolPage(loaded: QuickContentPanelContent) {

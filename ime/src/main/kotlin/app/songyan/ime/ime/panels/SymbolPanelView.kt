@@ -92,6 +92,20 @@ class SymbolPanelView(
         loadCells(wanted, keepScroll = true)
     }
 
+    /**
+     * A hidden panel holds no catalog: an [update] fills the rails and cells again and reopens the
+     * category remembered by [selectedCategoryId] (or the recent slot, which has no id).
+     */
+    override fun releaseData() {
+        super.releaseData()
+        catalog = SymbolCatalog()
+        recents = emptyList()
+        railCategories = emptyList()
+        cells = emptyList()
+        updateRail(emptyList())
+        invalidate()
+    }
+
     private fun reloadCells(railIndex: Int) = loadCells(railIndex, keepScroll = false)
 
     private fun loadCells(

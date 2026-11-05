@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -18,6 +19,14 @@ class SettingsAppStateTest {
     fun `unknown in use scheme is not invented`() {
         val state = SettingsAppState(schemes = schemes, inUseSchemeId = "missing")
         assertNull(state.inUseScheme)
+    }
+
+    @Test
+    fun `a resolved scheme family reaches layout selection`() {
+        val scheme = InstalledScheme("dachen", "大字注音", family = InputSchemeFamily.ZHUYIN)
+        assertEquals(InputSchemeFamily.ZHUYIN, familiesOfSchemes(listOf(scheme)).familyOf("dachen"))
+        // A scheme the state did not resolve keeps the id-only answer.
+        assertEquals(InputSchemeFamily.GENERIC, familiesOfSchemes(emptyList()).familyOf("dachen"))
     }
 
     @Test

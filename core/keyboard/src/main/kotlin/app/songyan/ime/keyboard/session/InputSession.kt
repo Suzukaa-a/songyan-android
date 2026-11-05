@@ -12,6 +12,7 @@ import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.engine.InputLanguageProfile
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyAction
@@ -67,6 +68,23 @@ class InputSession(
 
     /** The schema and declared script conversion [inputLanguage] was derived from. */
     internal var inputLanguageSource: String? = null
+
+    private var familyContextKey: Pair<String, InputSchemeFamily>? = null
+    private var familyContextValue: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN
+
+    /**
+     * The families this session already resolved, for layout selection. Reading the cached profile
+     * keeps schema resolution and the engine alphabet off the key path; the same schema and family
+     * hand back the same context, so drawing a key allocates nothing.
+     */
+    fun layoutFamilyContext(): LayoutFamilyContext {
+        val family = inputLanguage.family
+        familyContextKey?.let { if (it.first == selectedSchemaID && it.second == family) return familyContextValue }
+        val context = LayoutFamilyContext.of(selectedSchemaID to family)
+        familyContextKey = selectedSchemaID to family
+        familyContextValue = context
+        return context
+    }
 
     internal var inputLanguageConversion: String? = null
 
@@ -335,6 +353,12 @@ class InputSession(
 
     /** Explicit revalidation of the current schema (separate from selecting the current item). */
     suspend fun revalidateCurrentSchema() = revalidateCurrentSchemaImpl()
+
+    /**
+     * Repairs a running layout the current schema's family cannot use, keeping the schema. Called on
+     * editor start, where a stored pair can match the preference and still be a forbidden one.
+     */
+    suspend fun repairFamilyLayout() = repairFamilyLayoutImpl()
 
     /**
      * User-requested resource/layout transitions must call this before teardown. A failed or partial

@@ -1,5 +1,7 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,7 +11,21 @@ data class InstalledScheme(
     val id: String,
     val name: String,
     val supportedLayouts: Set<String> = setOf("qwerty26"),
+    /**
+     * The family the app state resolved for this scheme (its deployed speller alphabet counts).
+     * Layout selection reads it so an id the language table cannot name still picks its own
+     * physical layout. Unknown stays generic.
+     */
+    val family: InputSchemeFamily = InputSchemeFamily.GENERIC,
 )
+
+/** The families the app state already resolved, for choosing a keyboard's physical layout. */
+fun familiesOfSchemes(schemes: List<InstalledScheme>): LayoutFamilyContext =
+    LayoutFamilyContext.of(
+        schemes
+            .filter { it.family != InputSchemeFamily.GENERIC }
+            .associate { it.id to it.family },
+    )
 
 /** One keyboard the user added: an input method plus a keyboard layout, both display names. */
 data class AppKeyboardInfo(

@@ -56,6 +56,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.settings.R
@@ -401,6 +402,7 @@ private fun NavGraphBuilder.settingsGraph(
             KeyboardsScreen(
                 inputMethodName = state.value.inUseScheme?.name,
                 layoutId = state.value.layoutId,
+                supportedLayouts = state.value.inUseScheme?.supportedLayouts,
                 onSelectLayout = viewModel::selectLayout,
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
@@ -517,6 +519,9 @@ private fun NavGraphBuilder.settingsGraph(
         } else {
             CompositionScreen(
                 key = key,
+                families =
+                    state.value.inUseScheme?.let { LayoutFamilyContext.of(it.id to it.family) }
+                        ?: LayoutFamilyContext.UNKNOWN,
                 keyboardName =
                     stringResource(
                         R.string.keyboard_title,
@@ -621,7 +626,10 @@ private fun NavGraphBuilder.settingsGraph(
             if (!state.value.sourcesLoaded && state.value.inUseSchemeId == null) return@LaunchedEffect
             val catalog = registry ?: return@LaunchedEffect
             val key = compositionKeyOf(state.value.inUseSchemeId, "phone9")
-            val paired = key?.let { catalog.resolvedLayout(catalog.composition(it).mainLayoutID) }
+            val families =
+                state.value.inUseScheme?.let { LayoutFamilyContext.of(it.id to it.family) }
+                    ?: LayoutFamilyContext.UNKNOWN
+            val paired = key?.let { catalog.resolvedLayout(catalog.composition(it, families).mainLayoutID) }
             val id =
                 paired
                     ?.takeIf {

@@ -8,6 +8,7 @@ import app.songyan.ime.keyboard.display.SentenceSpelling
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
@@ -65,7 +66,7 @@ internal fun KeyboardController.render() {
     val config =
         KeyboardPages.Config(
             catalogRevision = catalog.revision,
-            pairing = catalog.registry.composition(compositionKey()),
+            pairing = catalog.registry.composition(compositionKey(), layoutFamilies()),
             layout = layoutKind,
             englishDirectInput = english,
             symbolMarksAscii = marksAscii,
@@ -279,20 +280,27 @@ internal class MainDefinitionMemo(
     val revision: Long,
     val kind: KeyboardLayoutKind,
     val schemaId: String,
+    val family: InputSchemeFamily,
     val definition: LayoutDefinition,
 )
 
 /** The main layout the keyboard draws: the pairing's choice, or the bundled preset of this shape. */
 internal fun KeyboardController.mainDefinition(): LayoutDefinition {
     val snapshot = KeyboardLayoutCatalog.snapshot.value
+    val families = layoutFamilies()
+    val family = families.familyOf(schemaId)
     mainDefinitionMemo
-        ?.takeIf { it.revision == snapshot.revision && it.kind == layoutKind && it.schemaId == schemaId }
-        ?.let { return it.definition }
+        ?.takeIf {
+            it.revision == snapshot.revision &&
+                it.kind == layoutKind &&
+                it.schemaId == schemaId &&
+                it.family == family
+        }?.let { return it.definition }
     val registry = snapshot.registry
     val resolved =
-        registry.resolvedLayout(registry.composition(compositionKey()).mainLayoutID)
+        registry.resolvedLayout(registry.composition(compositionKey(), families).mainLayoutID)
             ?: builtinDefinition(layoutKind)
-    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, resolved)
+    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, family, resolved)
     return resolved
 }
 

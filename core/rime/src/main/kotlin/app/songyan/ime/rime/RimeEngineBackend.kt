@@ -494,10 +494,13 @@ class RimeEngineBackend(
         }
 
     private suspend fun refreshSchemas() {
+        // The declared alphabet is part of what the list must carry: layout availability reads it to
+        // place an id the language table cannot name. [spellerAlphabet] caches each value, and this
+        // runs at setup and on a schema switch only, so the key path never asks for it.
         schemas =
-            engine.schemas().map { schema ->
-                KeyboardSchemaDescriptor(id = schema.id, name = schema.name)
-            }
+            SchemaDescriptors.withDeclaredAlphabets(
+                engine.schemas().map { schema -> KeyboardSchemaDescriptor(id = schema.id, name = schema.name) },
+            ) { schemaID -> spellerAlphabet(schemaID) }
     }
 
     private suspend fun readEngineSnapshot(): EngineSnapshot = publish(engine.readSnapshot())

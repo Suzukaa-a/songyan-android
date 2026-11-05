@@ -28,6 +28,8 @@ import app.songyan.ime.settings.ui.components.SettingsScaffold
 fun KeyboardsScreen(
     inputMethodName: String?,
     layoutId: String,
+    /** The shapes the input method in use can switch to; null keeps the static capability. */
+    supportedLayouts: Set<String>?,
     onSelectLayout: (KeyboardLayoutOption) -> Unit,
     onBack: (() -> Unit)?,
     onOpenLayouts: () -> Unit = {},
@@ -65,11 +67,12 @@ fun KeyboardsScreen(
             SectionHeader(stringResource(R.string.keyboards_layout_section))
             Column {
                 KeyboardLayoutOption.entries.forEachIndexed { index, option ->
+                    val available = option.availableIn(supportedLayouts)
                     RadioRow(
                         title = stringResource(option.nameRes),
-                        subtitle = option.noteRes(option.available)?.let { stringResource(it) },
+                        subtitle = option.noteRes(available)?.let { stringResource(it) },
                         selected = option == selected,
-                        enabled = option.available,
+                        enabled = available,
                         onClick = { onSelectLayout(option) },
                         trailing = { LayoutThumbnail(option.thumbnailRows) },
                     )

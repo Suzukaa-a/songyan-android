@@ -141,7 +141,7 @@ class KeyboardController(
                 KeyboardPages.openingMarks(
                     it,
                     KeyboardLayoutCatalog.snapshot.value.registry
-                        .composition(compositionKey()),
+                        .composition(compositionKey(), layoutFamilies()),
                 )
             }
         return KeyboardPages.marksAscii(symbolMarksOverride, opening, englishInput, policy.asciiMarks)
@@ -810,7 +810,8 @@ class KeyboardController(
         if (retired) return false
         val registry = KeyboardLayoutCatalog.snapshot.value.registry
         val choice =
-            KeyboardPages.categorizedSymbols(layoutKind, registry.composition(compositionKey())) ?: return false
+            KeyboardPages.categorizedSymbols(layoutKind, registry.composition(compositionKey(), layoutFamilies()))
+                ?: return false
         closeKeyboardMenu()
         val ascii = asciiMarksOn(KeyboardPageKind.SYMBOLS)
         quick.openSymbolPage(
@@ -820,7 +821,11 @@ class KeyboardController(
                 // Only the built-in tabs take the pairing's missing marks; a user's categories stay as made.
                 leadingMarks =
                     if (choice.categories == null) {
-                        KeyboardPages.missingMarks(layoutKind, registry.composition(compositionKey()), ascii)
+                        KeyboardPages.missingMarks(
+                            layoutKind,
+                            registry.composition(compositionKey(), layoutFamilies()),
+                            ascii,
+                        )
                     } else {
                         emptyList()
                     },

@@ -5,6 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 /** Which switches of a compiled schema the keyboard offers, and what each is called. */
 class SchemaOptionCapabilitiesTest {
@@ -12,6 +14,26 @@ class SchemaOptionCapabilitiesTest {
         yaml: String,
         installed: Set<String> = setOf("s2t.json", "t2s.json", "emoji.json", "s2tw.json"),
     ) = SchemaOptionCapabilities.parse("pinyin", "luna", yaml, installed::contains)
+
+    @Test
+    fun theDeployedSpellerAlphabetIsReadForLayoutSelection() {
+        val build = Files.createTempDirectory("speller-alphabet").toFile()
+        try {
+            File(build, "dachen.schema.yaml").writeText(
+                "schema:\n  schema_id: dachen\nspeller:\n  alphabet: \"1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-\"\n",
+            )
+            assertEquals(
+                "1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-",
+                SchemaOptionCapabilities.spellerAlphabet(build, "dachen"),
+            )
+            // A schema without the key declares no alphabet, and a missing file is not an error.
+            File(build, "plain.schema.yaml").writeText("schema:\n  schema_id: plain\n")
+            assertEquals("", SchemaOptionCapabilities.spellerAlphabet(build, "plain"))
+            assertEquals("", SchemaOptionCapabilities.spellerAlphabet(build, "missing"))
+        } finally {
+            build.deleteRecursively()
+        }
+    }
 
     private val traditional =
         """

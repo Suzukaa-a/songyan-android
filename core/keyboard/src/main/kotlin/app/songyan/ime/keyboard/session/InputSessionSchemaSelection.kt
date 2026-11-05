@@ -1,6 +1,8 @@
 package app.songyan.ime.keyboard.session
 
 import app.songyan.ime.keyboard.engine.EngineBackendError
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.support.UserTerminology
@@ -9,8 +11,11 @@ import kotlinx.coroutines.CancellationException
 // Schema and layout switching for [InputSession], split out to keep the session file small. Bodies are
 // moved verbatim; the public entry points stay on the class.
 
-internal suspend fun InputSession.selectLayoutImpl(newLayout: KeyboardLayoutKind) {
-    if (retired || newLayout == currentLayout) return
+internal suspend fun InputSession.selectLayoutImpl(requested: KeyboardLayoutKind) {
+    if (retired) return
+    val resource = resourceSet
+    val newLayout = resource?.let { legalLayoutFor(requested, selectedSchemaID, it) } ?: requested
+    if (newLayout == currentLayout) return
     val previousCompact = compactSpellingLayout
     compactSpellingLayout = false
     var succeeded = false
@@ -104,10 +109,12 @@ internal suspend fun InputSession.selectSchemaImpl(schemaID: String) {
 }
 
 internal suspend fun InputSession.selectLayoutBoundImpl(
-    newLayout: KeyboardLayoutKind,
+    requested: KeyboardLayoutKind,
     boundSchemaID: String,
 ) {
     if (retired) return
+    val resource = resourceSet
+    val newLayout = resource?.let { legalLayoutFor(requested, boundSchemaID, it) } ?: requested
     if (newLayout == currentLayout && boundSchemaID == selectedSchemaID) return
     val previousCompact = compactSpellingLayout
     compactSpellingLayout = false
@@ -165,6 +172,34 @@ internal suspend fun InputSession.validateSelection(schemaID: String) {
         throw EngineBackendError.SchemaNotEnabled(refusal.schemaID, refusal.enabledSchemaIDs)
     }
 }
+
+/**
+ * Brings the running layout back inside what the current schema's family allows. A stored layout
+ * the family forbids was allowed when it was saved, so the same schema keeps running on the shape
+ * the family uses instead of failing on every editor start.
+ */
+internal suspend fun InputSession.repairFamilyLayoutImpl() {
+    if (retired) return
+    val set = resourceSet ?: return
+    if (InputLayoutPolicy.allows(currentLayout, set.familyOf(selectedSchemaID))) return
+    selectLayoutImpl(currentLayout)
+}
+
+/**
+ * The layout a switch actually runs. A scheme family whose keys are not the shipped folded shapes
+ * keeps the identity shape, so a pairing saved before that rule lands on what the set offers
+ * instead of refusing the switch; anything the family allows passes through unchanged.
+ */
+private fun legalLayoutFor(
+    layout: KeyboardLayoutKind,
+    schemaID: String,
+    set: KeyboardResourceSet,
+): KeyboardLayoutKind =
+    if (InputLayoutPolicy.allows(layout, set.familyOf(schemaID))) {
+        layout
+    } else {
+        set.layoutsFor(schemaID).firstOrNull() ?: KeyboardLayoutKind.QWERTY26
+    }
 
 internal fun InputSession.refreshAfterSelectionFailure(error: Throwable) {
     // Read-only snapshots must never replay the commit produced by the confirmation.

@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -35,6 +36,27 @@ class KeyboardResourceSetsTest {
             )
         }
         assertFalse(set.availableCombinations.any { it.schemaID.startsWith("keyboard_") })
+    }
+
+    @Test
+    fun theEngineSchemasKeepTheirDeclaredAlphabetForTheFamilyRule() {
+        val dachen =
+            KeyboardSchemaDescriptor(
+                id = "dachen",
+                name = "大字注音",
+                alphabet = "1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-",
+            )
+        val set =
+            requireNotNull(
+                KeyboardResourceSets.forEngineSchemas(
+                    listOf(dachen, schema(BuiltinTemplateSchemas.QUANPIN)),
+                ),
+            )
+        assertEquals(InputSchemeFamily.ZHUYIN, set.familyOf("dachen"))
+        assertFalse(
+            "the zhuyin scheme keeps the identity shape only",
+            set.availableCombinations.any { it.schemaID == "dachen" && it.layout != KeyboardLayoutKind.QWERTY26 },
+        )
     }
 
     @Test

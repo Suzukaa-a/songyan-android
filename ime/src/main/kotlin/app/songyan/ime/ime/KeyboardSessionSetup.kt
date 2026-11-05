@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
@@ -115,6 +116,7 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
     if (active != null && ready) {
         active.selectLayout(kind, preferredSchema)
         syncSelection(active)
+        persistSelection()
         updateSwipe(active)
     } else {
         layoutKind = kind
@@ -147,6 +149,7 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (active != null && ready) {
         active.selectLayout(layoutKind, target)
         syncSelection(active)
+        persistSelection()
         updateSwipe(active)
     } else {
         schemaId = target
@@ -158,10 +161,18 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
 
 internal suspend fun KeyboardController.cycleLayout() {
     val usable = jumpableLayouts()
-    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind).filter { it in usable }
+    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, usable)
     val next = KeyboardMenuEntries.nextLayout(offered, layoutKind) ?: return
     chooseLayout(next)
 }
+
+/**
+ * The scheme families the session already resolved (the cached profile carries the engine alphabet),
+ * for choosing a keyboard's physical layout. An id the language table cannot place by its name still
+ * selects the layout of its family; before the session is ready the id-only answer stands.
+ */
+internal fun KeyboardController.layoutFamilies(): LayoutFamilyContext =
+    session?.layoutFamilyContext() ?: LayoutFamilyContext.UNKNOWN
 
 internal fun KeyboardController.syncSelection(active: InputSession) {
     layoutKind = active.layout

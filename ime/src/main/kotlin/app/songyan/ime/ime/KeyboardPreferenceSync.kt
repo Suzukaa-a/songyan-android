@@ -197,11 +197,24 @@ internal suspend fun KeyboardController.applyPreferences(active: InputSession) {
     val layout = preferredLayout
     val schema = preferredSchema
     if (active.layout == layout && active.selectedSchemaID == schema) {
-        syncSelection(active)
-        return
+        // A stored layout the new scheme's family cannot use is repaired here as well: the pair can
+        // match the preference and still be one the family forbids.
+        active.repairFamilyLayout()
+    } else {
+        active.selectLayout(layout, schema)
     }
-    active.selectLayout(layout, schema)
     syncSelection(active)
+    persistSelection()
+}
+
+/**
+ * Writes back a selection the keyboard itself had to change (a saved layout the scheme's family
+ * cannot use falls back to one it can), so the next editor does not retry the refused pairing.
+ */
+internal suspend fun KeyboardController.persistSelection() {
+    if (preferredLayout == layoutKind) return
+    preferredLayout = layoutKind
+    preferences?.setLayoutId(layoutKind.wire)
 }
 
 /** Applies a preference written elsewhere (settings app, the in-keyboard menu). */
@@ -234,7 +247,7 @@ internal fun KeyboardController.syncMenu() {
             ?.map { it.id to it.displayName }
             .orEmpty()
     menu.setSchemas(KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema)))
-    menu.setLayouts(KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind))
+    menu.setLayouts(KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts()))
     menu.update(schemaId, layoutKind)
 }
 
@@ -249,10 +262,18 @@ internal object KeyboardMenuEntries {
             .ifEmpty { BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS.map { it to "" } }
             .filter { (id, _) -> id !in hidden || id in current }
 
+    /**
+     * The layout chips: the running input method's usable shapes, less the ones the user hid. The
+     * running one always stays, so the menu can show where the keyboard is.
+     */
     fun layouts(
         hidden: Set<String>,
         current: KeyboardLayoutKind,
-    ): List<KeyboardLayoutKind> = KeyboardLayoutKind.entries.filter { it.wire !in hidden || it == current }
+        usable: Set<KeyboardLayoutKind> = KeyboardLayoutKind.entries.toSet(),
+    ): List<KeyboardLayoutKind> =
+        KeyboardLayoutKind.entries.filter {
+            (it.wire !in hidden || it == current) && (it in usable || it == current)
+        }
 
     /**
      * The layout after [current] in [offered] (the menu's list, already limited to what the running

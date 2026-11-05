@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class JumpTargetsTest {
@@ -30,6 +31,29 @@ class JumpTargetsTest {
             setOf(KeyboardLayoutKind.QWERTY26),
             JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "rime_ice"),
         )
+    }
+
+    @Test
+    fun aSchemeFamilyThatCannotUseAFoldedShapeCannotJumpThere() {
+        val familySet =
+            requireNotNull(
+                KeyboardResourceSets.forEngineSchemas(
+                    listOf(
+                        schema(BuiltinTemplateSchemas.QUANPIN),
+                        schema("bopomofo_tw"),
+                        schema("kagiroi"),
+                    ),
+                ),
+            )
+        assertEquals(
+            setOf(KeyboardLayoutKind.QWERTY26),
+            JumpTargets.usable(KeyboardLayoutKind.QWERTY26, familySet, "bopomofo_tw"),
+        )
+        assertEquals(
+            setOf(KeyboardLayoutKind.QWERTY26),
+            JumpTargets.usable(KeyboardLayoutKind.QWERTY26, familySet, "kagiroi"),
+        )
+        assertNotNull(familySet.incompatibilityReason(KeyboardLayoutKind.MERGED18, "kagiroi"))
     }
 
     @Test

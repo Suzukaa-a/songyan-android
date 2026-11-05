@@ -10,7 +10,10 @@ import kotlinx.serialization.json.contentOrNull
 import java.io.File
 import java.io.IOException
 
-/** Reads verified simplifier switches and native script choice groups from expanded engine schemas. */
+/**
+ * Reads facts of expanded engine schemas: the verified simplifier switches and native script choice
+ * groups, and the declared speller alphabet.
+ */
 object SchemaOptionCapabilities {
     /** The switches of [schemaID] as built in [compiledDir]; empty when the schema cannot be read. */
     fun read(
@@ -20,14 +23,33 @@ object SchemaOptionCapabilities {
         sharedDir: File,
     ): List<EngineOptionDescriptor> {
         if (resourceID.isEmpty()) return emptyList()
-        val yaml =
-            try {
-                File(compiledDir, "$schemaID.schema.yaml").takeIf { it.isFile }?.readText(Charsets.UTF_8)
-            } catch (_: IOException) {
-                null
-            } ?: return emptyList()
+        val yaml = deployedSchema(compiledDir, schemaID) ?: return emptyList()
         return parse(resourceID, schemaID, yaml, { true }) { config -> verifiedOpencc(config, sharedDir) }
     }
+
+    /**
+     * The speller alphabet [schemaID] declares as built in [compiledDir]; empty when it declares
+     * none or cannot be read. The language table reads it to place an input method its id cannot
+     * name by itself.
+     */
+    fun spellerAlphabet(
+        compiledDir: File,
+        schemaID: String,
+    ): String = alphabetOf(deployedSchema(compiledDir, schemaID).orEmpty())
+
+    /** The declared `speller/alphabet` of one deployed schema text; empty when absent. */
+    internal fun alphabetOf(yaml: String): String =
+        scalarField(sections(yaml)["speller"].orEmpty(), "alphabet").orEmpty()
+
+    private fun deployedSchema(
+        compiledDir: File,
+        schemaID: String,
+    ): String? =
+        try {
+            File(compiledDir, "$schemaID.schema.yaml").takeIf { it.isFile }?.readText(Charsets.UTF_8)
+        } catch (_: IOException) {
+            null
+        }
 
     fun parse(
         resourceID: String,

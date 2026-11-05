@@ -3043,7 +3043,8 @@ class RealEngineEditorTest {
         override suspend fun loadContent() =
             QuickContentPanelContent(SymbolCatalog(), emptyList(), listOf(CommonPhrase("。")), emptyList(), false)
 
-        override suspend fun recordRecentSymbol(text: String) = Unit
+        // The panel's symbol library is empty here, so no use is ever recorded.
+        override suspend fun recordRecentSymbol(text: String): List<String> = emptyList()
 
         override suspend fun deleteClipboardEntry(text: String) = Unit
 

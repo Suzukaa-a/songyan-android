@@ -223,24 +223,41 @@ internal class FeatureHost(
     @Volatile var phrases = emptyList<CommonPhrase>()
     val recentSymbols = mutableListOf<String>()
 
+    /** A stale full snapshot lets tests distinguish saved results from unrelated reloads. */
+    @Volatile private var pinnedFullRead: QuickContentPanelContent? = null
+
+    /** Freezes what full reads answer with as it is now. */
+    fun pinFullReads() {
+        pinnedFullRead =
+            QuickContentPanelContent(
+                symbolCatalog,
+                recentSymbols.toList(),
+                phrases,
+                clipboardEntries,
+                clipboardEnabled,
+            )
+    }
+
     private val data =
         object : QuickContentPanelDataSource {
-            override suspend fun loadContent() =
-                QuickContentPanelContent(
-                    symbolCatalog,
-                    recentSymbols.toList(),
-                    phrases,
-                    clipboardEntries,
-                    clipboardEnabled,
-                )
+            override suspend fun loadContent(): QuickContentPanelContent =
+                pinnedFullRead
+                    ?: QuickContentPanelContent(
+                        symbolCatalog,
+                        recentSymbols.toList(),
+                        phrases,
+                        clipboardEntries,
+                        clipboardEnabled,
+                    )
 
             override suspend fun setClipboardEnabled(enabled: Boolean) {
                 clipboardEnabled = enabled
             }
 
-            override suspend fun recordRecentSymbol(text: String) {
+            override suspend fun recordRecentSymbol(text: String): List<String> {
                 recentSymbols.remove(text)
                 recentSymbols.add(0, text)
+                return recentSymbols.toList()
             }
 
             override suspend fun deleteClipboardEntry(text: String) {

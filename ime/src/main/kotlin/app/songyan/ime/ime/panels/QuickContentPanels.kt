@@ -10,6 +10,8 @@ import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.SymbolPageCategories
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The view of a panel that has been opened at least once, or null while it has never opened.
@@ -128,10 +130,7 @@ class QuickContentPanels(
                 onOpenSettings = { openSettingsScreen(SettingsTarget.QUICK_CONTENT) }
                 onInsert = { text ->
                     callbacks.insert(text)
-                    scope.launch {
-                        dataSource.recordRecentSymbol(text)
-                        refreshContent()
-                    }
+                    scope.launch { recordRecentSymbol(text) }
                 }
                 onBackspace = { callbacks.deleteBackward() }
                 onSpace = { callbacks.insert(" ") }
@@ -147,7 +146,8 @@ class QuickContentPanels(
             SymbolPagePanelView(context).apply {
                 onInsert = { text ->
                     callbacks.insert(text)
-                    scope.launch { dataSource.recordRecentSymbol(text) }
+                    // The page's own grid stays as it was: the recent row is rebuilt when it next opens.
+                    scope.launch { recordRecentSymbol(text) }
                     callbacks.symbolPageInserted()
                 }
                 onAction = { action -> callbacks.symbolPageAction(action) }
@@ -240,6 +240,14 @@ class QuickContentPanels(
     /** The panel the keyboard last opened; null before the first one and after [close]. */
     private var shown: QuickContentPanelView? = null
     private var content: QuickContentPanelContent? = null
+
+    /**
+     * Puts full content reads and recent-list writes in one order.
+     *
+     * A read that started before an insertion could otherwise finish after it and push its older
+     * snapshot over the newer recent row, and two taps in a row could show their lists swapped.
+     */
+    private val contentMutex = Mutex()
 
     /**
      * The panel actually on screen. [shown] alone is stale after a panel closes itself through the
@@ -410,13 +418,30 @@ class QuickContentPanels(
         host.show(panel)
     }
 
-    private suspend fun refreshContent() {
-        val loaded = dataSource.loadContent()
-        // Closed while loading: the panel is gone, so neither it nor the owner keeps the result.
-        if (visiblePanel == null) return
-        content = loaded
-        applyContent(loaded)
-    }
+    private suspend fun refreshContent() =
+        contentMutex.withLock {
+            val loaded = dataSource.loadContent()
+            // Closed while loading: the panel is gone, so neither it nor the owner keeps the result.
+            if (visiblePanel == null) return@withLock
+            content = loaded
+            applyContent(loaded)
+        }
+
+    /**
+     * Records an inserted symbol and shows it in the open panel's recent row.
+     *
+     * The store answers with the list to show, so this updates that list only: reading the whole
+     * content again would reload the catalog, the phrases and the clipboard for one row.
+     */
+    private suspend fun recordRecentSymbol(text: String) =
+        contentMutex.withLock {
+            val recents = dataSource.recordRecentSymbol(text)
+            // Closed or trimmed meanwhile: the next opening loads everything, so nothing comes back here.
+            val panel = visiblePanel ?: return@withLock
+            content = content?.copy(recentSymbols = recents)
+            val symbolView = symbols.initializedValue
+            if (symbolView != null && panel === symbolView) symbolView.updateRecents(recents)
+        }
 
     /**
      * Pushes freshly loaded content to the panel on screen only. A hidden panel was released on trim

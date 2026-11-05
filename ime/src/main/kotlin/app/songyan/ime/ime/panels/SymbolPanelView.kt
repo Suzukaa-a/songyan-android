@@ -93,6 +93,20 @@ class SymbolPanelView(
     }
 
     /**
+     * Pushes a new recent list after a use, without the catalog and the rail being read again.
+     *
+     * The rail cannot change by a use (the recent slot is always first), so only the cells are
+     * rebuilt, and only while the recent slot is open: a category the user is browsing keeps its
+     * cells and both scroll offsets, so tapping a symbol never moves the grid under the finger.
+     */
+    fun updateRecents(recents: List<String>) {
+        this.recents = recents
+        if (!recentsSelected) return
+        cells = recents.map { SymbolCell(text = it, label = it) }
+        invalidate()
+    }
+
+    /**
      * A hidden panel holds no catalog: an [update] fills the rails and cells again and reopens the
      * category remembered by [selectedCategoryId] (or the recent slot, which has no id).
      */

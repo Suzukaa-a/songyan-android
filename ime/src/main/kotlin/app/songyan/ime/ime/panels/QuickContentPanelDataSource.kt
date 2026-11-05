@@ -22,8 +22,14 @@ data class QuickContentPanelContent(
 interface QuickContentPanelDataSource {
     suspend fun loadContent(): QuickContentPanelContent
 
-    /** A symbol was inserted; the recent list moves it to the front. */
-    suspend fun recordRecentSymbol(text: String)
+    /**
+     * A symbol was inserted; the recent list moves it to the front.
+     *
+     * Returns the list to show, as the store has it after the use, so the open panel can update
+     * its recent row without reading the rest of the content again. The list is the expected one
+     * even when saving failed: the use happened, so the panel shows it.
+     */
+    suspend fun recordRecentSymbol(text: String): List<String>
 
     suspend fun deleteClipboardEntry(text: String)
 

@@ -7,6 +7,8 @@ import kotlinx.serialization.json.buildJsonArray
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /** The outcome of [RecentSymbolStore.record]: the list to show and the save failure, if any. */
 data class RecentSymbolsUpdate(
@@ -26,8 +28,8 @@ data class RecentSymbolsUpdate(
  * to the backup, and a corrupt current file never replaces a valid backup.
  *
  * The directory is injected by the caller and is conventionally shared with [SymbolCatalogStore].
- * No threading assumptions: at most one writer per directory (the Android app), readers may
- * run in the IME process.
+ * The keyboard and settings create separate stores over the same files. A process-wide writer
+ * lock keeps each read-modify-write intact; all production writers live in this process.
  */
 class RecentSymbolStore(
     val directory: Path,
@@ -65,15 +67,16 @@ class RecentSymbolStore(
     fun record(
         text: String,
         onError: ((ContentException) -> Unit)? = null,
-    ): RecentSymbolsUpdate {
-        val trimmed = text.trim { it.isWhitespace() }
-        val current = read(onError)
-        if (trimmed.isEmpty()) return RecentSymbolsUpdate(current)
-        val texts = current.filter { it != trimmed }.toMutableList()
-        texts.add(0, trimmed)
-        val bounded = if (texts.size > limit) texts.subList(0, limit).toList() else texts
-        return RecentSymbolsUpdate(bounded, save(bounded))
-    }
+    ): RecentSymbolsUpdate =
+        writeLock.withLock {
+            val trimmed = text.trim { it.isWhitespace() }
+            val current = read(onError)
+            if (trimmed.isEmpty()) return@withLock RecentSymbolsUpdate(current)
+            val texts = current.filter { it != trimmed }.toMutableList()
+            texts.add(0, trimmed)
+            val bounded = if (texts.size > limit) texts.subList(0, limit).toList() else texts
+            RecentSymbolsUpdate(bounded, save(bounded))
+        }
 
     /**
      * Clears the list: first protects a recoverable current value into the active file, then
@@ -82,43 +85,47 @@ class RecentSymbolStore(
      * The order matters: the backup is deleted before the empty list is written, so a failing
      * deletion leaves the old list readable instead of losing it behind an empty `[]`.
      */
-    fun clear() {
-        if (validData(activeFile) == null) {
-            val recovered =
-                try {
-                    readValidated(backupFile).bytes
-                } catch (error: ContentException) {
-                    null
-                }
-            if (recovered != null) BoundedFile.writeAtomically(activeFile, recovered)
+    fun clear() =
+        writeLock.withLock {
+            if (validData(activeFile) == null) {
+                val recovered =
+                    try {
+                        readValidated(backupFile).bytes
+                    } catch (error: ContentException) {
+                        null
+                    }
+                if (recovered != null) BoundedFile.writeAtomically(activeFile, recovered)
+            }
+            try {
+                Files.deleteIfExists(backupFile)
+            } catch (error: IOException) {
+                throw ContentException(ContentErrorCode.STORAGE_UNAVAILABLE, BACKUP_FILE_NAME, error)
+            }
+            if (Files.exists(activeFile)) BoundedFile.writeAtomically(activeFile, EMPTY_LIST)
         }
-        try {
-            Files.deleteIfExists(backupFile)
-        } catch (error: IOException) {
-            throw ContentException(ContentErrorCode.STORAGE_UNAVAILABLE, BACKUP_FILE_NAME, error)
-        }
-        if (Files.exists(activeFile)) BoundedFile.writeAtomically(activeFile, EMPTY_LIST)
-    }
 
     /**
      * Saves [texts] atomically. Every failure is returned; the old files are then untouched,
      * and a still-recoverable backup is never overwritten by a corrupt current file.
      */
     fun save(texts: List<String>): ContentException? =
-        try {
-            val element: JsonElement = buildJsonArray { texts.forEach { add(JsonPrimitive(it)) } }
-            val bytes = ContentJson.pretty.encodeToString(JsonElement.serializer(), element).toByteArray(Charsets.UTF_8)
-            if (texts.size > MAX_ENTRIES || bytes.size > MAX_BYTES) {
-                throw ContentException(ContentErrorCode.OVERSIZE, ACTIVE_FILE_NAME)
+        writeLock.withLock {
+            try {
+                val element: JsonElement = buildJsonArray { texts.forEach { add(JsonPrimitive(it)) } }
+                val bytes =
+                    ContentJson.pretty.encodeToString(JsonElement.serializer(), element).toByteArray(Charsets.UTF_8)
+                if (texts.size > MAX_ENTRIES || bytes.size > MAX_BYTES) {
+                    throw ContentException(ContentErrorCode.OVERSIZE, ACTIVE_FILE_NAME)
+                }
+                Files.createDirectories(directory)
+                validData(activeFile)?.let { BoundedFile.writeAtomically(backupFile, it) }
+                BoundedFile.writeAtomically(activeFile, bytes)
+                null
+            } catch (error: ContentException) {
+                error
+            } catch (error: IOException) {
+                ContentException(ContentErrorCode.STORAGE_UNAVAILABLE, ACTIVE_FILE_NAME, error)
             }
-            Files.createDirectories(directory)
-            validData(activeFile)?.let { BoundedFile.writeAtomically(backupFile, it) }
-            BoundedFile.writeAtomically(activeFile, bytes)
-            null
-        } catch (error: ContentException) {
-            error
-        } catch (error: IOException) {
-            ContentException(ContentErrorCode.STORAGE_UNAVAILABLE, ACTIVE_FILE_NAME, error)
         }
 
     private class ValidatedRecent(
@@ -179,5 +186,12 @@ class RecentSymbolStore(
         const val BACKUP_FILE_NAME: String = "recent-last.json"
 
         private val EMPTY_LIST: ByteArray = "[]".toByteArray(Charsets.UTF_8)
+
+        /**
+         * One lock for every store in the process, because separate instances write the same files;
+         * a per-instance lock would let two of them read one list and overwrite each other's use.
+         * Reentrant so [record] can write through [save] inside its own critical section.
+         */
+        private val writeLock = ReentrantLock()
     }
 }

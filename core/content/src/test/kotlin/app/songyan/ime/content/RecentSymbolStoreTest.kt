@@ -11,6 +11,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** Ported from QuickContentKitTests: recents dedupe, MRU ordering, recovery and budgets. */
 class RecentSymbolStoreTest {
@@ -77,6 +81,40 @@ class RecentSymbolStoreTest {
         store.clear()
         assertEquals(emptyList<String>(), store.read())
         assertEquals(emptyList<String>(), RecentSymbolStore(directory).read())
+    }
+
+    /**
+     * The keyboard's repository and the settings screen each build their own store over the same
+     * files, in one process; a use recorded through one must not drop a use recorded through the other.
+     */
+    @Test
+    fun storesWritingOneDirectoryConcurrentlyKeepEveryUse() {
+        val directory = directory()
+        val writers = 4
+        val stores = List(2) { RecentSymbolStore(directory) }
+        val entries = List(RecentSymbolStore.DEFAULT_LIMIT) { index -> "▸$index" }
+        val executor = Executors.newFixedThreadPool(writers)
+        try {
+            val gate = CountDownLatch(1)
+            val writes =
+                entries.mapIndexed { index, text ->
+                    val store = stores[index % stores.size]
+                    executor.submit(
+                        Callable {
+                            gate.await()
+                            store.record(text)
+                        },
+                    )
+                }
+            gate.countDown()
+            writes.forEach { it.get(FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdownNow()
+        }
+        // The writers may finish in any order; every use must still be in the saved list.
+        val saved = RecentSymbolStore(directory).read()
+        assertEquals(entries.size, saved.size)
+        assertEquals(entries.toSet(), saved.toSet())
     }
 
     @Test
@@ -240,5 +278,10 @@ class RecentSymbolStoreTest {
         assertNull(store.save(listOf("new")))
         assertTrue(backupData.contentEquals(Files.readAllBytes(store.backupFile)))
         assertEquals(listOf("new"), store.read())
+    }
+
+    private companion object {
+        /** Longer than any write here needs, so a stuck writer fails the test instead of the suite. */
+        const val FUTURE_TIMEOUT_SECONDS = 10L
     }
 }

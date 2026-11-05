@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 /**
  * The view of a panel that has been opened at least once, or null while it has never opened.
  *
- * Refresh, trim, selection and insert callbacks run for every keyboard show, so they read this
+ * Editor, insert and refresh callbacks can arrive while a panel is closed, so they read this
  * instead of the lazy value itself, which would build a panel the user never opened.
  */
 private val <T> Lazy<T>.initializedValue: T?
@@ -31,7 +31,8 @@ private val <T> Lazy<T>.initializedValue: T?
  * so no panel ever touches the engine or the input connection.
  *
  * A panel's view is built the first time it opens and then reused; a keyboard that never opens one
- * does not pay for it, and only an opening may create one.
+ * does not pay for it, and only an opening may create one. The factory that creates them also
+ * records them, so appearance refresh and memory trimming reach every existing panel by themselves.
  *
  * The symbol panel stays open for multiple insertions; inserting a phrase, a clipboard entry or a
  * quick insert closes it. The settings panel stays open while settings change.
@@ -105,8 +106,24 @@ class QuickContentPanels(
         fun emojiMetadataVersion(): Int
     }
 
-    private val symbols: Lazy<SymbolPanelView> =
+    /** Every panel view created so far; appearance refresh and memory trimming walk it. */
+    private val initializedPanels = mutableListOf<QuickContentPanelView>()
+
+    /**
+     * A panel view created at most once, the first time its panel opens.
+     *
+     * The factory registers what it creates, so declaring a panel through it is all it takes to be
+     * reached by [refreshAppearance] and [trimMemory]; a new panel cannot be left out of them.
+     */
+    private fun <T : QuickContentPanelView> lazyPanel(factory: () -> T): Lazy<T> =
         lazy(LazyThreadSafetyMode.NONE) {
+            val panel = factory()
+            initializedPanels += panel
+            panel
+        }
+
+    private val symbols: Lazy<SymbolPanelView> =
+        lazyPanel {
             SymbolPanelView(context).apply {
                 onOpenSettings = { openSettingsScreen(SettingsTarget.QUICK_CONTENT) }
                 onInsert = { text ->
@@ -126,7 +143,7 @@ class QuickContentPanels(
         }
 
     private val symbolPage: Lazy<SymbolPagePanelView> =
-        lazy(LazyThreadSafetyMode.NONE) {
+        lazyPanel {
             SymbolPagePanelView(context).apply {
                 onInsert = { text ->
                     callbacks.insert(text)
@@ -143,7 +160,7 @@ class QuickContentPanels(
     private var symbolPageFresh = false
 
     private val phrases: Lazy<PhraseClipboardPanelView> =
-        lazy(LazyThreadSafetyMode.NONE) {
+        lazyPanel {
             PhraseClipboardPanelView(context).apply {
                 onOpenSettings = { target -> openSettingsScreen(target) }
                 onRepeat = {
@@ -178,7 +195,7 @@ class QuickContentPanels(
         }
 
     private val settings: Lazy<KeyboardSettingsPanelView> =
-        lazy(LazyThreadSafetyMode.NONE) {
+        lazyPanel {
             KeyboardSettingsPanelView(context).apply {
                 onChange = { change -> callbacks.applyQuickSetting(change) }
                 onChooseLayout = {
@@ -196,7 +213,7 @@ class QuickContentPanels(
     private val emojiSource = EmojiSource(context)
 
     private val emoji: Lazy<EmojiPanelView> =
-        lazy(LazyThreadSafetyMode.NONE) {
+        lazyPanel {
             EmojiPanelView(context).apply {
                 onInsert = { text ->
                     callbacks.insert(text)
@@ -214,7 +231,7 @@ class QuickContentPanels(
         }
 
     private val edit: Lazy<EditPanelView> =
-        lazy(LazyThreadSafetyMode.NONE) {
+        lazyPanel {
             EditPanelView(context).apply {
                 onEdit = { action, extend -> callbacks.edit(action, extend) }
             }
@@ -322,12 +339,7 @@ class QuickContentPanels(
 
     /** A day/night or font-scale change reaches the panels built so far too; they outlive one keyboard show. */
     fun refreshAppearance() {
-        symbols.initializedValue?.refreshAppearance()
-        symbolPage.initializedValue?.refreshAppearance()
-        phrases.initializedValue?.refreshAppearance()
-        settings.initializedValue?.refreshAppearance()
-        emoji.initializedValue?.refreshAppearance()
-        edit.initializedValue?.refreshAppearance()
+        for (panel in initializedPanels) panel.refreshAppearance()
     }
 
     /**
@@ -337,16 +349,7 @@ class QuickContentPanels(
      */
     fun trimMemory() {
         content = null
-        val panels =
-            listOfNotNull(
-                symbols.initializedValue,
-                symbolPage.initializedValue,
-                phrases.initializedValue,
-                settings.initializedValue,
-                emoji.initializedValue,
-                edit.initializedValue,
-            )
-        for (panel in panels) {
+        for (panel in initializedPanels) {
             if (panel === shown) panel.releaseLayoutCache() else panel.releaseData()
         }
         // The catalog also serves the keyboard's own emoji search, so it goes unless the panel shows it.

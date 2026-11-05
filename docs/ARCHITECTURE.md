@@ -19,7 +19,7 @@
 | 模块 | 类型 | 包名 | 依赖 | 职责 |
 | --- | --- | --- | --- | --- |
 | `app` | Android application | `app.songyan.ime` | ime, settings, 全部 core | Manifest、输入法服务、设置入口、部署服务、引擎运行时与发布协调 |
-| `ime` | Android library | `app.songyan.ime.ime` | core:keyboard, layout, candidate, appearance, content | 自绘键盘、候选栏、触摸与无障碍、`InputConnection` 适配；`QuickContentPanels` 在面板首次打开时创建并复用视图，外观刷新与内存回收只处理已创建的面板 |
+| `ime` | Android library | `app.songyan.ime.ime` | core:keyboard, layout, candidate, appearance, content | 自绘键盘、候选栏、触摸与无障碍、`InputConnection` 适配；`QuickContentPanels` 通过统一工厂在面板首次打开时创建并登记视图，后续复用；外观刷新与内存回收遍历已登记视图，新增面板只需在创建入口声明 |
 | `settings` | Android library | `app.songyan.ime.settings` | 全部 core | Compose + Material 3 设置界面、引导、试打、状态桥接接口 |
 | `core:rime` | Android library | `app.songyan.ime.rime` | core:keyboard | `native/android` 构建的 `libsongyan_rime.so`、JNI、`RimeEngine`、`RimeEngineBackend`、`RimeDeployment`、学习备份与合并（`RimeLearningBackup`、`.userdb.txt` 校验 `RimeUserDbSnapshot`；其他 Rime 前端的 `.userdb.txt` 头部读取 `RimeUserDbText`） |
 | `core:keyboard` | Kotlin/JVM | `app.songyan.ime.keyboard` | 无 | `EngineBackend` 契约与模型、`InputSession` 状态机、输入显示策略、`KeyboardLayout`、ABC 英文建议的词跟踪与下一词表、光标移动计算（`CaretMotion`） |

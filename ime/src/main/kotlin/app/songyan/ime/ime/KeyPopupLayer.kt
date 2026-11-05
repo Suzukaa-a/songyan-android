@@ -12,7 +12,7 @@ import android.view.View
 import androidx.core.graphics.ColorUtils
 
 /**
- * The surface the key preview, the long-press popup and the merged-key swipe letter are drawn on.
+ * The surface the key preview, the long-press popup and the flick / swipe bubble are drawn on.
  *
  * It covers the candidate bar and the key area, above both, so the popup of a first-row key is not
  * clipped by the key area and sits above the finger. It never takes touches: the finger that opened
@@ -43,9 +43,6 @@ internal class KeyPopupLayer(
     private var openedAt = 0L
     private var closedAt = 0L
 
-    private var swipeLabel: String? = null
-    private var swipeBounds = KeyBounds(0f, 0f, 0f, 0f)
-
     private var flick: FlickMorph? = null
     private var flickFrom: String? = null
     private var flickTo = ""
@@ -62,7 +59,7 @@ internal class KeyPopupLayer(
     val alternatesOpen: Boolean get() = labels.isNotEmpty() && closedAt == 0L
 
     /** Whether any popup content is on screen, including one that is fading out. */
-    val showing: Boolean get() = labels.isNotEmpty() || previewLabel != null || swipeLabel != null || flick != null
+    val showing: Boolean get() = labels.isNotEmpty() || previewLabel != null || flick != null
 
     /**
      * The layer only covers what the column beside it measured; it never asks for height of its own.
@@ -174,31 +171,12 @@ internal class KeyPopupLayer(
         dirty(gone)
     }
 
-    // --- merged-key swipe letter ---------------------------------------------------------------
-
-    fun showSwipe(
-        label: String,
-        bounds: KeyBounds,
-    ) {
-        if (swipeLabel == label && swipeBounds == bounds) return
-        if (swipeLabel != null) dirty(swipeBounds)
-        swipeLabel = label
-        swipeBounds = bounds
-        dirty(bounds)
-    }
-
-    fun hideSwipe() {
-        if (swipeLabel == null) return
-        swipeLabel = null
-        dirty(swipeBounds)
-    }
-
-    // --- flick to the corner hint --------------------------------------------------------------
+    // --- flick to the corner hint, swipe to a merged key's letter --------------------------------
 
     /**
-     * The bubble of a key being flicked, following [morph]: the key's preview label rolls out the
-     * way the finger goes while [to] rolls in behind it. Without a preview ([from] null) the bubble
-     * fades in with the hint instead. It replaces the plain preview of the same key.
+     * The bubble of a key in a flick or a sideways swipe, following [morph]: the key's preview label
+     * rolls out the way the finger goes while [to] rolls in behind it. Without a preview ([from]
+     * null) the bubble fades in with [to] instead. It replaces the plain preview of the same key.
      */
     fun showFlick(
         morph: FlickMorph,
@@ -206,6 +184,14 @@ internal class KeyPopupLayer(
         to: String,
         bounds: KeyBounds,
     ) {
+        if (flick === morph) {
+            // The same gesture moved on: only a swipe crossing to the other letter changes the target.
+            if (flickBounds != bounds) dirty(flickBounds)
+            flickTo = to
+            flickBounds = bounds
+            dirty(bounds)
+            return
+        }
         val textFactor = if (previewLabel != null) PREVIEW_TEXT_SCALE else 1f
         clearPreview()
         if (flick != null) dirty(flickBounds)
@@ -215,11 +201,6 @@ internal class KeyPopupLayer(
         flickBounds = bounds
         flickTextFactor = textFactor
         dirty(bounds)
-    }
-
-    /** The finger moved: redraw the bubble at the morph's new progress. */
-    fun updateFlick() {
-        if (flick != null) dirty(flickBounds)
     }
 
     fun hideFlick() {
@@ -233,7 +214,6 @@ internal class KeyPopupLayer(
     fun clear() {
         clearPreview()
         clearPopup()
-        hideSwipe()
         hideFlick()
     }
 
@@ -263,7 +243,6 @@ internal class KeyPopupLayer(
     override fun onDraw(canvas: Canvas) {
         val now = SystemClock.uptimeMillis()
         previewLabel?.let { drawBubble(canvas, it, previewBounds, 1f, 1f, PREVIEW_TEXT_SCALE) }
-        swipeLabel?.let { drawBubble(canvas, it, swipeBounds, 1f, 1f, 1f) }
         drawFlick(canvas, now)
         if (labels.isNotEmpty()) drawPopup(canvas, now)
     }
@@ -298,16 +277,22 @@ internal class KeyPopupLayer(
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = palette.tokens.keyLabelTextSizeSp * textScale * flickTextFactor
         val baseline = box.centerY() - (paint.ascent() + paint.descent()) / 2
-        // The content scrolls with the finger: up for an upward flick, down for a downward one.
-        val travel = box.height() * if (morph.up) -1f else 1f
+        // The content scrolls with the finger: the label leaves the way it goes, the target follows.
+        val travelX = box.width() * morph.towardX
+        val travelY = box.height() * morph.towardY
         canvas.save()
         canvas.clipRect(box)
         if (from != null) {
             paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * (1f - progress)).toInt())
-            canvas.drawText(from, box.centerX(), baseline + travel * progress, paint)
+            canvas.drawText(from, box.centerX() + travelX * progress, baseline + travelY * progress, paint)
         }
         paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * progress).toInt())
-        canvas.drawText(flickTo, box.centerX(), baseline - travel * (1f - progress), paint)
+        canvas.drawText(
+            flickTo,
+            box.centerX() - travelX * (1f - progress),
+            baseline - travelY * (1f - progress),
+            paint,
+        )
         canvas.restore()
     }
 

@@ -101,14 +101,14 @@ class KeyFlickTest {
     @Test
     fun `the morph glides to a new target and lands on it`() {
         val morph = FlickMorph()
-        morph.set(key = 3, up = true, target = 1f, now = 0L, motionScale = 1f)
+        morph.set(key = 3, towardX = 0, towardY = -1, target = 1f, now = 0L, motionScale = 1f)
         val halfway = morph.value(45L, 1f)
         assertTrue(halfway > 0f && halfway < 1f)
         assertTrue(morph.animating(45L, 1f))
         assertEquals(1f, morph.value(90L, 1f))
         assertFalse(morph.animating(90L, 1f))
         // Pulled back: it glides down from where it was, not from zero.
-        morph.set(key = 3, up = true, target = 0.2f, now = 100L, motionScale = 1f)
+        morph.set(key = 3, towardX = 0, towardY = -1, target = 0.2f, now = 100L, motionScale = 1f)
         assertEquals(1f, morph.value(100L, 1f))
         assertEquals(0.2f, morph.value(190L, 1f), 1e-6f)
     }
@@ -116,17 +116,19 @@ class KeyFlickTest {
     @Test
     fun `without system animations the morph jumps to its target`() {
         val morph = FlickMorph()
-        morph.set(key = 0, up = false, target = 1f, now = 0L, motionScale = 0f)
+        morph.set(key = 0, towardX = 1, towardY = 0, target = 1f, now = 0L, motionScale = 0f)
         assertEquals(1f, morph.value(0L, 0f))
         assertFalse(morph.animating(0L, 0f))
-        assertFalse(morph.up)
+        // A merged key's swipe to the right: the label leaves rightward.
+        assertEquals(1, morph.towardX)
+        assertEquals(0, morph.towardY)
     }
 
     @Test
     fun `another key starts its morph from rest, and clearing ends it`() {
         val morph = FlickMorph()
-        morph.set(key = 1, up = true, target = 1f, now = 0L, motionScale = 0f)
-        morph.set(key = 2, up = true, target = 0.5f, now = 10L, motionScale = 1f)
+        morph.set(key = 1, towardX = 0, towardY = -1, target = 1f, now = 0L, motionScale = 0f)
+        morph.set(key = 2, towardX = -1, towardY = 0, target = 0.5f, now = 10L, motionScale = 1f)
         assertEquals(0f, morph.value(10L, 1f))
         morph.clear()
         assertEquals(-1, morph.key)

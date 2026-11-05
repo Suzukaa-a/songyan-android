@@ -14,7 +14,6 @@ import app.songyan.ime.ime.KeyboardView.Companion.FLICK_RETURN_DP
 import app.songyan.ime.ime.KeyboardView.Companion.NO_POINTER
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_GROW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_MAX_CHARS
-import app.songyan.ime.ime.KeyboardView.Companion.SWIPE_PREVIEW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.TOUCH_SLOP_DP
 import app.songyan.ime.ime.KeyboardView.Press
 import app.songyan.ime.layout.LayoutAction
@@ -365,13 +364,12 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         val y = event.getY(i)
         val tracker = press.tracker
         if (tracker != null) {
-            val changed =
-                tracker.update(
-                    ((x - press.startX) / density).toDouble(),
-                    ((y - press.startY) / density).toDouble(),
-                )
+            tracker.update(
+                ((x - press.startX) / density).toDouble(),
+                ((y - press.startY) / density).toDouble(),
+            )
             if (tracker.choice != null) press.moved = true
-            if (changed) updateSwipePreview(press)
+            swipeMove(press, (x - press.startX) / density, (y - press.startY) / density)
             continue
         }
         if (press.snapshot.railPosition >= 0) {
@@ -466,7 +464,7 @@ internal fun KeyboardView.flickMove(
             press.moved = false
         }
         val progress = if (press.flickArmed) 1f else KeyFlick.progress(travel, TOUCH_SLOP_DP * density, threshold)
-        showFlick(press, target, up, progress)
+        showFlick(press, target.label, 0, if (up) -1 else 1, progress)
         if (press.flickArmed) return
     }
     flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, flickDirection, false))
@@ -495,28 +493,55 @@ internal fun KeyboardView.flickVoid(
 }
 
 /**
- * Moves [press]'s key toward its hint. The bubble above the finger follows the same progress; it is
- * left out in an editor that must not echo what is typed.
+ * A merged key's sideways swipe turns the key into the letter it will type, as a flick does: once
+ * the drag is mostly sideways it grows from the return distance to the lock distance, and is whole
+ * while a letter is picked. [dx] and [dy] are the finger's offset in dp.
+ */
+internal fun KeyboardView.swipeMove(
+    press: Press,
+    dx: Float,
+    dy: Float,
+) {
+    val tracker = press.tracker ?: return
+    val letters = swipeLetters.getOrNull(press.key) ?: return
+    val left = dx < 0
+    val label = letters.getOrNull(if (left) 0 else letters.lastIndex) ?: return
+    val progress =
+        when {
+            tracker.choice != null -> 1f
+            !tracker.isLocked && abs(dx) <= abs(dy) -> 0f
+            else ->
+                KeyFlick.progress(
+                    abs(dx),
+                    LetterSwipeTracker.RETURN_DISTANCE.toFloat(),
+                    LetterSwipeTracker.LOCK_DISTANCE.toFloat(),
+                )
+        }
+    showFlick(press, label, if (left) -1 else 1, 0, progress)
+}
+
+/**
+ * Moves [press]'s key toward [target], what the gesture will type; the finger goes ([towardX],
+ * [towardY]). The bubble above the finger follows the same progress; it is left out in an editor
+ * that must not echo what is typed.
  */
 internal fun KeyboardView.showFlick(
     press: Press,
-    target: LayoutOption,
-    up: Boolean,
+    target: String,
+    towardX: Int,
+    towardY: Int,
     progress: Float,
 ) {
     val started = flickMorph.key == press.key
     if (!started && progress <= 0f) return
-    flickMorph.set(press.key, up, progress, SystemClock.uptimeMillis(), ImeMotion.scale)
+    flickMorph.set(press.key, towardX, towardY, progress, SystemClock.uptimeMillis(), ImeMotion.scale)
     invalidateKey(press.key)
     val layer = popupLayer ?: return
-    if (started) {
-        layer.updateFlick()
-        return
-    }
     if (previewSuppressed) return
     val bubble = previewBubble(press.key) ?: return
     val from = if (keyPreviewEnabled) labels.getOrNull(press.key)?.takeIf { it.length <= PREVIEW_MAX_CHARS } else null
-    layer.showFlick(flickMorph, from, target.label, bubble)
+    // A swipe that crosses to the other letter changes the target; the layer keeps its own label.
+    layer.showFlick(flickMorph, from, target, bubble)
 }
 
 /** Drops the flick drawing of [key], if it is the key being flicked. */
@@ -525,22 +550,6 @@ internal fun KeyboardView.endFlick(key: Int) {
     flickMorph.clear()
     popupLayer?.hideFlick()
     invalidateKey(key)
-}
-
-/** The swipe letter of a merged key, above the key while the finger has picked a side. */
-internal fun KeyboardView.updateSwipePreview(press: Press) {
-    val layer = popupLayer ?: return
-    val choice = press.tracker?.choice
-    val label = choice?.let { swipeLetters.getOrNull(press.key)?.getOrNull(it) }
-    val slot = bounds.getOrNull(press.key)
-    if (label == null || slot == null) {
-        layer.hideSwipe()
-        return
-    }
-    updateLayerOffset()
-    val size = SWIPE_PREVIEW_DP * density
-    val cap = toLayer(capBounds(slot))
-    layer.showSwipe(label, PopupGeometry.preview(cap, size, size, layer.width.toFloat(), 0f, 4 * density))
 }
 
 /**
@@ -642,7 +651,6 @@ internal fun KeyboardView.handleUp(
         if (press.held || !press.moved || press.tracker?.choice != null) onReleaseFeedback()
         pointers.remove(pointerId)
         popupLayer?.hidePreview(KeyMotion.PREVIEW_HOLD_MS)
-        popupLayer?.hideSwipe()
         invalidateKey(press.key)
     }
     performClick()
@@ -717,7 +725,6 @@ internal fun KeyboardView.cancelTouches() {
     clearPopup()
     flickMorph.clear()
     popupLayer?.hidePreview(0)
-    popupLayer?.hideSwipe()
     popupLayer?.hideFlick()
     setCursorDragging(false)
     stopAccessibilityRepeat()

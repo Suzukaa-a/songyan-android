@@ -583,7 +583,10 @@ class KeyboardView(
             val onAccent = (emphasized || railChosen) && !pressed
             val contentColor = if (onAccent) palette.accentText else palette.text
             val morph = if (flicked) flickMorph.value(now, motionScale) else 0f
-            val labelLayer = if (morph > 0f) beginFlickLabel(canvas, drawBounds, morph) else -1
+            // A flick turns the key into its hint; a merged key's sideways swipe into one of its letters.
+            val flick = if (flickMorph.towardY != 0) morph else 0f
+            val swipe = if (flickMorph.towardY == 0) morph else 0f
+            val labelLayer = if (flick > 0f) beginFlickLabel(canvas, drawBounds, flick) else -1
             when {
                 key.action.type == LayoutActionKind.SHIFT && !railKey -> drawShiftIcon(canvas, drawBounds, contentColor)
                 key.action.type == LayoutActionKind.BACKSPACE && !railKey ->
@@ -594,15 +597,35 @@ class KeyboardView(
                 else -> {
                     val syllable = syllableLines.getOrNull(i)
                     if (syllable == null) {
-                        drawKeyLabel(canvas, i, drawBounds, contentColor)
+                        if (swipe > 0f) {
+                            drawSwipeLetters(canvas, i, drawBounds, contentColor, false, flickMorph.towardX, swipe)
+                        } else {
+                            drawKeyLabel(canvas, i, drawBounds, contentColor)
+                        }
                     } else {
                         // The letter moves up so the hint line under it reads as its own.
                         liftedBounds.set(drawBounds)
                         liftedBounds.offset(0f, -SYLLABLE_LIFT_DP * density)
                         if (syllable.columns.size > 1 && labels[i].length == syllable.columns.size) {
-                            drawSpreadLetters(canvas, i, liftedBounds, contentColor)
+                            if (swipe > 0f) {
+                                drawSwipeLetters(canvas, i, liftedBounds, contentColor, true, flickMorph.towardX, swipe)
+                            } else {
+                                drawSpreadLetters(canvas, i, liftedBounds, contentColor)
+                            }
                         } else {
-                            drawKeyLabel(canvas, i, liftedBounds, contentColor)
+                            if (swipe > 0f) {
+                                drawSwipeLetters(
+                                    canvas,
+                                    i,
+                                    liftedBounds,
+                                    contentColor,
+                                    false,
+                                    flickMorph.towardX,
+                                    swipe,
+                                )
+                            } else {
+                                drawKeyLabel(canvas, i, liftedBounds, contentColor)
+                            }
                         }
                         drawSyllableHint(canvas, syllable, drawBounds)
                     }
@@ -611,8 +634,8 @@ class KeyboardView(
             if (labelLayer >= 0) canvas.restoreToCount(labelLayer)
             val hint = key.secondaryLabel
             if (!hint.isNullOrEmpty()) {
-                if (morph > 0f) {
-                    drawFlickHint(canvas, i, hint, drawBounds, contentColor, morph)
+                if (flick > 0f) {
+                    drawFlickHint(canvas, i, hint, drawBounds, contentColor, flick)
                 } else {
                     drawHint(canvas, i, hint, drawBounds)
                 }
@@ -937,9 +960,6 @@ class KeyboardView(
 
         /** The preview grows this much beyond the keycap on each side (dp). */
         const val PREVIEW_GROW_DP = 4f
-
-        /** The merged-key swipe letter bubble (dp). */
-        const val SWIPE_PREVIEW_DP = 46f
 
         /** Finger travel that turns a tap into a slide (dp). */
         const val TOUCH_SLOP_DP = 8f

@@ -138,7 +138,8 @@ internal object KeyFlick {
 }
 
 /**
- * The drawn progress of a key turning into its hint, shared by the keycap and the bubble above it.
+ * The drawn progress of a key turning into what a gesture will type (a flick's hint, a merged key's
+ * swiped letter), shared by the keycap and the bubble above it.
  *
  * The finger sets where it should be; the drawing eases there over [DURATION_MS], so the jump when
  * a flick arms (to 1) or is pulled back (to the finger's spot) is a short glide, not a cut. Only the
@@ -149,8 +150,10 @@ internal class FlickMorph {
     var key: Int = -1
         private set
 
-    /** The flick goes up: the label leaves upward and the hint comes in from below. */
-    var up: Boolean = true
+    /** The way the finger goes, one of -1, 0, 1 per axis: the label leaves that way, the target comes in behind it. */
+    var towardX: Int = 0
+        private set
+    var towardY: Int = -1
         private set
 
     private var from = 0f
@@ -159,7 +162,8 @@ internal class FlickMorph {
 
     fun set(
         key: Int,
-        up: Boolean,
+        towardX: Int,
+        towardY: Int,
         target: Float,
         now: Long,
         motionScale: Float,
@@ -170,7 +174,8 @@ internal class FlickMorph {
             to = 0f
             startedAt = now
         }
-        this.up = up
+        this.towardX = towardX
+        this.towardY = towardY
         if (target == to) return
         from = value(now, motionScale)
         to = target

@@ -47,7 +47,7 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_6
-          disable-animations: true
+          disable-animations: false
           script: |
             ./gradlew --console=plain -Psongyan.abis=x86_64 :benchmark:connectedBenchmarkReleaseAndroidTest
             python3 scripts/check-perf-budget.py benchmark/build/outputs/connected_android_test_additional_output/benchmarkRelease/connected/*/*benchmarkData.json

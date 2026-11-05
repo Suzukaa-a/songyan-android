@@ -1,10 +1,18 @@
 package app.songyan.ime.keyboard.engine
 
-/** What a schema's typing produces; it decides key names, punctuation and glyph forms. */
-enum class InputLanguage {
-    ZH_HANS,
-    ZH_HANT,
-    JA,
+/**
+ * What a schema's typing produces; it decides key names, punctuation and glyph forms.
+ *
+ * [languageTag] is the BCP-47 identifier whose glyph forms the language uses, for text runtimes
+ * that select localized glyphs from a locale: Chinese and Japanese share code points but not
+ * their shapes.
+ */
+enum class InputLanguage(
+    val languageTag: String,
+) {
+    ZH_HANS("zh-Hans"),
+    ZH_HANT("zh-Hant"),
+    JA("ja"),
 }
 
 /**

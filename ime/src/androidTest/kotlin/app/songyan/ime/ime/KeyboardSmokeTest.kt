@@ -39,7 +39,7 @@ class KeyboardSmokeTest {
                             commits += text
                             true
                         },
-                        preedit = {},
+                        preedit = { _, _ -> },
                         delete = {},
                         moveCursor = {},
                         action = {},
@@ -96,7 +96,7 @@ class KeyboardSmokeTest {
                     scope,
                     KeyboardController.Callbacks(
                         commit = { _, _ -> true },
-                        preedit = {},
+                        preedit = { _, _ -> },
                         delete = {},
                         moveCursor = {},
                         action = {},

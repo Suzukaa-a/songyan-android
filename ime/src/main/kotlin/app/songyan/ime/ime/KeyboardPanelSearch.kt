@@ -59,7 +59,7 @@ private const val RESULT_LIMIT = 40
 internal fun KeyboardController.Callbacks.routedThrough(search: () -> PanelSearchSink?): KeyboardController.Callbacks =
     copy(
         commit = { text, selected -> search()?.append(text)?.let { true } ?: commit(text, selected) },
-        preedit = { text -> if (search() == null) preedit(text) },
+        preedit = { text, language -> if (search() == null) preedit(text, language) },
         delete = { search()?.backspace() ?: delete() },
         moveCursor = { delta -> if (search() == null) moveCursor(delta) },
         action = { search()?.submit() ?: action() },

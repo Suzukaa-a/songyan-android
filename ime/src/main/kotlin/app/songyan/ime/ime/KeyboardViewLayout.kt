@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.os.LocaleList
 import app.songyan.ime.candidate.KeyboardWideContentPlan
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_HINT_TEXT_SIZE_SP
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_LABEL_TEXT_SIZE_SP
@@ -489,6 +490,8 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
 
 /** Layouts and labels are pure functions of the current keys and faces. */
 internal fun KeyboardView.applyKeyFaces() {
+    applyTextLanguage()
+
     swipeCodes = keys.map { key -> swipeConfig?.codesFor(key) }
     swipeLetters = keys.map { key -> swipeConfig?.lettersFor(key) }
     if (releases.size != keys.size) releases = LongArray(keys.size)
@@ -508,6 +511,19 @@ internal fun KeyboardView.applyKeyFaces() {
     }
     identities = KeyIdentity.list(keys, railIndices, labels)
     fitLabels()
+}
+
+/**
+ * Applies the running scheme's language to the paints that fit and draw key labels. The locale is
+ * materialised only when it changes: this pass runs on every relabel and must not allocate per key.
+ */
+private fun KeyboardView.applyTextLanguage() {
+    val language = faces.language
+    if (language == textLanguage) return
+    textLanguage = language
+    val locales = LocaleList.forLanguageTags(language.languageTag)
+    paint.setTextLocales(locales)
+    measurePaint.setTextLocales(locales)
 }
 
 /**

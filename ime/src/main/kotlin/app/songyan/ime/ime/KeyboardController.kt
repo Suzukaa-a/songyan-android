@@ -22,6 +22,7 @@ import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.ime.panels.QuickSettingsState
 import app.songyan.ime.keyboard.engine.CandidateReadingFilter
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.SpellingRailChoices
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -72,7 +73,7 @@ class KeyboardController(
 
     data class Callbacks(
         val commit: (String, Boolean) -> Boolean,
-        val preedit: (String) -> Unit,
+        val preedit: (String, InputLanguage) -> Unit,
         val delete: () -> Unit,
         val moveCursor: (Int) -> Unit,
         val action: () -> Unit,
@@ -626,7 +627,7 @@ class KeyboardController(
         mergedSwipe = null
         privateDirectInput = false
         closeKeyboardMenu()
-        callbacks.preedit("")
+        callbacks.preedit("", InputLanguage.ZH_HANS)
         render()
     }
 
@@ -750,7 +751,7 @@ class KeyboardController(
     fun discardComposition() {
         enqueue {
             session?.discardComposition()
-            callbacks.preedit("")
+            callbacks.preedit("", InputLanguage.ZH_HANS)
             render()
         }
     }
@@ -772,7 +773,7 @@ class KeyboardController(
         ready = false
         resetEnglishWord()
         session?.engine?.releaseWordCompletions()
-        callbacks.preedit("")
+        callbacks.preedit("", InputLanguage.ZH_HANS)
         closeKeyboardMenu()
         enqueue {
             session?.discardComposition()

@@ -2,16 +2,21 @@ package app.songyan.ime.ime
 
 import android.content.ClipboardManager
 import android.os.Build
+import android.os.LocaleList
 import android.os.SystemClock
 import android.os.Trace
 import android.text.InputType
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.LocaleSpan
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.TextAttribute
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.SettingsTarget
 import java.text.BreakIterator
 
@@ -34,6 +39,14 @@ class EditorConnection(
 
     /** The composition text this connection last wrote into the editor. */
     private var composingText = ""
+
+    /**
+     * Input language of the composition and its locale list, built only when the language changes.
+     * The list is attached to the marked text as a LocaleSpan so a framework editor can pick that
+     * language's glyph forms; every input language, simplified Chinese included, carries its own.
+     */
+    private var composingLanguage: InputLanguage? = null
+    private var composingLocales: LocaleList? = null
 
     /** The editor is not a text editor (`TYPE_NULL`, terminals): it only understands key events. */
     var keyEventEditor = false
@@ -80,6 +93,7 @@ class EditorConnection(
         preedit: String,
         commits: List<String>,
         selectedCandidate: Boolean = false,
+        language: InputLanguage = InputLanguage.ZH_HANS,
     ): Boolean {
         if (preedit.isEmpty() && commits.isEmpty()) {
             abandon()
@@ -106,12 +120,17 @@ class EditorConnection(
                 }
             }
             if (preedit.isNotEmpty()) {
+                if (language != composingLanguage) {
+                    composingLanguage = language
+                    composingLocales = LocaleList.forLanguageTags(language.languageTag)
+                }
+                val composingText = preeditWithLanguage(preedit)
                 // Android 17: mark the composing text of a candidate selection for CJKV
                 // accessibility; the flag is only meaningful on that platform, so fail closed.
                 if (Build.VERSION.SDK_INT >= 33 && attribute != null) {
-                    ic.setComposingText(preedit, 1, attribute)
+                    ic.setComposingText(composingText, 1, attribute)
                 } else {
-                    ic.setComposingText(preedit, 1)
+                    ic.setComposingText(composingText, 1)
                 }
             } else if (composing && commits.isEmpty()) {
                 ic.setComposingText("", 1)
@@ -125,6 +144,18 @@ class EditorConnection(
             ic.endBatchEdit()
         }
         return accepted
+    }
+
+    /**
+     * [preedit] with the composition language attached: a framework editor applies the span's
+     * TextPaint locale while it measures and draws the marked range, so that language's glyph
+     * forms are used. An editor with its own text engine may drop the spans.
+     */
+    private fun preeditWithLanguage(preedit: String): CharSequence {
+        val locales = composingLocales ?: return preedit
+        return SpannableString(preedit).apply {
+            setSpan(LocaleSpan(locales), 0, preedit.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     /**
@@ -710,7 +741,7 @@ fun EditorConnection.keyboardCallbacks(
 ): KeyboardController.Callbacks =
     KeyboardController.Callbacks(
         commit = { text, selected -> update("", listOf(text), selected).also { if (it) onCommitted(text) } },
-        preedit = { text -> update(text, emptyList()) },
+        preedit = { text, language -> update(text, emptyList(), language = language) },
         delete = { delete() },
         moveCursor = { moveCursor(it) },
         action = action,

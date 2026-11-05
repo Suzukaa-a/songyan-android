@@ -35,6 +35,10 @@ internal fun KeyboardController.render() {
         }
     val marked = compositionText(active, snapshot)
     lastMarked = marked
+    // The cached profile of the running scheme decides the glyph forms of the bar, the keys and
+    // the composing text; it is read once here and never recomputed on the key path.
+    val language = active?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    candidates.language = language
     // A chosen reading narrows what the bar lists to the real candidates that read that way.
     candidatesFiltered = readingFilterShowing(active)
     // Only the engine's own menu is read further page by page; suggestions and a reading filter's
@@ -52,10 +56,9 @@ internal fun KeyboardController.render() {
     if (dispatchGeneration == generation &&
         active != null
     ) {
-        callbacks.preedit(if (snapshot.isComposing) marked else "")
+        callbacks.preedit(if (snapshot.isComposing) marked else "", language)
     }
     val english = englishNow()
-    val language = active?.inputLanguage?.language ?: InputLanguage.ZH_HANS
     val currentPage = if (policy.numeric) KeyboardPageKind.NUMERIC else page
     val marksAscii = asciiMarksNow
     val catalog = KeyboardLayoutCatalog.snapshot.value

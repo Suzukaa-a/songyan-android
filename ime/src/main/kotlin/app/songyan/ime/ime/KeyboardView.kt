@@ -110,6 +110,9 @@ class KeyboardView(
 
     internal val keyNames = KeyNames(context)
     internal var faces = KeyboardFaces()
+
+    /** Input language the key paints last applied; null until the first face pass. */
+    internal var textLanguage: InputLanguage? = null
     internal var shifted = false
     internal var capsLocked = false
     internal var releases = LongArray(0)

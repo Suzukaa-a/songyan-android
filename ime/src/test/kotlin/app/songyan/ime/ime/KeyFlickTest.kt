@@ -31,7 +31,7 @@ class KeyFlickTest {
         snapshot: KeyPressSnapshot,
         direction: FlickDirection = FlickDirection.UP,
         digit: String? = null,
-    ) = KeyFlick.target(snapshot, direction, digit, (snapshot.swipeCodes?.size ?: 0) > 1)
+    ) = KeyFlick.target(snapshot, direction, digit)
 
     @Test
     fun `the flick types the hint drawn on the key, either way it is set`() {
@@ -64,16 +64,18 @@ class KeyFlickTest {
     }
 
     @Test
-    fun `a merged key keeps its sideways swipes`() {
-        assertNull(target(snapshot(listOf(first, second), swipeCodes = listOf("q", "w"))))
+    fun `a merged key flicks its hint as well as swiping`() {
+        val partner = LayoutOption("w", LayoutAction.code("w"))
+        val key = snapshot(listOf(partner, first, second), hint = "，", swipeCodes = listOf("q", "w"))
+        assertEquals(first, target(key))
     }
 
     @Test
     fun `the setting off removes the flick`() {
         val key = snapshot(listOf(first, second))
         assertNull(target(key, FlickDirection.OFF))
-        assertFalse(KeyFlick.eligible(key, FlickDirection.OFF, false))
-        assertTrue(KeyFlick.eligible(key, FlickDirection.DOWN, false))
+        assertFalse(KeyFlick.eligible(key, FlickDirection.OFF))
+        assertTrue(KeyFlick.eligible(key, FlickDirection.DOWN))
     }
 
     @Test

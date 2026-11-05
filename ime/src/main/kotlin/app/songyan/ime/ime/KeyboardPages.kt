@@ -623,13 +623,13 @@ internal object KeyboardPages {
 
     /**
      * A letter key on the Chinese page carries the long-press marks of the iOS alternate policy and
-     * shows the first one in its corner (a: "，", s: "。", d: "？" ...). A merged pair keeps its
-     * partner letter as the first alternate and shows no mark; a single letter on a merged layout is
-     * completed the same way as on the 26-key page.
+     * shows the first one in its corner (a: "，", s: "。", d: "？" ...). A single letter on a merged
+     * layout is completed the same way as on the 26-key page.
      */
     private fun chineseLetterKey(key: LayoutKey): LayoutKey {
         val label = key.label
-        if (key.action.type != LayoutActionKind.CODE || label.length != 1 || !label[0].isLetter()) return key
+        if (key.action.type != LayoutActionKind.CODE || label.isEmpty() || !label.all { it.isLetter() }) return key
+        if (label.length > 1) return mergedPairKey(key)
         val policy =
             AlternateKeyPolicy.options(
                 AlternateKeyPolicy.Request(
@@ -649,6 +649,20 @@ internal object KeyboardPages {
             secondaryLabel = key.secondaryLabel ?: options.firstOrNull()?.label,
             longPress = options.ifEmpty { null },
         )
+    }
+
+    /**
+     * A merged pair keeps its partner letter as the first alternate and adds its pair's marks
+     * after it. The corner shows the first mark unless the layout's own hint is one of the
+     * alternates: a flick types only an alternate the corner shows, so a decorative hint like
+     * the QW key's "1 !" gives way to "1".
+     */
+    private fun mergedPairKey(key: LayoutKey): LayoutKey {
+        val marks = AlternateKeyPolicy.mergedPairLiterals(key.label)
+        if (marks.isEmpty()) return key
+        val options = (key.longPress.orEmpty() + marks.map { option(it) }).distinctBy { it.label }
+        val hint = key.secondaryLabel?.takeIf { hint -> options.any { it.label == hint } } ?: marks.first()
+        return key.copy(secondaryLabel = hint, longPress = options)
     }
 
     private const val MERGED_KEY_HINT = "合并键"

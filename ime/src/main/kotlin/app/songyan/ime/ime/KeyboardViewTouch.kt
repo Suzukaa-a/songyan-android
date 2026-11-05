@@ -364,12 +364,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         val y = event.getY(i)
         val tracker = press.tracker
         if (tracker != null) {
-            tracker.update(
-                ((x - press.startX) / density).toDouble(),
-                ((y - press.startY) / density).toDouble(),
-            )
-            if (tracker.choice != null) press.moved = true
-            swipeMove(press, (x - press.startX) / density, (y - press.startY) / density)
+            mergedMove(press, tracker, x, y)
             continue
         }
         if (press.snapshot.railPosition >= 0) {
@@ -434,10 +429,8 @@ internal fun KeyboardView.flickDigit(snapshot: KeyPressSnapshot): String? {
 }
 
 /** What a flick on this key types under the current setting: its drawn hint, or nothing. */
-internal fun KeyboardView.flickTarget(
-    snapshot: KeyPressSnapshot,
-    merged: Boolean = (snapshot.swipeCodes?.size ?: 0) > 1,
-): LayoutOption? = KeyFlick.target(snapshot, flickDirection, flickDigit(snapshot), merged)
+internal fun KeyboardView.flickTarget(snapshot: KeyPressSnapshot): LayoutOption? =
+    KeyFlick.target(snapshot, flickDirection, flickDigit(snapshot))
 
 /**
  * The vertical flick of a character key, the configured way only. Past the touch slop the key
@@ -467,7 +460,7 @@ internal fun KeyboardView.flickMove(
         showFlick(press, target.label, 0, if (up) -1 else 1, progress)
         if (press.flickArmed) return
     }
-    flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, flickDirection, false))
+    flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, flickDirection))
 }
 
 /**
@@ -490,6 +483,30 @@ internal fun KeyboardView.flickVoid(
             press.moved = false
         }
     }
+}
+
+/**
+ * A merged key picks a letter sideways and flicks vertically, whichever way the finger first goes
+ * clearly: a swipe that locked ignores vertical travel, and a flick that armed or voided the press
+ * ignores sideways travel, as on any other key.
+ */
+internal fun KeyboardView.mergedMove(
+    press: Press,
+    tracker: LetterSwipeTracker,
+    x: Float,
+    y: Float,
+) {
+    val dx = (x - press.startX) / density
+    val dy = (y - press.startY) / density
+    if (!press.flickArmed && !press.flickVoid) {
+        tracker.update(dx.toDouble(), dy.toDouble())
+        if (tracker.choice != null) press.moved = true
+        if (tracker.isLocked || abs(dx) > abs(dy)) {
+            swipeMove(press, dx, dy)
+            return
+        }
+    }
+    if (popupKey < 0 && !press.held) flickMove(press, y)
 }
 
 /**

@@ -1367,6 +1367,17 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun anUpwardFlickOnAMergedKeyTypesTheMarkItShows() {
+        for ((layout, pair, mark) in listOf(Triple("merged14", "df", "。"), Triple("merged18", "fg", "？"))) {
+            withHost(layout = layout) { host ->
+                host.start()
+                flickKey(host, pair, -30f)
+                host.awaitField(mark)
+            }
+        }
+    }
+
+    @Test
     fun aShortVerticalJitterOnALetterKeyStillTypesTheLetter() =
         withHost { host ->
             host.start()

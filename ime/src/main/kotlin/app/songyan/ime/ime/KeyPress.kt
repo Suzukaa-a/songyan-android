@@ -100,15 +100,13 @@ internal object KeyFlick {
      * the drawn hint. A hint without a matching option (a layout's decorative label) types nothing.
      *
      * @param digit the digit a nine-key digit key shows and types, which needs no long-press option
-     * @param merged the key is a merged key whose sideways swipes pick letters
      */
     fun target(
         snapshot: KeyPressSnapshot,
         direction: FlickDirection,
         digit: String?,
-        merged: Boolean,
     ): LayoutOption? {
-        if (!eligible(snapshot, direction, merged)) return null
+        if (!eligible(snapshot, direction)) return null
         if (digit != null) return LayoutOption(digit, LayoutAction.literal(digit))
         val hint = snapshot.hint?.takeIf { it.isNotEmpty() } ?: return null
         return snapshot.longPress.firstOrNull { it.label == hint }
@@ -118,9 +116,8 @@ internal object KeyFlick {
     fun eligible(
         snapshot: KeyPressSnapshot,
         direction: FlickDirection,
-        merged: Boolean,
     ): Boolean {
-        if (direction == FlickDirection.OFF || merged) return false
+        if (direction == FlickDirection.OFF) return false
         if (snapshot.railLabel != null || snapshot.railPosition >= 0) return false
         val type = snapshot.action.type
         return type == LayoutActionKind.CODE || type == LayoutActionKind.LITERAL

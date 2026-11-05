@@ -216,7 +216,7 @@ class RealEngineEditorTest {
                     .first()
                     .text,
             )
-            host.longPressCandidate("鱼我")
+            host.longPressBarItem("鱼我")
             // The hold's release left the word's menu, not the character strip.
             assertEquals(listOf(host.string(R.string.ime_candidate_delete_word)), host.barLabels())
             host.main {
@@ -259,7 +259,7 @@ class RealEngineEditorTest {
                     .candidates
                     .first()
                     .text
-            host.longPressCandidate(first)
+            host.longPressBarItem(first)
             host.tap(host.string(R.string.ime_candidate_delete_word), bar = true)
             host.awaitIdle()
             assertEquals(
@@ -280,7 +280,7 @@ class RealEngineEditorTest {
             for (key in "nihao") host.tap(key.toString())
             host.awaitComposing()
             val before = host.text()
-            host.longPressCandidate("你好")
+            host.longPressBarItem("你好")
             // Whatever is left on screen after the release, touching the candidate again must only
             // close it: no character of the long-pressed word is typed.
             host.tapBarAt("你好")
@@ -371,6 +371,43 @@ class RealEngineEditorTest {
             assertEquals("", host.text())
             assertTrue("the toolbar is back", host.toolbarLabelsNow().isNotEmpty())
         }
+
+    @Test
+    fun holdingExpandedBackspaceStopsWhenCandidatesClose() =
+        withHost { host ->
+            host.start(initial = "abc")
+            for (key in "jiu") host.tap(key.toString())
+            host.awaitField("abcjiu")
+            host.tap(host.string(R.string.ime_expand), bar = true)
+            host.awaitIdle()
+            host.longPressBarItem(
+                host.string(R.string.ime_delete),
+                ViewConfiguration.getLongPressTimeout() + 1_200L,
+            )
+            host.awaitField("abcj")
+            assertFalse(host.main2 { host.find(CandidateBarView::class.java).expanded })
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("abc")
+            host.tap("n")
+            host.tap("i")
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField("abc你")
+        }
+
+    @Test
+    fun cancelingExpandedBackspaceStopsBeforeRepeat() {
+        for (cancelAction in listOf(MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_MOVE)) {
+            withHost { host ->
+                host.start(initial = "abc")
+                for (key in "jiu") host.tap(key.toString())
+                host.awaitField("abcjiu")
+                host.tap(host.string(R.string.ime_expand), bar = true)
+                host.awaitIdle()
+                host.cancelBarPress(host.string(R.string.ime_delete), cancelAction)
+                host.awaitField("abcji")
+            }
+        }
+    }
 
     @Test
     fun anIdleSpaceTypesASpace() =
@@ -2415,12 +2452,30 @@ class RealEngineEditorTest {
             return center
         }
 
-        /** Holds a finger on the candidate [text] past the long-press time, then lifts it without moving. */
-        fun longPressCandidate(text: String) {
+        /** Holds a candidate or fixed control, then lifts without moving. */
+        fun longPressBarItem(
+            text: String,
+            holdMs: Long = ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS,
+        ) {
             val center = barItemCenter(text)
             lastBarPoint = center
             val start = SystemClock.uptimeMillis()
             main { touchBar(start, MotionEvent.ACTION_DOWN, center, start) }
+            SystemClock.sleep(holdMs)
+            main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
+            awaitIdle()
+        }
+
+        fun cancelBarPress(
+            label: String,
+            cancelAction: Int,
+        ) {
+            val center = barItemCenter(label)
+            val start = SystemClock.uptimeMillis()
+            main { touchBar(start, MotionEvent.ACTION_DOWN, center, start) }
+            awaitIdle()
+            val point = if (cancelAction == MotionEvent.ACTION_MOVE) -1f to -1f else center
+            main { touchBar(SystemClock.uptimeMillis(), cancelAction, point, start) }
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
             main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
             awaitIdle()

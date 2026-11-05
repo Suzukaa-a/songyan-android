@@ -32,7 +32,7 @@ internal fun CandidateBarView.activateControl(localIndex: Int) {
     when (controls.getOrNull(localIndex)) {
         Control.EXPAND -> setExpanded(true)
         Control.BACK -> setExpanded(false)
-        Control.BACKSPACE -> onBackspace()
+        Control.BACKSPACE -> onBackspace(snapshot.isComposing)
         Control.RETYPE -> onRetype()
         null -> Unit
     }
@@ -46,6 +46,7 @@ internal fun CandidateBarView.commitPopupCharacter(index: Int) {
 }
 
 internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
+    ui.removeCallbacks(repeatBackspace)
     gestureX = event.x
     gestureY = event.y
     scrollingGesture = false
@@ -93,6 +94,11 @@ internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
         downControl = hit - entries.size
     }
     if (down >= 0 || downReading >= 0 || downControl >= 0) onPressFeedback()
+    if (controls.getOrNull(downControl) == Control.BACKSPACE) {
+        backspaceStartedComposing = snapshot.isComposing
+        onBackspace(backspaceStartedComposing)
+        if (canRepeatBackspace) ui.postDelayed(repeatBackspace, ViewConfiguration.getLongPressTimeout().toLong())
+    }
     // A new touch may try a read that failed before, once.
     pages.resume()
     scrollingReadings = false
@@ -116,6 +122,13 @@ internal fun CandidateBarView.onMove(event: MotionEvent): Boolean {
                 invalidate()
             }
         }
+        return true
+    }
+    if (controls.getOrNull(downControl) == Control.BACKSPACE &&
+        hitTest(event.x, event.y) != entries.size + downControl
+    ) {
+        cancelPress()
+        invalidate()
         return true
     }
     val position = if (expanded) event.y else event.x
@@ -172,6 +185,7 @@ internal fun CandidateBarView.canOverscroll(): Boolean = snapshot.candidates.isN
 
 internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     ui.removeCallbacks(longPress)
+    ui.removeCallbacks(repeatBackspace)
     velocity?.addMovement(event)
     if (menu != null) {
         val open = menu
@@ -237,7 +251,8 @@ internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
             ImePerf.commitStart()
             onCandidate(choice)
         }
-    } else if (control >= 0 && hit == entries.size + control) {
+    } else if (control >= 0 && hit == entries.size + control && controls.getOrNull(control) != Control.BACKSPACE) {
+        // Delete already acted on DOWN; lifting never adds another deletion.
         // Expansion is bound to the same list revision as a selection.
         if (downRevision == listRevision) activateControl(control)
     }

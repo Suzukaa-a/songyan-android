@@ -138,9 +138,14 @@ internal fun KeyboardController.wireViews() {
         val fallback = (keyAreaHeightDp * context.resources.displayMetrics.density).toInt()
         bandRow.height + (keyboard.height.takeIf { it > 0 } ?: fallback)
     }
-    candidates.onBackspace = {
-        BackspaceTrace.record(BackspaceTrace.Event.CANDIDATE_BAR_DELETE, composing = true)
-        enqueueKey(LayoutAction(LayoutActionKind.BACKSPACE))
+    candidates.onBackspace = { startedComposing ->
+        BackspaceTrace.record(BackspaceTrace.Event.CANDIDATE_BAR_DELETE, composing = startedComposing)
+        enqueue {
+            // A queued repeat must not spill into committed text after its composition ends.
+            if (ready && engineNotice == null && (!startedComposing || session?.snapshot?.isComposing == true)) {
+                dispatch(LayoutAction(LayoutActionKind.BACKSPACE))
+            }
+        }
     }
     candidates.onRetype = { enqueueKey(LayoutAction(LayoutActionKind.CLEAR_INPUT)) }
     candidates.onLoadMore = { revision, page ->

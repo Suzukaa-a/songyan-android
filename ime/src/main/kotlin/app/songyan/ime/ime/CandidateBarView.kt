@@ -190,6 +190,7 @@ class CandidateBarView(
     internal val viewport = Rect()
     internal var down = -1
     internal var downControl = -1
+    internal var backspaceStartedComposing = false
 
     /** The revision of the list on screen; a replaced list gets a new one, a grown list keeps it. */
     internal val listRevision: Int get() = pages.revision
@@ -261,7 +262,7 @@ class CandidateBarView(
      * [page] read-only and hand it to [appendPage] (or [loadFailed]) with the same [revision].
      */
     var onLoadMore: (revision: Int, page: Int) -> Unit = { _, _ -> }
-    var onBackspace: () -> Unit = {}
+    var onBackspace: (startedComposing: Boolean) -> Unit = {}
     var onRetype: () -> Unit = {}
 
     /** Scroll offset in px: horizontal while collapsed, vertical while expanded; 0 is the start. */
@@ -361,6 +362,21 @@ class CandidateBarView(
     /** Delayed work runs on the main looper directly, so it also runs for a view not yet attached. */
     internal val ui = Handler(Looper.getMainLooper())
 
+    internal val canRepeatBackspace: Boolean
+        get() =
+            expanded &&
+                controls.getOrNull(downControl) == Control.BACKSPACE &&
+                (!backspaceStartedComposing || snapshot.isComposing)
+
+    internal val repeatBackspace =
+        object : Runnable {
+            override fun run() {
+                if (!canRepeatBackspace) return
+                onBackspace(backspaceStartedComposing)
+                if (canRepeatBackspace) ui.postDelayed(this, KeyboardView.BACKSPACE_REPEAT_MS)
+            }
+        }
+
     internal val longPress =
         Runnable {
             val press = pressed ?: return@Runnable
@@ -390,9 +406,10 @@ class CandidateBarView(
             invalidate()
         }
 
-    /** Breaks a long-press delay if the finger moves before the popup opens. */
+    /** No hold survives the pointer leaving its control or the control disappearing. */
     internal fun cancelPress() {
         ui.removeCallbacks(longPress)
+        ui.removeCallbacks(repeatBackspace)
         downReading = -1
         beginFade(down, downControl)
         pressed = null
@@ -628,6 +645,7 @@ class CandidateBarView(
     }
 
     internal fun setExpanded(value: Boolean) {
+        if (expanded != value) cancelPress()
         expanded = value
         if (value) expandedHeightPx = expandedHeight()
         scroll = 0f
@@ -693,7 +711,7 @@ class CandidateBarView(
     }
 
     override fun onDetachedFromWindow() {
-        ui.removeCallbacks(longPress)
+        cancelPress()
         ui.removeCallbacks(clearNotice)
         revealAnimator?.cancel()
         revealAnimator = null
@@ -929,6 +947,9 @@ class CandidateBarView(
             MotionEvent.ACTION_DOWN -> return onDown(event)
             MotionEvent.ACTION_MOVE -> return onMove(event)
             MotionEvent.ACTION_UP -> return onUp(event)
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                if (controls.getOrNull(downControl) == Control.BACKSPACE) cancelPress()
+            }
             MotionEvent.ACTION_CANCEL -> {
                 cancelPress()
                 scrollingGesture = false

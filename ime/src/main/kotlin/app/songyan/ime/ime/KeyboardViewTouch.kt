@@ -337,20 +337,24 @@ internal fun KeyboardView.showPopup(
 ) {
     popupOptions = options
     popupIndex = 0
-    popupLayer?.hidePreview(0)
     updateLayerOffset()
     val layer = popupLayer
     val layerWidth = layer?.width?.toFloat()?.takeIf { it > 0f } ?: (width.toFloat() + layerOffset[0])
+    val singleBubble = if (options.size == 1) previewBubble(popupKey) else null
     val geometry =
-        PopupGeometry.alternates(
-            anchor = toLayer(capBounds(slot)),
-            count = options.size,
-            cellWidth = metrics.popupCellWidthDp * density,
-            cellHeight = metrics.popupCellHeightDp * density,
-            layerWidth = layerWidth,
-            layerTop = 0f,
-            gap = PopupGeometry.GAP_DP * density,
-        )
+        if (singleBubble != null) {
+            PopupGeometry.Alternates(singleBubble, false)
+        } else {
+            PopupGeometry.alternates(
+                anchor = toLayer(capBounds(slot)),
+                count = options.size,
+                cellWidth = metrics.popupCellWidthDp * density,
+                cellHeight = metrics.popupCellHeightDp * density,
+                layerWidth = layerWidth,
+                layerTop = 0f,
+                gap = PopupGeometry.GAP_DP * density,
+            )
+        }
     popupBounds = fromLayer(geometry.bounds)
     popupMirrored = geometry.mirrored
     layer?.open(options.map { it.label }, geometry, 0)

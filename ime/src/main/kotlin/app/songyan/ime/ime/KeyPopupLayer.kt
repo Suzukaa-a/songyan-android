@@ -41,6 +41,8 @@ internal class KeyPopupLayer(
     private var previousSelected = -1
     private var selectedAt = 0L
     private var openedAt = 0L
+    private var openingBounds: KeyBounds? = null
+    private var openingLabel: String? = null
     private var closedAt = 0L
 
     private var flick: FlickMorph? = null
@@ -128,7 +130,17 @@ internal class KeyPopupLayer(
         geometry: PopupGeometry.Alternates,
         selectedIndex: Int,
     ) {
+        openingBounds =
+            if (previewLabel != null) {
+                previewBounds
+            } else if (flick != null) {
+                flickBounds
+            } else {
+                null
+            }
+        openingLabel = previewLabel ?: flickTo.takeIf { flick != null }
         clearPreview()
+        hideFlick()
         if (labels.isNotEmpty()) dirty(popup)
         labels = options
         popup = geometry.bounds
@@ -149,7 +161,7 @@ internal class KeyPopupLayer(
         dirty(popup)
     }
 
-    /** Closes the popup: faded out over 80 ms, or at once when [animated] is false. */
+    /** Closes the popup with the bubble timing, or at once when [animated] is false. */
     fun close(animated: Boolean) {
         if (labels.isEmpty()) return
         if (animated && ImeMotion.scale > 0f) {
@@ -168,6 +180,9 @@ internal class KeyPopupLayer(
         previousSelected = -1
         closedAt = 0L
         openedAt = 0L
+        openingBounds?.let { dirty(it) }
+        openingBounds = null
+        openingLabel = null
         dirty(gone)
     }
 
@@ -267,7 +282,7 @@ internal class KeyPopupLayer(
         now: Long,
     ) {
         val morph = flick ?: return
-        val motion = ImeMotion.scale
+        val motion = ImeMotion.scale * 0.8f
         val progress = morph.value(now, motion)
         if (morph.animating(now, motion)) frame(flickBounds)
         val from = flickFrom
@@ -303,20 +318,35 @@ internal class KeyPopupLayer(
         scale: Float,
         alpha: Float,
     ): Int {
+        scaled(bounds, scale)
+        return drawBubbleSurface(canvas, alpha)
+    }
+
+    private fun drawBubbleSurface(
+        canvas: Canvas,
+        alpha: Float,
+    ): Int {
         val metrics = palette.tokens
         val channel = (255 * alpha).toInt().coerceIn(0, 255)
-        scaled(bounds, scale)
         paint.style = Paint.Style.FILL
         paint.color = ColorUtils.setAlphaComponent(palette.popupBackground, channel)
         paint.setShadowLayer(
-            metrics.popupElevationDp * density,
+            (metrics.popupElevationDp + 1f) * density,
             0f,
             2 * density,
-            ColorUtils.setAlphaComponent(palette.popupShadow, (Color.alpha(palette.popupShadow) * alpha).toInt()),
+            ColorUtils.setAlphaComponent(
+                palette.popupShadow,
+                (Color.alpha(palette.popupShadow) * alpha * 1.3f).toInt().coerceAtMost(255),
+            ),
         )
         val radius = metrics.popupRadiusDp * density
         canvas.drawRoundRect(box, radius, radius, paint)
         paint.clearShadowLayer()
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 0.75f * density
+        paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * 0.18f).toInt())
+        canvas.drawRoundRect(box, radius, radius, paint)
+        paint.style = Paint.Style.FILL
         return channel
     }
 
@@ -325,7 +355,7 @@ internal class KeyPopupLayer(
         now: Long,
     ) {
         val metrics = palette.tokens
-        val motion = ImeMotion.scale
+        val motion = ImeMotion.scale * 0.8f
         val closing = closedAt > 0L
         val scale: Float
         val alpha: Float
@@ -336,28 +366,44 @@ internal class KeyPopupLayer(
                 clearPopup()
                 return
             }
-            scale = KeyMotion.popupCloseScale(progress)
+            scale = if (labels.size == 1) 1f else KeyMotion.popupCloseScale(progress)
             alpha = KeyMotion.popupCloseAlpha(progress)
             animating = true
         } else {
             val value = KeyMotion.popupOpenValue(now, openedAt, motion)
-            scale = KeyMotion.popupScale(value)
-            alpha = KeyMotion.popupAlpha(value)
+            scale = if (labels.size == 1 || openingBounds != null) 1f else KeyMotion.popupScale(value)
+            alpha = if (openingBounds != null) 1f else KeyMotion.popupAlpha(value)
             animating = KeyMotion.popupOpening(now, openedAt, motion)
         }
-        val channel = (255 * alpha).toInt().coerceIn(0, 255)
         scaled(popup, scale)
+        val reveal = if (closing) 1f else KeyMotion.popupOpenValue(now, openedAt, motion).coerceIn(0f, 1f)
+        // Only the drawn surface grows; popupBounds in the key view stays fixed for picking.
+        if (!closing && labels.size > 1) {
+            openingBounds?.let { start ->
+                box.set(
+                    start.left + (box.left - start.left) * reveal,
+                    start.top + (box.top - start.top) * reveal,
+                    start.right + (box.right - start.right) * reveal,
+                    start.bottom + (box.bottom - start.bottom) * reveal,
+                )
+            }
+        }
+        val channel = drawBubbleSurface(canvas, alpha)
+        if (labels.size == 1) {
+            paint.textAlign = Paint.Align.CENTER
+            paint.textSize = metrics.keyLabelTextSizeSp * textScale * PREVIEW_TEXT_SCALE
+            val baseline = box.centerY() - (paint.ascent() + paint.descent()) / 2
+            openingLabel?.takeIf { !closing && reveal < 1f }?.let { previous ->
+                paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * (1f - reveal)).toInt())
+                canvas.drawText(previous, box.centerX(), baseline, paint)
+            }
+            val emphasis = if (selected >= 0) 1f else 0.45f
+            paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * reveal * emphasis).toInt())
+            canvas.drawText(labels[0], box.centerX(), baseline, paint)
+            if (animating) frame(popup)
+            return
+        }
         val radius = metrics.popupRadiusDp * density
-        paint.style = Paint.Style.FILL
-        paint.color = ColorUtils.setAlphaComponent(palette.popupBackground, channel)
-        paint.setShadowLayer(
-            metrics.popupElevationDp * density,
-            0f,
-            2 * density,
-            ColorUtils.setAlphaComponent(palette.popupShadow, (Color.alpha(palette.popupShadow) * alpha).toInt()),
-        )
-        canvas.drawRoundRect(box, radius, radius, paint)
-        paint.clearShadowLayer()
         val cell = box.width() / labels.size
         val fade = KeyMotion.highlightProgress(now, selectedAt, motion)
         if (fade < 1f) animating = true
@@ -368,8 +414,7 @@ internal class KeyPopupLayer(
         canvas.clipPath(clip)
         highlight(canvas, selected, cell, channel, fade)
         if (previousSelected >= 0) highlight(canvas, previousSelected, cell, channel, 1f - fade)
-        canvas.restore()
-        paint.color = ColorUtils.setAlphaComponent(palette.text, channel)
+        paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * reveal).toInt())
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = metrics.keyLabelTextSizeSp * textScale
         for (cellIndex in labels.indices) {
@@ -381,7 +426,11 @@ internal class KeyPopupLayer(
                 paint,
             )
         }
-        if (animating) frame(popup)
+        canvas.restore()
+        if (animating) {
+            frame(popup)
+            openingBounds?.let { frame(it) }
+        }
     }
 
     private fun highlight(

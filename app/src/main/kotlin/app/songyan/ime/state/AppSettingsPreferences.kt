@@ -25,7 +25,7 @@ class AppSettingsPreferences(
     override val longPressDelayMs: Flow<Int?> = preferences.longPressDelayMs
     override val showSwitchKey: Flow<Boolean> = preferences.showSwitchKey
     override val keyPreview: Flow<Boolean> = preferences.keyPreview
-    override val keyFlick: Flow<Boolean> = preferences.keyFlick
+    override val keyFlickDirection: Flow<String> = preferences.keyFlickDirection
     override val doubleSpacePeriod: Flow<Boolean> = preferences.doubleSpacePeriod
     override val hideIdleToolbar: Flow<Boolean> = preferences.hideIdleToolbar
     override val releaseHaptic: Flow<Boolean> = preferences.releaseHaptic
@@ -71,7 +71,7 @@ class AppSettingsPreferences(
 
     override suspend fun setKeyPreview(value: Boolean) = preferences.setKeyPreview(value)
 
-    override suspend fun setKeyFlick(value: Boolean) = preferences.setKeyFlick(value)
+    override suspend fun setKeyFlickDirection(value: String) = preferences.setKeyFlickDirection(value)
 
     override suspend fun setDoubleSpacePeriod(value: Boolean) = preferences.setDoubleSpacePeriod(value)
 

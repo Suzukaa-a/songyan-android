@@ -264,7 +264,7 @@ class KeyboardPagesTest {
     fun mergedKeyCornerJargonIsNeverDrawn() {
         val definition = KeyboardPages.definition(null, letters.copy(layout = KeyboardLayoutKind.MERGED14))
         assertTrue(definition.rows.flatMap { it.keys }.none { it.secondaryLabel == "合并键" })
-        assertEquals("1 !", definition.rows[0].keys[0].secondaryLabel)
+        assertEquals("1", definition.rows[0].keys[0].secondaryLabel)
     }
 
     @Test
@@ -390,6 +390,28 @@ class KeyboardPagesTest {
                 .flatMap { it.keys }
                 .first { it.label == "l" }
         assertEquals("，", l.longPress?.first()?.label)
+    }
+
+    @Test
+    fun mergedPairsShowAMarkTheirLongPressTypes() {
+        fun pair(
+            layout: KeyboardLayoutKind,
+            label: String,
+        ) = KeyboardPages
+            .definition(null, letters.copy(layout = layout))
+            .rows
+            .take(3)
+            .flatMap { it.keys }
+            .first { it.label == label }
+        val df = pair(KeyboardLayoutKind.MERGED14, "df")
+        assertEquals("。", df.secondaryLabel)
+        assertEquals(listOf("f", "。", ".", "…"), df.longPress?.map { it.label })
+        // The QW key's decorative "1 !" is not one alternate, so the corner shows the one a flick types.
+        val qw = pair(KeyboardLayoutKind.MERGED14, "qw")
+        assertEquals("1", qw.secondaryLabel)
+        assertEquals("w", qw.longPress?.first()?.label)
+        assertEquals("？", pair(KeyboardLayoutKind.MERGED18, "fg").secondaryLabel)
+        assertEquals("-", pair(KeyboardLayoutKind.MERGED18, "xc").secondaryLabel)
     }
 
     @Test

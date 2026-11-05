@@ -58,6 +58,8 @@ internal data class KeyPressSnapshot(
     val railLabel: String?,
     val longPress: List<LayoutOption>,
     val swipeCodes: List<String>?,
+    /** The small character drawn in the key's corner; a flick types it when a long-press option matches. */
+    val hint: String? = null,
     /** The slot of a rail choice among the rail's keys, top to bottom; -1 for any other key. */
     val railPosition: Int = -1,
     /** Whether this rail choice is already applied (drawn as chosen, not tappable). */
@@ -74,35 +76,134 @@ internal data class KeyPressSnapshot(
                 action.pageSwitchTarget == LayoutPageTarget.SYMBOLS
 }
 
+/** Which vertical flick types the hint drawn on a key; the stored values are the settings' own. */
+enum class FlickDirection(
+    val wire: String,
+) {
+    OFF("off"),
+    UP("up"),
+    DOWN("down"),
+    ;
+
+    companion object {
+        fun resolve(stored: String?): FlickDirection = entries.firstOrNull { it.wire == stored } ?: UP
+    }
+}
+
 /**
- * Which long-press option a vertical flick on a character key types: the first for up, the second
- * for down. Pure so the rules are testable without a view.
+ * What a vertical flick on a character key types: only what the key shows in its corner, so the
+ * gesture never types something the user cannot see. Pure so the rules are testable without a view.
  */
 internal object KeyFlick {
     /**
-     * @param digitFlick the key is a nine-key digit key, which keeps its own upward flick
-     * @param merged the key is a merged key whose sideways swipes pick letters
+     * The flick's option, or null when the key has no flick: the long-press option whose label is
+     * the drawn hint. A hint without a matching option (a layout's decorative label) types nothing.
+     *
+     * @param digit the digit a nine-key digit key shows and types, which needs no long-press option
      */
-    fun option(
+    fun target(
         snapshot: KeyPressSnapshot,
-        up: Boolean,
-        enabled: Boolean,
-        digitFlick: Boolean,
-        merged: Boolean,
+        direction: FlickDirection,
+        digit: String?,
     ): LayoutOption? {
-        if (!eligible(snapshot, enabled, merged) || digitFlick) return null
-        return snapshot.longPress.getOrNull(if (up) 0 else 1)
+        if (!eligible(snapshot, direction)) return null
+        if (digit != null) return LayoutOption(digit, LayoutAction.literal(digit))
+        val hint = snapshot.hint?.takeIf { it.isNotEmpty() } ?: return null
+        return snapshot.longPress.firstOrNull { it.label == hint }
     }
 
-    /** Whether a vertical flick on this key is a flick at all, whether or not it has an option that way. */
+    /** Whether a vertical flick on this key is a flick at all, whether or not it has something to type. */
     fun eligible(
         snapshot: KeyPressSnapshot,
-        enabled: Boolean,
-        merged: Boolean,
+        direction: FlickDirection,
     ): Boolean {
-        if (!enabled || merged || snapshot.railLabel != null || snapshot.railPosition >= 0) return false
+        if (direction == FlickDirection.OFF) return false
+        if (snapshot.railLabel != null || snapshot.railPosition >= 0) return false
         val type = snapshot.action.type
         return type == LayoutActionKind.CODE || type == LayoutActionKind.LITERAL
+    }
+
+    /**
+     * How far a finger [travel]ling the flick's way has turned the key into its hint: nothing within
+     * the touch [slop], all of it at the [threshold] that arms the flick.
+     */
+    fun progress(
+        travel: Float,
+        slop: Float,
+        threshold: Float,
+    ): Float = ((travel - slop) / (threshold - slop).coerceAtLeast(1f)).coerceIn(0f, 1f)
+}
+
+/**
+ * The drawn progress of a key turning into what a gesture will type (a flick's hint, a merged key's
+ * swiped letter), shared by the keycap and the bubble above it.
+ *
+ * The finger sets where it should be; the drawing eases there over [DURATION_MS], so the jump when
+ * a flick arms (to 1) or is pulled back (to the finger's spot) is a short glide, not a cut. Only the
+ * key a finger is flicking has a morph; nothing allocates per frame.
+ */
+internal class FlickMorph {
+    /** The key being flicked, or -1. */
+    var key: Int = -1
+        private set
+
+    /** The way the finger goes, one of -1, 0, 1 per axis: the label leaves that way, the target comes in behind it. */
+    var towardX: Int = 0
+        private set
+    var towardY: Int = -1
+        private set
+
+    private var from = 0f
+    private var to = 0f
+    private var startedAt = 0L
+
+    fun set(
+        key: Int,
+        towardX: Int,
+        towardY: Int,
+        target: Float,
+        now: Long,
+        motionScale: Float,
+    ) {
+        if (key != this.key) {
+            this.key = key
+            from = 0f
+            to = 0f
+            startedAt = now
+        }
+        this.towardX = towardX
+        this.towardY = towardY
+        if (target == to) return
+        from = value(now, motionScale)
+        to = target
+        startedAt = now
+    }
+
+    fun clear() {
+        key = -1
+        from = 0f
+        to = 0f
+    }
+
+    /** The eased progress at [now]; the system's animator scale 0 shows the target at once. */
+    fun value(
+        now: Long,
+        motionScale: Float,
+    ): Float {
+        val duration = DURATION_MS * motionScale
+        if (duration <= 0f) return to
+        val t = ((now - startedAt) / duration).coerceIn(0f, 1f)
+        val eased = 1f - (1f - t) * (1f - t)
+        return from + (to - from) * eased
+    }
+
+    fun animating(
+        now: Long,
+        motionScale: Float,
+    ): Boolean = key >= 0 && value(now, motionScale) != to
+
+    companion object {
+        const val DURATION_MS = 90f
     }
 }
 

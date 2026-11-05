@@ -1383,7 +1383,7 @@ class RealEngineEditorTest {
     }
 
     @Test
-    fun anUpwardFlickOnALetterKeyTypesItsFirstLongPressOption() =
+    fun anUpwardFlickOnALetterKeyTypesTheHintItShows() =
         withHost { host ->
             host.start()
             flickKey(host, "a", -30f)
@@ -1391,12 +1391,54 @@ class RealEngineEditorTest {
         }
 
     @Test
-    fun aDownwardFlickOnALetterKeyTypesItsSecondLongPressOption() =
+    fun aDownwardFlickTypesNothingWhileTheFlickGoesUp() =
         withHost { host ->
             host.start()
+            // "a" also offers "," in its long press; only the hint drawn on the key is a flick.
             flickKey(host, "a", 30f)
-            host.awaitField(",")
+            host.awaitIdle()
+            assertEquals("", host.text())
         }
+
+    @Test
+    fun withTheFlickSetDownADownwardFlickTypesTheHintAndAnUpwardOneDoesNot() =
+        withHost { host ->
+            host.preferences.keyFlickDirection.value = FlickDirection.DOWN.wire
+            host.start()
+            host.awaitUntil("flick set down") {
+                host.main2 { host.controller.keyboard.flickDirection } ==
+                    FlickDirection.DOWN
+            }
+            flickKey(host, "a", 30f)
+            host.awaitField("，")
+            flickKey(host, "a", -30f)
+            host.awaitIdle()
+            assertEquals("，", host.text())
+        }
+
+    @Test
+    fun withTheFlickOffAnUpwardFlickNeverTypesTheHint() =
+        withHost { host ->
+            host.preferences.keyFlickDirection.value = FlickDirection.OFF.wire
+            host.start()
+            host.awaitUntil(
+                "flick off",
+            ) { host.main2 { host.controller.keyboard.flickDirection } == FlickDirection.OFF }
+            flickKey(host, "a", -30f)
+            host.awaitIdle()
+            assertFalse(host.text(), host.text().contains("，"))
+        }
+
+    @Test
+    fun anUpwardFlickOnAMergedKeyTypesTheMarkItShows() {
+        for ((layout, pair, mark) in listOf(Triple("merged14", "df", "。"), Triple("merged18", "fg", "？"))) {
+            withHost(layout = layout) { host ->
+                host.start()
+                flickKey(host, pair, -30f)
+                host.awaitField(mark)
+            }
+        }
+    }
 
     @Test
     fun aShortVerticalJitterOnALetterKeyStillTypesTheLetter() =
@@ -1434,8 +1476,8 @@ class RealEngineEditorTest {
     fun aDownwardFlickWithNothingToTypeDoesNotTypeTheKeyItEndsOn() =
         withHost { host ->
             host.start()
-            // "q" has one long-press option, so a downward flick has nothing to type; the finger
-            // lifts over "a", which must not be typed in its place.
+            // The flick goes up, so a downward one has nothing to type; the finger lifts over "a",
+            // which must not be typed in its place.
             dragKey(host, "q", "a")
             host.awaitIdle()
             assertEquals("", host.text())
@@ -2931,6 +2973,7 @@ class RealEngineEditorTest {
         override val shuangpinHints = MutableStateFlow<Map<Char, String>>(emptyMap())
         override val menuHiddenSchemas = MutableStateFlow<Set<String>>(emptySet())
         override val widePosition = MutableStateFlow(50)
+        override val keyFlickDirection = MutableStateFlow(FlickDirection.UP.wire)
 
         override suspend fun setLayoutId(id: String) {
             layoutId.value = id

@@ -54,12 +54,14 @@ class SettingsPreferencesTest {
         }
 
     @Test
-    fun `the key flick defaults to on and can be switched off`() =
+    fun `the key flick defaults to up and can be turned down or off`() =
         runTest {
             val preferences = InMemorySettingsPreferences()
-            assertEquals(true, preferences.keyFlick.first())
-            preferences.setKeyFlick(false)
-            assertEquals(false, preferences.keyFlick.first())
+            assertEquals("up", preferences.keyFlickDirection.first())
+            preferences.setKeyFlickDirection("down")
+            assertEquals("down", preferences.keyFlickDirection.first())
+            preferences.setKeyFlickDirection("off")
+            assertEquals("off", preferences.keyFlickDirection.first())
         }
 
     @Test

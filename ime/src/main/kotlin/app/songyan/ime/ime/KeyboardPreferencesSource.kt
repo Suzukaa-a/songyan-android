@@ -27,8 +27,8 @@ interface KeyboardPreferencesSource {
     /** Key hold delay in ms ([HoldDelay] range); null follows the system's touch & hold delay. */
     val longPressDelayMs: Flow<Int?> get() = flowOf(null)
 
-    /** Vertical flicks on character keys type their first and second long-press option. */
-    val keyFlick: Flow<Boolean> get() = flowOf(true)
+    /** Which vertical flick types the hint drawn on a key ([FlickDirection.wire]). */
+    val keyFlickDirection: Flow<String> get() = flowOf(FlickDirection.UP.wire)
 
     /** Two quick spaces after an English word type a period and a space. */
     val doubleSpacePeriod: Flow<Boolean> get() = flowOf(true)

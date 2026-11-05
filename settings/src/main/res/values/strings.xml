@@ -140,8 +140,11 @@
     <string name="options_one_hand_left">Left</string>
     <string name="options_one_hand_right">Right</string>
     <string name="options_key_feel_section">Key feel</string>
-    <string name="options_key_flick_title">Flick for digits and symbols</string>
-    <string name="options_key_flick_body">Flick up to type the first symbol on a key, down for the second.</string>
+    <string name="options_key_flick_title">Swipe for the corner character</string>
+    <string name="options_key_flick_body">Swipe a key to type the small character in its corner.</string>
+    <string name="options_key_flick_off">Off</string>
+    <string name="options_key_flick_up">Swipe up</string>
+    <string name="options_key_flick_down">Swipe down</string>
     <string name="options_double_space_title">Double-space period</string>
     <string name="options_double_space_body">After an English word, tap space twice to type a period and a space.</string>
     <string name="options_key_preview_title">Key preview</string>

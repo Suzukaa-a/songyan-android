@@ -29,10 +29,10 @@ interface SettingsPreferences {
     /** Whether the keyboard draws the input-method switch key; off unless the user wants it. */
     val showSwitchKey: Flow<Boolean>
 
-    /** Vertical flicks on character keys type their first and second long-press option (on by default). */
-    val keyFlick: Flow<Boolean>
+    /** Which vertical flick types the hint drawn on a key: one of [FLICK_DIRECTIONS], up by default. */
+    val keyFlickDirection: Flow<String>
 
-    suspend fun setKeyFlick(value: Boolean)
+    suspend fun setKeyFlickDirection(value: String)
 
     /** Two quick spaces after an English word type a period and a space (on by default). */
     val doubleSpacePeriod: Flow<Boolean>
@@ -170,6 +170,8 @@ interface SettingsPreferences {
             }
 
         val SPLIT_MODES = listOf("layout", "on", "off")
+        val FLICK_DIRECTIONS = listOf("off", "up", "down")
+        const val DEFAULT_FLICK_DIRECTION = "up"
         val READING_PLACEMENTS = listOf("row", "inline")
         const val DEFAULT_READING_PLACEMENT = "row"
     }
@@ -191,7 +193,7 @@ class InMemorySettingsPreferences(
     override val layoutId: Flow<String> = layout.asStateFlow()
     private val height = MutableStateFlow(SettingsPreferences.DEFAULT_KEY_HEIGHT)
     private val preview = MutableStateFlow(true)
-    private val flick = MutableStateFlow(true)
+    private val flick = MutableStateFlow(SettingsPreferences.DEFAULT_FLICK_DIRECTION)
     private val doubleSpace = MutableStateFlow(true)
     private val hideToolbar = MutableStateFlow(false)
     private val release = MutableStateFlow(false)
@@ -270,9 +272,10 @@ class InMemorySettingsPreferences(
     }
 
     override val keyPreview: Flow<Boolean> = preview.asStateFlow()
-    override val keyFlick: Flow<Boolean> = flick.asStateFlow()
+    override val keyFlickDirection: Flow<String> = flick.asStateFlow()
 
-    override suspend fun setKeyFlick(value: Boolean) {
+    override suspend fun setKeyFlickDirection(value: String) {
+        require(value in SettingsPreferences.FLICK_DIRECTIONS) { "unknown flick direction: $value" }
         flick.value = value
     }
 

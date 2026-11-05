@@ -46,6 +46,12 @@ internal class KeyPopupLayer(
     private var swipeLabel: String? = null
     private var swipeBounds = KeyBounds(0f, 0f, 0f, 0f)
 
+    private var flick: FlickMorph? = null
+    private var flickFrom: String? = null
+    private var flickTo = ""
+    private var flickBounds = KeyBounds(0f, 0f, 0f, 0f)
+    private var flickTextFactor = 1f
+
     init {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         isClickable = false
@@ -56,7 +62,7 @@ internal class KeyPopupLayer(
     val alternatesOpen: Boolean get() = labels.isNotEmpty() && closedAt == 0L
 
     /** Whether any popup content is on screen, including one that is fading out. */
-    val showing: Boolean get() = labels.isNotEmpty() || previewLabel != null || swipeLabel != null
+    val showing: Boolean get() = labels.isNotEmpty() || previewLabel != null || swipeLabel != null || flick != null
 
     /**
      * The layer only covers what the column beside it measured; it never asks for height of its own.
@@ -187,11 +193,48 @@ internal class KeyPopupLayer(
         dirty(swipeBounds)
     }
 
+    // --- flick to the corner hint --------------------------------------------------------------
+
+    /**
+     * The bubble of a key being flicked, following [morph]: the key's preview label rolls out the
+     * way the finger goes while [to] rolls in behind it. Without a preview ([from] null) the bubble
+     * fades in with the hint instead. It replaces the plain preview of the same key.
+     */
+    fun showFlick(
+        morph: FlickMorph,
+        from: String?,
+        to: String,
+        bounds: KeyBounds,
+    ) {
+        val textFactor = if (previewLabel != null) PREVIEW_TEXT_SCALE else 1f
+        clearPreview()
+        if (flick != null) dirty(flickBounds)
+        flick = morph
+        flickFrom = from
+        flickTo = to
+        flickBounds = bounds
+        flickTextFactor = textFactor
+        dirty(bounds)
+    }
+
+    /** The finger moved: redraw the bubble at the morph's new progress. */
+    fun updateFlick() {
+        if (flick != null) dirty(flickBounds)
+    }
+
+    fun hideFlick() {
+        if (flick == null) return
+        flick = null
+        flickFrom = null
+        dirty(flickBounds)
+    }
+
     /** Drops everything at once: a new editor or a hidden keyboard starts clean. */
     fun clear() {
         clearPreview()
         clearPopup()
         hideSwipe()
+        hideFlick()
     }
 
     // --- drawing -------------------------------------------------------------------------------
@@ -221,6 +264,7 @@ internal class KeyPopupLayer(
         val now = SystemClock.uptimeMillis()
         previewLabel?.let { drawBubble(canvas, it, previewBounds, 1f, 1f, PREVIEW_TEXT_SCALE) }
         swipeLabel?.let { drawBubble(canvas, it, swipeBounds, 1f, 1f, 1f) }
+        drawFlick(canvas, now)
         if (labels.isNotEmpty()) drawPopup(canvas, now)
     }
 
@@ -232,6 +276,48 @@ internal class KeyPopupLayer(
         alpha: Float,
         textFactor: Float,
     ) {
+        val channel = drawBubbleBox(canvas, bounds, scale, alpha)
+        paint.color = ColorUtils.setAlphaComponent(palette.text, channel)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = palette.tokens.keyLabelTextSizeSp * textScale * textFactor
+        canvas.drawText(label, box.centerX(), box.centerY() - (paint.ascent() + paint.descent()) / 2, paint)
+    }
+
+    private fun drawFlick(
+        canvas: Canvas,
+        now: Long,
+    ) {
+        val morph = flick ?: return
+        val motion = ImeMotion.scale
+        val progress = morph.value(now, motion)
+        if (morph.animating(now, motion)) frame(flickBounds)
+        val from = flickFrom
+        val alpha = if (from == null) progress else 1f
+        if (alpha <= 0f) return
+        val channel = drawBubbleBox(canvas, flickBounds, 1f, alpha)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = palette.tokens.keyLabelTextSizeSp * textScale * flickTextFactor
+        val baseline = box.centerY() - (paint.ascent() + paint.descent()) / 2
+        // The content scrolls with the finger: up for an upward flick, down for a downward one.
+        val travel = box.height() * if (morph.up) -1f else 1f
+        canvas.save()
+        canvas.clipRect(box)
+        if (from != null) {
+            paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * (1f - progress)).toInt())
+            canvas.drawText(from, box.centerX(), baseline + travel * progress, paint)
+        }
+        paint.color = ColorUtils.setAlphaComponent(palette.text, (channel * progress).toInt())
+        canvas.drawText(flickTo, box.centerX(), baseline - travel * (1f - progress), paint)
+        canvas.restore()
+    }
+
+    /** The bubble's shadowed body at [bounds] (left in [box]); returns the alpha channel it used. */
+    private fun drawBubbleBox(
+        canvas: Canvas,
+        bounds: KeyBounds,
+        scale: Float,
+        alpha: Float,
+    ): Int {
         val metrics = palette.tokens
         val channel = (255 * alpha).toInt().coerceIn(0, 255)
         scaled(bounds, scale)
@@ -246,10 +332,7 @@ internal class KeyPopupLayer(
         val radius = metrics.popupRadiusDp * density
         canvas.drawRoundRect(box, radius, radius, paint)
         paint.clearShadowLayer()
-        paint.color = ColorUtils.setAlphaComponent(palette.text, channel)
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = metrics.keyLabelTextSizeSp * textScale * textFactor
-        canvas.drawText(label, box.centerX(), box.centerY() - (paint.ascent() + paint.descent()) / 2, paint)
+        return channel
     }
 
     private fun drawPopup(

@@ -171,7 +171,9 @@ class SettingsViewModel(
             preferences.longPressDelayMs,
         ) { copy(keyboardFeel = keyboardFeel.copy(longPressDelayMs = it)) }
         collectPreference(preferences.showSwitchKey) { copy(keyboardFeel = keyboardFeel.copy(showSwitchKey = it)) }
-        collectPreference(preferences.keyFlick) { copy(keyboardFeel = keyboardFeel.copy(keyFlick = it)) }
+        collectPreference(preferences.keyFlickDirection) {
+            copy(keyboardFeel = keyboardFeel.copy(keyFlickDirection = it))
+        }
         collectPreference(preferences.doubleSpacePeriod) {
             copy(keyboardFeel = keyboardFeel.copy(doubleSpacePeriod = it))
         }
@@ -321,8 +323,8 @@ class SettingsViewModel(
         viewModelScope.launch { preferences.setOneHand(value) }
     }
 
-    fun setKeyFlick(value: Boolean) {
-        viewModelScope.launch { preferences.setKeyFlick(value) }
+    fun setKeyFlickDirection(value: String) {
+        viewModelScope.launch { preferences.setKeyFlickDirection(value) }
     }
 
     fun setDoubleSpacePeriod(value: Boolean) {

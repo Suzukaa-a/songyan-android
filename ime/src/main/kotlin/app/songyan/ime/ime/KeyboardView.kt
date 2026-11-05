@@ -127,8 +127,11 @@ class KeyboardView(
     /** The user's key hold delay in ms, or null to follow the system; backspace repeat ignores it. */
     var longPressOverrideMs: Int? = null
 
-    /** Vertical flicks on character keys type their long-press options; off leaves only the nine-key digit flick. */
-    var keyFlickEnabled = true
+    /** Which vertical flick types the hint drawn on a character key; off leaves only taps and long presses. */
+    var flickDirection = FlickDirection.UP
+
+    /** The flicked key turning into its hint; the popup layer's bubble reads the same progress. */
+    internal val flickMorph = FlickMorph()
 
     /** Magnified preview of a tapped key; the keyboard turns it off in a private editor. */
     var keyPreviewEnabled = true
@@ -297,10 +300,10 @@ class KeyboardView(
         var cursorSampleX: Float = 0f,
         var cursorSampleAt: Long = 0L,
         var cursorFast: Boolean = false,
-        /** A nine-key digit key's upward flick is past its threshold: release types the digit. */
-        var risen: Boolean = false,
-        /** A character key's flick is armed: release types this long-press option; -1 when not armed. */
-        var flickIndex: Int = -1,
+        /** What this key's flick types (its drawn hint), fixed at the press; null when it has none. */
+        var flickTarget: LayoutOption? = null,
+        /** The flick is past its threshold: release types [flickTarget]. */
+        var flickArmed: Boolean = false,
         /**
          * A vertical flick past the threshold that has nothing to type that way: the release types
          * nothing, not the key the finger ended on.
@@ -520,6 +523,11 @@ class KeyboardView(
                 animating = true
                 dirtyUnion(box)
             }
+            val flicked = i == flickMorph.key
+            if (flicked && flickMorph.animating(now, motionScale)) {
+                animating = true
+                dirtyUnion(box)
+            }
             // A dirty-rect invalidate (one key pressed or released) skips the keys outside it.
             if (box.right < clipRect.left ||
                 box.left > clipRect.right ||
@@ -574,6 +582,8 @@ class KeyboardView(
             }
             val onAccent = (emphasized || railChosen) && !pressed
             val contentColor = if (onAccent) palette.accentText else palette.text
+            val morph = if (flicked) flickMorph.value(now, motionScale) else 0f
+            val labelLayer = if (morph > 0f) beginFlickLabel(canvas, drawBounds, morph) else -1
             when {
                 key.action.type == LayoutActionKind.SHIFT && !railKey -> drawShiftIcon(canvas, drawBounds, contentColor)
                 key.action.type == LayoutActionKind.BACKSPACE && !railKey ->
@@ -598,8 +608,15 @@ class KeyboardView(
                     }
                 }
             }
+            if (labelLayer >= 0) canvas.restoreToCount(labelLayer)
             val hint = key.secondaryLabel
-            if (!hint.isNullOrEmpty()) drawHint(canvas, i, hint, drawBounds)
+            if (!hint.isNullOrEmpty()) {
+                if (morph > 0f) {
+                    drawFlickHint(canvas, i, hint, drawBounds, contentColor, morph)
+                } else {
+                    drawHint(canvas, i, hint, drawBounds)
+                }
+            }
         }
         drawCursorCue(canvas)
         if (animating) {
@@ -910,7 +927,7 @@ class KeyboardView(
         /** Sideways finger travel that turns a press on the space bar into a caret drag (dp). */
         const val CURSOR_START_DP = 14f
 
-        /** A nine-key digit flick: rise needed (dp), share of the key's height, and the way back (dp). */
+        /** A flick: travel needed (dp), share of the key's height, and the way back that disarms it (dp). */
         const val FLICK_DISTANCE_DP = 24f
         const val FLICK_KEY_SHARE = 0.4f
         const val FLICK_RETURN_DP = 10f

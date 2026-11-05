@@ -136,6 +136,59 @@ internal fun KeyboardView.drawHint(
     canvas.restore()
 }
 
+/**
+ * Starts drawing the label of a key being flicked: it fades and shrinks as its hint takes its place.
+ * Returns the save count to restore once the label is drawn.
+ */
+internal fun KeyboardView.beginFlickLabel(
+    canvas: Canvas,
+    box: RectF,
+    progress: Float,
+): Int {
+    val count = canvas.saveLayerAlpha(box, ((1f - progress) * 255).toInt())
+    val scale = 1f - FLICK_LABEL_SHRINK * progress
+    canvas.scale(scale, scale, box.centerX(), box.centerY())
+    return count
+}
+
+/**
+ * The hint of a key being flicked, on its way from the corner to the label's place: it grows to the
+ * label's size and takes the label's colour, so at [progress] 1 the keycap shows what release types.
+ */
+internal fun KeyboardView.drawFlickHint(
+    canvas: Canvas,
+    index: Int,
+    hint: String,
+    box: RectF,
+    color: Int,
+    progress: Float,
+) {
+    val inset = metrics.secondaryLabelInsetDp * density
+    val small = hintSizes.getOrElse(index) { metrics.keySecondaryLabelTextSizeSp * textScale }
+    val large = maxOf(small, labelSizes.getOrElse(index) { metrics.keyLabelTextSizeSp * textScale })
+    paint.style = Paint.Style.FILL
+    paint.textAlign = Paint.Align.CENTER
+    paint.textSize = small
+    // Only the one flicked key is measured here, while it moves.
+    val startX = box.right - inset - paint.measureText(hint) / 2
+    val startY = box.top + inset - paint.ascent()
+    paint.textSize = small + (large - small) * progress
+    val endY = box.centerY() - (paint.ascent() + paint.descent()) / 2
+    paint.color = ColorUtils.blendARGB(ColorUtils.setAlphaComponent(palette.muted, HINT_ALPHA), color, progress)
+    canvas.save()
+    canvas.clipRect(box)
+    canvas.drawText(
+        hint,
+        startX + (box.centerX() - startX) * progress,
+        startY + (endY - startY) * progress,
+        paint,
+    )
+    canvas.restore()
+}
+
+/** How much smaller the label of a fully flicked key is as it fades. */
+private const val FLICK_LABEL_SHRINK = 0.4f
+
 /** A merged key's letters, each centred over its own shuangpin hint column. */
 internal fun KeyboardView.drawSpreadLetters(
     canvas: Canvas,

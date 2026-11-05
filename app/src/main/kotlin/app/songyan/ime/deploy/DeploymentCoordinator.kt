@@ -3,6 +3,7 @@ package app.songyan.ime.deploy
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
+import app.songyan.ime.ServiceLocale
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.EngineFeatureSettings
@@ -56,9 +57,12 @@ class DeploymentCoordinator(
     private val runner: RimeDeployRunner,
     private val appName: String,
     private val stamp: BuildStamp,
+    /** The app's effective locales, most preferred first; read only when a first installation is seeded. */
+    private val localeTags: () -> List<String> = { emptyList() },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val installer = BuiltinSourceInstaller(assets)
+    private val scriptDefault = BuiltinScriptDefault(storage, localeTags)
     private val publisher = GenerationPublisher(storage)
     private val catalog = SourceCatalog(storage)
     private val builder = SourceBuilder(assets)
@@ -447,6 +451,7 @@ class DeploymentCoordinator(
     }
 
     private suspend fun deployBuiltinLocked(): PublicationRecord {
+        scriptDefault.seedIfFirstInstallation()
         val sourceDir = storage.sourceDir(SourceIds.BUILTIN)
         installer.install(sourceDir, builtinRevision)
         CompiledReuse.stampConfigTimes(sourceDir)
@@ -456,6 +461,7 @@ class DeploymentCoordinator(
     }
 
     private suspend fun installLocked(staged: BuiltSource): PublicationRecord {
+        scriptDefault.seedIfFirstInstallation()
         val manifest = staged.manifest
         requireIdentifier("source", manifest.sourceId, SOURCE_ID_PATTERN)
         requireIdentifier("revision", manifest.revision, REVISION_PATTERN)
@@ -1018,6 +1024,10 @@ class DeploymentCoordinator(
                 runner = runner,
                 appName = RimeBindings.APP_NAME,
                 stamp = BuildStamps.current(context),
+                localeTags = {
+                    val wanted = ServiceLocale.wanted(context)
+                    (0 until wanted.size()).map { wanted[it].toLanguageTag() }
+                },
             )
         }
     }

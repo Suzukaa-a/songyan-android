@@ -8,6 +8,12 @@ android {
     buildFeatures { compose = true }
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // First-install acceptance requires an explicitly selected isolated target.
+        val bootstrapTarget =
+            providers.gradleProperty("android.testInstrumentationRunnerArguments.songyan.bootstrap.target")
+        if (!bootstrapTarget.isPresent) {
+            testInstrumentationRunnerArguments["notClass"] = "app.songyan.ime.ime.BuiltinScriptDefaultDeviceTest"
+        }
     }
 }
 

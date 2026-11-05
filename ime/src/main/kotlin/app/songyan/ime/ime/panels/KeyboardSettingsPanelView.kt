@@ -120,7 +120,11 @@ class KeyboardSettingsPanelView(
         switchesStart = if (open == null) tiles.indexOfFirst { it.setting == QuickSetting.ENGINE_OPTION } else -1
         resetScroll()
         invalidate()
+        // The grid and an option page reuse the same virtual ids for different items.
+        announceItemsChanged()
     }
+
+    override fun itemSelected(index: Int): Boolean = cells.getOrNull(index - cellItemBase())?.checked ?: false
 
     private fun apply(change: QuickSettingChange) {
         state = state.apply(change)

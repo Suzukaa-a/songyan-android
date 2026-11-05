@@ -824,6 +824,8 @@ class KeyboardController(
                         emptyList()
                     },
                 enterLabel = enterLabel(),
+                inputLanguage =
+                    session?.inputLanguage?.language ?: app.songyan.ime.keyboard.engine.InputLanguage.ZH_HANS,
             ),
         )
         callbacks.panelsChanged(true)

@@ -4,6 +4,7 @@ import android.content.Context
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.EditAction
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardPageCategory
 import app.songyan.ime.layout.LayoutAction
@@ -40,6 +41,8 @@ class QuickContentPanels(
         val enterLabel: String,
         /** The everyday marks the pairing reaches nowhere else; the built-in 常用 lists them first. */
         val leadingMarks: List<String> = emptyList(),
+        /** The schemas input language: the built-in 常用 adds the marks Japanese needs. */
+        val inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     )
 
     interface Callbacks {
@@ -373,6 +376,7 @@ class QuickContentPanels(
                         )
                     },
                     request.leadingMarks,
+                    request.inputLanguage,
                 )
         symbolPage.update(categories, request.asciiMarks, reopen = symbolPageFresh)
         symbolPageFresh = false

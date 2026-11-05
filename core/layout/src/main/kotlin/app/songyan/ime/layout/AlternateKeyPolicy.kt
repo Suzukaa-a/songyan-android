@@ -1,5 +1,7 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputLanguage
+
 /**
  * Pure long-press alternate policy for physical keycaps.
  *
@@ -48,7 +50,10 @@ object AlternateKeyPolicy {
         /** The declared, ordered secondary literals from the layout data. */
         val secondaryLiterals: List<String> = emptyList(),
         val page: Page,
+        /** The engine mode the key dispatches into; not the input scheme's script language. */
         val language: Language,
+        /** The script language of the running schema; only the bundled defaults follow it. */
+        val inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
         /** Shift is active, so letter variants render (and insert) uppercase. */
         val isUppercase: Boolean = false,
         /** The host field requires ASCII punctuation; CJK punctuation is filtered out. */
@@ -77,7 +82,19 @@ object AlternateKeyPolicy {
         }
 
     /** Ordered builtin defaults only; DIY declarations are passed by the caller instead. */
-    fun defaultLetterLiterals(letter: String): List<String> = DEFAULT_LETTERS[letter.lowercase()] ?: emptyList()
+    fun defaultLetterLiterals(
+        letter: String,
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
+    ): List<String> {
+        val key = letter.lowercase()
+        val marks =
+            when (inputLanguage) {
+                InputLanguage.ZH_HANS -> DEFAULT_LETTERS
+                InputLanguage.ZH_HANT -> HANT_LETTERS
+                InputLanguage.JA -> JAPANESE_LETTERS
+            }
+        return marks[key] ?: DEFAULT_LETTERS[key] ?: emptyList()
+    }
 
     /**
      * Each full-width mark is paired with the ASCII key a desktop Chinese IME types it from, so
@@ -112,6 +129,26 @@ object AlternateKeyPolicy {
             "n" to listOf("】", "]", "》", ">"),
             "m" to listOf("/"),
         )
+
+    // Traditional Chinese keeps the same everyday marks and names its quotes 「」/『』 first.
+    private val HANT_LETTERS: Map<String, List<String>> =
+        DEFAULT_LETTERS +
+            mapOf(
+                "c" to listOf("「", "『", "“", "\""),
+                "v" to listOf("」", "』", "”", "'"),
+            )
+
+    // Japanese keeps the marks Chinese readers know where they are the same, and moves the quotes
+    // and the marks only Japanese uses (・, ー, ～) onto the same letters.
+    private val JAPANESE_LETTERS: Map<String, List<String>> =
+        DEFAULT_LETTERS +
+            mapOf(
+                "a" to listOf("、"),
+                "g" to listOf("・"),
+                "x" to listOf("ー", "～", "-", "_"),
+                "c" to listOf("「", "『"),
+                "v" to listOf("」", "』"),
+            )
 
     private fun letterOptions(request: Request): List<Option> {
         val label = request.keyLabel
@@ -181,9 +218,10 @@ object AlternateKeyPolicy {
     private fun symbolOptions(request: Request): List<Option> {
         val label = request.keyLabel
         val table = if (request.usesAsciiPunctuation) ASCII_SYMBOL_ALTERNATES else CHINESE_SYMBOL_ALTERNATES
+        val japanese = if (request.inputLanguage == InputLanguage.JA) JAPANESE_SYMBOL_ALTERNATES[label] else null
         var variants =
             deduplicated(
-                (table[label] ?: SHARED_SYMBOL_ALTERNATES[label] ?: emptyList())
+                (japanese ?: table[label] ?: SHARED_SYMBOL_ALTERNATES[label] ?: emptyList())
                     .filter { it != label && it !in request.visibleKeys },
             )
         if (request.usesAsciiPunctuation) {
@@ -218,6 +256,14 @@ object AlternateKeyPolicy {
             "、" to listOf("·"),
             "？" to listOf("?"),
             "！" to listOf("!"),
+        )
+
+    /** Marks Japanese uses that the Chinese table has no home for; ー is a letter, not punctuation. */
+    private val JAPANESE_SYMBOL_ALTERNATES: Map<String, List<String>> =
+        mapOf(
+            "-" to listOf("ー", "～", "—", "_"),
+            "・" to listOf("ー", "～", "·"),
+            "。" to listOf("、", "．", "·"),
         )
 
     /** Half-width punctuation (English mode and ASCII fields): only what an ASCII field accepts. */

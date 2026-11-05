@@ -72,6 +72,7 @@ internal fun KeyboardController.render() {
             showsGlobe = showsSwitchKey,
             jumpLayouts = jumpableLayouts(),
             everydayMarksPage = everydayMarksPage,
+            inputLanguage = language,
         )
     val faces =
         KeyboardFaces(

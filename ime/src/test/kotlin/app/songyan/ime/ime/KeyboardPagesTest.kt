@@ -47,22 +47,23 @@ class KeyboardPagesTest {
                 .rows
                 .last()
                 .keys
-        // 123 | 中/英 | 空格 | ，| 回车. No globe key: the navigation bar owns the switcher.
+        // 123 | 中/英 | ，| 空格 | 。| 回车. No globe key: the navigation bar owns the switcher.
         assertEquals(
             listOf(
                 LayoutActionKind.PAGE_SWITCH,
                 LayoutActionKind.LANGUAGE_SWITCH,
+                LayoutActionKind.LITERAL,
                 LayoutActionKind.SPACE,
                 LayoutActionKind.LITERAL,
                 LayoutActionKind.ENTER,
             ),
             footer.map { it.action.type },
         )
-        assertEquals(listOf("123", "中/英", "空格", "，", "⏎"), footer.map { it.label })
-        // One punctuation key: the comma, with the full stop first in its long press (the corner hint).
-        assertEquals(listOf("。", "？", "！", "、", "：", "；"), footer[3].longPress?.map { it.label })
+        assertEquals(listOf("123", "中/英", "，", "空格", "。", "⏎"), footer.map { it.label })
+        // The comma's full stop stays first in its long press, so it is the corner hint.
+        assertEquals(listOf("。", "？", "！", "、", "：", "；"), footer[2].longPress?.map { it.label })
         // The space bar keeps one share on every page, so every bottom row lines up.
-        assertEquals(KeyboardPages.FooterWeight.SPACE, footer[2].widthWeight, 0.001)
+        assertEquals(KeyboardPages.FooterWeight.SPACE, footer[3].widthWeight, 0.001)
         val forcedAscii =
             KeyboardPages
                 .definition(null, letters.copy(languageSwitch = false))
@@ -144,10 +145,21 @@ class KeyboardPagesTest {
                     .rows
                     .last()
                     .keys
-            assertEquals(listOf("返回", "中/英", "空格", if (ascii) "," else "，", "⏎"), footer.map { it.label })
+            assertEquals(
+                if (ascii) {
+                    listOf("返回", "中/英", "空格", ",", "⏎")
+                } else {
+                    listOf("返回", "中/英", "，", "空格", "。", "⏎")
+                },
+                footer.map { it.label },
+            )
             assertTrue(footer.none { it.action.pageSwitchTarget == LayoutPageTarget.SYMBOLS })
             // The comma holds the slot it has on the letters footer, so it stays put when the page flips.
-            assertEquals(KeyboardPages.lettersFooter(config.copy(englishDirectInput = ascii))[3].label, footer[3].label)
+            val lettersFooter = KeyboardPages.lettersFooter(config.copy(englishDirectInput = ascii))
+            assertEquals(
+                lettersFooter.first { it.label == if (ascii) "," else "，" }.label,
+                footer.first { it.label == if (ascii) "," else "，" }.label,
+            )
         }
     }
 
@@ -183,8 +195,8 @@ class KeyboardPagesTest {
         assertEquals("123", third.first().label)
         assertEquals(LayoutActionKind.BACKSPACE, third.last().action.type)
         val footer = definition.rows.last().keys
-        // The page types every mark itself: no comma, no lock, and 更多 right of the space bar.
-        assertEquals(listOf("返回", "中/英", "空格", "更多", "⏎"), footer.map { it.label })
+        // The page types every mark itself; the native comma and full stop still bracket the space bar.
+        assertEquals(listOf("返回", "中/英", "，", "空格", "。", "更多", "⏎"), footer.map { it.label })
         assertTrue(footer.none { it.action.type == LayoutActionKind.SYMBOL_LOCK })
         assertTrue(footer.none { it.action.pageSwitchTarget == LayoutPageTarget.NUMERIC })
         assertEquals(
@@ -295,7 +307,11 @@ class KeyboardPagesTest {
                     .keys
             return footer.filter { it.action.type == LayoutActionKind.LITERAL }.map { it.label }
         }
-        assertEquals(listOf("，"), marks(letters))
+        assertEquals(listOf("，", "。"), marks(letters))
+        assertEquals(
+            listOf("、", "。"),
+            marks(letters.copy(inputLanguage = app.songyan.ime.keyboard.engine.InputLanguage.JA)),
+        )
         assertEquals(listOf(","), marks(letters.copy(englishDirectInput = true)))
         val email = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL)
         assertEquals(listOf("@", "."), marks(email))

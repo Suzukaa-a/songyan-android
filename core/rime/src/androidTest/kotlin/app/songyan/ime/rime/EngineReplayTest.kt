@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -29,6 +30,34 @@ class EngineReplayTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
     @Test
+    fun playbackCasesReadScriptOptionsAndFirstCandidateExpectation() {
+        val fixture =
+            Json
+                .parseToJsonElement(
+                    """[{"schema":"songyan_quanpin","layout":"qwerty26","keys":"fazhan","expect_text":"發展","options":{"simplification":false,"zht":true,"zh_tw":false,"zh_hk":false},"expect_first":"發展"}]""",
+                ).jsonArray
+        val case = PlaybackFixtures.parse(fixture).single()
+        assertEquals(
+            mapOf("simplification" to false, "zht" to true, "zh_tw" to false, "zh_hk" to false),
+            case.options,
+        )
+        assertEquals("發展", case.expectFirst)
+    }
+
+    @Test
+    fun olderPlaybackCasesKeepTheirCommitExpectation() {
+        val fixture =
+            Json
+                .parseToJsonElement(
+                    """[{"schema":"songyan_quanpin","layout":"qwerty26","keys":"nihao","expect_text":"你好"}]""",
+                ).jsonArray
+        val case = PlaybackFixtures.parse(fixture).single()
+        assertEquals("你好", case.expectText)
+        assertEquals(emptyMap<String, Boolean>(), case.options)
+        assertEquals(null, case.expectFirst)
+    }
+
+    @Test
     fun playbackCasesCommitTheDictionaryWord() =
         runBlocking {
             val assets = instrumentation.context.assets
@@ -45,7 +74,15 @@ class EngineReplayTest {
                         failures.append("not deployed: ${case.schema}/${case.layout}\n")
                         continue
                     }
-                    val text = replayAndCommit(engine, schema, case.keys, case.expectText)
+                    val text =
+                        replayAndCommit(
+                            engine,
+                            schema,
+                            case.keys,
+                            case.expectText,
+                            case.options,
+                            case.expectFirst,
+                        )
                     when {
                         text == case.expectText -> committed++
                         text == null -> {
@@ -103,7 +140,8 @@ class EngineReplayTest {
                             continue
                         }
                         val keys = case.keys.map { fold.map[it] ?: it }.joinToString("")
-                        val text = replayAndCommit(engine, schema, keys, case.expectText)
+                        // Folded keys prove reachability; the declared layout checks first-candidate order.
+                        val text = replayAndCommit(engine, schema, keys, case.expectText, case.options)
                         if (text == case.expectText) {
                             committed++
                         } else if (failures.length < MAX_REPORTED_FAILURES * 80) {
@@ -187,6 +225,8 @@ class EngineReplayTest {
         val source = File(root, "source")
         val user = File(root, "user")
         copyAssetTree(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
+        // The frontend tables must sit beside the source, as in the app installer.
+        copyAssetTree(instrumentation.targetContext.assets, "rime/opencc", File(source, "opencc"))
         val deployment =
             RimeDeployment.deploy(
                 sharedDataDir = source,
@@ -245,14 +285,24 @@ class EngineReplayTest {
         schema: String,
         keys: String,
         expected: String,
+        options: Map<String, Boolean> = emptyMap(),
+        expectFirst: String? = null,
     ): String? {
         if (!engine.selectSchema(schema)) return null
         engine.clearComposition()
+        // The engine keeps options across cases, so legacy cases start in the original script.
+        for (option in SCRIPT_OPTIONS) engine.setOption(option, option == "simplification")
+        for ((name, value) in options) {
+            assertTrue("could not set fixture option $name", engine.setOption(name, value))
+        }
         for (char in keys) {
             val keycode = RimeKey.baseKeycode(char) ?: return null
             engine.processKey(RimeKey(keycode))
         }
         var snapshot = engine.readSnapshot()
+        if (expectFirst != null) {
+            assertEquals("first candidate for $schema '$keys'", expectFirst, snapshot.candidates.firstOrNull()?.text)
+        }
         var pages = 0
         while (true) {
             val index = snapshot.candidates.indexOfFirst { it.text == expected }
@@ -289,6 +339,8 @@ class EngineReplayTest {
         val layout: String,
         val keys: String,
         val expectText: String,
+        val options: Map<String, Boolean> = emptyMap(),
+        val expectFirst: String? = null,
     )
 
     private data class LearningCase(
@@ -298,18 +350,26 @@ class EngineReplayTest {
     )
 
     private object PlaybackFixtures {
-        fun load(assets: AssetManager): List<PlaybackCase> {
-            val root = readJson(assets, "engine-fixtures/builtin/playback_cases.json")
-            return root.mapNotNull { element ->
+        fun load(assets: AssetManager): List<PlaybackCase> =
+            parse(readJson(assets, "engine-fixtures/builtin/playback_cases.json"))
+
+        fun parse(root: JsonArray): List<PlaybackCase> =
+            root.mapNotNull { element ->
                 val fields = runCatching { element.jsonObject }.getOrNull() ?: return@mapNotNull null
                 PlaybackCase(
                     schema = fields.string("schema") ?: return@mapNotNull null,
                     layout = fields.string("layout") ?: return@mapNotNull null,
                     keys = fields.string("keys") ?: return@mapNotNull null,
                     expectText = fields.string("expect_text") ?: return@mapNotNull null,
+                    options =
+                        fields["options"]
+                            ?.jsonObject
+                            ?.mapValues { (_, value) ->
+                                value.jsonPrimitive.boolean
+                            }.orEmpty(),
+                    expectFirst = fields.string("expect_first"),
                 )
             }
-        }
     }
 
     private object LearningFixtures {
@@ -336,6 +396,7 @@ class EngineReplayTest {
         private const val BUILTIN_ASSET_ROOT = "rime/builtin"
         private const val DEFAULT_SOURCE_SCHEMA = "songyan_quanpin"
         private const val MAX_PAGES = 40
+        private val SCRIPT_OPTIONS = listOf("simplification", "zht", "zh_tw", "zh_hk")
         private const val MAX_REPORTED_FAILURES = 20
         private val ADAPTER_ID = Regex("keyboard_([0-9a-f]+)_(\\d+)")
 

@@ -2,6 +2,8 @@ package app.songyan.ime
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -18,6 +20,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.LinearLayout
+import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
@@ -65,6 +68,11 @@ import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
 import app.songyan.ime.settings.ui.theme.ThemeMode
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.tools.ProcessTextKind
+import app.songyan.ime.tools.ProcessTextOutcome
+import app.songyan.ime.tools.ProcessTextRelay
+import app.songyan.ime.tools.ProcessTextRequest
+import app.songyan.ime.tools.sameEditorAs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +91,9 @@ private const val SETTINGS_ACTION_DELAY_MS = 2_000L
 private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
 private const val TAG = "SongyanIme"
+
+/** How much of the field a tool may be handed: a paragraph, not the whole document. */
+private const val MAX_PROCESS_TEXT = 1000
 
 class SongyanInputMethodService : InputMethodService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + LogAndContinue)
@@ -202,6 +213,12 @@ class SongyanInputMethodService : InputMethodService() {
     private var root: LinearLayout? = null
     private var policy = EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE)
 
+    /**
+     * The editor that has this keyboard right now, as the platform last said in onStartInput and
+     * cleared in onFinishInput. Never the stale [currentInputEditorInfo] of a finished binding.
+     */
+    private var inputBinding: EditorInfo? = null
+
     /** The repeat-buffer rules that follow from [policy]; kept in step by [applyPolicy]. */
     private var quickInsertPolicy = QuickInsertPolicy()
 
@@ -209,6 +226,63 @@ class SongyanInputMethodService : InputMethodService() {
         policy = value
         quickInsertPolicy = QuickInsertPolicy.of(value)
     }
+
+    /**
+     * What the tool relay needs from this editor and the clipboard. A tool only handles text that is
+     * already in the field, so a composition (and a private editor) never runs one: the composition
+     * stays exactly as the user left it.
+     */
+    private val processTextHost =
+        object : ProcessTextRelay.Host {
+            override fun snapshotForProcessText(): ProcessTextRequest? {
+                val info = inputBinding ?: return null
+                if (policy.privateInput || editor.composing) return null
+                val connection = currentInputConnection ?: return null
+                val selected = runCatching { connection.getSelectedText(0)?.toString() }.getOrNull()
+                if (!selected.isNullOrEmpty()) {
+                    // A selection that cannot be handed over whole is refused, not cut silently.
+                    if (selected.length > MAX_PROCESS_TEXT) return null
+                    return ProcessTextRequest(selected, info.packageName, info.fieldId, ProcessTextKind.SELECTION)
+                }
+                // Only the paragraph the caret is in; an earlier one stays in the field.
+                val paragraph = (editor.contextBeforeCursor(MAX_PROCESS_TEXT) ?: return null).substringAfterLast('\n')
+                if (paragraph.isBlank()) return null
+                return ProcessTextRequest(paragraph, info.packageName, info.fieldId, ProcessTextKind.CURSOR)
+            }
+
+            override fun writeProcessText(
+                request: ProcessTextRequest,
+                text: String,
+            ): ProcessTextOutcome {
+                // The field may have changed while the other app was open: never write into a binding
+                // this keyboard does not have, and never over text that is no longer the same.
+                if (policy.privateInput || editor.composing || currentInputConnection == null) {
+                    copyProcessText(text)
+                    return ProcessTextOutcome.COPIED
+                }
+                if (!request.sameEditorAs(inputBinding)) {
+                    copyProcessText(text)
+                    return ProcessTextOutcome.COPIED
+                }
+                val written =
+                    when (request.kind) {
+                        ProcessTextKind.SELECTION -> editor.replaceSelection(request.text, text)
+                        ProcessTextKind.CURSOR -> editor.replaceBeforeCursor(request.text, text)
+                    }
+                if (!written) {
+                    copyProcessText(text)
+                    return ProcessTextOutcome.COPIED
+                }
+                return ProcessTextOutcome.REPLACED
+            }
+
+            override fun copyProcessText(text: String) {
+                getSystemService(ClipboardManager::class.java)?.setPrimaryClip(
+                    ClipData.newPlainText(getString(R.string.app_name), text),
+                )
+                Toast.makeText(this@SongyanInputMethodService, R.string.process_text_copied, Toast.LENGTH_SHORT).show()
+            }
+        }
 
     private var backend: EngineBackend? = null
     private var backDispatcher: OnBackInvokedDispatcher? = null
@@ -377,6 +451,7 @@ class SongyanInputMethodService : InputMethodService() {
                 )
         }
         clipboardRecorder.start()
+        ProcessTextRelay.attach(processTextHost)
     }
 
     /**
@@ -588,6 +663,7 @@ class SongyanInputMethodService : InputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInput(info, restarting)
+        inputBinding = info
         keepComposition = editor.startInput(info, restarting)
         inputToken++
         applyPolicy(EditorPolicy.from(info))
@@ -596,6 +672,8 @@ class SongyanInputMethodService : InputMethodService() {
         if (quickInsertPolicy.mustResetOnNewSession(restarting)) quickInsert?.resetContext()
         clipboardRecorder.setCaptureAllowed(false)
         startControllerInput()
+        // The editor that a tool's answer belongs to may have come back, or another one may have.
+        ProcessTextRelay.onEditorStarted(info)
     }
 
     /** Starts the keyboard on the current input exactly once, however many shows follow. */
@@ -611,6 +689,7 @@ class SongyanInputMethodService : InputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInputView(info, restarting)
+        inputBinding = info
         snapshotJob?.cancel()
         ImePerf.refresh()
         ImePerf.showStart()
@@ -632,6 +711,8 @@ class SongyanInputMethodService : InputMethodService() {
         controller?.onWindowShown()
         updateAutomaticCaps()
         root?.requestApplyInsets()
+        // A show after the relay is another chance for the editor to come back before the answer.
+        ProcessTextRelay.onEditorStarted(info)
     }
 
     /** Ends the show metric on the first pre-draw of the IME window, then detaches. */
@@ -680,6 +761,9 @@ class SongyanInputMethodService : InputMethodService() {
         editor.finishInput(currentInputEditorInfo)
         controller?.finishInput()
         quickInsert?.resetContext()
+        // No editor has this keyboard any more: a tool's answer must not use the old connection.
+        inputBinding = null
+        ProcessTextRelay.onEditorStarted(null)
         super.onFinishInput()
     }
 
@@ -789,6 +873,7 @@ class SongyanInputMethodService : InputMethodService() {
         runtime?.shutdown()
         updatePanelBack(false)
         controller?.retire()
+        ProcessTextRelay.detach(processTextHost)
         scope.cancel()
         super.onDestroy()
         viewOwners.destroy()

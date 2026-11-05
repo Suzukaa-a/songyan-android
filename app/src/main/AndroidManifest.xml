@@ -10,6 +10,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Other apps that take text through ACTION_PROCESS_TEXT. Android 11+ hides them from this
+         app's package queries without this declaration. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
     <application
         android:name=".SongyanApplication"
         android:allowBackup="true"
@@ -58,6 +67,15 @@
                 <data android:mimeType="application/x-zip-compressed" />
             </intent-filter>
         </activity>
+
+        <!-- The input method itself cannot start another app for a result. This invisible relay does
+             it, keeps its task out of the recent apps list, and stays alive until the answer is back. -->
+        <activity
+            android:name=".tools.ProcessTextTargetActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Songyan.Translucent" />
 
         <service
             android:name=".SongyanInputMethodService"

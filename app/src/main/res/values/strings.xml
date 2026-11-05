@@ -167,4 +167,7 @@
     <string name="package_learning_not_in_use">Could not switch to this input scheme, so its learned words were not merged.</string>
     <string name="package_learning_nothing">The learned words in this package do not match its dictionaries. Nothing was merged.</string>
     <string name="package_learning_gone">These learned words are no longer there.</string>
+
+    <!-- A tool's answer could not be written where it came from, so it is on the clipboard. -->
+    <string name="process_text_copied">Copied the result. Paste it where you need it.</string>
 </resources>

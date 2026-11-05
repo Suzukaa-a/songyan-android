@@ -429,6 +429,28 @@ class EditorConnection(
         return true
     }
 
+    /**
+     * Replaces the selected text with [replacement] in one edit, only when the editor still selects
+     * exactly [expected]. False leaves the editor untouched.
+     */
+    fun replaceSelection(
+        expected: String,
+        replacement: String,
+    ): Boolean {
+        val ic = connection() ?: return false
+        if (keyEventEditor || composing || expected.isEmpty()) return false
+        ic.beginBatchEdit()
+        try {
+            if (ic.getSelectedText(0)?.toString() != expected) return false
+            if (!ic.commitText(replacement, 1)) return false
+            selection.forget()
+            forgetText()
+            return true
+        } finally {
+            ic.endBatchEdit()
+        }
+    }
+
     /** Deletes [units] UTF-16 units before the caret in one edit (a typed word replaced by a suggestion). */
     fun deleteBeforeCursor(units: Int) {
         val ic = connection() ?: return

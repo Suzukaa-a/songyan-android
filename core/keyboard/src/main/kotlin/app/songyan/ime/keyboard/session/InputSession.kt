@@ -8,6 +8,9 @@ import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.EngineBackendError
 import app.songyan.ime.keyboard.engine.EngineOptionState
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.InputLanguageProfile
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -53,6 +56,22 @@ class InputSession(
 
     var options: List<EngineOptionState> = emptyList()
         internal set
+
+    /**
+     * Cached input language of the source schema. It is recomputed only when the schema or a
+     * declared script switch changes, so drawing a key never queries the engine for it.
+     */
+    var inputLanguage: InputLanguageProfile =
+        InputLanguageProfile(InputLanguage.ZH_HANS, InputSchemeFamily.GENERIC)
+        internal set
+
+    /** The schema and declared script conversion [inputLanguage] was derived from. */
+    internal var inputLanguageSource: String? = null
+
+    internal var inputLanguageConversion: String? = null
+
+    /** `speller/alphabet` read once per source schema; an empty entry is a failed read (fail closed). */
+    internal val alphabetCache = mutableMapOf<String, String>()
 
     /**
      * Real engine-state version, incremented on every [apply]. The host uses it as part of the
@@ -185,6 +204,7 @@ class InputSession(
                 onUpdate?.invoke()
                 return
             }
+        refreshInputLanguage()
         onUpdate?.invoke()
     }
 

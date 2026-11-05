@@ -2,6 +2,7 @@ package app.songyan.ime.rime
 
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -42,6 +43,50 @@ class SchemaOptionCapabilitiesTest {
         assertTrue(found.defaultValue)
         assertEquals("pinyin", found.resourceID)
         assertEquals("luna", found.schemaID)
+    }
+
+    @Test
+    fun aSwitchCarriesTheOpenccConfigItDeclares() {
+        assertEquals("s2t", parse(traditional).single().scriptConfig)
+    }
+
+    @Test
+    fun aSwitchWithoutAScriptConversionCarriesNoConfig() {
+        val fullShape = traditional.replace("  - name: ascii_punct", "  - name: full_shape")
+        assertNull(parse(fullShape).last().scriptConfig)
+        assertNull(parse(traditional.replace("s2t.json", "emoji.json")).single().scriptConfig)
+    }
+
+    @Test
+    fun theBareSimplifierCarriesItsDefaultDeclaredConfig() {
+        val yaml =
+            """
+            engine:
+              filters:
+              - simplifier
+            switches:
+            - name: simplification
+            simplifier:
+              opencc_config: t2s.json
+            """.trimIndent()
+        assertEquals("t2s", parse(yaml).single().scriptConfig)
+    }
+
+    @Test
+    fun aRadioGroupMemberCarriesTheConfigOfItsOwnFilter() {
+        val yaml =
+            """
+            engine:
+              filters:
+                - simplifier@trad
+            switches:
+              - options: [ trad, simp ]
+                states: [ 繁, 简 ]
+            trad:
+              option_name: trad
+              opencc_config: s2t.json
+            """.trimIndent()
+        assertEquals(listOf("s2t", null), parse(yaml).map { it.scriptConfig })
     }
 
     @Test

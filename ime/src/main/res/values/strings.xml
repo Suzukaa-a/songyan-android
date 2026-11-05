@@ -12,6 +12,7 @@
     <string name="ime_previous">Previous</string>
     <string name="ime_numbers">123</string>
     <string name="ime_symbols">Symbols</string>
+    <string name="ime_symbol_key">Symbols</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">Clear</string>
     <string name="ime_language_to_english">Chinese. Tap to switch to English</string>
@@ -25,6 +26,40 @@
     <string name="ime_jump_to_numbers">Switch to %1$s and open its numbers page</string>
     <string name="ime_jump_to_symbols">Switch to %1$s and open its symbols page</string>
     <string name="ime_return_to_letters">Return to letters</string>
+    <!-- Automatic key names that do not follow the mobile UI language but the schemas input
+         language; keeping them neutral avoids a half-translated locale turning the rest English. -->
+    <string name="input_space_hant" translatable="false">空白</string>
+    <string name="input_space_ja" translatable="false">空白</string>
+    <string name="input_space_composing_hant" translatable="false">空白</string>
+    <string name="input_space_composing_ja" translatable="false">変換</string>
+    <string name="input_enter_composing_ja" translatable="false">確定</string>
+    <string name="input_enter_hant" translatable="false">換行</string>
+    <string name="input_enter_ja" translatable="false">改行</string>
+    <string name="input_go_hant" translatable="false">前往</string>
+    <string name="input_go_ja" translatable="false">開く</string>
+    <string name="input_search_hant" translatable="false">搜尋</string>
+    <string name="input_search_ja" translatable="false">検索</string>
+    <string name="input_send_hant" translatable="false">傳送</string>
+    <string name="input_send_ja" translatable="false">送信</string>
+    <string name="input_next_hant" translatable="false">下一個</string>
+    <string name="input_next_ja" translatable="false">次へ</string>
+    <string name="input_done_hant" translatable="false">完成</string>
+    <string name="input_done_ja" translatable="false">完了</string>
+    <string name="input_symbol_key_hant" translatable="false">符</string>
+    <string name="input_symbol_key_ja" translatable="false">記号</string>
+    <string name="input_open_symbols_page_hant" translatable="false">開啟符號頁</string>
+    <string name="input_open_symbols_page_ja" translatable="false">記号ページを開く</string>
+    <string name="input_open_numbers_page_hant" translatable="false">開啟數字符號頁</string>
+    <string name="input_open_numbers_page_ja" translatable="false">数字記号ページを開く</string>
+    <string name="input_language_key_ja" translatable="false">あ/A</string>
+    <string name="input_language_to_english_hant" translatable="false">中文，點按切換為英文</string>
+    <string name="input_language_to_chinese_hant" translatable="false">英文，點按切換為中文</string>
+    <string name="input_language_to_english_symbols_hant" translatable="false">中文標點，點按切換為英文標點</string>
+    <string name="input_language_to_chinese_symbols_hant" translatable="false">英文標點，點按切換為中文標點</string>
+    <string name="input_language_to_english_ja" translatable="false">中国語（タップで英語に切り替え）</string>
+    <string name="input_language_to_chinese_ja" translatable="false">英語（タップで中国語に切り替え）</string>
+    <string name="input_language_to_english_symbols_ja" translatable="false">中国語の記号（タップで英語の記号に切り替え）</string>
+    <string name="input_language_to_chinese_symbols_ja" translatable="false">英語の記号（タップで中国語の記号に切り替え）</string>
     <string name="ime_menu_input_method">Input method</string>
     <string name="ime_menu_layout">Keyboard layout</string>
     <string name="ime_menu_close">Close</string>

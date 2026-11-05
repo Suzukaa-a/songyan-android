@@ -39,6 +39,7 @@ object SchemaOptionCapabilities {
         val sections = sections(yaml)
         val items = switchItems(sections["switches"].orEmpty())
         val conversions = linkedMapOf<String, EngineOptionKind?>()
+        val declaredConfigs = linkedMapOf<String, String>()
         for (filter in filters(sections["engine"].orEmpty())) {
             val namespace =
                 when {
@@ -49,7 +50,12 @@ object SchemaOptionCapabilities {
             val fields = sections[namespace].orEmpty()
             val name = scalarField(fields, "option_name") ?: "simplification"
             val config = scalarField(fields, "opencc_config") ?: "t2s.json"
-            if (name !in conversions) conversions[name] = if (openccInstalled(config)) openccKind(config) else null
+            if (name !in conversions) {
+                conversions[name] = if (openccInstalled(config)) openccKind(config) else null
+                // Keep the config the schema declares: the keyboard's script rules read it instead
+                // of inferring a state from the verified kind alone.
+                declaredConfigs[name] = config.removeSuffix(".json")
+            }
         }
         val result = mutableListOf<EngineOptionDescriptor>()
         for (item in items) {
@@ -63,6 +69,10 @@ object SchemaOptionCapabilities {
                         name,
                         kind,
                         scalarField(item, "reset") in TRUE_VALUES,
+                        scriptConfig =
+                            declaredConfigs[name]?.takeIf {
+                                kind == EngineOptionKind.TRADITIONAL || kind == EngineOptionKind.SIMPLIFIED
+                            },
                     )
                 continue
             }
@@ -93,6 +103,7 @@ object SchemaOptionCapabilities {
                         reset == index,
                         options,
                         labels[index],
+                        scriptConfig = declaredConfigs[option],
                     )
             }
         }

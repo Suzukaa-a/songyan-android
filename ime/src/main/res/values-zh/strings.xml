@@ -12,6 +12,7 @@
     <string name="ime_previous">上一项</string>
     <string name="ime_numbers">123</string>
     <string name="ime_symbols">符号</string>
+    <string name="ime_symbol_key">符</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">重输</string>
     <string name="ime_language_to_english">中文，点按切换为英文</string>

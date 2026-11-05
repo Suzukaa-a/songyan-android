@@ -7,6 +7,7 @@ import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.display.SentenceSpelling
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
@@ -54,6 +55,7 @@ internal fun KeyboardController.render() {
         callbacks.preedit(if (snapshot.isComposing) marked else "")
     }
     val english = englishNow()
+    val language = active?.inputLanguage?.language ?: InputLanguage.ZH_HANS
     val currentPage = if (policy.numeric) KeyboardPageKind.NUMERIC else page
     val marksAscii = asciiMarksNow
     val catalog = KeyboardLayoutCatalog.snapshot.value
@@ -78,6 +80,8 @@ internal fun KeyboardController.render() {
             symbolMarksAscii = marksAscii,
             phone = layoutKind == KeyboardLayoutKind.PHONE9,
             symbolLocked = symbolLock,
+            language = language,
+            composing = visible.isComposing,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF
@@ -146,10 +150,10 @@ internal fun KeyboardController.render() {
                     showsGlobe = showsSwitchKey,
                     labels =
                         PhoneKeypadLayout.Labels(
-                            page = context.getString(R.string.ime_numbers),
-                            language = "中/英",
-                            space = names.getString(R.string.ime_space),
-                            symbols = names.getString(R.string.ime_symbols),
+                            page = names.getString(R.string.ime_numbers),
+                            language = keyNames.languageKeyDrawn(language) ?: "中/英",
+                            space = keyNames.space(language, visible.isComposing),
+                            symbols = keyNames.symbolPageDrawn(language),
                             back =
                                 if (english) {
                                     context.getString(R.string.ime_back)
@@ -297,8 +301,15 @@ internal fun KeyboardController.builtinDefinition(kind: KeyboardLayoutKind) =
     }
 
 /** The editor's own action label wins: it is the string the editor will act on. */
-internal fun KeyboardController.enterLabel(): String =
-    policy.customActionLabel ?: keyNames.chinese().getString(enterKeyLabelRes(policy.action))
+internal fun KeyboardController.enterLabel(): String {
+    val language = session?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    policy.customActionLabel?.let { return it }
+    // While a composition is open some languages name the confirmation instead of the action.
+    if (session?.snapshot?.isComposing == true) {
+        keyNames.enterComposing(language)?.let { return it }
+    }
+    return keyNames.enterAction(language, enterKeyLabelRes(policy.action))
+}
 
 /** Whether the keyboard is in English mode. */
 internal fun KeyboardController.englishNow(): Boolean =

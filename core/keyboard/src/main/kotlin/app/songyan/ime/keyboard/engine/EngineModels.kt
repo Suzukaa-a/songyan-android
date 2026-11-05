@@ -218,6 +218,8 @@ data class EngineOptionDescriptor(
     val defaultValue: Boolean = false,
     val choiceGroup: List<String> = emptyList(),
     val choiceLabel: String? = null,
+    /** The OpenCC config (`s2t`, `s2twp`) a script switch declares; null for other switches. */
+    val scriptConfig: String? = null,
 ) {
     val id: String get() = name
 }

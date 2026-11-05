@@ -28,26 +28,27 @@ internal fun KeyboardView.face(
     key: LayoutKey,
     spoken: Boolean,
 ): String {
+    val names = keyNames.chinese()
     if (key.titleMode == LayoutKeyTitleMode.CUSTOM) return key.label
     return when (key.action.type) {
-        LayoutActionKind.SPACE -> keyName(R.string.ime_space, spoken)
+        LayoutActionKind.SPACE -> keyNames.space(faces.language, faces.composing)
         LayoutActionKind.BACKSPACE ->
-            context.getString(if (spoken) R.string.ime_delete else R.string.ime_glyph_delete)
-        LayoutActionKind.ENTER -> if (spoken) spokenEnterLabel() else actionLabel
+            names.getString(if (spoken) R.string.ime_delete else R.string.ime_glyph_delete)
+        LayoutActionKind.ENTER -> actionLabel
         LayoutActionKind.SHIFT ->
             if (spoken) {
-                context.getString(if (capsLocked) R.string.ime_shift_locked else R.string.ime_shift)
+                names.getString(if (capsLocked) R.string.ime_shift_locked else R.string.ime_shift)
             } else {
-                context.getString(R.string.ime_glyph_shift)
+                names.getString(R.string.ime_glyph_shift)
             }
         // Drawn as an icon; the name is for TalkBack.
-        LayoutActionKind.GLOBE -> if (spoken) context.getString(R.string.ime_toolbar_switch_input_method) else key.label
-        LayoutActionKind.SYMBOL_LOCK -> context.getString(R.string.ime_symbol_lock)
+        LayoutActionKind.GLOBE -> if (spoken) names.getString(R.string.ime_toolbar_switch_input_method) else key.label
+        LayoutActionKind.SYMBOL_LOCK -> names.getString(R.string.ime_symbol_lock)
         LayoutActionKind.LANGUAGE_SWITCH -> languageFace(key, spoken)
         LayoutActionKind.PAGE_SWITCH -> pageSwitchFace(key.action, key, spoken)
         // Only the keyboard's own key is renamed for the ear; an author's label is what they wrote.
         LayoutActionKind.CLEAR_INPUT ->
-            if (spoken && isKeyName(key.label, R.string.ime_clear)) context.getString(R.string.ime_clear) else key.label
+            if (spoken && isKeyName(key.label, R.string.ime_clear)) names.getString(R.string.ime_clear) else key.label
         LayoutActionKind.LAYOUT_PAGE_SWITCH -> if (spoken) jumpName(key) else key.label
         else -> {
             val base =
@@ -67,36 +68,10 @@ internal fun KeyboardView.face(
     }
 }
 
-/** A key's drawn name is Chinese; its spoken name follows the system language. */
-internal fun KeyboardView.keyName(
-    id: Int,
-    spoken: Boolean,
-): String = (if (spoken) context else keyNames.chinese()).getString(id)
-
-/** TalkBack names the Enter key in the system language; the drawn label is Chinese. */
-private fun KeyboardView.spokenEnterLabel(): String {
-    val drawn = actionLabel
-    for (id in ENTER_LABELS) {
-        if (isKeyName(drawn, id)) return context.getString(id)
-    }
-    return drawn
-}
-
 private fun KeyboardView.isKeyName(
     drawn: String,
     id: Int,
 ): Boolean = keyNames.chinese().getString(id) == drawn
-
-private val ENTER_LABELS =
-    intArrayOf(
-        R.string.ime_enter,
-        R.string.ime_go,
-        R.string.ime_search,
-        R.string.ime_send,
-        R.string.ime_next,
-        R.string.ime_done,
-        R.string.ime_previous,
-    )
 
 /** The language key names the language it switches to, never the current one. */
 internal fun KeyboardView.languageFace(
@@ -105,22 +80,14 @@ internal fun KeyboardView.languageFace(
 ): String {
     val action = key.action
     if (action.languageSwitchBehavior == LayoutLanguageSwitchBehavior.LETTERS) {
-        return context.getString(if (spoken) R.string.ime_return_to_letters else R.string.ime_back)
+        return keyNames.chinese().getString(if (spoken) R.string.ime_return_to_letters else R.string.ime_back)
     }
-    // The key's name never changes with the system language or the current state: it is drawn
-    // "中/英" with the current side emphasised (see drawLanguageLabel). Only TalkBack gets words.
-    if (!spoken) return key.label
+    // Chinese is drawn "中/英" with the current side emphasised (see drawLanguageLabel); Japanese
+    // names its two sides あ and A. Only TalkBack gets words otherwise.
+    if (!spoken) return keyNames.languageKeyDrawn(faces.language) ?: key.label
     val symbols = faces.page != null
     val targetChinese = if (symbols) faces.symbolMarksAscii else faces.english
-    val id =
-        when {
-            spoken && symbols && targetChinese -> R.string.ime_language_to_chinese_symbols
-            spoken && symbols -> R.string.ime_language_to_english_symbols
-            spoken && targetChinese -> R.string.ime_language_to_chinese
-            spoken -> R.string.ime_language_to_english
-            else -> R.string.ime_language_key
-        }
-    return context.getString(id)
+    return keyNames.languageKeySpoken(faces.language, symbols, targetChinese)
 }
 
 /** TalkBack names where a jump key goes, since its drawn label (often "123") does not say which layout. */
@@ -128,33 +95,36 @@ internal fun KeyboardView.jumpName(key: LayoutKey): String {
     val jump = key.action.layoutPageJump ?: return key.label
     val kind = KeyboardLayoutKind.fromWire(jump.layout.wire) ?: return key.label
     val id = if (jump.page == LayoutPageTarget.SYMBOLS) R.string.ime_jump_to_symbols else R.string.ime_jump_to_numbers
-    return context.getString(id, layoutName(context, kind))
+    val names = keyNames.chinese()
+    return names.getString(id, layoutName(names, kind))
 }
 
 internal fun KeyboardView.pageSwitchFace(
     action: LayoutAction,
     key: LayoutKey,
     spoken: Boolean,
-): String =
-    when (action.pageSwitchTarget) {
+): String {
+    val names = keyNames.chinese()
+    return when (action.pageSwitchTarget) {
         // The Chinese keyboard says "返回"; the English one names where it goes, "ABC".
         LayoutPageTarget.LETTERS ->
             when {
-                spoken -> context.getString(R.string.ime_return_to_letters)
-                faces.english -> context.getString(R.string.ime_back)
+                spoken -> names.getString(R.string.ime_return_to_letters)
+                faces.english -> names.getString(R.string.ime_back)
                 else -> key.label
             }
         LayoutPageTarget.NUMERIC ->
-            context.getString(if (spoken) R.string.ime_open_numbers_page else R.string.ime_numbers)
+            if (spoken) keyNames.numbersPageSpoken(faces.language) else names.getString(R.string.ime_numbers)
         // On the symbol page itself the switch turns from its extra page of everyday marks to the rest.
         LayoutPageTarget.SYMBOLS ->
             if (faces.page == KeyboardPageKind.SYMBOLS) {
-                context.getString(if (spoken) R.string.ime_open_more_symbols else R.string.ime_more_symbols)
+                names.getString(if (spoken) R.string.ime_open_more_symbols else R.string.ime_more_symbols)
             } else {
-                if (spoken) context.getString(R.string.ime_open_symbols_page) else keyName(R.string.ime_symbols, false)
+                if (spoken) keyNames.symbolPageSpoken(faces.language) else keyNames.symbolPageDrawn(faces.language)
             }
         null -> key.label
     }
+}
 
 /** The key area height of [rows] rows in dp: every page above the letters uses the same one. */
 internal fun KeyboardView.keyAreaHeightDp(rows: Int): Float = rows * metrics.rowHeightDp

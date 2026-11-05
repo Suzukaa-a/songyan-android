@@ -19,6 +19,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import app.songyan.ime.candidate.KeyboardContentDock
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -40,6 +41,10 @@ data class KeyboardFaces(
     val phone: Boolean = false,
     /** The symbol page's corner lock is on. */
     val symbolLocked: Boolean = false,
+    /** Input language of the running schema; it decides the automatic key names. */
+    val language: InputLanguage = InputLanguage.ZH_HANS,
+    /** A composition is open: the space and return keys name what they do next. */
+    val composing: Boolean = false,
 )
 
 class KeyboardView(

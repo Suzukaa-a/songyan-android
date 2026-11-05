@@ -33,6 +33,35 @@ class SymbolCatalogTest {
         assertTrue(catalog.items.all { it.category in categoryIds })
     }
 
+    /** A later prefix match must outrank an earlier contains match. */
+    @Test
+    fun searchKeepsRankingWhenAliasesMatchDifferentWays() {
+        val catalog =
+            SymbolCatalog(
+                categories = emptyList(),
+                items =
+                    listOf(
+                        SymbolItem("text", "AB", "Other", emptyList(), "c"),
+                        SymbolItem("alias-contains", "1", "Other", listOf("xx ab yy"), "c"),
+                        SymbolItem("name-contains", "2", "xx ab yy", listOf("zzabzz"), "c"),
+                        SymbolItem("alias-prefix", "3", "xxab", listOf("zzabzz", "ＡＢ tail"), "c"),
+                        SymbolItem("alias-prefix-next", "4", "Other", listOf("ab next"), "c"),
+                        SymbolItem("name-prefix", "5", "AB name", emptyList(), "c"),
+                    ),
+            )
+        assertEquals(
+            listOf(
+                "name-prefix",
+                "alias-prefix",
+                "alias-prefix-next",
+                "name-contains",
+                "alias-contains",
+                "text",
+            ),
+            catalog.search(" ＡＢ ").map { it.id },
+        )
+    }
+
     @Test
     fun bundledKaomojiSearchAndRoundTrip() {
         val catalog = SymbolCatalog.bundledDefault()

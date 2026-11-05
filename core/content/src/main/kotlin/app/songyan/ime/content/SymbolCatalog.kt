@@ -91,7 +91,18 @@ data class SymbolCatalog(
                 byNamePrefix.add(item)
                 continue
             }
-            if (item.aliases.any { SymbolSearch.normalize(it).startsWith(query) }) {
+            // Check both alias ranks in one pass, normalizing each alias once.
+            var aliasPrefix = false
+            var aliasContains = false
+            for (alias in item.aliases) {
+                val normalized = SymbolSearch.normalize(alias)
+                if (normalized.startsWith(query)) {
+                    aliasPrefix = true
+                    break
+                }
+                if (!aliasContains && normalized.contains(query)) aliasContains = true
+            }
+            if (aliasPrefix) {
                 byAliasPrefix.add(item)
                 continue
             }
@@ -99,7 +110,7 @@ data class SymbolCatalog(
                 byNameContains.add(item)
                 continue
             }
-            if (item.aliases.any { SymbolSearch.normalize(it).contains(query) }) {
+            if (aliasContains) {
                 byAliasContains.add(item)
                 continue
             }

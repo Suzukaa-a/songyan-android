@@ -103,6 +103,13 @@
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:process=":deploy" />
 
+        <!-- A regular expression cannot be stopped from inside its match, so the deadline is
+             enforced by killing the process that runs it: the match gets a process of its own. -->
+        <service
+            android:name=".tools.regex.ToolRegexWorkerService"
+            android:exported="false"
+            android:process=":tools" />
+
         <!-- The Rime configuration folder in the Files app. Exported with MANAGE_DOCUMENTS, as the
              Storage Access Framework requires: only the system document UI binds it, other apps only
              get what the user grants them in the picker. -->

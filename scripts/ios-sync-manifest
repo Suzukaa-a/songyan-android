@@ -33,6 +33,7 @@ Packages/QuickContentKit/Sources/QuickContentKit/Resources/default-symbols.json 
 
 # --- Engine fixtures (androidTest assets) --------------------------------
 Tests/EngineFixtures/Builtin/ core/rime/src/androidTest/assets/engine-fixtures/builtin/
+Tests/EngineFixtures/Prediction/ ime/src/androidTest/assets/engine-fixtures/prediction/
 Tests/Fixtures/GrammarRanking/ core/rime/src/androidTest/assets/engine-fixtures/grammar-ranking/
 Tools/BuildRimeIOS/testdata/generic-ambiguity/ core/rime/src/androidTest/assets/engine-fixtures/ambiguity/
 # --- Package manager fixtures (cross-checked schema projections) ----------

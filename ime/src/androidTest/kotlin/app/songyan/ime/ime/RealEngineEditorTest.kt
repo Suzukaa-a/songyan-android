@@ -26,10 +26,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.content.CommonPhrase
 import app.songyan.ime.content.SymbolCatalog
+import app.songyan.ime.ime.panels.EditPanelView
 import app.songyan.ime.ime.panels.PhraseClipboardPanelView
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
@@ -576,6 +578,213 @@ class RealEngineEditorTest {
             }
             host.awaitIdle()
             assertEquals("", host.text())
+        }
+
+    /** A Delete answered after its field ended must not delete in the field that replaced it. */
+    @Test
+    fun aDeleteAnsweredAfterItsFieldEndedDeletesNothingInTheNextField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abc")
+            typePredictionContext(host)
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            // Release before the field changes: a finger still down would add its own repeats.
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+        }
+
+    /** The same Delete in the field it was made in: dismissing the prediction still deletes once. */
+    @Test
+    fun aDeleteStillDeletesAfterDismissingThePredictionInItsOwnField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abc")
+            typePredictionContext(host)
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            // Release before the gate opens: a finger still down would add its own repeats.
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the committed word is deleted", "abc", host.text())
+        }
+
+    /**
+     * Commits 你 through the engine, so the pinned predictor offers 好 as its real post-commit
+     * prediction: the fixture is a real scheme with a real predict.db, never a fabricated snapshot.
+     */
+    private fun typePredictionContext(host: Host) {
+        val before = host.text()
+        host.tap("n")
+        host.tap("i")
+        host.awaitField(before + "ni")
+        val you = host.barLabels().firstOrNull { it.startsWith("你") }
+        assertTrue("the dictionary offers 你: " + host.barLabels(), you != null)
+        host.tap(you!!, bar = true)
+        host.awaitIdle()
+        val snapshot = host.backend.currentSnapshot()
+        assertEquals("only 你 was committed", before + "你", host.text())
+        assertTrue("a post-commit prediction: " + snapshot, snapshot.isPrediction)
+        assertFalse("prediction is not a composition", snapshot.isComposing)
+        assertEquals("prediction shows no preedit", "", snapshot.preedit)
+        assertTrue("the prediction offers 好: " + snapshot, snapshot.candidates.any { it.text == "好" })
+    }
+
+    /** A space after a prediction types only a space: the predicted word is never picked for the user. */
+    @Test
+    fun aSpaceAfterAPredictionTypesOnlyASpace() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            assertTrue(
+                "the row offers the prediction: " + host.barLabels(),
+                host.barLabels().any { it.startsWith("好") },
+            )
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField("你 ")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+        }
+
+    /** A punctuation key after a prediction types only that mark, never the predicted word. */
+    @Test
+    fun aMarkAfterAPredictionTypesOnlyTheMark() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            assertTrue(
+                "the row offers the prediction: " + host.barLabels(),
+                host.barLabels().any { it.startsWith("好") },
+            )
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tap("【")
+            host.awaitField("你【")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+        }
+
+    /** Choosing the predicted word in the row is the one way it commits. */
+    @Test
+    fun tappingAPredictedCandidateCommitsIt() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            val word = host.barLabels().firstOrNull { it.startsWith("好") }
+            assertTrue("the row offers the prediction: " + host.barLabels(), word != null)
+            host.tap(word!!, bar = true)
+            host.awaitField("你好")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+        }
+
+    /** Typing on after a prediction types only what was typed: the predicted word never leaks in. */
+    @Test
+    fun typingAfterAPredictionDoesNotTypeThePredictedWord() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            host.tap("n")
+            host.tap("i")
+            host.awaitField("你ni")
+            host.awaitIdle()
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+            assertTrue(
+                "the new keys compose: " + host.backend.currentSnapshot(),
+                host.backend.currentSnapshot().isComposing,
+            )
+        }
+
+    /**
+     * A panel edit confirms the composition through the engine before it edits. If the field ends
+     * while that answer is pending, the edit must not reach the field that replaced it.
+     */
+    @Test
+    fun aPanelEditAnsweredAfterItsFieldEndedEditsNothingInTheNextField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abcdef")
+            typePredictionContext(host)
+            host.main { host.controller.openEditPanel() }
+            host.awaitIdle()
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            host.tapPanelCell(EditPanelView::class.java, host.string(R.string.ime_edit_delete))
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+        }
+
+    /** A prediction belongs to its field: it must not survive into the next one. */
+    @Test
+    fun aPredictionDoesNotSurviveIntoTheNextField() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start(initial = "abcdef")
+            typePredictionContext(host)
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+            assertFalse("the prediction went with its field", host.backend.currentSnapshot().isPrediction)
+            assertTrue("no predicted word is offered", host.barLabels().none { it.startsWith("好") })
+        }
+
+    /** Enter on a multi-line host types a newline and closes the prediction, never a predicted word. */
+    @Test
+    fun aReturnAfterAPredictionTypesANewline() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+            typePredictionContext(host)
+            host.tap(host.string(R.string.ime_enter))
+            host.awaitField("你\n")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse("the predicted word was not typed: " + host.text(), host.text().contains("好"))
         }
 
     /**
@@ -2324,16 +2533,43 @@ class RealEngineEditorTest {
         schema: String = "",
         readingPlacement: String = "row",
         smallestWidthDp: Int? = null,
+        /** An asset tree under engine-fixtures/ deployed and opened instead of the builtin scheme. */
+        fixtureAssetRoot: String? = null,
+        /** Wraps the real backend so a prediction dismissal can be held before the engine answers. */
+        pauseDismiss: Boolean = false,
         block: (Host) -> T,
     ): T {
         val user = File(root, "user-" + SystemClock.uptimeMillis())
-        val engineSource = if (smallPages) smallPageDeployment.first else source
-        val engineCompiled = if (smallPages) smallPageDeployment.second else compiled
+        var fixture: File? = null
+        var fixtureCompiled: File? = null
+        val engineSource =
+            if (fixtureAssetRoot != null) {
+                val fixtureDir = File(root, "fixture-" + SystemClock.uptimeMillis())
+                copyAssetTree(fixtureAssetRoot, fixtureDir)
+                val deployment = runBlocking { RimeDeployment.deploy(fixtureDir, user, appVersion = "test") }
+                check(deployment.success) { "fixture deployment failed: " + deployment.lastError }
+                fixture = fixtureDir
+                fixtureCompiled = deployment.compiledDir
+                fixtureDir
+            } else if (smallPages) {
+                smallPageDeployment.first
+            } else {
+                source
+            }
+        val engineCompiled = fixtureCompiled ?: if (smallPages) smallPageDeployment.second else compiled
         val backend =
             runBlocking {
                 RimeEngineBackend.create(engineSource, user, engineCompiled, RimeEngine.DEFAULT_APP_NAME, "test")
             }
-        val host = Host(backend, layout, fontScale, schema, readingPlacement, smallestWidthDp)
+        val host =
+            Host(
+                if (pauseDismiss) PausedDismissBackend(backend) else backend,
+                layout,
+                fontScale,
+                schema,
+                readingPlacement,
+                smallestWidthDp,
+            )
         try {
             return block(host)
         } finally {
@@ -2342,7 +2578,55 @@ class RealEngineEditorTest {
             } finally {
                 runBlocking { backend.shutdown() }
                 user.deleteRecursively()
+                fixture?.deleteRecursively()
             }
+        }
+    }
+
+    /** Copies a fixture out of the androidTest assets into [target], where the engine deploys it. */
+    private fun copyAssetTree(
+        assetPath: String,
+        target: File,
+    ) {
+        val assets = instrumentation.context.assets
+
+        fun copy(
+            path: String,
+            into: File,
+        ) {
+            into.mkdirs()
+            for (name in assets.list(path).orEmpty()) {
+                val childPath = path + "/" + name
+                val child = File(into, name)
+                if (assets.list(childPath).orEmpty().isNotEmpty()) {
+                    copy(childPath, child)
+                } else {
+                    assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
+                }
+            }
+        }
+        copy(assetPath, target)
+    }
+
+    /**
+     * The real backend with one test seam: a prediction dismissal can be held before the engine
+     * answers it. Snapshots are always the engine's own; nothing is fabricated.
+     */
+    private class PausedDismissBackend(
+        private val inner: EngineBackend,
+    ) : EngineBackend by inner {
+        /** Set to hold the next dismissal; cleared once it has been awaited. */
+        @Volatile
+        var gate: CompletableDeferred<Unit>? = null
+
+        @Volatile
+        var dismissals = 0
+
+        override suspend fun dismissPrediction(): EngineSnapshot {
+            dismissals++
+            gate?.await()
+            gate = null
+            return inner.dismissPrediction()
         }
     }
 
@@ -2845,11 +3129,18 @@ class RealEngineEditorTest {
          * its composition itself when it loses focus, and the new one starts on the same connection
          * (restarting = true). Returns the field that was left.
          */
-        fun switchField(restarting: Boolean = true): EditText {
+        fun switchField(
+            restarting: Boolean = true,
+            initialText: String = "",
+        ): EditText {
             val left = field
             connection.finishComposingText()
             field = EditText(context)
             field.inputType = InputType.TYPE_CLASS_TEXT
+            if (initialText.isNotEmpty()) {
+                field.setText(initialText)
+                field.setSelection(initialText.length)
+            }
             connect()
             beginInput(restarting = restarting)
             return left
@@ -3104,6 +3395,26 @@ class RealEngineEditorTest {
 
         fun labelsOf(view: View): List<String> = labels(view)
 
+        /**
+         * Clicks a panel cell spoken as [label], as a screen reader does. The click is queued only:
+         * a caller that holds the work it starts must not wait for idle here.
+         */
+        fun tapPanelCell(
+            type: Class<out View>,
+            label: String,
+        ) {
+            main {
+                val view = find(type)
+                val spoken = labels(view)
+                val index = spoken.indexOfFirst { matches(it, label) }
+                assertTrue("no '" + label + "' in " + spoken, index >= 0)
+                assertTrue(
+                    "the panel cell answered",
+                    view.accessibilityNodeProvider.performAction(index, AccessibilityNodeInfo.ACTION_CLICK, null),
+                )
+            }
+        }
+
         private fun labels(view: View): List<String> {
             val provider = view.accessibilityNodeProvider
             val result = ArrayList<String>()
@@ -3232,6 +3543,10 @@ class RealEngineEditorTest {
         private const val MIN_OVERFLOW_PAGE = 4
         private const val PICKED_RANK = 4
         private const val BUILTIN_ASSET_ROOT = "rime/builtin"
+
+        /** This module's own prediction fixture (a real predict.db and the schema that mounts it). */
+        private const val PREDICTION_FIXTURE = "engine-fixtures/prediction"
+        private const val PREDICTION_SCHEMA = "prediction_probe"
         private const val MAX_FONT_SCALE = 1.3f
         private const val LAST_OF_FIVE = 4
         private const val EXPANDED_DRAG_PX = 700f

@@ -589,6 +589,9 @@ class KeyboardController(
         operations.trySend(ANY_GENERATION to stepOp)
     }
 
+    /** Engine replies cannot authorize writes after the owning input generation ends. */
+    internal fun fieldStillCurrent(): Boolean = dispatchGeneration == generation && !retired && !preparing
+
     /**
      * Returns once every press and operation queued so far has run. An engine swap waits for this
      * before it unbinds, so a press made just before the swap is handled by the engine it was made
@@ -624,10 +627,11 @@ class KeyboardController(
         dispatch(action, t9FirstKey)
     }
 
-    /** Confirms the composition through the engine before a quick insert; true when nothing remains. */
+    /** Engine confirmation must not authorize a follow-up write to a replacement editor. */
     private suspend fun confirmComposition(): Boolean {
         val active = session.takeIf { ready } ?: return true
-        return active.commitComposition()
+        val committed = active.commitComposition()
+        return committed && fieldStillCurrent()
     }
 
     /**

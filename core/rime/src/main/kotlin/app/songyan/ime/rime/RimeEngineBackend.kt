@@ -110,6 +110,7 @@ class RimeEngineBackend(
         val key =
             RimeKey.fromKeyValue(keyValue)
                 ?: throw EngineBackendError.OperationFailed("not an engine key: $keyValue")
+        if (key != RimeKey.ESCAPE && engine.snapshot.value.hasPredictionComposition) dismissPrediction()
         val result =
             try {
                 engine.processKey(key)
@@ -141,12 +142,29 @@ class RimeEngineBackend(
             else -> null
         }
 
-    override suspend fun cancelComposition(): EngineSnapshot =
-        try {
+    override suspend fun cancelComposition(): EngineSnapshot {
+        // Clearing a prediction directly lets the predictor recreate it from commit history.
+        if (inputUnavailableReason == null && engine.snapshot.value.hasPredictionComposition) {
+            return dismissPrediction()
+        }
+        return try {
             publish(engine.cancelComposition())
         } catch (e: RimeException) {
             throw e.asBackendError()
         }
+    }
+
+    override suspend fun dismissPrediction(): EngineSnapshot {
+        if (!engine.snapshot.value.hasPredictionComposition) return currentSnapshot().copy(committed = "")
+        return try {
+            var state = engine.processKey(RimeKey.ESCAPE).snapshot
+            if (state.hasPredictionComposition) state = engine.cancelComposition()
+            if (state.isComposing) throw EngineBackendError.OperationFailed("prediction not dismissed")
+            publish(state).copy(committed = "")
+        } catch (e: RimeException) {
+            throw e.asBackendError()
+        }
+    }
 
     override suspend fun selectCandidate(index: Int): EngineSnapshot {
         val snapshot =
@@ -558,8 +576,9 @@ class RimeEngineBackend(
         var capability: SchemaDisplayCapability? = null
         var capabilityPresent = false
         var declaredMode = CompositionDisplayMode.NATIVE
-        val demanded = isComposing && spellingDemand?.invoke() == true
-        if (isComposing) {
+        val composing = isComposing && !hasPredictionComposition
+        val demanded = composing && spellingDemand?.invoke() == true
+        if (composing) {
             val context = displayContext(schemaId)
             capabilityPresent = context?.capabilityPresent ?: false
             declaredMode = context?.capability?.mode ?: CompositionDisplayMode.NATIVE
@@ -608,6 +627,10 @@ class RimeEngineBackend(
         return verifiedReading(engine, current)
     }
 
+    // librime represents post-commit suggestions as a zero-length placeholder composition.
+    private val RimeSnapshot.hasPredictionComposition: Boolean
+        get() = isComposing && input.isEmpty()
+
     private fun RimeSnapshot.mapped(
         spelling: String,
         hidesNumericTransportCode: Boolean,
@@ -632,9 +655,9 @@ class RimeEngineBackend(
                         selectLabel = candidate.selectLabel,
                     )
                 },
-            preedit = preedit,
+            preedit = if (hasPredictionComposition) "" else preedit,
             rawInput = input,
-            isComposing = isComposing,
+            isComposing = isComposing && !hasPredictionComposition,
             highlightedIndex = if (candidates.isEmpty()) -1 else highlightedIndex,
             pageIndex = pageIndex,
             pageSize = pageSize,
@@ -644,7 +667,7 @@ class RimeEngineBackend(
             preeditCaretByte = preeditCursor,
             highlightedSpelling = spelling,
             hidesNumericTransportCode = hidesNumericTransportCode,
-            isPrediction = !isComposing && input.isEmpty() && candidates.isNotEmpty(),
+            isPrediction = hasPredictionComposition && candidates.isNotEmpty(),
         )
 
     private fun selectionIn(

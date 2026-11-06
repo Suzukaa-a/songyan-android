@@ -14,15 +14,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * The view of a panel that has been opened at least once, or null while it has never opened.
- *
- * Editor, insert and refresh callbacks can arrive while a panel is closed, so they read this
- * instead of the lazy value itself, which would build a panel the user never opened.
- */
-private val <T> Lazy<T>.initializedValue: T?
-    get() = if (isInitialized()) value else null
-
-/**
  * Owns the quick-content panels of one keyboard instance and the actions they trigger.
  * UI-thread access lets each view wait until it opens, keeping unused panels out of keyboard startup.
  *
@@ -35,6 +26,10 @@ private val <T> Lazy<T>.initializedValue: T?
  * A panel's view is built the first time it opens and then reused; a keyboard that never opens one
  * does not pay for it, and only an opening may create one. The factory that creates them also
  * records them, so appearance refresh and memory trimming reach every existing panel by themselves.
+ *
+ * The emoji and edit panels are their own features ([EmojiPanelFeature], [EditPanelFeature]) behind
+ * [PanelFeatureHost]: this type only routes their openings, their live updates and their close, and
+ * their views are created through the same factory as the panels implemented here.
  *
  * The symbol panel stays open for multiple insertions; inserting a phrase, a clipboard entry or a
  * quick insert closes it. The settings panel stays open while settings change.
@@ -134,6 +129,21 @@ class QuickContentPanels(
             panel
         }
 
+    /** Feature views share this coordinator's registration and presentation lifecycle. */
+    private val featureHost: PanelFeatureHost =
+        object : PanelFeatureHost {
+            override fun <T : QuickContentPanelView> lazyPanel(factory: () -> T): Lazy<T> =
+                this@QuickContentPanels.lazyPanel(factory)
+
+            override fun show(panel: QuickContentPanelView) = this@QuickContentPanels.show(panel)
+
+            override fun isVisible(view: QuickContentPanelView): Boolean = visiblePanel === view
+
+            override fun close() {
+                this@QuickContentPanels.close()
+            }
+        }
+
     private val symbols: Lazy<SymbolPanelView> =
         lazyPanel {
             SymbolPanelView(context).apply {
@@ -220,32 +230,30 @@ class QuickContentPanels(
             }
         }
 
-    private val emojiSource = EmojiSource(context)
-
-    private val emoji: Lazy<EmojiPanelView> =
-        lazyPanel {
-            EmojiPanelView(context).apply {
-                onInsert = { text ->
-                    callbacks.insert(text)
-                    scope.launch {
-                        dataSource.recordRecentEmoji(text)
-                        updateEmojiRecents()
-                    }
-                }
-                onSearch = {
-                    close()
-                    callbacks.startSearch(PanelSearchKind.EMOJI)
-                }
-                onBackspace = { callbacks.deleteBackward() }
-            }
+    /** Created on the first use, so a keyboard that never opens the panel does not build the feature. */
+    private val emojiFeature: Lazy<EmojiPanelFeature> =
+        lazy(LazyThreadSafetyMode.NONE) {
+            EmojiPanelFeature(
+                context = context,
+                host = featureHost,
+                scope = scope,
+                dataSource = dataSource,
+                insert = { text -> callbacks.insert(text) },
+                deleteBackward = { callbacks.deleteBackward() },
+                startSearch = { callbacks.startSearch(PanelSearchKind.EMOJI) },
+                metadataVersion = { callbacks.emojiMetadataVersion() },
+            )
         }
 
-    private val edit: Lazy<EditPanelView> =
-        lazyPanel {
-            EditPanelView(context).apply {
-                onEdit = { action, extend -> callbacks.edit(action, extend) }
-                onEditRepeated = { action, extend, stillHeld -> callbacks.repeatEdit(action, extend, stillHeld) }
-            }
+    /** Created on the first use, so a keyboard that never opens the panel does not build the feature. */
+    private val editFeature: Lazy<EditPanelFeature> =
+        lazy(LazyThreadSafetyMode.NONE) {
+            EditPanelFeature(
+                context = context,
+                host = featureHost,
+                edit = { action, extend -> callbacks.edit(action, extend) },
+                repeatEdit = { action, extend, stillHeld -> callbacks.repeatEdit(action, extend, stillHeld) },
+            )
         }
 
     /** The panel the keyboard last opened; null before the first one and after [close]. */
@@ -314,51 +322,32 @@ class QuickContentPanels(
 
     /** The emoji panel: categories, recents, skin tones; the lists load off the main thread. */
     fun openEmoji() {
-        val panel = emoji.value
-        panel.reset()
-        show(panel)
-        scope.launch {
-            val catalog = emojiSource.catalog(callbacks.emojiMetadataVersion())
-            val recents = dataSource.loadRecentEmoji()
-            // The panel may have been closed or replaced while the catalog loaded.
-            if (visiblePanel === panel) {
-                panel.lookup(catalog::find)
-                panel.update(catalog.categories, recents)
-            }
-        }
+        emojiFeature.value.open()
     }
 
     /** The edit panel: arrows, select, select all, copy, cut, paste, undo. */
     fun openEdit() {
-        val panel = edit.value
-        panel.reset()
-        show(panel)
+        editFeature.value.open()
     }
 
     /** The edit panel's live keys; ignored while another panel is showing. */
     fun updateEditAvailability(value: EditAvailability) {
-        val panel = edit.initializedValue ?: return
-        if (visiblePanel === panel) panel.setAvailability(value)
+        editFeature.initializedValue?.updateAvailability(value)
     }
 
     /** A new selection state from the editor, for Copy and Cut. */
     fun updateEditSelection(hasSelection: Boolean) {
-        val panel = edit.initializedValue ?: return
-        if (visiblePanel === panel) panel.setSelection(hasSelection)
+        editFeature.initializedValue?.updateSelection(hasSelection)
     }
 
-    /** The emoji catalog for the editor's renderer, for the keyboard's own emoji search. */
-    suspend fun emojiCatalog(): EmojiCatalog = emojiSource.catalog(callbacks.emojiMetadataVersion())
+    /**
+     * The emoji catalog for the editor's renderer, for the keyboard's own emoji search. This creates
+     * the feature's catalog reader on first use but never the panel itself.
+     */
+    suspend fun emojiCatalog(): EmojiCatalog = emojiFeature.value.catalog()
 
     /** The symbols and phrases for the keyboard's own search: what the panels hold, or a fresh read. */
     suspend fun content(): QuickContentPanelContent = content ?: dataSource.loadContent()
-
-    private suspend fun updateEmojiRecents() {
-        val recents = dataSource.loadRecentEmoji()
-        val panel = emoji.initializedValue ?: return
-        // The rows are loaded again when the panel opens; a closed panel keeps none of them.
-        if (visiblePanel === panel) panel.updateRecents(recents)
-    }
 
     fun openKeyboardSettings() {
         val panel = settings.value
@@ -389,8 +378,7 @@ class QuickContentPanels(
             if (panel === visible) panel.releaseLayoutCache() else panel.releaseData()
         }
         // The catalog also serves the keyboard's own emoji search, so it goes unless the panel shows it.
-        val emojiPanel = emoji.initializedValue
-        if (emojiPanel == null || visible !== emojiPanel) emojiSource.release()
+        emojiFeature.initializedValue?.trim(visible)
     }
 
     /** Leaves the keyboard surface and opens the app's settings, where the empty list is filled. */
@@ -419,8 +407,8 @@ class QuickContentPanels(
         if (!host.isShowing) return false
         host.hide()
         shown = null
-        edit.initializedValue?.reset()
-        emoji.initializedValue?.reset()
+        editFeature.initializedValue?.reset()
+        emojiFeature.initializedValue?.reset()
         return true
     }
 

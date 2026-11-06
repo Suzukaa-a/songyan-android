@@ -64,6 +64,14 @@ If you cannot run a check, say so in the pull request and list what remains unve
 - Do not commit build output, logs, backups or parallel copies (`*.bak`, `*_old`, commented-out blocks of old code); delete unused code instead. A committed generated file must be reproducible by a script in `scripts/`, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says how. The checked-in Baseline Profile is the exception that is regenerated with `scripts/generate-baseline-profile.sh`.
 - Performance is user-visible. Think about the cost of a change on the key-to-preedit and keyboard-show paths, measure with the `:benchmark` module, and state the build type; only measure on builds with the engine optimized (`benchmarkRelease`).
 
+## Adding a keyboard panel
+
+Use [EmojiPanelFeature](ime/src/main/kotlin/app/songyan/ime/ime/panels/EmojiPanelFeature.kt) or [EditPanelFeature](ime/src/main/kotlin/app/songyan/ime/ime/panels/EditPanelFeature.kt) as a starting point. A feature owns its view, data loading and action callbacks.
+
+1. Create its view through [PanelFeatureHost](ime/src/main/kotlin/app/songyan/ime/ime/panels/PanelFeatureHost.kt).`lazyPanel`, so the existing owner registers it for appearance updates and memory trimming.
+2. Wire the feature lazily in [QuickContentPanels](ime/src/main/kotlin/app/songyan/ime/ime/panels/QuickContentPanels.kt), pass the editor actions it needs, and delegate its opening route there. Add its toolbar or menu action through the existing controller routing.
+3. Before applying asynchronous results, check `host.isVisible(view)`. Forward close, editor-state and cache-release events only to initialized features, following the two examples.
+
 ## User-facing text
 
 - Chinese copy reads naturally: short sentences, address the user as 「你」, full-width punctuation (，。：；？！「」（）) in Chinese text. Say what happened first, then what the user can do. The interface does not explain internals or justify itself.

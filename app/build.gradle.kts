@@ -90,7 +90,7 @@ android {
         testInstrumentationRunnerArguments["notClass"] =
             "app.songyan.ime.deploy.DeploySpeedBenchmark,app.songyan.ime.deploy.KagiroiDeploymentDeviceTest," +
             "app.songyan.ime.deploy.KagiroiPublicationDeviceTest,app.songyan.ime.deploy.KagiroiRuntimeDeviceTest," +
-            "app.songyan.ime.TraditionalCatalogInstallDeviceTest"
+            "app.songyan.ime.TraditionalCatalogInstallDeviceTest,app.songyan.ime.deploy.KagiroiInstallDeviceTest"
         // Parts of the generation build stamp (BuildStamps): a published generation is rebuilt when
         // the bundled Rime data or the engine sources (librime pin, patches, plugins) change, even
         // when the version code does not.

@@ -1,5 +1,6 @@
 package app.songyan.ime.rime
 
+import app.songyan.ime.packages.JapaneseSchemePresets
 import java.io.File
 import kotlin.math.roundToLong
 
@@ -160,6 +161,8 @@ class BuiltinSourceInstaller(
                 }
             destination.writeBytes(data)
         }
+        // Scheme-specific patches travel beside the package sources, never inside them.
+        JapaneseSchemePresets.supplement(target)
     }
 
     private fun rewriteSchemaList(

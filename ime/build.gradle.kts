@@ -20,6 +20,9 @@ android {
             excludedTests += "app.songyan.ime.ime.ZhuyinKeyboardDeviceTest"
             excludedTests += "app.songyan.ime.ime.CangjieKeyboardDeviceTest"
         }
+        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.kagiroiFixture").isPresent) {
+            excludedTests += "app.songyan.ime.ime.JapaneseRomajiDeviceTest"
+        }
         if (excludedTests.isNotEmpty()) testInstrumentationRunnerArguments["notClass"] = excludedTests.joinToString(",")
     }
 }

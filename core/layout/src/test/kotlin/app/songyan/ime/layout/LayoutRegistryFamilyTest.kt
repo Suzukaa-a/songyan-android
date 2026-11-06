@@ -13,8 +13,8 @@ import org.junit.Test
  * The registry's share of the layout availability rules: which physical layouts a scheme family may
  * pair with, which one a keyboard defaults to, and how a pairing saved before the rule reads now.
  *
- * The zhuyin and cangjie pads ship as builtin layouts; the Japanese physical layouts are still
- * reserved ids, so this class stands in for the layout files that will ship with them.
+ * The zhuyin, cangjie and romaji boards ship as builtin layouts; the twelve-key kana pad is still a
+ * reserved id, so this class stands in for the layout file that will ship with it.
  */
 class LayoutRegistryFamilyTest {
     private fun physical(
@@ -25,7 +25,8 @@ class LayoutRegistryFamilyTest {
             .copyWithId(id, id)
             .copy(input = LayoutInput(schemaID = schemaID, builtinLayout = LayoutInput.Builtin.QWERTY26))
 
-    private val reserved = listOf(physical("romaji26"), physical("kana12"))
+    /** The twelve-key kana pad has not shipped yet, so a stand-in carries its reserved id. */
+    private val reserved = listOf(physical("kana12"))
 
     private fun registry(layouts: List<LayoutDefinition> = BuiltinLayouts.all + reserved): LayoutRegistry =
         LayoutRegistry.create(layouts = layouts)
@@ -72,7 +73,7 @@ class LayoutRegistryFamilyTest {
         assertFalse("cangjie26" in candidates(registry, "kagiroi", KeyboardLayoutKind.QWERTY26))
         // Cantonese is a Latin phonetic scheme: it keeps the shipped shapes only.
         assertEquals(listOf("qwerty26"), candidates(registry, "jyut6ping3", KeyboardLayoutKind.QWERTY26))
-        // A scheme without a family keeps every reserved layout out.
+        // A scheme without a family keeps the family-owned boards out.
         assertFalse("zhuyin41" in candidates(registry, "rime_ice", KeyboardLayoutKind.QWERTY26))
     }
 
@@ -95,10 +96,12 @@ class LayoutRegistryFamilyTest {
         assertEquals("romaji26", registry.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.QWERTY26)))
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("jyut6ping3", KeyboardLayoutKind.QWERTY26)))
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("rime_ice", KeyboardLayoutKind.QWERTY26)))
-        // A family whose layout has not shipped yet falls back to the shipped preset of the shape.
-        val bare = LayoutRegistry.create()
-        assertEquals("qwerty26", bare.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.QWERTY26)))
-        assertEquals("qwerty26", bare.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)))
+        // The 9-key shape cannot draw the Japanese board: the identity shape answers with its board.
+        assertEquals("romaji26", registry.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)))
+        // A catalog saved before the board shipped still defaults to it: presets live in code.
+        val older = LayoutRegistry.create(layouts = listOf(BuiltinLayouts.qwerty26))
+        assertEquals("romaji26", older.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.QWERTY26)))
+        assertEquals("romaji26", older.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)))
     }
 
     @Test
@@ -166,7 +169,7 @@ class LayoutRegistryFamilyTest {
     @Test
     fun theKnownAliasFamilySelectsItsOwnPhysicalLayouts() {
         val registry = registry()
-        // The alias id alone proves nothing: the unrestricted family keeps every reserved layout out.
+        // The alias id alone proves nothing: the unrestricted family keeps the family-owned boards out.
         assertFalse("zhuyin41" in candidates(registry, alias, KeyboardLayoutKind.QWERTY26))
         assertTrue("zhuyin41" in candidates(registry, alias, KeyboardLayoutKind.QWERTY26, zhuyinFacts()))
         assertFalse("romaji26" in candidates(registry, alias, KeyboardLayoutKind.QWERTY26, zhuyinFacts()))
@@ -226,8 +229,14 @@ class LayoutRegistryFamilyTest {
             registry.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)),
         )
         assertEquals(
-            "qwerty26",
+            "romaji26",
             registry(BuiltinLayouts.all).defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)),
+        )
+        // An older catalog without the code-owned board gets the same answer: presets need no migration.
+        assertEquals(
+            "romaji26",
+            registry(listOf(BuiltinLayouts.qwerty26))
+                .defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)),
         )
     }
 }

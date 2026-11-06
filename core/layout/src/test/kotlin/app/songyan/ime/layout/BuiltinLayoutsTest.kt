@@ -16,7 +16,7 @@ class BuiltinLayoutsTest {
             assertEquals(builtin, LayoutJson.decode(builtin.encoded()))
         }
         assertEquals(
-            listOf("qwerty26", "merged14", "merged18", "phone9", "zhuyin41", "cangjie26"),
+            listOf("qwerty26", "merged14", "merged18", "phone9", "zhuyin41", "cangjie26", "romaji26"),
             BuiltinLayouts.all.map { it.id },
         )
     }

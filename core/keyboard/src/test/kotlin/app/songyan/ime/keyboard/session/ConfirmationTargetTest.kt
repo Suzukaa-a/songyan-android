@@ -22,6 +22,7 @@ class ConfirmationTargetTest {
     private class TwoWordEngine(
         private val schemaID: String = "",
         private val nativeSpace: EngineSnapshot? = null,
+        private val nativeReturn: EngineSnapshot? = null,
     ) : EngineBackend {
         override val kind: EngineBackendKind = EngineBackendKind.DEMO_SIMULATOR
         override val inputUnavailableReason: String? = null
@@ -42,6 +43,10 @@ class ConfirmationTargetTest {
             keys += keyValue
             if (keyValue.length == 1 && keyValue[0].isLetterOrDigit()) input += keyValue
             if (keyValue == EngineBackend.SPACE_KEY) return nativeSpace ?: finish(0)
+            if (keyValue == EngineBackend.RETURN_KEY && nativeReturn != null) {
+                input = ""
+                return nativeReturn
+            }
             return currentSnapshot()
         }
 
@@ -111,6 +116,25 @@ class ConfirmationTargetTest {
             assertTrue(commits.isEmpty())
             assertEquals("ㄓㄜˉ", session.snapshot.preedit)
             assertEquals("5k ", session.snapshot.rawInput)
+        }
+
+    @Test
+    fun japaneseReturnKeepsTheNativeKanaCommitBinding() =
+        runTest {
+            val engine =
+                TwoWordEngine(
+                    schemaID = "kagiroi",
+                    nativeReturn = EngineSnapshot(committed = "にほんご"),
+                )
+            val session = InputSession(engine, KeyboardLayoutKind.QWERTY26)
+            session.reloadOptions()
+            val commits = mutableListOf<String>()
+            session.onCommitted = { commits += it }
+            "nihongo".forEach { session.tap(KeyAction.Code(it.toString())) }
+            session.confirmationTarget = { 1 }
+            session.tap(KeyAction.Enter)
+            assertEquals(listOf("にほんご"), commits)
+            assertFalse(session.snapshot.isComposing)
         }
 
     @Test

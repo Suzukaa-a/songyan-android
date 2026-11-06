@@ -721,7 +721,14 @@ internal object KeyboardPages {
     private fun nativeLetterDefaults(config: Config): Boolean {
         val main = mainLayout(config)
         val builtin = main.input.builtinLayout ?: return false
-        val bundled = BuiltinLayouts.byId(builtin.wire) ?: return false
+        // The romaji board keeps the 26-key transport, so looking only the transport up would compare
+        // it with the QWERTY board; its own bundled definition is the one an untouched board matches.
+        val bundled =
+            if (builtin == LayoutInput.Builtin.QWERTY26 && main.id == BuiltinLayouts.romaji26.id) {
+                BuiltinLayouts.romaji26
+            } else {
+                BuiltinLayouts.byId(builtin.wire) ?: return false
+            }
         return main.id == bundled.id && main.rows == bundled.rows
     }
 

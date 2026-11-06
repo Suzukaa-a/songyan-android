@@ -462,7 +462,10 @@ class InputSession(
                     apply(next)
                 }
                 KeyAction.Enter ->
-                    if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
+                    if (inputLanguage.family == InputSchemeFamily.JAPANESE && !snapshot.isAsciiMode) {
+                        // The scheme's Return binding commits kana, independently of the candidate filter.
+                        apply(engine.processKey(EngineBackend.RETURN_KEY))
+                    } else if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
                         commitComposition()
                     } else if (snapshot.isComposing && (compactSpellingLayout || numericTransportLayout)) {
                         // The raw input of a folded or numeric layout is key codes, not letters, so

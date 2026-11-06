@@ -28,7 +28,7 @@ sealed interface LayoutDisplayName {
 
 /** The main layout the keyboard in use draws, resolved against the catalog the keyboard reads. */
 data class CurrentMainLayout(
-    /** The layout definition id: a physical board (zhuyin41, cangjie26) or a shipped shape. */
+    /** The layout definition id: a physical board (zhuyin41, cangjie26, romaji26) or a shipped shape. */
     val id: String,
     /** The name every settings surface words this keyboard by. */
     val displayName: LayoutDisplayName,
@@ -42,6 +42,7 @@ fun bundledLayoutNameRes(layoutId: String?): Int? =
     when (layoutId) {
         InputLayoutPolicy.ZHUYIN_LAYOUT -> R.string.layout_name_zhuyin41
         InputLayoutPolicy.CANGJIE_LAYOUT -> R.string.layout_name_cangjie26
+        InputLayoutPolicy.ROMAJI_LAYOUT -> R.string.layout_name_romaji26
         else -> null
     }
 

@@ -38,6 +38,7 @@
     <string name="ime_layout_phone9">9 鍵</string>
     <string name="ime_layout_zhuyin41">注音 41 鍵</string>
     <string name="ime_layout_cangjie26">倉頡 26 鍵</string>
+    <string name="ime_layout_romaji26">羅馬字 26 鍵</string>
     <string name="ime_preparing">正在準備輸入方案</string>
     <string name="ime_unavailable">輸入方案尚未就緒</string>
     <string name="ime_expand">展開候選</string>

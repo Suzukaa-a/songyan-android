@@ -590,9 +590,15 @@ object SchemePackageImportBuilder {
 
     private fun isStaged(path: String): Boolean {
         val components = path.split('/')
-        // VCS metadata and a precompiled build tree are never source: librime recompiles from source.
-        if (components.first() == ".git" || components.first() == "build") return false
+        if (components.first() == ".git") return false
         val name = components.last()
+        if (components.first() == "build") {
+            // Only native dictionaries and spelling indexes can seed a prebuilt deployment.
+            return components.size == 2 &&
+                listOf(".table.bin", ".reverse.bin", ".prism.bin").any {
+                    name.endsWith(it) && name.length > it.length
+                }
+        }
         if (SchemeSourceCheck.isNotice(name)) return true
         val dot = name.lastIndexOf('.')
         if (dot <= 0) return false

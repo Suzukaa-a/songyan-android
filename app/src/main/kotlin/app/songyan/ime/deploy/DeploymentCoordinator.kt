@@ -495,11 +495,12 @@ class DeploymentCoordinator(
     /**
      * Deploys [sourceDir] into a fresh work directory and publishes it.
      *
-     * The work directory starts with copies of the compiled dictionaries of the newest generation
-     * of the same source built by this engine ([CompiledReuse]); librime checks each against the
-     * checksums of the files it was built from and compiles again whatever changed, so a rebuild
-     * with unchanged dictionaries skips the slowest part of a deployment. Nothing else is carried
-     * over: configs are always compiled from the current sources.
+     * The work directory starts with copies of the compiled dictionaries the package ships itself
+     * or, failing that, of the newest generation of the same source built by this engine
+     * ([CompiledReuse]); librime checks each against the checksums of the files it was built from
+     * and compiles again whatever changed, so a rebuild with unchanged dictionaries skips the
+     * slowest part of a deployment. Nothing else is carried over: configs are always compiled from
+     * the current sources.
      *
      * Compact layouts take about a second each to compile, three per input method, so a scheme
      * package with many input methods would keep the user waiting most of a minute. Unless
@@ -670,9 +671,13 @@ class DeploymentCoordinator(
     }
 
     /**
-     * Copies the reusable compiled files of the newest complete generation of [sourceId] that this
-     * engine built into [workDir]'s build directory, and lists them in a marker for
-     * [seededFiles]. The source's own tree and the overlay are where its dictionaries live.
+     * Copies the compiled files a deployment of [sourceId] may start from into [workDir]'s build
+     * directory and lists them in a marker for [seededFiles]. The source's own prebuilt build wins
+     * over an earlier generation: a package without dictionary sources gives librime no way to
+     * tell that an older table is stale, so a package update would otherwise keep the old words.
+     * An ordinary source falls back to the newest generation of [sourceId] built by this engine,
+     * since the checksums do not cover the engine's table builder. The source's own tree and the
+     * overlay are where its dictionaries live.
      */
     private fun seedCompiled(
         sourceDir: File,
@@ -682,11 +687,15 @@ class DeploymentCoordinator(
         val previous =
             publisher
                 .publishedRecords()
-                .firstOrNull { it.sourceId == sourceId && it.stamp?.engine == stamp.engine } ?: return
+                .firstOrNull { it.sourceId == sourceId && it.stamp?.engine == stamp.engine }
+        val previousBuild =
+            CompiledReuse.prebuiltBuild(sourceDir)
+                ?: previous?.let { File(storage.generationDir(it.generation), BUILD_DIRECTORY) }
+                ?: return
         val build = File(workDir, BUILD_DIRECTORY)
         val copied =
             CompiledReuse.seed(
-                previousBuild = File(storage.generationDir(previous.generation), BUILD_DIRECTORY),
+                previousBuild = previousBuild,
                 sourceDirs = listOf(sourceDir, workDir),
                 targetBuild = build,
             )

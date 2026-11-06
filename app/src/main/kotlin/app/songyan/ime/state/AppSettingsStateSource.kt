@@ -234,6 +234,7 @@ class AppSettingsStateSource(
         when (layoutId) {
             InputLayoutPolicy.ZHUYIN_LAYOUT -> R.string.keyboard_layout_zhuyin41
             InputLayoutPolicy.CANGJIE_LAYOUT -> R.string.keyboard_layout_cangjie26
+            InputLayoutPolicy.ROMAJI_LAYOUT -> R.string.keyboard_layout_romaji26
             else -> null
         }
 

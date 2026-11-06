@@ -1,5 +1,6 @@
 package app.songyan.ime.storage
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -7,6 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
 
 class GenerationPublisherTest {
     private fun newStorage(): AppStorage {
@@ -23,6 +25,68 @@ class GenerationPublisherTest {
         File(root, "opencc").mkdirs()
         File(root, "opencc/s2t.json").writeText("{}")
         return root
+    }
+
+    /** A stored scheme source: its configuration plus the compiled bins the package shipped. */
+    private fun prebuiltSource(
+        root: File,
+        tableBytes: Int = 4096,
+        reverseBytes: Int = 2048,
+        prismBytes: Int = 1024,
+    ): File {
+        root.mkdirs()
+        File(root, "default.yaml").writeText("config_version: \"1\"\n")
+        File(root, "songyan_quanpin.schema.yaml").writeText("schema:\n  schema_id: songyan_quanpin\n")
+        File(root, "opencc").mkdirs()
+        File(root, "opencc/s2t.json").writeText("{}")
+        File(root, "user/songyan.userdb").mkdirs()
+        File(root, "user/songyan.userdb/CURRENT").writeText("1\n")
+        val build = File(root, BUILD).also { it.mkdirs() }
+        File(build, "default.yaml").writeText("build_info:\n  rime_version: 1.17.0\n")
+        File(build, TABLE_BIN).writeBytes(binary(tableBytes, 1))
+        File(build, REVERSE_BIN).writeBytes(binary(reverseBytes, 2))
+        File(build, PRISM_BIN).writeBytes(binary(prismBytes, 3))
+        return root
+    }
+
+    /**
+     * The deployment's writable work build: a byte copy of the source's prebuilt bins plus what
+     * librime compiled into it. No file here may be linked into a generation.
+     */
+    private fun workBuild(
+        source: File,
+        root: File,
+    ): File {
+        root.mkdirs()
+        val build = File(root, BUILD)
+        File(source, BUILD).copyRecursively(build, overwrite = true)
+        File(build, COMPILED_SCHEMA).writeText("schema:\n  schema_id: songyan_quanpin\n  version: \"1\"\n")
+        return build
+    }
+
+    private fun binary(
+        size: Int,
+        salt: Int,
+    ): ByteArray = ByteArray(size) { ((it * 31 + salt) and 0xFF).toByte() }
+
+    private fun sameFile(
+        a: File,
+        b: File,
+    ): Boolean = Files.isSameFile(a.toPath(), b.toPath())
+
+    /** Bytes under [root], counting a file that several paths link to only once. */
+    private fun uniqueBytes(root: File): Long {
+        val seen = HashSet<Any>()
+        var total = 0L
+        root
+            .walkTopDown()
+            .filter { it.isFile }
+            .forEach { file ->
+                val attributes = Files.readAttributes(file.toPath(), BasicFileAttributes::class.java)
+                val key: Any = attributes.fileKey() ?: file.absolutePath
+                if (seen.add(key)) total += file.length()
+            }
+        return total
     }
 
     @Test
@@ -223,5 +287,209 @@ class GenerationPublisherTest {
         assertEquals(again, publisher.readActive())
         assertTrue(again.generation in publisher.publishedRecords().map { it.generation })
         assertNull(publisher.reactivate("missing"))
+    }
+
+    @Test
+    fun prebuiltTablesWithIdenticalBytesBecomeLinksToTheSource() {
+        val storage = newStorage()
+        val source = prebuiltSource(storage.sourceDir(SOURCE_ID))
+        val work = workBuild(source, Files.createTempDirectory("work").toFile())
+        // The deployment rewrote the compiled schema but left the prebuilt tables as they were, and
+        // the source ships a table this deployment did not keep.
+        File(work, TABLE_BIN).setLastModified(1_000_000_000_000L)
+        File(source, "$BUILD/dropped.prism.bin").writeBytes(binary(512, 4))
+        val publisher = GenerationPublisher(storage)
+
+        val record =
+            publisher.publish(
+                resourcesDir = source,
+                compiledDir = work,
+                sourceId = SOURCE_ID,
+                schemaId = SCHEMA_ID,
+                revision = "1",
+            )
+
+        val generation = storage.generationDir(record.generation)
+        val generationBuild = File(generation, BUILD)
+        for (name in listOf(TABLE_BIN, REVERSE_BIN, PRISM_BIN)) {
+            val sourceTable = File(source, "$BUILD/$name")
+            val published = File(generationBuild, name)
+            assertTrue(
+                "$name is byte for byte the source's prebuilt table, so its bytes must be shared",
+                sameFile(sourceTable, published),
+            )
+            assertFalse(
+                "$name must not link the writable work build",
+                sameFile(File(work, name), published),
+            )
+            assertEquals(sourceTable.length(), published.length())
+        }
+        assertFalse(
+            "a prebuilt bin the deployment did not keep must not be resurrected",
+            File(generationBuild, "dropped.prism.bin").exists(),
+        )
+        // Only prebuilt bins are shared: compiled configuration and the source's own configuration
+        // are published as copies, as is learning data that arrived in the source tree.
+        assertFalse(
+            "the deployment's compiled default.yaml is configuration, not a shared bin",
+            sameFile(File(source, "$BUILD/default.yaml"), File(generationBuild, "default.yaml")),
+        )
+        assertFalse(
+            "the source's configuration is copied",
+            sameFile(File(source, "default.yaml"), File(generation, "resources/default.yaml")),
+        )
+        val sourceUserdb = File(source, "user/songyan.userdb/CURRENT")
+        val publishedUserdb = File(generation, "resources/user/songyan.userdb/CURRENT")
+        assertEquals("1\n", publishedUserdb.readText())
+        assertFalse("learning data is copied, never shared", sameFile(sourceUserdb, publishedUserdb))
+        assertEquals(
+            File(work, COMPILED_SCHEMA).readText(),
+            File(generationBuild, COMPILED_SCHEMA).readText(),
+        )
+        assertFalse(
+            "the compiled schema is not a prebuilt bin",
+            sameFile(File(work, COMPILED_SCHEMA), File(generationBuild, COMPILED_SCHEMA)),
+        )
+        assertTrue(publisher.isComplete(record))
+        assertTrue("the source keeps its prebuilt table", File(source, "$BUILD/$TABLE_BIN").isFile)
+    }
+
+    @Test
+    fun aTableTheDeploymentRecompiledKeepsItsOwnBytes() {
+        val storage = newStorage()
+        val source = prebuiltSource(storage.sourceDir(SOURCE_ID))
+        val work = workBuild(source, Files.createTempDirectory("work").toFile())
+        val prebuilt = File(source, "$BUILD/$TABLE_BIN").readBytes()
+        // Same byte count as the source's table, different content: only the content decides.
+        val recompiled = binary(prebuilt.size, 9)
+        File(work, TABLE_BIN).writeBytes(recompiled)
+        val publisher = GenerationPublisher(storage)
+
+        val record = publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "1")
+
+        val generationBuild = File(storage.generationDir(record.generation), BUILD)
+        val published = File(generationBuild, TABLE_BIN)
+        assertArrayEquals(
+            "a recompiled table keeps the deployment's own bytes",
+            recompiled,
+            published.readBytes(),
+        )
+        assertFalse(
+            "a recompiled table is not the source's prebuilt table",
+            sameFile(File(source, "$BUILD/$TABLE_BIN"), published),
+        )
+        assertFalse(
+            "a recompiled table is not linked to the work build either",
+            sameFile(File(work, TABLE_BIN), published),
+        )
+        assertArrayEquals(
+            "the source's prebuilt table is only read",
+            prebuilt,
+            File(source, "$BUILD/$TABLE_BIN").readBytes(),
+        )
+        assertTrue(
+            "a table the deployment left alone is still shared",
+            sameFile(File(source, "$BUILD/$REVERSE_BIN"), File(generationBuild, REVERSE_BIN)),
+        )
+        assertTrue(publisher.isComplete(record))
+    }
+
+    @Test
+    fun twoGenerationsShareTheSourceInodeWithoutOneChangingTheOther() {
+        val storage = newStorage()
+        val source = prebuiltSource(storage.sourceDir(SOURCE_ID))
+        val prebuiltTable = File(source, "$BUILD/$TABLE_BIN").readBytes()
+        val publisher = GenerationPublisher(storage)
+        val firstWork = workBuild(source, Files.createTempDirectory("work-first").toFile())
+        val first = publisher.publish(source, firstWork, SOURCE_ID, SCHEMA_ID, "1")
+        val firstBuild = File(storage.generationDir(first.generation), BUILD)
+
+        val secondWork = workBuild(source, Files.createTempDirectory("work-second").toFile())
+        val recompiled = binary(prebuiltTable.size, 9)
+        File(secondWork, TABLE_BIN).writeBytes(recompiled)
+        val second = publisher.publish(source, secondWork, SOURCE_ID, SCHEMA_ID, "2")
+        val secondBuild = File(storage.generationDir(second.generation), BUILD)
+
+        for (name in listOf(REVERSE_BIN, PRISM_BIN)) {
+            assertTrue(
+                "$name must be shared with the source",
+                sameFile(File(source, "$BUILD/$name"), File(firstBuild, name)),
+            )
+            assertTrue(
+                "two publications of the same prebuilt table must share one inode for $name",
+                sameFile(File(firstBuild, name), File(secondBuild, name)),
+            )
+        }
+        assertEquals(second, publisher.readActive())
+        assertArrayEquals(
+            "the newest generation keeps its own recompiled table",
+            recompiled,
+            File(secondBuild, TABLE_BIN).readBytes(),
+        )
+        assertArrayEquals(
+            "a new generation must not change the old one",
+            prebuiltTable,
+            File(firstBuild, TABLE_BIN).readBytes(),
+        )
+
+        // Whatever a deployment still writes after publishing must not reach a published generation.
+        File(firstWork, TABLE_BIN).writeBytes(binary(prebuiltTable.size, 11))
+        File(secondWork, TABLE_BIN).writeBytes(binary(prebuiltTable.size, 12))
+        File(firstWork, REVERSE_BIN).writeBytes(binary(2048, 13))
+        assertArrayEquals(
+            "the old generation keeps its bytes",
+            prebuiltTable,
+            File(firstBuild, TABLE_BIN).readBytes(),
+        )
+        assertArrayEquals(
+            "the new generation keeps its own bytes",
+            recompiled,
+            File(secondBuild, TABLE_BIN).readBytes(),
+        )
+        assertArrayEquals(
+            "a shared bin's bytes are the source's",
+            File(source, "$BUILD/$REVERSE_BIN").readBytes(),
+            File(firstBuild, REVERSE_BIN).readBytes(),
+        )
+        assertTrue(publisher.isComplete(first))
+        assertTrue(publisher.isComplete(second))
+        assertEquals("both publications are kept", 2, publisher.publishedRecords().size)
+    }
+
+    @Test
+    fun twoPublicationsOfPrebuiltTablesStayWithinOneCompiledBuild() {
+        val storage = newStorage()
+        val source =
+            prebuiltSource(
+                storage.sourceDir(SOURCE_ID),
+                tableBytes = 1 shl 20,
+                reverseBytes = 1 shl 19,
+                prismBytes = 1 shl 18,
+            )
+        val work = workBuild(source, Files.createTempDirectory("work").toFile())
+        val publisher = GenerationPublisher(storage)
+
+        publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "1")
+        publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "2")
+
+        assertEquals("both publications are kept", 2, publisher.publishedRecords().size)
+        val compiledBytes = work.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        val unique = uniqueBytes(storage.rimeRoot)
+        assertTrue("the compiled build has no bytes", compiledBytes > 0L)
+        assertTrue(
+            "two publications keep $unique bytes of rime/ data for a $compiledBytes-byte compiled " +
+                "build; the prebuilt tables must be shared with the source",
+            unique * 10 <= compiledBytes * 13,
+        )
+    }
+
+    private companion object {
+        const val SOURCE_ID = "scheme-kagiroi"
+        const val SCHEMA_ID = "songyan_quanpin"
+        const val BUILD = "build"
+        const val TABLE_BIN = "songyan_quanpin.table.bin"
+        const val REVERSE_BIN = "songyan_quanpin.reverse.bin"
+        const val PRISM_BIN = "songyan_quanpin.prism.bin"
+        const val COMPILED_SCHEMA = "songyan_quanpin.schema.yaml"
     }
 }

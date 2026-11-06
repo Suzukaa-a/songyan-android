@@ -304,6 +304,20 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_SYMBOL_LOCK] = value }
     }
 
+    /**
+     * The Japanese twelve-key keys only flick: a repeated tap types the row's next kana instead of
+     * cycling the row. Off by default, which keeps the reference keyboard's tap cycle.
+     */
+    val kana12FlickOnly: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_KANA12_FLICK_ONLY] ?: false }
+            .distinctUntilChanged()
+
+    suspend fun setKana12FlickOnly(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_KANA12_FLICK_ONLY] = value }
+    }
+
     suspend fun setKeyHeight(value: String) {
         require(value in KEY_HEIGHTS) { "unknown key height: $value" }
         appContext.keyboardDataStore.edit { it[KEY_HEIGHT] = value }
@@ -464,6 +478,7 @@ class KeyboardPreferences(
         private val KEY_READING_PLACEMENT = stringPreferencesKey("reading_placement")
         private val KEY_LAYOUT_ID = stringPreferencesKey("layout_id")
         private val KEY_SYMBOL_LOCK = booleanPreferencesKey("symbol_lock")
+        private val KEY_KANA12_FLICK_ONLY = booleanPreferencesKey("kana12_flick_only")
         private val KEY_HEIGHT = stringPreferencesKey("key_height")
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")

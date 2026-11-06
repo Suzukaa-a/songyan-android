@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keyboard tools: other apps that handle text -->
+    <string name="tools_process_text_section">Other apps</string>
+    <string name="tools_process_text_body">Turn on an app to send it the text you select from the keyboard. What it returns is only previewed; nothing is written until you choose.</string>
+    <string name="tools_process_text_switch">Use %1$s</string>
+    <string name="tools_process_text_empty">No app on this device handles text.</string>
+    <string name="tools_process_text_unavailable">Can\'t read the apps that handle text.</string>
+</resources>

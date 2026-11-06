@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- キーボードツール：テキストを渡すほかのアプリ -->
+    <string name="ime_process_text_apps_section">ほかのアプリ</string>
+    <string name="ime_process_text_answer_from">%1$s からの結果</string>
+    <string name="ime_process_text_answer">ほかのアプリからの結果</string>
+    <string name="ime_process_text_waiting">%1$s を待っています…</string>
+    <string name="ime_process_text_open_failed">%1$s を開けませんでした。</string>
+    <string name="ime_process_text_unavailable">テキストを扱うアプリを読み取れませんでした。</string>
+</resources>

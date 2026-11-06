@@ -23,6 +23,13 @@ object ProcessTextRelay {
         /** The text and editor to hand out; null when this editor may not run a tool. */
         fun snapshotForProcessText(): ProcessTextRequest?
 
+        /**
+         * Whether [request]'s text can still be written where it came from: the same editor is
+         * bound, its text is unchanged, and this field may run a tool at all. False offers only
+         * insert or copy.
+         */
+        fun canWriteProcessText(request: ProcessTextRequest): Boolean
+
         /** Writes [text] over the request's text; only on an explicit user action. */
         fun writeProcessText(
             request: ProcessTextRequest,
@@ -31,6 +38,9 @@ object ProcessTextRelay {
 
         /** Puts [text] on the clipboard and tells the user why it is there. */
         fun copyProcessText(text: String)
+
+        /** Refreshes a visible preview when the external app returns without a keyboard show. */
+        fun onProcessTextAnswer() {}
     }
 
     private val session = ProcessTextSession { UUID.randomUUID().toString() }
@@ -55,10 +65,12 @@ object ProcessTextRelay {
     fun request(
         context: Context,
         target: ComponentName,
+        /** The app's own name, so the preview can say which app answered. */
+        targetLabel: String? = null,
     ): Boolean {
         val host = host ?: return false
         val request = host.snapshotForProcessText() ?: return false
-        val token = session.start(request) ?: return false
+        val token = session.start(request, targetLabel) ?: return false
         // A relay left from a cancelled request must not stay behind while this one runs.
         ProcessTextTargetActivity.cancelOpen()
         // A relay cancelled while its other app was still open leaves that task behind with this
@@ -83,13 +95,28 @@ object ProcessTextRelay {
         }
     }
 
-    /** The editor binding changed: an answer for a field that is gone is copied, never written. */
+    /** A confirmed different editor retires the answer without writing or copying it. */
     fun onEditorStarted(info: EditorInfo?) {
-        session.onEditor(info)?.let { answer -> host?.copyProcessText(answer) }
+        session.onEditor(info)
     }
 
     /** The answer waiting for the user; null while the other app is still on screen. */
     fun pendingResult(): ProcessTextResult? = session.pendingResult()
+
+    /** Whether the waiting answer can still replace its source; false offers insert or copy only. */
+    fun canApplyPending(): Boolean {
+        val host = host ?: return false
+        val pending = session.pendingResult() ?: return false
+        return host.canWriteProcessText(pending.request)
+    }
+
+    /** Puts the waiting answer on the clipboard without writing it; the user asked for that. */
+    fun copyPending(): Boolean {
+        val host = host ?: return false
+        val pending = session.take() ?: return false
+        host.copyProcessText(pending.text)
+        return true
+    }
 
     /** Writes the waiting answer where it came from, or copies it; the user asked for it. */
     fun applyPending(): ProcessTextOutcome {
@@ -110,6 +137,7 @@ object ProcessTextRelay {
         token: String,
         answer: String?,
     ) {
-        session.onResult(token, answer)
+        val accepted = session.onResult(token, answer)
+        if (accepted) host?.onProcessTextAnswer()
     }
 }

@@ -172,6 +172,7 @@
     <string name="layout_error_unknown">This layout cannot be found. It may have been deleted.</string>
     <string name="layout_error_ascii_only_literal">Only a key that types text can have a half-width text.</string>
     <string name="layout_error_code_char">A key that sends a letter needs exactly one letter or symbol.</string>
+    <string name="layout_error_kana_row">A kana key can name only one kana row. Choose the row again.</string>
     <string name="layout_error_literal_empty">A key that types text needs the text to type.</string>
     <string name="layout_error_ascii_empty">The half-width text cannot be empty. Clear it if you do not need it.</string>
     <string name="layout_error_mode_switch">A layout switch key can only go to the next layout.</string>

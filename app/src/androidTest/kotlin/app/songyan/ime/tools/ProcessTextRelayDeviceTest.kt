@@ -1,14 +1,12 @@
 package app.songyan.ime.tools
 
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.UiAutomation
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.util.Log
-import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -32,8 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.util.concurrent.CopyOnWriteArrayList
-import app.songyan.ime.R as AppR
+import app.songyan.ime.ime.R as ImeR
 import app.songyan.ime.settings.R as SettingsR
 
 /**
@@ -48,15 +45,6 @@ class ProcessTextRelayDeviceTest {
     private val testPackage = instrumentation.context.packageName
     private var previousIme: String? = null
     private var wasEnabled = false
-
-    /** What the app announced through accessibility: its own prompt, not the system's clipboard one. */
-    private val prompts = CopyOnWriteArrayList<String>()
-    private val promptListener =
-        UiAutomation.OnAccessibilityEventListener { event ->
-            if (event.eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
-                event.text?.forEach { text -> text?.toString()?.let { prompts += it } }
-            }
-        }
 
     @Before
     fun setUp() {
@@ -76,14 +64,11 @@ class ProcessTextRelayDeviceTest {
         // The keyboard process may read the clipboard; the test reads it the same way.
         instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.READ_CLIPBOARD_IN_BACKGROUND")
         clipboard().clearPrimaryClip()
-        prompts.clear()
-        instrumentation.uiAutomation.setOnAccessibilityEventListener(promptListener)
         main2 { ProcessTextRelay.dismissPending() }
     }
 
     @After
     fun tearDown() {
-        instrumentation.uiAutomation.setOnAccessibilityEventListener(null)
         main2 { ProcessTextRelay.dismissPending() }
         device.pressHome()
         shell("am force-stop $testPackage")
@@ -192,9 +177,9 @@ class ProcessTextRelayDeviceTest {
         requireNotNull(awaitKeyboardShown()) { "the composition lost the keyboard" }
     }
 
-    /** The app's other field has its own field id: the answer is copied and the field is untouched. */
+    /** A different field retires the answer without changing text or the clipboard. */
     @Test
-    fun aResultForAnotherFieldOfTheSameAppIsOnlyCopied() {
+    fun aResultForAnotherFieldOfTheSameAppIsRetired() {
         openHost(identify = true)
         assertTrue(requestTool(FakeProcessTextActivity::class.java))
         requireNotNull(awaitPending()) { "no answer came back" }
@@ -202,16 +187,14 @@ class ProcessTextRelayDeviceTest {
         tapSecondField()
 
         assertTrue("the answer stayed waiting for another field", awaitPendingCleared())
-        assertEquals("the answer was not copied", "HELLO WORLD", clipboardText())
+        assertNull("the answer was copied without an explicit action", clipboardText())
         assertEquals("the other field was written to", ProcessTextHostActivity.SECOND_TEXT, hostText(1))
         assertEquals("the first field changed", ProcessTextHostActivity.FIRST_TEXT, hostText(0))
-        val prompt = context.getString(AppR.string.process_text_copied)
-        assertTrue("the copied result was not announced: " + prompts, await(5_000) { prompts.contains(prompt) })
     }
 
     /** A field of a different app is not written to either. */
     @Test
-    fun aResultForAnotherAppIsOnlyCopied() {
+    fun aResultForAnotherAppIsRetired() {
         openHost(identify = true)
         assertTrue(requestTool(FakeProcessTextActivity::class.java))
         requireNotNull(awaitPending()) { "no answer came back" }
@@ -219,7 +202,7 @@ class ProcessTextRelayDeviceTest {
         openSettingsTryOutField()
 
         assertTrue("the answer stayed waiting for another app", awaitPendingCleared())
-        assertEquals("the answer was not copied", "HELLO WORLD", clipboardText())
+        assertNull("the answer was copied without an explicit action", clipboardText())
         assertNull(main2 { ProcessTextRelay.pendingResult() })
     }
 
@@ -443,15 +426,18 @@ class ProcessTextRelayDeviceTest {
         return condition()
     }
 
-    /** The keyboard window together with one of its keys, the way a user sees it. */
+    /**
+     * The keyboard window is back. An answer from another app is previewed by the tools panel, which
+     * covers the key area, so the panel's own close button marks the window as shown there too.
+     */
     private fun awaitKeyboardShown(): AccessibilityNodeInfo? {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MS
-        var key: AccessibilityNodeInfo? = null
-        while (key == null && SystemClock.elapsedRealtime() < deadline) {
-            key = awaitKey("q")
-            if (key == null) Thread.sleep(POLL_MS)
+        var found: AccessibilityNodeInfo? = null
+        while (found == null && SystemClock.elapsedRealtime() < deadline) {
+            found = awaitKey("q") ?: awaitKey(context.getString(ImeR.string.ime_panel_close))
+            if (found == null) Thread.sleep(POLL_MS)
         }
-        return key
+        return found
     }
 
     /** What a lost answer needs: whether it already reached the clipboard, and what still runs. */

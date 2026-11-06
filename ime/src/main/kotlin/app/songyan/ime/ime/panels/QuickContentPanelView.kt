@@ -356,6 +356,12 @@ abstract class QuickContentPanelView(
         invalidate()
     }
 
+    /** Scrolls the content to its last row: a panel that just produced a result shows it at once. */
+    protected fun scrollToContentEnd() {
+        contentScrollDp = maxContentScrollDp()
+        invalidate()
+    }
+
     protected fun px(dp: Double): Float = (dp * density).toFloat()
 
     protected fun titleBarHeightDp(): Double = layoutNow().titleBarHeight

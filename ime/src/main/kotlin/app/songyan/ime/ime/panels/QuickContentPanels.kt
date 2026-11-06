@@ -4,6 +4,10 @@ import android.content.Context
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.EditAction
+import app.songyan.ime.ime.tools.KeyboardToolsEditor
+import app.songyan.ime.ime.tools.KeyboardToolsGateway
+import app.songyan.ime.ime.tools.KeyboardToolsPanel
+import app.songyan.ime.ime.tools.KeyboardToolsSession
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardPageCategory
@@ -30,6 +34,12 @@ class QuickContentPanels(
     private val scope: CoroutineScope,
     private val dataSource: QuickContentPanelDataSource,
     private val callbacks: Callbacks,
+    /** The app's tool store and runner; null leaves the tools panel out. */
+    private val tools: KeyboardToolsGateway? = null,
+    /** What a tool may read and write in the editor; null leaves the tools panel out. */
+    private val toolEditor: KeyboardToolsEditor? = null,
+    /** The scheme language that decides a tool's script-conversion direction. */
+    private val inputLanguage: () -> InputLanguage = { InputLanguage.ZH_HANS },
 ) {
     /**
      * What the categorized symbol page shows. [categories] null is the built-in page, derived from the
@@ -93,6 +103,9 @@ class QuickContentPanels(
 
         /** The emoji metadata version the editor can render; 0 when it does not say. */
         fun emojiMetadataVersion(): Int
+
+        /** Leaves the keyboard for the settings screen where keyboard tools are managed. */
+        fun manageTools()
     }
 
     private val symbols: SymbolPanelView =
@@ -169,6 +182,11 @@ class QuickContentPanels(
                 callbacks.openLayoutChooser()
             }
             onOpenQuickContent = { openPhrases() }
+            onManageTools = {
+                // The tools page is a settings screen: the keyboard leaves before it opens.
+                close()
+                callbacks.manageTools()
+            }
             onOpenSettings = {
                 close()
                 callbacks.openSettings()
@@ -196,6 +214,39 @@ class QuickContentPanels(
     private val edit: EditPanelView =
         EditPanelView(context).apply {
             onEdit = { action, extend -> callbacks.edit(action, extend) }
+        }
+
+    private val toolsPanel: KeyboardToolsPanel? =
+        if (tools != null && toolEditor != null) KeyboardToolsPanel(context) else null
+
+    /**
+     * The tools panel's decisions. It captures and writes through [toolEditor], runs tools through
+     * [tools] on this panel's own scope, and never touches the engine.
+     */
+    private val toolsSession: KeyboardToolsSession? =
+        toolsPanel?.let { view ->
+            KeyboardToolsSession(
+                scope = scope,
+                panel = view,
+                gateway = requireNotNull(tools),
+                editor = requireNotNull(toolEditor),
+                inputLanguage = inputLanguage,
+                insert = { text ->
+                    callbacks.insert(text)
+                    close()
+                },
+                manage = { callbacks.manageTools() },
+                present = { show(view) },
+                dismiss = { close() },
+            ).apply {
+                view.onChoice = { kind -> chooseSource(kind) }
+                view.onTool = { id -> run(id) }
+                view.onApp = { id, label -> runApp(id, label) }
+                view.onReplace = { replace() }
+                view.onInsert = { insertResult() }
+                view.onCopy = { copyResult() }
+                view.onManage = { manageTools() }
+            }
         }
 
     private var shown: QuickContentPanelView? = null
@@ -288,6 +339,31 @@ class QuickContentPanels(
         show(settings)
     }
 
+    /**
+     * The tools panel. It opens with the source text captured and the tools listed; [pinnedToolId]
+     * runs that tool at once, which is what a pinned toolbar entry does.
+     */
+    fun openTools(pinnedToolId: String? = null): Boolean {
+        val session = toolsSession ?: return false
+        session.open(pinnedToolId)
+        return true
+    }
+
+    /**
+     * The preview of an answer another app returned: the keyboard calls this when it comes back to
+     * the editor that handed the text out. False when nothing waits, so the key area is left alone.
+     */
+    fun openProcessTextResult(onlyIfToolsOpen: Boolean = false): Boolean {
+        if (onlyIfToolsOpen && (!host.isShowing || shown !== toolsPanel)) return false
+        if (host.isShowing && shown !== toolsPanel) return false
+        val session = toolsSession ?: return false
+        if (onlyIfToolsOpen) {
+            session.open()
+            return true
+        }
+        return session.openAnswer()
+    }
+
     /** A day/night or font-scale change reaches the panels too; they outlive one keyboard show. */
     fun refreshAppearance() {
         symbols.refreshAppearance()
@@ -296,6 +372,7 @@ class QuickContentPanels(
         settings.refreshAppearance()
         emoji.refreshAppearance()
         edit.refreshAppearance()
+        toolsPanel?.refreshAppearance()
     }
 
     /**
@@ -304,7 +381,9 @@ class QuickContentPanels(
      */
     fun trimMemory() {
         content = null
-        for (panel in listOf<QuickContentPanelView>(symbols, symbolPage, phrases, settings, emoji, edit)) {
+        val panels =
+            listOfNotNull<QuickContentPanelView>(symbols, symbolPage, phrases, settings, emoji, edit, toolsPanel)
+        for (panel in panels) {
             if (panel === shown) panel.releaseLayoutCache() else panel.releaseData()
         }
         if (shown !== emoji) emojiSource.release()
@@ -324,12 +403,24 @@ class QuickContentPanels(
     /** Back inside a panel that has pages (an open choice of the settings panel); false when there is none. */
     fun navigateBack(): Boolean = shown === settings && settings.backToGrid()
 
+    /**
+     * The panel surface went away without [close] (its own close button hides the host directly).
+     * Nothing may update a panel that is no longer on screen, and no tool run may land in it.
+     */
+    fun onHostHidden() {
+        toolsSession?.closed()
+        shown = null
+    }
+
     /** Ends a closing panel's exit at once; see [QuickContentHost.settle]. */
     fun settle() = host.settle()
 
     /** Closes the panel if one is open; returns whether it closed anything. */
-    fun close(): Boolean {
+    fun close(preserveExternalAnswer: Boolean = false): Boolean {
         if (!host.isShowing) return false
+        // Host hiding also reports onHostHidden synchronously; clear the session first so a
+        // lifecycle close cannot let that callback consume a pending external answer.
+        toolsSession?.closed(preserveExternalAnswer)
         host.hide()
         shown = null
         edit.reset()

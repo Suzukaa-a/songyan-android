@@ -65,6 +65,12 @@ internal fun KeyboardController.wireViews() {
         candidates.dismissPopup()
         enqueueKey(action, t9FirstKey = true)
     }
+    // The twelve-key kana surface reports one gesture per press; the press time is read here, on
+    // the UI thread, so a queued press keeps the user's own tap timing.
+    keyboard.onKana12Action = { action ->
+        candidates.dismissPopup()
+        handleKana12(action)
+    }
     keyboard.onPopupChanged = { syncBackOwnership() }
     candidates.onPopupChanged = { syncBackOwnership() }
     keyboard.onDoubleShift = {
@@ -81,6 +87,8 @@ internal fun KeyboardController.wireViews() {
         // caret, so holding space never drops what the user typed, and never strands a hidden
         // spelling in the editor.
         enqueue {
+            // A caret move is never the state the kana model predicted.
+            kana12Reset()
             val active = session.takeIf { ready }
             if (active != null) active.moveCursor(delta) else callbacks.moveCursor(delta)
             resetEnglishWord()
@@ -114,6 +122,8 @@ internal fun KeyboardController.wireViews() {
             FeedbackKind.TICK -> feedback.tick(keyboard)
         }
     }
+    // A pinned tool is the tools panel's one-tap entry: it opens the panel with that tool already run.
+    toolbar.onTool = { id -> openToolsPanel(id) }
     toolbar.onAction = { action ->
         when (action) {
             ToolbarView.Action.CLIPBOARD -> openClipboardPanel()
@@ -121,6 +131,7 @@ internal fun KeyboardController.wireViews() {
             ToolbarView.Action.ONE_HAND -> toggleOneHand()
             ToolbarView.Action.EMOJI -> openEmojiPanel()
             ToolbarView.Action.EDIT -> openEditPanel()
+            ToolbarView.Action.TOOLS -> openToolsPanel()
             ToolbarView.Action.SETTINGS -> openKeyboardSettingsPanel()
             ToolbarView.Action.HIDE -> callbacks.hideKeyboard()
             ToolbarView.Action.SWITCH_INPUT_METHOD -> callbacks.inputMethods.switchToOther()
@@ -188,6 +199,8 @@ internal fun KeyboardController.wireViews() {
         val revision = session?.compositionRevision
         val suggested = candidates.suggestionRow
         enqueue {
+            // Every candidate selection ends the composition the kana model claimed a tail of.
+            kana12Reset()
             if (suggested) {
                 if (panelSearch !=
                     null
@@ -259,6 +272,7 @@ internal fun KeyboardController.wireViews() {
             // to it. The commit lands first, while the editor still has the marked region, so
             // commitText replaces that region; clearing the engine composition first would make
             // finishComposingText publish the half-typed spelling as real text.
+            kana12Reset()
             callbacks.commit(pick.text, false)
             active?.discardComposition()
             render()
@@ -292,5 +306,6 @@ internal fun KeyboardController.wireViews() {
         callbacks.inputMethods.startVoice()
     }
     observePreferences()
+    observeKana12Preferences()
     observeLayoutCatalog()
 }

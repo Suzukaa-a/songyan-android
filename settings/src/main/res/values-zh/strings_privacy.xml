@@ -5,4 +5,5 @@
     <string name="about_privacy_local">松烟完全在本机运行，不收集也不上传你输入的内容。</string>
     <string name="about_privacy_network">只有你在设置里下载输入方案、语法模型或联想词库，或者从链接导入词库时，才会联网下载这些内容。键盘本身从不联网。</string>
     <string name="about_privacy_private">密码等私密输入框不学习、不记录剪贴板，也不显示联想。</string>
+    <string name="about_privacy_tools">键盘工具在本机处理你指定的文字。交给其他 App 的文字由那个 App 处理。</string>
 </resources>

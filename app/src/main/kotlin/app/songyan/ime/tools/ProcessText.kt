@@ -28,6 +28,8 @@ data class ProcessTextRequest(
 data class ProcessTextResult(
     val request: ProcessTextRequest,
     val text: String,
+    /** The app that answered, as the caller named it; null when the request came in unnamed. */
+    val appLabel: String? = null,
 )
 
 /** What happened to a tool's answer. */
@@ -94,8 +96,7 @@ object ProcessTextTargets {
 /**
  * The relay's bookkeeping: one request at a time, identified by a token that is never reused, so a
  * relay that comes back after the process restarted cannot answer a newer request. A result is kept
- * until the user applies it or dismisses it; an editor binding that is neither its own nor the
- * opened app's is what turns it into a copy.
+ * until the user applies it or dismisses it; a different editor retires it without writing anywhere.
  */
 internal class ProcessTextSession(
     private val newToken: () -> String,
@@ -103,6 +104,7 @@ internal class ProcessTextSession(
     class Pending(
         val token: String,
         val request: ProcessTextRequest,
+        val appLabel: String?,
     ) {
         var answered = false
         var answer: String? = null
@@ -110,11 +112,17 @@ internal class ProcessTextSession(
 
     private var pending: Pending? = null
 
-    /** Starts a request; null while another one is unanswered or its answer still waits. */
-    fun start(request: ProcessTextRequest): String? {
+    /**
+     * Starts a request; null while another one is unanswered or its answer still waits. [appLabel]
+     * names the app that was opened, so the preview can say where the answer came from.
+     */
+    fun start(
+        request: ProcessTextRequest,
+        appLabel: String? = null,
+    ): String? {
         if (pending != null) return null
         val token = newToken()
-        pending = Pending(token, request)
+        pending = Pending(token, request, appLabel)
         return token
     }
 
@@ -134,24 +142,30 @@ internal class ProcessTextSession(
         return true
     }
 
-    /**
-     * The editor binding changed. Until the opened app answers, every binding is that app's own
-     * editor or the absence between editors, so nothing is copied; an answer that then belongs to
-     * no editor still waiting for it is.
-     */
+    /** A different editor retires an answered request; an absent binding waits for the return. */
     fun onEditor(info: EditorInfo?): String? {
         val current = pending ?: return null
         if (!current.answered || info == null) return null
+        // The platform may bind an unidentified connection while the activity result returns.
+        // It cannot authorize a write or prove that the source field was replaced.
+        if (info.packageName.isNullOrEmpty()) return null
         if (current.request.sameEditorAs(info)) return null
+        // Unnamed editors cannot authorize replacement, but their preview may still be copied
+        // explicitly. A missing field id is not evidence of a different field in the same app.
+        if (current.request.packageName == info.packageName &&
+            (current.request.fieldId <= 0 || info.fieldId <= 0)
+        ) {
+            return null
+        }
         pending = null
-        return current.answer
+        return null
     }
 
     /** The waiting answer, or null while the other app is still on screen. */
     fun pendingResult(): ProcessTextResult? {
         val current = pending ?: return null
         if (!current.answered) return null
-        return ProcessTextResult(current.request, current.answer.orEmpty())
+        return ProcessTextResult(current.request, current.answer.orEmpty(), current.appLabel)
     }
 
     /** Takes the waiting answer for an explicit write. */

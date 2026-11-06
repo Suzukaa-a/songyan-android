@@ -97,6 +97,7 @@
     <string name="layout_name_zhuyin41">Zhuyin 41 keys</string>
     <string name="layout_name_cangjie26">Cangjie 26 keys</string>
     <string name="layout_name_romaji26">Romaji 26 keys</string>
+    <string name="layout_name_kana12">Kana 12 keys</string>
     <string name="layout_unavailable_note">This layout is not supported by the keyboard yet.</string>
 
     <!-- Input options -->

@@ -100,6 +100,7 @@ class QuickSettingsModelTest {
                 QuickSetting.KEY_HAPTICS,
                 QuickSetting.KEY_PREVIEW,
                 QuickSetting.PHRASES,
+                QuickSetting.MANAGE_TOOLS,
             ),
             QuickSettingsModel.tiles(QuickSettingsState()).map { it.setting },
         )
@@ -167,6 +168,25 @@ class QuickSettingsModelTest {
     }
 
     @Test
+    fun theFlickOnlyChoiceAppearsOnlyForJapaneseKana() {
+        assertTrue(
+            "an ordinary keyboard offers no kana-only choice",
+            QuickSettingsModel.tiles(QuickSettingsState()).none { it.setting == QuickSetting.KANA12_FLICK_ONLY },
+        )
+        val flick = tile(QuickSettingsState(kana12 = true), QuickSetting.KANA12_FLICK_ONLY)
+        assertEquals(QuickTile.Kind.TOGGLE, flick.kind)
+        assertFalse(flick.on)
+        assertEquals(QuickSettingChange.Kana12FlickOnly(true), QuickSettingsModel.toggled(flick))
+        val on =
+            QuickSettingsModel.toggled(
+                tile(QuickSettingsState(kana12 = true, kana12FlickOnly = true), QuickSetting.KANA12_FLICK_ONLY),
+            )
+        assertEquals(QuickSettingChange.Kana12FlickOnly(false), on)
+        val changed = QuickSettingsState(kana12 = true).apply(QuickSettingChange.Kana12FlickOnly(true))
+        assertTrue(tile(changed, QuickSetting.KANA12_FLICK_ONLY).on)
+    }
+
+    @Test
     fun onlyTogglesToggle() {
         val state = QuickSettingsState()
         assertNull(QuickSettingsModel.toggled(tile(state, QuickSetting.ONE_HAND)))
@@ -209,7 +229,7 @@ class QuickSettingsModelTest {
                     ),
             )
         val tiles = QuickSettingsModel.tiles(state)
-        assertEquals(QuickSetting.PHRASES, tiles[tiles.size - 3].setting)
+        assertEquals(QuickSetting.MANAGE_TOOLS, tiles[tiles.size - 3].setting)
         val (first, second) = tiles.takeLast(2)
         assertTrue(first.kind == QuickTile.Kind.TOGGLE && first.on)
         assertFalse(second.on)
@@ -233,6 +253,6 @@ class QuickSettingsModelTest {
 
     @Test
     fun anInputMethodWithoutSwitchesAddsNoTiles() {
-        assertEquals(8, QuickSettingsModel.tiles(QuickSettingsState()).size)
+        assertEquals(9, QuickSettingsModel.tiles(QuickSettingsState()).size)
     }
 }

@@ -73,6 +73,15 @@ class KeyboardView(
     internal var swipeLetters = emptyList<List<String>?>()
     internal var layout: LayoutDefinition? = null
 
+    /** The twelve-key kana surface the selected layout describes; null for every other layout. */
+    internal var kana12: Kana12Surface? = null
+
+    /** The kana row each placed key types, aligned with [keys]; null for the surface's controls. */
+    internal var kana12RowIds: List<String?> = emptyList()
+
+    /** Where the kana surface's own dp coordinates sit in this view. */
+    internal var kana12Frame: Kana12Frame? = null
+
     /** The authored side rails drawn beside [layout]'s rows; null for every page without any. */
     internal var rails: KeyboardPages.PageRails? = null
 
@@ -226,6 +235,13 @@ class KeyboardView(
 
     var onAction: (LayoutAction) -> Unit = {}
     var onT9FirstKey: (LayoutAction) -> Unit = { onAction(it) }
+
+    /**
+     * One press on the twelve-key kana surface, emitted once per release (Delete once per press and
+     * once per repeat tick, like every other page's Delete). The surface never touches the engine:
+     * the caller's kana model decides what to send, the same way [onAction] carries other pages.
+     */
+    var onKana12Action: (Kana12Action) -> Unit = {}
     internal var t9FirstKeyIndex = -1
     var onCursor: (Int) -> Unit = {}
 
@@ -332,6 +348,8 @@ class KeyboardView(
         var tracker: LetterSwipeTracker? = null,
         /** A Delete press deleted at its DOWN while a composition was in progress (see [handleDown]). */
         var startedComposing: Boolean = false,
+        /** The flick direction a kana press currently resolves to, for the cross preview. */
+        var kanaDirection: Kana12Direction = Kana12Direction.Center,
     ) {
         /** Re-points the pressed visual after a rebuild that only relabelled the same keys. */
         fun rebase(index: Int) {
@@ -374,10 +392,19 @@ class KeyboardView(
         railChoiceCount = 0
         railChoiceFirst = 0
         layout = definition
-        this.rails = rails
         this.faces = faces
+        // A twelve-key kana board is placed slot by slot from its authored grid and rails; every
+        // other page keeps the row solver.
+        val kanaSurface = kana12SurfaceFor(definition)
+        kana12 = kanaSurface
+        this.rails = if (kanaSurface == null) rails else null
         swipeConfig = swipe
-        keys = KeyRowSolver.columns(definition.rows, showsGlobe).flatten()
+        keys =
+            if (kanaSurface == null) {
+                KeyRowSolver.columns(definition.rows, showsGlobe).flatten()
+            } else {
+                emptyList()
+            }
         rebuild()
         logKeyBoundsOnce()
         invalidate()
@@ -413,6 +440,7 @@ class KeyboardView(
             return
         }
         layout = null
+        kana12 = null
         rails = null
         shell =
             ShellModel(config, config.numeric) { width, height ->
@@ -441,6 +469,7 @@ class KeyboardView(
     ) {
         if (shell?.key == pad && layout == null && actionLabel == enterLabel && this.faces == faces) return
         layout = null
+        kana12 = null
         rails = null
         shell = ShellModel(pad, numeric = true) { width, height -> EditorDigitLayouts.build(pad, width, height) }
         railChoices = emptyList()
@@ -570,7 +599,10 @@ class KeyboardView(
             }
             val key = keys[i]
             val pressed = pressedFlags[i]
-            val isLetter = key.action.type == LayoutActionKind.CODE || key.action.type == LayoutActionKind.LITERAL
+            val isLetter =
+                key.action.type == LayoutActionKind.CODE ||
+                    key.action.type == LayoutActionKind.LITERAL ||
+                    isKana12KeyFace(key.action)
             val isSpace = key.action.type == LayoutActionKind.SPACE
             val emphasized =
                 key.action.type == LayoutActionKind.ENTER ||
@@ -641,6 +673,7 @@ class KeyboardView(
             val hint = key.secondaryLabel
             if (!hint.isNullOrEmpty()) drawHint(canvas, i, hint, drawBounds)
         }
+        drawKana12Preview(canvas)
         drawCursorCue(canvas)
         if (animating) {
             val dirty = animationDirty
@@ -867,6 +900,9 @@ class KeyboardView(
     }
 
     override fun itemCustomActions(index: Int): List<AccessibilityNodeInfo.AccessibilityAction> {
+        // A kana key offers each flick direction the row carries as a named action.
+        val kanaActions = kana12CustomActions(index)
+        if (kanaActions.isNotEmpty()) return kanaActions
         val key = keys.getOrNull(index) ?: return emptyList()
         if (popupKey == index) {
             return popupOptions.mapIndexed { ordinal, option ->
@@ -892,6 +928,7 @@ class KeyboardView(
         index: Int,
         actionId: Int,
     ): Boolean {
+        if (performKana12CustomAction(index, actionId)) return true
         if (actionId == R.id.ime_cursor_left_action || actionId == R.id.ime_cursor_right_action) {
             if (keys.getOrNull(index)?.action?.type != LayoutActionKind.SPACE) return false
             onCursor(if (actionId == R.id.ime_cursor_left_action) -1 else 1)

@@ -171,6 +171,7 @@
     <string name="layout_error_unknown">このキー配列が見つかりません。削除された可能性があります。</string>
     <string name="layout_error_ascii_only_literal">テキストを入力するキーだけが半角の文字を設定できます。</string>
     <string name="layout_error_code_char">文字を入力するキーには、文字または記号を 1 つだけ入力してください。</string>
+    <string name="layout_error_kana_row">かなキーには、かな行を 1 つだけ指定できます。選び直してください。</string>
     <string name="layout_error_literal_empty">テキストを入力するキーには、入力するテキストが必要です。</string>
     <string name="layout_error_ascii_empty">半角の文字は空欄にできません。必要ない場合は消してください。</string>
     <string name="layout_error_mode_switch">キー配列を切り替えるキーは、次のキー配列にだけ切り替えられます。</string>

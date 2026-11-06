@@ -429,6 +429,7 @@ internal object KeyboardPages {
      */
     private fun letters(config: Config): BuiltPage {
         val main = mainLayout(config)
+        val kanaBoard = !config.englishDirectInput && config.field == FieldKind.TEXT && main == BuiltinLayouts.kana12
         val authoredEnglish =
             if (config.englishDirectInput) {
                 chosenPage(
@@ -442,6 +443,7 @@ internal object KeyboardPages {
         // falls back to these rows and gets the generated footer like every other layout.
         val footer =
             when {
+                kanaBoard -> emptyList()
                 config.layout == KeyboardLayoutKind.PHONE9 &&
                     !config.englishDirectInput &&
                     PhoneKeypadLayout.draws(main) -> emptyList()
@@ -477,6 +479,7 @@ internal object KeyboardPages {
                 input = LayoutInput(builtinLayout = builtin(config.layout)),
                 rows = digitRows + rows + if (footer.isEmpty()) emptyList() else listOf(LayoutRow(footer)),
                 split = split,
+                auxiliaryAreas = if (kanaBoard) main.auxiliaryAreas else null,
             )
         val rails = railsOf(authoredEnglish?.chrome, digitRows.size + rows.size, footer.isNotEmpty(), config)
         return BuiltPage(definition, rails)
@@ -642,6 +645,7 @@ internal object KeyboardPages {
         main: LayoutDefinition,
         footer: List<LayoutKey>,
     ): Boolean {
+        if (main == BuiltinLayouts.kana12) return false
         val letterRows = main.rows.size - if (LayoutBottomRow.index(main) != null) 1 else 0
         if (letterRows < 4) return true
         return footer.none { it.action.type == LayoutActionKind.BACKSPACE }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- キーボードツール：テキストを渡せるほかのアプリ -->
+    <string name="tools_process_text_section">ほかのアプリ</string>
+    <string name="tools_process_text_body">アプリをオンにすると、キーボードで選択したテキストをそのアプリに渡せます。返ってきた内容はプレビューだけで、選んでから書き込みます。</string>
+    <string name="tools_process_text_switch">%1$s を使う</string>
+    <string name="tools_process_text_empty">この端末にテキストを扱うアプリはありません。</string>
+    <string name="tools_process_text_unavailable">テキストを扱うアプリを読み取れませんでした。</string>
+</resources>

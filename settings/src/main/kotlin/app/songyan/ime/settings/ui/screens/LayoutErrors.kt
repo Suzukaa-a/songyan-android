@@ -26,6 +26,7 @@ private fun codeRes(code: LayoutInvalidCode): Int =
         LayoutInvalidCode.T9_QUICK_SYMBOLS_INVALID -> R.string.layout_error_t9_symbols
         LayoutInvalidCode.ASCII_VALUE_ONLY_ON_LITERAL -> R.string.layout_error_ascii_only_literal
         LayoutInvalidCode.CODE_REQUIRES_ONE_PRINTABLE_ASCII_CHARACTER -> R.string.layout_error_code_char
+        LayoutInvalidCode.KANA_REQUIRES_KNOWN_ROW -> R.string.layout_error_kana_row
         LayoutInvalidCode.LITERAL_REQUIRES_NONEMPTY_VALUE -> R.string.layout_error_literal_empty
         LayoutInvalidCode.ASCII_VALUE_MUST_NOT_BE_EMPTY -> R.string.layout_error_ascii_empty
         LayoutInvalidCode.MODE_SWITCH_SUPPORTS_ONLY_NEXT_LAYOUT -> R.string.layout_error_mode_switch

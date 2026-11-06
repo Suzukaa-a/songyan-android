@@ -409,7 +409,7 @@ internal fun KeyboardController.syncToolbar() {
         }
     // One-handed mode only exists on a phone-width portrait window; elsewhere the button would do nothing.
     val oneHandAvailable = shell.isAvailable()
-    toolbar.actions =
+    val actions =
         if (hideIdleToolbar) {
             emptyList()
         } else if (customSwitcherRequested && options.canSwitch) {
@@ -425,6 +425,31 @@ internal fun KeyboardController.syncToolbar() {
         } else {
             ToolbarView.DEFAULT_ACTIONS
         }.filter { it != ToolbarView.Action.ONE_HAND || oneHandAvailable }
+    // A private field (a password, or an editor that asked for no personalized learning) offers no
+    // tools at all, neither the entry nor a pinned tool: the rule is about the field, not the tool.
+    // A hidden idle toolbar keeps its row but shows nothing, pinned tools included.
+    val showsTools = toolsAvailable && !hideIdleToolbar
+    toolbar.actions =
+        if (showsTools) {
+            actions.flatMap { action ->
+                if (action == ToolbarView.Action.EDIT) {
+                    listOf(action, ToolbarView.Action.TOOLS)
+                } else {
+                    listOf(action)
+                }
+            }
+        } else {
+            actions
+        }
+    toolbar.tools =
+        if (showsTools) {
+            keyboardTools
+                .filter { it.pinned }
+                .take(ToolbarView.MAXIMUM_PINNED_TOOLS)
+                .map { ToolbarView.PinnedTool(it.id, it.label) }
+        } else {
+            emptyList()
+        }
     menu.setInputMethodOptions(options)
     menu.setToolbarShortcuts(shown = hideIdleToolbar, oneHandAvailable = oneHandAvailable, oneHand = oneHandMode)
 }

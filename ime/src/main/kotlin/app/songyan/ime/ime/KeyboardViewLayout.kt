@@ -246,6 +246,11 @@ internal fun KeyboardView.rebuild() {
         rebuildPhone(model)
         return
     }
+    val kanaSurface = kana12
+    if (kanaSurface != null) {
+        rebuildKana12(kanaSurface)
+        return
+    }
     val rows = layout?.rows ?: return
     if (width <= 0) return
     rails?.let {
@@ -524,6 +529,8 @@ internal fun KeyboardView.applyKeyFaces() {
                 }
             }
     }
+    // The kana surface speaks each row's name and renames the arrow-only caret key.
+    applyKana12KeyFaces()
     identities = KeyIdentity.list(keys, railIndices, labels)
     fitLabels()
 }

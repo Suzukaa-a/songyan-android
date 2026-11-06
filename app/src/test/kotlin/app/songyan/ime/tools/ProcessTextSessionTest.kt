@@ -29,6 +29,18 @@ class ProcessTextSessionTest {
     }
 
     @Test
+    fun anUnidentifiedBindingDuringTheReturnKeepsTheAnswerWithoutAuthorizingAWrite() {
+        val token = requireNotNull(session.start(request()))
+        session.onResult(token, "HELLO WORLD")
+        val transient = editor(packageName = "", fieldId = 0)
+        session.onEditor(transient)
+        assertEquals("HELLO WORLD", session.pendingResult()?.text)
+        assertFalse(request().sameEditorAs(transient))
+        session.onEditor(editor())
+        assertEquals("HELLO WORLD", session.take()?.text)
+    }
+
+    @Test
     fun anAnswerThatArrivesAfterTheEditorCameBackIsKept() {
         val token = requireNotNull(session.start(request()))
         assertNull(session.onEditor(editor()))
@@ -77,20 +89,26 @@ class ProcessTextSessionTest {
     }
 
     @Test
-    fun anAnswerForAnotherFieldIsCopied() {
+    fun anAnswerForAnotherFieldIsRetiredWithoutCopying() {
         val token = requireNotNull(session.start(request()))
         assertTrue(session.onResult(token, "HELLO WORLD"))
 
-        assertEquals("HELLO WORLD", session.onEditor(editor(fieldId = 202)))
+        assertNull(
+            "a changed field must never produce an automatic clipboard write",
+            session.onEditor(editor(fieldId = 202)),
+        )
         assertNull(session.pendingResult())
     }
 
     @Test
-    fun anAnswerForAnotherAppIsCopied() {
+    fun anAnswerForAnotherAppIsRetiredWithoutCopying() {
         val token = requireNotNull(session.start(request()))
         assertTrue(session.onResult(token, "HELLO WORLD"))
 
-        assertEquals("HELLO WORLD", session.onEditor(editor(packageName = "app.three")))
+        assertNull(
+            "a changed app must never produce an automatic clipboard write",
+            session.onEditor(editor(packageName = "app.three", fieldId = 0)),
+        )
         assertNull(session.pendingResult())
     }
 
@@ -111,13 +129,13 @@ class ProcessTextSessionTest {
     fun aFieldIdOfZeroOrLessCannotBeConfirmed() {
         val zero = requireNotNull(session.start(request(fieldId = 0)))
         assertTrue(session.onResult(zero, "HELLO WORLD"))
-        assertEquals("HELLO WORLD", session.onEditor(editor(fieldId = 0)))
-        assertNull(session.pendingResult())
+        assertNull(session.onEditor(editor(fieldId = 0)))
+        assertEquals("HELLO WORLD", session.take()?.text)
 
         val negative = requireNotNull(session.start(request(fieldId = -1)))
         assertTrue(session.onResult(negative, "HELLO WORLD"))
-        assertEquals("HELLO WORLD", session.onEditor(editor(fieldId = -1)))
-        assertNull(session.pendingResult())
+        assertNull(session.onEditor(editor(fieldId = -1)))
+        assertEquals("HELLO WORLD", session.take()?.text)
     }
 
     @Test

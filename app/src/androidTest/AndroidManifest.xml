@@ -52,6 +52,18 @@
             </intent-filter>
         </activity>
 
+        <!-- A text app that closes without an answer: a cancelled request writes nothing. -->
+        <activity
+            android:name="app.songyan.ime.tools.CancelledProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- A second text app, so a new answer is told apart from an old one. -->
         <activity
             android:name="app.songyan.ime.tools.LowercaseProcessTextActivity"

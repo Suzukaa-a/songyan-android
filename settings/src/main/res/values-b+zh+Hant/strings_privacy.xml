@@ -5,4 +5,5 @@
     <string name="about_privacy_local">松煙完全在本機執行，不收集也不上傳你輸入的內容。</string>
     <string name="about_privacy_network">只有你在設定裡下載輸入方案、語法模型或聯想詞庫，或者從連結匯入詞庫時，才會聯網下載這些內容。鍵盤本身從不聯網。</string>
     <string name="about_privacy_private">密碼等私密輸入框不學習、不記錄剪貼簿，也不顯示聯想。</string>
+    <string name="about_privacy_tools">鍵盤工具在本機處理你指定的文字。交給其他 App 的文字由那個 App 處理。</string>
 </resources>

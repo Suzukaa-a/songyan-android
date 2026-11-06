@@ -38,6 +38,7 @@ android {
         if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.kagiroiFixture").isPresent) {
             externalFixtureTests += "app.songyan.ime.rime.JapaneseReplayTest"
             externalFixtureTests += "app.songyan.ime.rime.JapaneseLearningTest"
+            externalFixtureTests += "app.songyan.ime.rime.KanaRomajiTableTest"
         }
         if (externalFixtureTests.isNotEmpty()) {
             testInstrumentationRunnerArguments["notClass"] = externalFixtureTests.joinToString(",")

@@ -20,6 +20,8 @@ internal fun KeyboardController.quickSettingsState(): QuickSettingsState =
         soundBlockedBySystem = !feedback.soundAllowedBySystem,
         hapticsOn = feedback.hapticsActive,
         previewOn = keyboard.keyPreviewEnabled,
+        kana12 = kana12Scheme(),
+        kana12FlickOnly = kana12.model.flickOnly,
         engineOptions =
             session
                 ?.takeIf { ready }
@@ -77,6 +79,10 @@ internal fun KeyboardController.applyQuickSetting(change: QuickSettingChange) {
         is QuickSettingChange.Preview -> {
             keyboard.keyPreviewEnabled = change.on
             scope.launch { preferences?.setKeyPreview(change.on) }
+        }
+        is QuickSettingChange.Kana12FlickOnly -> {
+            kana12.model.flickOnly = change.on
+            scope.launch { preferences?.setKana12FlickOnly(change.on) }
         }
     }
 }

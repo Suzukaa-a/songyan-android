@@ -22,6 +22,7 @@ android {
         }
         if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.kagiroiFixture").isPresent) {
             excludedTests += "app.songyan.ime.ime.JapaneseRomajiDeviceTest"
+            excludedTests += "app.songyan.ime.ime.KanaFlickDeviceTest"
         }
         if (excludedTests.isNotEmpty()) testInstrumentationRunnerArguments["notClass"] = excludedTests.joinToString(",")
     }

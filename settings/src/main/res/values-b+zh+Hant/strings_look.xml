@@ -172,6 +172,7 @@
     <string name="layout_error_unknown">找不到這個佈局，它可能已經被刪除。</string>
     <string name="layout_error_ascii_only_literal">只有輸入文字的按鍵可以設定半形文字。</string>
     <string name="layout_error_code_char">輸入字母的按鍵要正好填一個字母或符號。</string>
+    <string name="layout_error_kana_row">假名鍵只能填一個假名行，請重新選擇。</string>
     <string name="layout_error_literal_empty">輸入文字的按鍵需要填寫要輸入的文字。</string>
     <string name="layout_error_ascii_empty">半形文字不能留空，不需要時請清除。</string>
     <string name="layout_error_mode_switch">切換佈局的按鍵只能切到下一個佈局。</string>

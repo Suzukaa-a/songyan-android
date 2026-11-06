@@ -93,4 +93,12 @@ interface KeyboardPreferencesSource {
     val symbolLock: Flow<Boolean> get() = flowOf(false)
 
     suspend fun setSymbolLock(value: Boolean) = Unit
+
+    /**
+     * The Japanese twelve-key keys only flick: a repeated tap types the row's next kana instead of
+     * cycling the row. Off by default, which keeps the reference keyboard's tap cycle.
+     */
+    val kana12FlickOnly: Flow<Boolean> get() = flowOf(false)
+
+    suspend fun setKana12FlickOnly(value: Boolean) = Unit
 }

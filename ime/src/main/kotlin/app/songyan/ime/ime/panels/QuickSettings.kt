@@ -16,7 +16,13 @@ enum class QuickSetting {
     KEY_SOUND,
     KEY_HAPTICS,
     KEY_PREVIEW,
+
+    /** The Japanese twelve-key keys only flick; shown only while a Japanese scheme is running. */
+    KANA12_FLICK_ONLY,
     PHRASES,
+
+    /** Leaves the panel for the settings page where keyboard tools are managed. */
+    MANAGE_TOOLS,
 
     /** A schema switch of the input method in use (traditional output, emoji, ...); one tile per switch. */
     ENGINE_OPTION,
@@ -45,6 +51,11 @@ sealed interface QuickSettingChange {
     ) : QuickSettingChange
 
     data class Preview(
+        val on: Boolean,
+    ) : QuickSettingChange
+
+    /** The twelve-key kana keys only flick; the store keeps the choice. */
+    data class Kana12FlickOnly(
         val on: Boolean,
     ) : QuickSettingChange
 
@@ -84,6 +95,9 @@ data class QuickSettingsState(
     val soundBlockedBySystem: Boolean = false,
     val hapticsOn: Boolean = true,
     val previewOn: Boolean = true,
+    /** The running scheme types Japanese kana, so the twelve-key tap-cycle choice applies. */
+    val kana12: Boolean = false,
+    val kana12FlickOnly: Boolean = false,
     /** The switches of the input method in use; empty when it has none. */
     val engineOptions: List<EngineOptionTile> = emptyList(),
 ) {
@@ -95,6 +109,7 @@ data class QuickSettingsState(
             is QuickSettingChange.Sound -> copy(soundOn = change.on)
             is QuickSettingChange.Haptics -> copy(hapticsOn = change.on)
             is QuickSettingChange.Preview -> copy(previewOn = change.on)
+            is QuickSettingChange.Kana12FlickOnly -> copy(kana12FlickOnly = change.on)
             is QuickSettingChange.EngineOption ->
                 copy(
                     engineOptions =
@@ -187,8 +202,21 @@ object QuickSettingsModel {
             ),
             QuickTile(QuickSetting.KEY_HAPTICS, QuickTile.Kind.TOGGLE, on = state.hapticsOn),
             QuickTile(QuickSetting.KEY_PREVIEW, QuickTile.Kind.TOGGLE, on = state.previewOn),
-            QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
         ) +
+            listOfNotNull(
+                // A twelve-key kana choice means nothing on another scheme, so it appears only there.
+                if (state.kana12) {
+                    QuickTile(
+                        QuickSetting.KANA12_FLICK_ONLY,
+                        QuickTile.Kind.TOGGLE,
+                        on = state.kana12FlickOnly,
+                    )
+                } else {
+                    null
+                },
+                QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
+                QuickTile(QuickSetting.MANAGE_TOOLS, QuickTile.Kind.ACTION),
+            ) +
             state.engineOptions
                 .distinctBy { it.choiceGroup.firstOrNull() ?: it.name }
                 .map { option ->
@@ -230,6 +258,7 @@ object QuickSettingsModel {
             QuickSetting.KEY_SOUND -> QuickSettingChange.Sound(!tile.on)
             QuickSetting.KEY_HAPTICS -> QuickSettingChange.Haptics(!tile.on)
             QuickSetting.KEY_PREVIEW -> QuickSettingChange.Preview(!tile.on)
+            QuickSetting.KANA12_FLICK_ONLY -> QuickSettingChange.Kana12FlickOnly(!tile.on)
             QuickSetting.ENGINE_OPTION -> tile.engineOption?.let { QuickSettingChange.EngineOption(it.name, !tile.on) }
             else -> null
         }

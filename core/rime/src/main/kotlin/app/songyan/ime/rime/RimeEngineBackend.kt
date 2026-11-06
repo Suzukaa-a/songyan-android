@@ -137,6 +137,32 @@ class RimeEngineBackend(
         return snapshot.copy(committed = literal)
     }
 
+    /**
+     * Moves the composition caret with librime's own Left / Right keysyms.
+     *
+     * The key is built here instead of going through [RimeKey.fromKeyValue], so no front-end string
+     * ever turns into a text key: a backend that cannot move the caret keeps the interface's null
+     * default and the caller leaves the composition untouched.
+     */
+    override suspend fun moveCompositionCaret(offset: Int): EngineSnapshot? {
+        val steps = if (offset < 0) -offset else offset
+        if (steps == 0) return currentSnapshot()
+        if (!currentSnapshot().isComposing) return null
+        val key = RimeKey(if (offset < 0) RimeKeyCode.LEFT else RimeKeyCode.RIGHT)
+        var latest: RimeSnapshot? = null
+        var remaining = steps
+        while (remaining > 0) {
+            latest =
+                try {
+                    engine.processKey(key).snapshot
+                } catch (e: RimeException) {
+                    throw e.asBackendError()
+                }
+            remaining--
+        }
+        return publish(latest ?: return null)
+    }
+
     /** What an unconsumed key types; control keys other than Return type nothing. */
     private fun literalForUnconsumed(keyValue: String): String? =
         when {

@@ -66,6 +66,43 @@
                 <data android:mimeType="application/zip" />
                 <data android:mimeType="application/x-zip-compressed" />
             </intent-filter>
+            <!-- A keyboard-tool file opened from a file manager. The path pattern keeps the app out
+                 of "open with" for every other JSON document; a document provider whose URI hides
+                 the file name simply does not offer this app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:scheme="content"
+                    android:host="*"
+                    android:mimeType="application/json"
+                    android:pathPattern=".*\\.songyantool\\.json" />
+                <data
+                    android:scheme="content"
+                    android:host="*"
+                    android:mimeType="application/octet-stream"
+                    android:pathPattern=".*\\.songyantool\\.json" />
+            </intent-filter>
+            <!-- Our own MIME type names a tool without relying on the file name: a document whose
+                 provider hides the path can still be opened. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/vnd.songyan.tool+json" />
+            </intent-filter>
+            <!-- A tool file shared from another app. Sharing sends a .json file as application/json,
+                 and the tool format is the validation: a file that is not a tool is refused with an
+                 explanation and nothing is stored. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.songyan.tool+json" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
         </activity>
 
         <!-- The input method itself cannot start another app for a result. This invisible relay does

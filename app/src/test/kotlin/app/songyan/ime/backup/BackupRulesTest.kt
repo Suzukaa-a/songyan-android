@@ -1,6 +1,7 @@
 package app.songyan.ime.backup
 
 import app.songyan.ime.content.LocalQuickContentStore
+import app.songyan.ime.content.ToolStore
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.SourceIds
 import org.junit.Assert.assertEquals
@@ -68,6 +69,7 @@ class BackupRulesTest {
                 rel(storage.contentDir),
                 rel(storage.layoutsDir),
                 rel(storage.appearanceDir),
+                rel(File(files, ToolStore.DIRECTORY_NAME)),
                 "datastore",
             )
 
@@ -117,6 +119,19 @@ class BackupRulesTest {
                 covered(rules, rel(File(storage.contentDir, "emoji/recent.json"))),
             )
             assertFalse("$name backs up the whole rime directory", rel(storage.rimeRoot) in rules.includes)
+        }
+    }
+
+    @Test
+    fun theToolsAndTheirMetadataTravelWithEveryBackup() {
+        val tools = File(files, ToolStore.DIRECTORY_NAME)
+        val definition = rel(File(tools, "sample" + ToolStore.TOOL_FILE_SUFFIX))
+        val metadata = rel(File(tools, ToolStore.INDEX_FILE_NAME))
+        val lock = rel(File(tools, ToolStore.LOCK_FILE_NAME))
+        for ((name, rules) in listOf("legacy" to legacy, "cloud" to cloud, "transfer" to transfer)) {
+            assertTrue("$name keeps a user tool", covered(rules, definition))
+            assertTrue("$name keeps the enabled/pinned/order metadata", covered(rules, metadata))
+            assertFalse("$name must not back up the tools lock", covered(rules, lock))
         }
     }
 

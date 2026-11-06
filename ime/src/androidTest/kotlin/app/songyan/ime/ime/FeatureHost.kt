@@ -20,6 +20,8 @@ import app.songyan.ime.content.SymbolCatalog
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.ime.panels.QuickInsertHost
+import app.songyan.ime.ime.tools.KeyboardToolsEditor
+import app.songyan.ime.ime.tools.KeyboardToolsGateway
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -233,6 +235,12 @@ internal class FeatureHost(
     /** The app's quick-insert seam; null leaves the rows the panel has without it. */
     @Volatile var quickInsert: QuickInsertHost? = null
 
+    /** The app's tool store and runner; null leaves the keyboard without keyboard tools. */
+    @Volatile var toolGateway: KeyboardToolsGateway? = null
+
+    /** What a tool may read and write in this editor; null leaves the keyboard without tools. */
+    @Volatile var toolsEditor: KeyboardToolsEditor? = null
+
     /** The window the keyboard surface lives in, once [attachTo] was called. */
     private var attachedWindow: Activity? = null
 
@@ -416,6 +424,8 @@ internal class FeatureHost(
                     preferences,
                     quickContentDataSource = data,
                     quickInsert = quickInsert,
+                    toolGateway = toolGateway,
+                    toolEditor = toolsEditor,
                     copiedChipSource =
                         if (chips) {
                             CopiedChipSource(

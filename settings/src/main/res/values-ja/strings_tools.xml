@@ -1,0 +1,99 @@
+<resources>
+    <!-- キーボードツール：ホームの入口とページ -->
+    <string name="row_tools_title">キーボードツール</string>
+    <string name="row_tools_subtitle">選択したテキストにツールを実行します</string>
+    <string name="tools_search_keywords">ツール 翻訳 変換 全角 半角</string>
+    <string name="tools_title">キーボードツール</string>
+    <string name="tools_section_list">ツール</string>
+    <string name="tools_section_manage">ツールの管理</string>
+    <string name="tools_pinned_counter">固定 %1$d / %2$d</string>
+    <string name="tools_pinned">ツールバーに固定済み</string>
+    <string name="tools_steps_count">ステップ：%1$d</string>
+    <string name="tools_origin_builtin">内蔵</string>
+    <string name="tools_origin_user">自分のツール</string>
+    <string name="tools_more">その他の操作</string>
+    <string name="tools_edit">編集</string>
+    <string name="tools_copy">自分のツールとしてコピー</string>
+    <string name="tools_pin">ツールバーに固定</string>
+    <string name="tools_unpin">固定を解除</string>
+    <string name="tools_move_up">上へ移動</string>
+    <string name="tools_move_down">下へ移動</string>
+    <string name="tools_export">書き出す</string>
+    <string name="tools_delete">削除</string>
+    <string name="tools_delete_title">「%1$s」を削除しますか？</string>
+    <string name="tools_delete_body">削除した直後なら元に戻せます。</string>
+    <string name="tools_deleted">「%1$s」を削除しました。</string>
+    <string name="tools_undo">元に戻す</string>
+    <string name="tools_imported">「%1$s」を読み込みました。</string>
+    <string name="tools_exported">「%1$s」を書き出しました。</string>
+    <string name="tools_shared_title">このツールを読み込みますか？</string>
+    <string name="tools_shared_body">ほかのアプリから届いたツールファイルです。読み込んだあとでここで確認できます。自動では実行されません。</string>
+    <string name="tools_import_action">読み込む</string>
+    <string name="tools_add_from_example">例からコピー</string>
+    <string name="tools_add_from_example_body">例をもとにツールを作り、名前とステップを変更します。</string>
+    <string name="tools_import">ファイルから読み込む</string>
+    <string name="tools_import_body">.songyantool.json ファイルを選びます。</string>
+    <string name="tools_load_failed">ツールを読み取れませんでした。もう一度お試しください。</string>
+    <string name="tools_examples_title">例からコピー</string>
+
+    <!-- キーボードツール：エディター -->
+    <string name="tools_editor_title">ツールを編集</string>
+    <string name="tools_editor_save">保存する</string>
+    <string name="tools_editor_name_section">名前</string>
+    <string name="tools_editor_steps_section">ステップ</string>
+    <string name="tools_editor_step_counter">ステップ %1$d / %2$d</string>
+    <string name="tools_editor_add_step">ステップを追加</string>
+    <string name="tools_editor_step_limit">ステップは %1$d 個までです。</string>
+    <string name="tools_editor_step_number">ステップ %1$d · %2$s</string>
+    <string name="tools_editor_remove_step">このステップを削除</string>
+    <string name="tools_editor_tool_missing">このツールはもうありません。</string>
+
+    <!-- キーボードツール：ステップのパラメーター -->
+    <string name="tools_step_type_opencc">文字の変換</string>
+    <string name="tools_step_type_replace">検索と置換</string>
+    <string name="tools_step_type_map">1 文字ずつ置換</string>
+    <string name="tools_step_type_case">英字の大文字と小文字</string>
+    <string name="tools_step_type_width">全角と半角</string>
+    <string name="tools_step_type_template">形式で囲む</string>
+    <string name="tools_step_opencc_config">変換方法</string>
+    <string name="tools_step_case_mode">大文字と小文字</string>
+    <string name="tools_step_width_mode">変換の向き</string>
+    <string name="tools_step_replace_pattern">検索する内容</string>
+    <string name="tools_step_replace_replacement">置換後の内容</string>
+    <string name="tools_step_replace_hint">検索する内容には正規表現を使えます（例：「你+」）。</string>
+    <string name="tools_step_template_pattern">形式</string>
+    <string name="tools_step_template_hint">本文の位置に {text} と書きます（例：「{text}」）。</string>
+    <string name="tools_step_map_summary">対応表：%1$d 件</string>
+    <string name="tools_step_map_edit">対応表を編集</string>
+    <string name="tools_step_map_hint">1 行に「文字=置換後」を 1 つ書きます。</string>
+    <string name="tools_step_map_dialog_title">1 文字ずつ置換</string>
+    <string name="tools_step_map_error">各行に文字と「=」と置換後の内容が必要です。</string>
+    <string name="tools_case_upper">すべて大文字</string>
+    <string name="tools_case_lower">すべて小文字</string>
+    <string name="tools_case_capitalize">各単語の先頭を大文字</string>
+    <string name="tools_width_to_half">全角から半角へ</string>
+    <string name="tools_width_to_full">半角から全角へ</string>
+    <string name="tools_name_zh_hans">簡体字中国語</string>
+    <string name="tools_name_zh_hant">繁体字中国語</string>
+    <string name="tools_name_ja">日本語</string>
+    <string name="tools_name_en">英語</string>
+
+    <!-- キーボードツール：失敗の説明 -->
+    <string name="tools_pin_limit">ツールバーに固定できるのは %1$d 個までです。先に 1 つ解除してください。</string>
+    <string name="tools_error_unreadable">このファイルを読み取れません。もう一度選んでください。</string>
+    <string name="tools_error_not_a_tool">キーボードツールのファイルではありません。.songyantool.json ファイルを選んでください。</string>
+    <string name="tools_error_too_large">ファイルが %1$d KB を超えているため読み込めません。</string>
+    <string name="tools_error_version">このファイルは新しいバージョンの松煙で作られています。松煙を更新してから読み込んでください。</string>
+    <string name="tools_error_step_type">ステップ %1$d はこのバージョンにない種類（「%2$s」）を使っています。松煙を更新してから読み込んでください。</string>
+    <string name="tools_error_opencc">ステップ %1$d はこのバージョンにない変換（「%2$s」）を使っています。</string>
+    <string name="tools_error_regex">ステップ %1$d の検索する内容が正規表現として正しくありません。</string>
+    <string name="tools_error_invalid_step">ステップ %1$d の内容が足りないか、形式に合わない値があります。</string>
+    <string name="tools_error_name">名前を 1 つ以上入力してください。</string>
+    <string name="tools_error_invalid_shape">内容が足りないか形式が違います。名前と各ステップを確認してから、もう一度お試しください。</string>
+    <string name="tools_error_no_steps">このツールにはステップがありません。</string>
+    <string name="tools_error_too_many_steps">ステップは %1$d 個までです。このツールには %2$d 個あります。</string>
+    <string name="tools_error_too_many_tools">ツールは %1$d 個まで保存できます。1 つ削除してから、もう一度お試しください。</string>
+    <string name="tools_error_builtin">内蔵の例は変更できません。コピーして自分のツールにしてください。</string>
+    <string name="tools_error_unknown">完了できませんでした。もう一度お試しください。</string>
+    <string name="tools_error_storage">ツールを保存できませんでした。端末の空き容量を確認してから、もう一度お試しください。</string>
+</resources>

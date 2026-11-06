@@ -43,6 +43,7 @@ fun bundledLayoutNameRes(layoutId: String?): Int? =
         InputLayoutPolicy.ZHUYIN_LAYOUT -> R.string.layout_name_zhuyin41
         InputLayoutPolicy.CANGJIE_LAYOUT -> R.string.layout_name_cangjie26
         InputLayoutPolicy.ROMAJI_LAYOUT -> R.string.layout_name_romaji26
+        InputLayoutPolicy.KANA_LAYOUT -> R.string.layout_name_kana12
         else -> null
     }
 

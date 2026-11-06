@@ -96,6 +96,7 @@
     <string name="layout_name_zhuyin41">注音 41キー</string>
     <string name="layout_name_cangjie26">倉頡 26キー</string>
     <string name="layout_name_romaji26">ローマ字 26キー</string>
+    <string name="layout_name_kana12">かな 12キー</string>
     <string name="layout_unavailable_note">このキー配列はまだキーボードで使えません。</string>
 
     <!-- 入力オプション -->

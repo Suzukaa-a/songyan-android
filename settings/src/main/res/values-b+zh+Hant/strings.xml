@@ -97,6 +97,7 @@
     <string name="layout_name_zhuyin41">注音 41 鍵</string>
     <string name="layout_name_cangjie26">倉頡 26 鍵</string>
     <string name="layout_name_romaji26">羅馬字 26 鍵</string>
+    <string name="layout_name_kana12">假名 12 鍵</string>
     <string name="layout_unavailable_note">鍵盤暫時還不能用這個佈局。</string>
 
     <!-- 輸入選項 -->

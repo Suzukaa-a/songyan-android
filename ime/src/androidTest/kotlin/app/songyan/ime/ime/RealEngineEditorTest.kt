@@ -1125,14 +1125,13 @@ class RealEngineEditorTest {
     fun theStripReadsLaterPagesAsItScrollsWithoutPagingTheEngine() =
         withHost(smallPages = true) { host ->
             // Five candidates for ji, two per engine page, in a row about one candidate wide: the
-            // first read fills the row and the last page is left for the scroll to ask for.
+            // first page already runs past the row, so nothing more is read until the user scrolls.
             host.start(width = STRIP_WIDTH_PX)
             for (key in "ji") host.tap(key.toString())
             host.awaitComposing()
             val pageSize = host.backend.currentSnapshot().pageSize
             val first = host.stripLabels()
-            assertTrue("the row is filled past one engine page: $first", first.size > pageSize)
-            assertTrue("a page is left to read: $first", first.size < JI_CANDIDATES)
+            assertEquals("only the first engine page is read before scrolling: $first", pageSize, first.size)
             repeat(STRIP_SWIPES) { host.swipeStrip() }
             val after = host.stripLabels()
             assertTrue("scrolling reads later pages: ${first.size} -> ${after.size}", after.size > first.size)
@@ -2745,7 +2744,9 @@ class RealEngineEditorTest {
                 context,
                 scope,
                 editor.keyboardCallbacks(
-                    action = { editor.sendReturn(false) },
+                    // As the service does: a multi-line field takes the newline as text. This host's
+                    // field is not in a window, so a key event would never reach it.
+                    action = { editor.sendReturn(EditorPolicy.from(info).returnsNewline) },
                     onCommitted = { controller.onTextInserted() },
                     panelsChanged = { backOwned = it },
                     hideKeyboard = { hidden = true },

@@ -838,3 +838,55 @@ ENTRY jboolean JNI_FN(nativeDeploySchema)(JNIEnv* env, jclass, jstring file) {
   return api->deploy_schema(path.c_str()) ? JNI_TRUE : JNI_FALSE;
   SONGYAN_JNI_CATCH(JNI_FALSE)
 }
+
+// Standard UTF-8 preserves supplementary characters and NUL; JNI's modified UTF-8 does not.
+static std::string OpenccInputUtf8(JNIEnv* env, jstring text, jclass strings, jstring charset) {
+  const jmethodID get_bytes = env->GetMethodID(strings, "getBytes", "(Ljava/lang/String;)[B");
+  if (env->ExceptionCheck()) return {};
+  auto bytes = static_cast<jbyteArray>(env->CallObjectMethod(text, get_bytes, charset));
+  if (env->ExceptionCheck()) return {};
+  const jsize count = env->GetArrayLength(bytes);
+  std::string result(static_cast<size_t>(count), '\0');
+  if (count != 0) env->GetByteArrayRegion(bytes, 0, count, reinterpret_cast<jbyte*>(result.data()));
+  return result;
+}
+
+static jstring OpenccOutputUtf8(JNIEnv* env, const char* text, size_t count, jclass strings, jstring charset) {
+  const jmethodID constructor = env->GetMethodID(strings, "<init>", "([BLjava/lang/String;)V");
+  if (env->ExceptionCheck()) return nullptr;
+  auto bytes = env->NewByteArray(static_cast<jsize>(count));
+  if (env->ExceptionCheck()) return nullptr;
+  if (count != 0) env->SetByteArrayRegion(bytes, 0, static_cast<jsize>(count), reinterpret_cast<const jbyte*>(text));
+  return static_cast<jstring>(env->NewObject(strings, constructor, bytes, charset));
+}
+
+ENTRY jint JNI_FN(nativeOpenccConvert)(JNIEnv* env, jclass, jstring config_path, jstring text,
+                                      jobjectArray result) {
+  SONGYAN_JNI_TRY
+  if (!config_path || !text || !result || env->GetArrayLength(result) < 2) return RB_OPENCC_INVALID_ARGUMENT;
+  env->SetObjectArrayElement(result, 0, nullptr);
+  env->SetObjectArrayElement(result, 1, nullptr);
+  const jclass strings = env->FindClass("java/lang/String");
+  if (env->ExceptionCheck()) return RB_OPENCC_OUT_OF_MEMORY;
+  const jstring charset = env->NewStringUTF("UTF-8");
+  if (env->ExceptionCheck()) return RB_OPENCC_OUT_OF_MEMORY;
+  const auto config = OpenccInputUtf8(env, config_path, strings, charset);
+  if (env->ExceptionCheck()) return RB_OPENCC_CONVERSION_FAILED;
+  const auto input = OpenccInputUtf8(env, text, strings, charset);
+  if (env->ExceptionCheck()) return RB_OPENCC_CONVERSION_FAILED;
+  char* converted = nullptr;
+  size_t length = 0;
+  char* reason = nullptr;
+  const auto status = rb_opencc_convert(config.c_str(), input.data(), input.size(), &converted, &length, &reason);
+  if (status == RB_OPENCC_OK) {
+    auto output = OpenccOutputUtf8(env, converted, length, strings, charset);
+    if (!env->ExceptionCheck()) env->SetObjectArrayElement(result, 0, output);
+  } else if (reason) {
+    auto diagnostic = OpenccOutputUtf8(env, reason, std::strlen(reason), strings, charset);
+    if (!env->ExceptionCheck()) env->SetObjectArrayElement(result, 1, diagnostic);
+  }
+  rb_opencc_free(converted);
+  rb_opencc_free(reason);
+  return status;
+  SONGYAN_JNI_CATCH(RB_OPENCC_CONVERSION_FAILED)
+}

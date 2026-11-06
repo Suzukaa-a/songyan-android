@@ -263,6 +263,13 @@ class CandidateBarView(
      */
     var onLoadMore: (revision: Int, page: Int) -> Unit = { _, _ -> }
     var onBackspace: (startedComposing: Boolean) -> Unit = {}
+
+    /**
+     * One step of a held Delete. [stillHeld] is asked when the step runs, so a step queued by a
+     * touch that has since ended deletes nothing.
+     */
+    var onRepeatBackspace: (startedComposing: Boolean, stillHeld: () -> Boolean) -> Unit =
+        { startedComposing, _ -> onBackspace(startedComposing) }
     var onRetype: () -> Unit = {}
 
     /** Scroll offset in px: horizontal while collapsed, vertical while expanded; 0 is the start. */
@@ -368,12 +375,24 @@ class CandidateBarView(
                 controls.getOrNull(downControl) == Control.BACKSPACE &&
                 (!backspaceStartedComposing || snapshot.isComposing)
 
+    /**
+     * Bumped whenever a touch begins or ends. A held Delete repeats through the owner's queue, so a
+     * step queued by one touch must not delete for the next touch on the same control: the step
+     * carries its touch's epoch and is dropped once a newer touch has bumped it.
+     */
+    internal var holdEpoch = 0
+
+    /** The [holdEpoch] the running Backspace repeat belongs to. */
+    internal var repeatHoldEpoch = 0
+
     internal val repeatBackspace =
         object : Runnable {
             override fun run() {
-                if (!canRepeatBackspace) return
-                onBackspace(backspaceStartedComposing)
-                if (canRepeatBackspace) ui.postDelayed(this, KeyboardView.BACKSPACE_REPEAT_MS)
+                val epoch = repeatHoldEpoch
+                if (epoch != holdEpoch || !canRepeatBackspace) return
+                val stillHeld = { epoch == holdEpoch && canRepeatBackspace }
+                onRepeatBackspace(backspaceStartedComposing, stillHeld)
+                if (stillHeld()) ui.postDelayed(this, KeyboardView.BACKSPACE_REPEAT_MS)
             }
         }
 
@@ -408,6 +427,7 @@ class CandidateBarView(
 
     /** No hold survives the pointer leaving its control or the control disappearing. */
     internal fun cancelPress() {
+        holdEpoch++
         ui.removeCallbacks(longPress)
         ui.removeCallbacks(repeatBackspace)
         downReading = -1

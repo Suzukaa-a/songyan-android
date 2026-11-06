@@ -46,6 +46,8 @@ internal fun CandidateBarView.commitPopupCharacter(index: Int) {
 }
 
 internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
+    // A new touch is a new hold: steps queued by the previous one must not delete for it.
+    holdEpoch++
     ui.removeCallbacks(repeatBackspace)
     gestureX = event.x
     gestureY = event.y
@@ -97,7 +99,10 @@ internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
     if (controls.getOrNull(downControl) == Control.BACKSPACE) {
         backspaceStartedComposing = snapshot.isComposing
         onBackspace(backspaceStartedComposing)
-        if (canRepeatBackspace) ui.postDelayed(repeatBackspace, ViewConfiguration.getLongPressTimeout().toLong())
+        if (canRepeatBackspace) {
+            repeatHoldEpoch = holdEpoch
+            ui.postDelayed(repeatBackspace, ViewConfiguration.getLongPressTimeout().toLong())
+        }
     }
     // A new touch may try a read that failed before, once.
     pages.resume()
@@ -238,6 +243,8 @@ internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     val press = pressed
     val control = downControl
     val reading = downReading
+    // The touch ends here: a held Delete's queued steps belong to it and must not run for the next one.
+    holdEpoch++
     pressed = null
     downControl = -1
     downReading = -1

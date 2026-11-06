@@ -203,22 +203,47 @@ class KeyboardView(
     /** Accessibility-only repeat of the Backspace key; a virtual node cannot hold a finger. */
     private var accessibleRepeatKey = -1
     private var accessibleRepeatSteps = 0
+
+    /** Bumped by every burst start and stop: a queued step only runs for the burst that queued it. */
+    private var accessibleRepeatToken = 0
+
+    /** Whether the composition the burst started in was still there; the burst stops when it ends. */
+    private var accessibleRepeatComposing = false
     private val accessibleRepeat =
         object : Runnable {
             override fun run() {
                 val index = accessibleRepeatKey
-                if (index !in keys.indices || accessibleRepeatSteps >= MAX_ACCESSIBILITY_REPEAT_STEPS) {
+                if (index !in keys.indices ||
+                    accessibleRepeatSteps >= MAX_ACCESSIBILITY_REPEAT_STEPS ||
+                    (accessibleRepeatComposing && !composing())
+                ) {
                     stopAccessibilityRepeat()
                     return
                 }
                 accessibleRepeatSteps += 1
-                activateItem(index)
+                // A step belongs to the burst that queued it: once that burst is stopped (another
+                // action, touch exploration, its composition gone) a newer burst on the same key
+                // must not run it, and it must not delete text the composition left behind.
+                val token = accessibleRepeatToken
+                val startedComposing = accessibleRepeatComposing
+                onRepeatAction(keySnapshot(index).action) {
+                    token == accessibleRepeatToken &&
+                        !(startedComposing && !composing())
+                }
                 timers.postDelayed(this, BACKSPACE_REPEAT_MS)
             }
         }
 
     var onAction: (LayoutAction) -> Unit = {}
     var onT9FirstKey: (LayoutAction) -> Unit = { onAction(it) }
+
+    /**
+     * One step of a held key. [stillHeld] is asked when the step runs, so a hold that ended while
+     * the step was queued (a release, a cancel, a second finger, the composition it was deleting)
+     * types nothing more. The default treats a step as a plain press.
+     */
+    var onRepeatAction: (action: LayoutAction, stillHeld: () -> Boolean) -> Unit =
+        { action, _ -> onAction(action) }
     internal var t9FirstKeyIndex = -1
     var onCursor: (Int) -> Unit = {}
 
@@ -892,6 +917,8 @@ class KeyboardView(
         if (key.action.type != LayoutActionKind.BACKSPACE) return
         accessibleRepeatKey = index
         accessibleRepeatSteps = 0
+        accessibleRepeatToken++
+        accessibleRepeatComposing = composing()
         timers.post(accessibleRepeat)
     }
 
@@ -899,6 +926,8 @@ class KeyboardView(
         if (accessibleRepeatKey < 0) return
         accessibleRepeatKey = -1
         accessibleRepeatSteps = 0
+        // Invalidates steps of this burst that are still queued.
+        accessibleRepeatToken++
         timers.removeCallbacks(accessibleRepeat)
     }
 

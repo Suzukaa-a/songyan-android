@@ -123,18 +123,26 @@ abstract class QuickContentPanelView(
 
     /** The held cell whose repeat is running, or -1; its release or cancel stops it. */
     private var repeatingCell = -1
+
+    /** Bumped when a held cell ends: a step queued by that hold must not run for the next one. */
+    private var repeatToken = 0
+
     private val repeatTick =
         object : Runnable {
             override fun run() {
                 val item = pressedItem
                 if (repeatingCell < 0 || item != repeatingCell + cellItemBase()) return
-                activateTouchedItem(item)
+                val token = repeatToken
+                onCellRepeated(item) {
+                    token == repeatToken && repeatingCell >= 0 && pressedItem == item
+                }
                 ui.postDelayed(this, cellRepeatIntervalMs())
             }
         }
 
     private fun stopRepeat() {
         ui.removeCallbacks(repeatTick)
+        repeatToken++
         repeatingCell = -1
     }
 
@@ -260,6 +268,15 @@ abstract class QuickContentPanelView(
     protected abstract fun cellAccessibilityLabel(index: Int): String
 
     protected open fun onCellActivated(index: Int) {}
+
+    /**
+     * One step of a held cell. [stillHeld] is asked when the step runs, so a hold that ended while
+     * the step was queued does nothing; the default treats it as a fresh press.
+     */
+    protected open fun onCellRepeated(
+        index: Int,
+        stillHeld: () -> Boolean,
+    ) = onCellActivated(index)
 
     /** A dimmed cell neither answers a touch nor shows the press layer. */
     protected open fun cellEnabled(index: Int): Boolean = true

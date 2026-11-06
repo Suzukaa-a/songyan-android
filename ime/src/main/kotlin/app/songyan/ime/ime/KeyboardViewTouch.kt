@@ -255,7 +255,7 @@ internal fun KeyboardView.beginLongPress(press: Press) {
             // The DOWN deleted once; the hold's first repeat lands now, then one per tick.
             BackspaceTrace.record(BackspaceTrace.Event.TOUCH_HOLD_START, composing())
             feedback(press.snapshot, FeedbackKind.REPEAT)
-            activate(press.snapshot)
+            repeatStep(press)
             scheduleRepeat(press, press.startedComposing)
         }
         press.snapshot.isSpace -> {
@@ -292,6 +292,17 @@ internal fun KeyboardView.beginLongPress(press: Press) {
     }
 }
 
+/**
+ * One step of a held Backspace: the delete is queued, and dropped if the hold ends (the finger
+ * lifts, is cancelled, or the composition it was deleting ends) before the queue reaches it.
+ */
+internal fun KeyboardView.repeatStep(press: Press) {
+    val startedComposing = press.startedComposing
+    onRepeatAction(press.snapshot.action) {
+        pointers.get(press.pointerId) === press && !(startedComposing && !composing())
+    }
+}
+
 /** One delete per repeat tick, bound to the same pointer and its captured action. */
 internal fun KeyboardView.scheduleRepeat(
     press: Press,
@@ -307,7 +318,7 @@ internal fun KeyboardView.scheduleRepeat(
                 }
                 BackspaceTrace.record(BackspaceTrace.Event.TOUCH_REPEAT, startedComposing)
                 feedback(press.snapshot, FeedbackKind.REPEAT)
-                activate(press.snapshot)
+                repeatStep(press)
                 timers.postDelayed(this, BACKSPACE_REPEAT_MS)
             }
         }

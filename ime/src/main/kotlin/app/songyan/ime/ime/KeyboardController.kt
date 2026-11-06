@@ -513,6 +513,18 @@ class KeyboardController(
                 }
             }
 
+            override fun repeatEdit(
+                action: EditAction,
+                extend: Boolean,
+                stillHeld: () -> Boolean,
+            ) {
+                enqueueRepeat(stillHeld) {
+                    if (confirmComposition()) callbacks.editAction(action, extend, !policy.privateInput)
+                    refreshEditPanel()
+                    render()
+                }
+            }
+
             override fun startSearch(kind: PanelSearchKind) = beginPanelSearch(kind)
 
             override fun emojiMetadataVersion(): Int = policy.emojiMetaVersion
@@ -557,6 +569,24 @@ class KeyboardController(
         }
         val epoch = keyEpoch
         operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, epoch) })
+    }
+
+    /**
+     * Queues one step of a held control. [stillHeld] is asked on the main thread when the step is
+     * about to run: a release, a cancel or a second finger may end the hold while its steps are
+     * still queued, and such a step must do nothing. Unlike [enqueueKey] a step is never kept for a
+     * session that is still being prepared: a hold cannot outlive the session it was made in.
+     */
+    internal fun enqueueRepeat(
+        stillHeld: () -> Boolean,
+        step: suspend () -> Unit,
+    ) {
+        if (retired || engineNotice != null) return
+        val epoch = keyEpoch
+        val stepOp: suspend () -> Unit = {
+            if (!retired && ready && epoch == keyEpoch && stillHeld()) step()
+        }
+        operations.trySend(ANY_GENERATION to stepOp)
     }
 
     /**

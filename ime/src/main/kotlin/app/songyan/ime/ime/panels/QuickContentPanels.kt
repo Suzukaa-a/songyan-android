@@ -101,6 +101,16 @@ class QuickContentPanels(
             extend: Boolean,
         )
 
+        /**
+         * One step of a held edit-panel key. [stillHeld] is asked when the step runs: a hold that
+         * ended while the step was queued must not act. The default treats it as a plain key.
+         */
+        fun repeatEdit(
+            action: EditAction,
+            extend: Boolean,
+            stillHeld: () -> Boolean,
+        ) = edit(action, extend)
+
         /** A panel's search key: the keyboard takes over to type the query. */
         fun startSearch(kind: PanelSearchKind)
 
@@ -234,6 +244,7 @@ class QuickContentPanels(
         lazyPanel {
             EditPanelView(context).apply {
                 onEdit = { action, extend -> callbacks.edit(action, extend) }
+                onEditRepeated = { action, extend, stillHeld -> callbacks.repeatEdit(action, extend, stillHeld) }
             }
         }
 

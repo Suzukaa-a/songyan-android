@@ -579,6 +579,118 @@ class RealEngineEditorTest {
         }
 
     /**
+     * The keyboard is still busy with a hold when the finger lifts: the hold's queued repeat was
+     * made for that hold and must delete nothing, not even when the same key is pressed again.
+     */
+    @Test
+    fun aQueuedRepeatThatOutlivesItsHoldDeletesNothing() =
+        withHost { host ->
+            host.start(initial = "abcd")
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val first = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(first, MotionEvent.ACTION_DOWN, delete)
+                // The hold's first step: a real repeat, queued behind the blocked operation.
+                val pointers = host.controller.keyboard.pointers
+                requireNotNull(pointers.valueAt(0).task).run()
+                host.touch(first + 20, MotionEvent.ACTION_UP, delete, downTime = first)
+            }
+            // A new press on the same key while the old hold's step is still queued.
+            val second = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(second, MotionEvent.ACTION_DOWN, delete)
+                host.touch(second + 20, MotionEvent.ACTION_UP, delete, downTime = second)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("one delete per press, none from the finished hold", "ab", host.text())
+        }
+
+    @Test
+    fun aQueuedRepeatStopsOnceTheCompositionItWasDeletingIsGone() =
+        withHost { host ->
+            host.start(initial = "abc")
+            host.tap("n")
+            host.awaitField("abcn")
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(start, MotionEvent.ACTION_DOWN, delete)
+                // The hold's first step is queued while the composition it deletes is still there.
+                val pointers = host.controller.keyboard.pointers
+                requireNotNull(pointers.valueAt(0).task).run()
+            }
+            host.main { queue.complete(Unit) }
+            // The DOWN deletes the last letter and the composition ends: the queued repeat must not
+            // delete the text that is already committed (the finger is still down, so only the
+            // composition rule can stop it).
+            host.awaitIdle()
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.awaitIdle()
+            assertEquals("abc", host.text())
+        }
+
+    /**
+     * The expanded candidates' held Delete repeats through the keyboard's queue too: a step queued
+     * by one touch must not delete for the next touch on the same control, even though the control,
+     * the grid and the composition rule all say "held" again.
+     */
+    @Test
+    fun aQueuedCandidateRepeatDoesNotDeleteForTheNextTouchOnTheSameControl() =
+        withHost { host ->
+            host.start(initial = "xyz")
+            host.typeKeys("nihao")
+            host.main {
+                host.controller.candidates.setExpanded(true)
+                host.relayout()
+            }
+            host.awaitIdle()
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val bar = host.controller.candidates
+            val (x, y) = host.main2 { bar.controlCells[1].let { it.exactCenterX() to it.exactCenterY() } }
+
+            fun touch(
+                action: Int,
+                downTime: Long,
+                eventTime: Long,
+            ) {
+                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+                bar.dispatchTouchEvent(event)
+                event.recycle()
+            }
+            val first = SystemClock.uptimeMillis()
+            host.main {
+                touch(MotionEvent.ACTION_DOWN, first, first)
+                // The touch's own hold step, queued behind the blocked operation.
+                bar.repeatBackspace.run()
+                touch(MotionEvent.ACTION_UP, first, first + 20)
+                // No second step of this touch: the one below is what the queue must judge.
+                bar.ui.removeCallbacks(bar.repeatBackspace)
+            }
+            // A new hold on the same control, still down when the queue is let go.
+            val second = SystemClock.uptimeMillis()
+            host.main {
+                touch(MotionEvent.ACTION_DOWN, second, second)
+                bar.ui.removeCallbacks(bar.repeatBackspace)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            host.main { touch(MotionEvent.ACTION_UP, second, SystemClock.uptimeMillis()) }
+            host.awaitIdle()
+            assertEquals(
+                "only the two presses delete, while composition stays active",
+                "nih",
+                host.backend.currentSnapshot().rawInput,
+            )
+            assertTrue("committed text stays untouched", host.text().startsWith("xyz"))
+        }
+
+    /**
      * The keyboard is still busy with a press when its field ends: that press was made for the field
      * and must not be typed into the one that replaces it, while the new field's own press is typed
      * there and only there.

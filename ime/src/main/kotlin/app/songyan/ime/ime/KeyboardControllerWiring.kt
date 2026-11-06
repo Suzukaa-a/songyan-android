@@ -65,6 +65,11 @@ internal fun KeyboardController.wireViews() {
         candidates.dismissPopup()
         enqueueKey(action, t9FirstKey = true)
     }
+    // A held key repeats through the queue, so each step is checked again when it runs: one queued
+    // for a hold that has since ended types nothing.
+    keyboard.onRepeatAction = { action, stillHeld ->
+        enqueueRepeat(stillHeld) { dispatch(action) }
+    }
     keyboard.onPopupChanged = { syncBackOwnership() }
     candidates.onPopupChanged = { syncBackOwnership() }
     keyboard.onDoubleShift = {
@@ -146,6 +151,12 @@ internal fun KeyboardController.wireViews() {
                 dispatch(LayoutAction(LayoutActionKind.BACKSPACE))
             }
         }
+    }
+    // The expanded grid's held Delete repeats the same way: its touch epoch says whether the step
+    // still belongs to a live hold (the composition rule is part of that check).
+    candidates.onRepeatBackspace = { startedComposing, stillHeld ->
+        BackspaceTrace.record(BackspaceTrace.Event.CANDIDATE_BAR_DELETE, composing = startedComposing)
+        enqueueRepeat(stillHeld) { dispatch(LayoutAction(LayoutActionKind.BACKSPACE)) }
     }
     candidates.onRetype = { enqueueKey(LayoutAction(LayoutActionKind.CLEAR_INPUT)) }
     candidates.onLoadMore = { revision, page ->

@@ -18,8 +18,8 @@ interface QuickContentHost {
     fun hide()
 
     /**
-     * Ends a closing panel's exit at once, so the key area is back before the keyboard covers it
-     * with something else; otherwise the exit's end would bring the key area back over it.
+     * Ends a closing panel's visual exit before another surface, such as the keyboard menu,
+     * covers the same area.
      */
     fun settle()
 

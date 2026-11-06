@@ -960,7 +960,7 @@ class KeyboardController(
 
     internal fun openKeyboardMenu() {
         if (retired || menuOpen) return
-        // Opened from the settings panel, whose exit would otherwise bring the keys back over the menu.
+        // Finish the settings panel's visual exit before the menu replaces the same surface.
         panels?.settle()
         syncMenu()
         refreshInputMethodOptions()

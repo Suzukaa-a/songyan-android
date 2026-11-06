@@ -56,6 +56,44 @@ class CandidatePagesTest {
     }
 
     @Test
+    fun anAutomaticFillStopsAtTheVisibleEndWhileBrowsingReadsAhead() {
+        // Collapsed strip on a 411 dp screen: 363 dp of viewport beside the 48 dp expand control, and
+        // the lead is two 48 dp rows. A one-character candidate stays on the 44 dp minimum chip, so
+        // each engine page of five adds 220 dp of strip: 224, 444 and 664 dp after one, two and three
+        // pages (the 2 dp insets included).
+        val lookAhead = 96f
+
+        fun due(
+            content: Float,
+            browsing: Boolean,
+            visibleEnd: Float = 363f,
+        ) = loadMoreDue(visibleEnd, content, lookAhead, browsing)
+
+        val pages = CandidatePages()
+        pages.update(snapshot(), browsable = true)
+        // A strip that ends before the viewport is filled by the view's own refresh; one that ends
+        // exactly at its end is not (the fill rule is strict).
+        assertTrue("row not full: fill it", due(content = 224f, browsing = false))
+        assertFalse(due(content = 363f, browsing = false))
+        assertEquals(1, pages.nextRead(due(content = 224f, browsing = false)))
+        pages.read(1)
+        // Two pages run past the viewport but still end inside the lead: the view's own refresh reads
+        // nothing off screen, while browsing (a page read ahead of the finger) asks for the next one.
+        assertFalse("row full: nothing to fill", due(content = 444f, browsing = false))
+        assertNull(pages.nextRead(due(content = 444f, browsing = false)))
+        assertTrue(due(content = 444f, browsing = true))
+        assertEquals(2, pages.nextRead(due(content = 444f, browsing = true)))
+        pages.read(2)
+        // Three pages end beyond the lead: browsing asks for nothing until it has scrolled into reach,
+        // and the lead's own edge counts.
+        assertFalse("out of reach", due(content = 664f, browsing = true))
+        assertNull(pages.nextRead(due(content = 664f, browsing = true)))
+        assertFalse(due(content = 664f, browsing = true, visibleEnd = 567f))
+        assertTrue("scrolled into the lead", due(content = 664f, browsing = true, visibleEnd = 568f))
+        assertEquals(3, pages.nextRead(due(content = 664f, browsing = true, visibleEnd = 568f)))
+    }
+
+    @Test
     fun laterCandidatesKeepTheirAbsoluteIndex() {
         val pages = CandidatePages()
         pages.update(snapshot(), browsable = true)

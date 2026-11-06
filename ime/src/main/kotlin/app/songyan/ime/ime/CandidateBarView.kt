@@ -748,7 +748,7 @@ class CandidateBarView(
             if (atStart) startEdge.onAbsorb(speed) else endEdge.onAbsorb(speed)
             scroller.abortAnimation()
         }
-        maybeLoadMore()
+        maybeLoadMore(userBrowsing = true)
         postInvalidateOnAnimation()
     }
 
@@ -903,7 +903,7 @@ class CandidateBarView(
         pages.resume()
         scroller.abortAnimation()
         scrollTo(target)
-        maybeLoadMore()
+        maybeLoadMore(userBrowsing = true)
         sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SCROLLED)
         return true
     }
@@ -998,9 +998,10 @@ class CandidateBarView(
         const val FADE_MS = 150L
 
         /**
-         * The strip and the grid ask for the next engine page once the end of what was read is
-         * this many candidate rows (row heights) away: far enough that a read lands before an
-         * ordinary scroll gets there, near enough that a new code costs at most one read up front.
+         * A scroll, drag, fling or reveal asks for the next engine page while the end of what was
+         * read is this many candidate rows (row heights) short of the viewport's end: far enough
+         * that a read lands before an ordinary scroll gets there. The view's own refreshes never
+         * read off screen; they only fill a row that does not cover the viewport yet.
          */
         const val LOAD_AHEAD_ROWS = 2f
 

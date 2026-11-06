@@ -448,6 +448,8 @@ class CandidateBarView(
         rebuild()
         val chosen = value.indexOfLast { it.selected }
         if (chosen >= 0) revealReading(chosen)
+        // The readings are items of this same virtual surface, after the chips in index order.
+        announceContentChanged()
         invalidate()
     }
 
@@ -474,6 +476,8 @@ class CandidateBarView(
         browsable: Boolean = true,
     ) {
         val highlightBefore = highlightedAbsolute
+        val listBefore = entrySource
+        val hadCandidates = snapshot.candidates.isNotEmpty()
         val replaced = pages.update(value, browsable)
         snapshot = value
         highlightedAbsolute = highlightOf(value)
@@ -493,6 +497,12 @@ class CandidateBarView(
         // The engine moved its highlight (a page or arrow key it handles): keep it in sight.
         if (!replaced && highlightedAbsolute != highlightBefore) revealHighlight()
         maybeLoadMore()
+        // The rows are virtual nodes addressed by item index: a replaced list describes different
+        // words under the same ids, and the appearance or disappearance of the controls changes the
+        // list as a whole. Only the reference from [pages] is consulted, not the labels themselves.
+        if (listBefore !== entrySource || hadCandidates != value.candidates.isNotEmpty()) {
+            announceContentChanged()
+        }
         invalidate()
     }
 
@@ -587,6 +597,9 @@ class CandidateBarView(
         scroll = 0f
         rebuild()
         maybeLoadMore()
+        // The engine's list was replaced under the same code (a deleted word): every index may now
+        // describe another word.
+        announceContentChanged()
         invalidate()
     }
 
@@ -653,7 +666,14 @@ class CandidateBarView(
         pages.abandonRead()
     }
 
-    /** The accessible surface changed wholesale (the strip replaced the chips, or went away). */
+    /**
+     * The accessible surface changed wholesale (the strip replaced the chips, or went away).
+     *
+     * The items are virtual nodes addressed by their index, and a replaced list reuses those indices
+     * for different words. The event must therefore report a subtree change: without that type the
+     * accessibility cache only refreshes the host node and keeps the cached children, so a screen
+     * reader reads the previous candidates at the same ids.
+     */
     internal fun announceContentChanged() {
         val manager = context.getSystemService(AccessibilityManager::class.java) ?: return
         if (!manager.isEnabled) return
@@ -661,6 +681,7 @@ class CandidateBarView(
         event.setSource(this)
         event.packageName = context.packageName
         event.className = javaClass.name
+        event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE
         parent?.requestSendAccessibilityEvent(this, event)
     }
 
@@ -680,6 +701,9 @@ class CandidateBarView(
         animateReveal()
         onExpanded(value)
         maybeLoadMore()
+        // Expanded, this surface lists other controls and lays the cells out differently, while the
+        // item indices stay the same.
+        announceContentChanged()
     }
 
     /**

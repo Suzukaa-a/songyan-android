@@ -177,8 +177,10 @@ internal suspend fun KeyboardController.dispatch(
                         )
                     }
                 } else {
-                    // The editor can change while the engine dismisses its predictions.
-                    if (active?.dismissPrediction() == false || !fieldStillCurrent()) return
+                    // A failed dismissal is reported by the session and must not swallow the delete;
+                    // only an editor that changed meanwhile stops it.
+                    active?.dismissPrediction()
+                    if (!fieldStillCurrent()) return
                     BackspaceTrace.record(BackspaceTrace.Event.EDITOR_DELETE)
                     callbacks.delete()
                     noteBackspaceForEnglishWord()
@@ -189,7 +191,8 @@ internal suspend fun KeyboardController.dispatch(
                 ) {
                     active.tap(KeyAction.Enter)
                 } else {
-                    if (active?.dismissPrediction() == false || !fieldStillCurrent()) return
+                    active?.dismissPrediction()
+                    if (!fieldStillCurrent()) return
                     callbacks.action()
                 }
             LayoutActionKind.SPACE ->

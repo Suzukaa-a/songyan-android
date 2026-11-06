@@ -79,6 +79,8 @@
     <string name="keyboard_layout_18">18 キー</string>
     <string name="keyboard_layout_9">9 キー</string>
     <string name="keyboard_layout_26">26 キー</string>
+    <string name="keyboard_layout_zhuyin41">注音 41キー</string>
+    <string name="keyboard_layout_cangjie26">倉頡 26キー</string>
 
     <string name="dictionary_import_error_row">「%1$s」の %2$d 行目の列数が正しくありません。</string>
     <string name="dictionary_import_error_word">「%1$s」の %2$d 行目に、漢字でない見出し語があります。</string>

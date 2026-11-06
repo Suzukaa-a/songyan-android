@@ -104,7 +104,13 @@ internal fun KeyboardView.jumpName(key: LayoutKey): String {
     val kind = KeyboardLayoutKind.fromWire(jump.layout.wire) ?: return key.label
     val id = if (jump.page == LayoutPageTarget.SYMBOLS) R.string.ime_jump_to_symbols else R.string.ime_jump_to_numbers
     val names = keyNames.chinese()
-    return names.getString(id, layoutName(names, kind))
+    // The page belongs to the keyboard being drawn: a physical board names itself, not the shape it shares.
+    val definition =
+        faces.mainLayoutId?.let {
+            KeyboardLayoutCatalog.snapshot.value.registry
+                .resolvedLayout(it)
+        }
+    return names.getString(id, layoutName(names, definition, kind))
 }
 
 internal fun KeyboardView.pageSwitchFace(

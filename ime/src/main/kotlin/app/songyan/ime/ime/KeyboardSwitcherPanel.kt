@@ -12,8 +12,13 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutInput
 
 /**
  * The in-keyboard "输入方式 × 键盘布局" menu, opened by a long press on the language key.
@@ -48,6 +53,9 @@ internal class KeyboardSwitcherPanel(
     private val layoutChips = mutableMapOf<KeyboardLayoutKind, TextView>()
     private var currentSchema = defaultSchemaId
     private var currentLayout = defaultLayout
+
+    /** The name each chip shows; a kind without one keeps the shape's own name. */
+    private var layoutNames: Map<KeyboardLayoutKind, String> = emptyMap()
 
     var onSchema: (String) -> Unit = {}
     var onLayout: (KeyboardLayoutKind) -> Unit = {}
@@ -177,6 +185,18 @@ internal class KeyboardSwitcherPanel(
 
     /** The input methods the menu offers, in order. */
     internal val schemaIds: List<String> get() = schemaChips.keys.toList()
+
+    /**
+     * The names of the layouts the menu offers, resolved for the running input method: a keyboard
+     * that draws a physical board names that board instead of the shape it shares.
+     */
+    fun setLayoutNames(names: Map<KeyboardLayoutKind, String>) {
+        layoutNames = names
+        for ((kind, view) in layoutChips) {
+            view.text = layoutLabel(kind)
+            view.contentDescription = chipDescription(layoutLabel(kind), kind == currentLayout)
+        }
+    }
 
     /** The layouts the menu offers; the others' chips are hidden. */
     fun setLayouts(kinds: Collection<KeyboardLayoutKind>) {
@@ -425,7 +445,7 @@ internal class KeyboardSwitcherPanel(
             else -> schemaNames[id]?.takeIf { it.isNotBlank() } ?: BuiltinTemplateSchemas.NAMES[id] ?: id
         }
 
-    private fun layoutLabel(kind: KeyboardLayoutKind): String = layoutName(context, kind)
+    private fun layoutLabel(kind: KeyboardLayoutKind): String = layoutNames[kind] ?: layoutName(context, kind)
 
     private fun padding(dp: Int): Int = (dp * density).toInt()
 
@@ -451,3 +471,48 @@ internal fun layoutName(
             KeyboardLayoutKind.PHONE9 -> R.string.ime_layout_phone9
         },
     )
+
+/** The resource that words a bundled physical board by id; null keeps the shape's own name. */
+internal fun bundledLayoutNameRes(layoutId: String?): Int? =
+    when (layoutId) {
+        InputLayoutPolicy.ZHUYIN_LAYOUT -> R.string.ime_layout_zhuyin41
+        InputLayoutPolicy.CANGJIE_LAYOUT -> R.string.ime_layout_cangjie26
+        else -> null
+    }
+
+/**
+ * The name a keyboard drawing [definition] calls its layout: a board still identical to the bundled
+ * preset is worded by resources; an edited bundled board or the user's own layout keeps the name it
+ * was saved with.
+ */
+internal fun layoutName(
+    context: Context,
+    definition: LayoutDefinition?,
+    kind: KeyboardLayoutKind,
+): String {
+    if (definition != null) {
+        if (definition != BuiltinLayouts.byId(definition.id)) return definition.name
+        bundledLayoutNameRes(definition.id)?.let { return context.getString(it) }
+    }
+    return layoutName(context, kind)
+}
+
+/**
+ * The name each layout chip shows for the running input method. The keyboard reads the same catalog,
+ * so a chip names the board the keyboard behind it would draw, not just the shape it is paired with.
+ */
+internal fun KeyboardController.layoutNamesByKind(): Map<KeyboardLayoutKind, String> {
+    val registry = KeyboardLayoutCatalog.snapshot.value.registry
+    val families = layoutFamilies()
+    return KeyboardLayoutKind.entries.associateWith { kind ->
+        val definition =
+            LayoutInput.Builtin
+                .fromWire(kind.wire)
+                ?.let { shape ->
+                    registry.resolvedLayout(
+                        registry.composition(KeyboardCompositionKey(schemaId, shape), families).mainLayoutID,
+                    )
+                }
+        layoutName(context, definition, kind)
+    }
+}

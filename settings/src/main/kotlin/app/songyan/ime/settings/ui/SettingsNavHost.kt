@@ -66,6 +66,7 @@ import app.songyan.ime.settings.platform.shareText
 import app.songyan.ime.settings.platform.showInputMethodPicker
 import app.songyan.ime.settings.state.DiagnosticsHolder
 import app.songyan.ime.settings.state.EngineRecoveryNotice
+import app.songyan.ime.settings.state.familiesOfSchemes
 import app.songyan.ime.settings.ui.components.GrammarModelActions
 import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.LoadingScreen
@@ -403,6 +404,7 @@ private fun NavGraphBuilder.settingsGraph(
             KeyboardsScreen(
                 inputMethodName = state.value.inUseScheme?.name,
                 layoutId = state.value.layoutId,
+                mainLayout = state.value.mainLayout,
                 supportedLayouts = state.value.inUseScheme?.supportedLayouts,
                 onSelectLayout = viewModel::selectLayout,
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
@@ -471,6 +473,7 @@ private fun NavGraphBuilder.settingsGraph(
             onEdit = { id -> navController.navigate(SettingsRoutes.pageEditor(id)) },
             onUse = { id -> navController.navigate(SettingsRoutes.useContent(id, page = true)) },
             inputMethodNames = BuiltinTemplateSchemas.NAMES + state.value.schemes.associate { it.id to it.name },
+            families = familiesOfSchemes(state.value.schemes),
         )
     }
 
@@ -527,7 +530,10 @@ private fun NavGraphBuilder.settingsGraph(
                     stringResource(
                         R.string.keyboard_title,
                         state.value.inUseScheme?.name ?: key.inputMethodId,
-                        stringResource(state.value.currentLayout.nameRes),
+                        state.value.mainLayout
+                            ?.displayName
+                            ?.text()
+                            ?: stringResource(state.value.currentLayout.nameRes),
                     ),
                 onBack = { navController.popBackStack() },
             )

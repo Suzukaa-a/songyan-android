@@ -73,6 +73,8 @@
     <string name="ime_layout_merged14">14-key</string>
     <string name="ime_layout_merged18">18-key</string>
     <string name="ime_layout_phone9">9-key</string>
+    <string name="ime_layout_zhuyin41">Zhuyin 41 keys</string>
+    <string name="ime_layout_cangjie26">Cangjie 26 keys</string>
     <string name="ime_preparing">Preparing input schemes</string>
     <string name="ime_unavailable">Input schemes are not ready</string>
     <string name="ime_expand">Expand candidates</string>

@@ -91,6 +91,14 @@ data class EngineSnapshot(
     /** Post-commit prediction: candidates with no composition. Never marked text. */
     val isPrediction: Boolean = false,
 ) {
+    /** A confirmed fluency-editor selection leaves an empty tail at the UTF-8 end. */
+    val isFullyConfirmedComposition: Boolean
+        get() {
+            if (!isComposing || rawInput.isEmpty() || preedit.isEmpty()) return false
+            val end = preedit.toByteArray(Charsets.UTF_8).size
+            return preeditSelStart == end && preeditSelEnd == end && preeditCaretByte == end
+        }
+
     val canPageBackward: Boolean get() = pageSize > 0 && pageIndex > 0
     val canPageForward: Boolean get() = pageSize > 0 && !isLastPage
 

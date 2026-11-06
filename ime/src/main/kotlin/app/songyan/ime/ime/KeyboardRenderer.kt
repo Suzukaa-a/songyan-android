@@ -87,6 +87,7 @@ internal fun KeyboardController.render() {
             symbolLocked = symbolLock,
             language = language,
             composing = visible.isComposing,
+            mainLayoutId = mainDefinition().id,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF

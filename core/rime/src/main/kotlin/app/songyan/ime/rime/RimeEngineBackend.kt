@@ -14,6 +14,8 @@ import app.songyan.ime.keyboard.engine.EngineBackendKind
 import app.songyan.ime.keyboard.engine.EngineOptionDescriptor
 import app.songyan.ime.keyboard.engine.EngineOptionState
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.engine.ReadingCandidate
@@ -116,8 +118,10 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             }
-        val snapshot = publish(result.snapshot)
-        if (result.consumed || result.snapshot.isComposing) return snapshot
+        val next =
+            if (keyValue == EngineBackend.SPACE_KEY) commitFullyConfirmedZhuyin(result.snapshot) else result.snapshot
+        val snapshot = publish(next)
+        if (result.consumed || next.isComposing) return snapshot
         if (snapshot.committed.isNotEmpty()) {
             // A capital the speller refused: the editor confirmed the composition and handed the
             // letter back, so it is typed right after what was confirmed.
@@ -141,6 +145,23 @@ class RimeEngineBackend(
             else -> null
         }
 
+    private suspend fun commitFullyConfirmedZhuyin(snapshot: RimeSnapshot): RimeSnapshot {
+        if (snapshot.isAsciiMode ||
+            snapshot.commitText.isNotEmpty() ||
+            InputLayoutPolicy.familyOf(snapshot.schemaId, alphabetCache[snapshot.schemaId].orEmpty()) !=
+            InputSchemeFamily.ZHUYIN ||
+            !snapshot.mapped(spelling = "", hidesNumericTransportCode = false).isFullyConfirmedComposition
+        ) {
+            return snapshot
+        }
+        // Another Space reopens a confirmed selection in fluency_editor.
+        return try {
+            engine.commitComposition().snapshot
+        } catch (error: RimeException) {
+            throw error.asBackendError()
+        }
+    }
+
     override suspend fun cancelComposition(): EngineSnapshot =
         try {
             publish(engine.cancelComposition())
@@ -155,7 +176,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        return publish(snapshot)
+        return publish(commitFullyConfirmedZhuyin(snapshot))
     }
 
     override suspend fun selectCandidateAbsolute(index: Int): EngineSnapshot {
@@ -165,7 +186,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        return publish(snapshot)
+        return publish(commitFullyConfirmedZhuyin(snapshot))
     }
 
     override suspend fun deleteCandidate(index: Int): EngineSnapshot? {

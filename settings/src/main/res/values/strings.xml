@@ -94,6 +94,8 @@
     <string name="layout_name_14">14-key</string>
     <string name="layout_name_18">18-key</string>
     <string name="layout_name_9">9-key</string>
+    <string name="layout_name_zhuyin41">Zhuyin 41 keys</string>
+    <string name="layout_name_cangjie26">Cangjie 26 keys</string>
     <string name="layout_unavailable_note">This layout is not supported by the keyboard yet.</string>
 
     <!-- Input options -->

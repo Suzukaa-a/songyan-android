@@ -94,6 +94,8 @@
     <string name="layout_name_14">14 鍵</string>
     <string name="layout_name_18">18 鍵</string>
     <string name="layout_name_9">9 鍵</string>
+    <string name="layout_name_zhuyin41">注音 41 鍵</string>
+    <string name="layout_name_cangjie26">倉頡 26 鍵</string>
     <string name="layout_unavailable_note">鍵盤暫時還不能用這個佈局。</string>
 
     <!-- 輸入選項 -->

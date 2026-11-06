@@ -10,7 +10,12 @@ mode="$2"
 dir="$(mkdir -p "$3" && cd "$3" && pwd)"
 
 stage="$(mktemp -d)"
-trap 'rm -rf "$stage"' EXIT
+printf 'interop staging: %s\n' "$stage"
+# The staging tree contains source symlinks; keep cleanup reversible.
+cleanup_stage() {
+  swift -e 'import Foundation; var result: NSURL?; try FileManager.default.trashItem(at: URL(fileURLWithPath: CommandLine.arguments[1]), resultingItemURL: &result)' "$stage" >/dev/null
+}
+trap cleanup_stage EXIT
 cp -R "$here/ios-interop/." "$stage/"
 mkdir -p "$stage/Sources/SkinKit" "$stage/Sources/CandidateKit" "$stage/Sources/AppearanceKit"
 ln -s "$ios/Packages/SkinKit/Sources/SkinKit/SkinDefinition.swift" "$stage/Sources/SkinKit/"

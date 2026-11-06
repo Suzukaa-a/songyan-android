@@ -13,8 +13,8 @@ import org.junit.Test
  * The registry's share of the layout availability rules: which physical layouts a scheme family may
  * pair with, which one a keyboard defaults to, and how a pairing saved before the rule reads now.
  *
- * The four reserved ids are the future scheme-driven keyboard definitions; registering them here
- * stands in for the layout files that will ship with the zhuyin, cangjie and Japanese keyboards.
+ * The zhuyin and cangjie pads ship as builtin layouts; the Japanese physical layouts are still
+ * reserved ids, so this class stands in for the layout files that will ship with them.
  */
 class LayoutRegistryFamilyTest {
     private fun physical(
@@ -25,13 +25,7 @@ class LayoutRegistryFamilyTest {
             .copyWithId(id, id)
             .copy(input = LayoutInput(schemaID = schemaID, builtinLayout = LayoutInput.Builtin.QWERTY26))
 
-    private val reserved =
-        listOf(
-            physical("zhuyin41"),
-            physical("cangjie26"),
-            physical("romaji26"),
-            physical("kana12"),
-        )
+    private val reserved = listOf(physical("romaji26"), physical("kana12"))
 
     private fun registry(layouts: List<LayoutDefinition> = BuiltinLayouts.all + reserved): LayoutRegistry =
         LayoutRegistry.create(layouts = layouts)
@@ -101,14 +95,20 @@ class LayoutRegistryFamilyTest {
         assertEquals("romaji26", registry.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.QWERTY26)))
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("jyut6ping3", KeyboardLayoutKind.QWERTY26)))
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("rime_ice", KeyboardLayoutKind.QWERTY26)))
-        // Before the layout file ships the default stays the shipped preset of the shape.
-        val bare = registry(BuiltinLayouts.all)
-        assertEquals("qwerty26", bare.defaultMainLayoutId(key("bopomofo_tw", KeyboardLayoutKind.QWERTY26)))
+        // A family whose layout has not shipped yet falls back to the shipped preset of the shape.
+        val bare = LayoutRegistry.create()
+        assertEquals("qwerty26", bare.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.QWERTY26)))
+        assertEquals("qwerty26", bare.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)))
     }
 
     @Test
     fun anExplicitSchemaBindingIsNotOverriddenByTheFamilyDefault() {
-        val registry = registry(BuiltinLayouts.all + listOf(physical("zhuyin41", schemaID = "bopomofo_tw")))
+        // The explicit binding replaces the shipped pad for this catalog.
+        val registry =
+            registry(
+                BuiltinLayouts.all.filterNot { it.id == "zhuyin41" } +
+                    physical("zhuyin41", schemaID = "bopomofo_tw"),
+            )
         assertEquals("zhuyin41", registry.defaultMainLayoutId(key("bopomofo_tw", KeyboardLayoutKind.QWERTY26)))
         // A different scheme of the same family is not what this keyboard is bound to.
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("bopomofo", KeyboardLayoutKind.QWERTY26)))
@@ -137,8 +137,9 @@ class LayoutRegistryFamilyTest {
                 compositions = mapOf("bopomofo_tw:merged14" to KeyboardComposition(mainLayoutID = "merged14")),
             )
         assertEquals("merged14", registry.compositions.getValue("bopomofo_tw:merged14").mainLayoutID)
+        // The zhuyin family reads through the identity shape, whose default is now its own pad.
         assertEquals(
-            "qwerty26",
+            "zhuyin41",
             registry.composition(key("bopomofo_tw", KeyboardLayoutKind.MERGED14)).mainLayoutID,
         )
     }

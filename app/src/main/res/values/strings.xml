@@ -75,6 +75,8 @@
     <string name="keyboard_layout_18">18-key</string>
     <string name="keyboard_layout_9">9-key</string>
     <string name="keyboard_layout_26">26-key</string>
+    <string name="keyboard_layout_zhuyin41">Zhuyin 41 keys</string>
+    <string name="keyboard_layout_cangjie26">Cangjie 26 keys</string>
 
     <string name="dictionary_import_error_row">Line %2$d of %1$s doesn\'t have the expected columns.</string>
     <string name="dictionary_import_error_word">Line %2$d of %1$s has an entry that isn\'t Chinese characters.</string>

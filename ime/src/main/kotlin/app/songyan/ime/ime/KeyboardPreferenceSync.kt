@@ -248,6 +248,7 @@ internal fun KeyboardController.syncMenu() {
             .orEmpty()
     menu.setSchemas(KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema)))
     menu.setLayouts(KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts()))
+    menu.setLayoutNames(layoutNamesByKind())
     menu.update(schemaId, layoutKind)
 }
 

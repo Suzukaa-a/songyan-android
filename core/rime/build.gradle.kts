@@ -30,6 +30,10 @@ android {
         buildConfigField("String", "LIBRIME_VERSION", "\"$librimeVersion\"")
         ndk { abiFilters += abis }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Offline catalogue tests need archives staged in this runner's own cache.
+        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.traditionalArchivesDir").isPresent) {
+            testInstrumentationRunnerArguments["notClass"] = "app.songyan.ime.rime.TraditionalReplayDeviceTest"
+        }
         externalNativeBuild {
             cmake {
                 arguments += "-DANDROID_STL=c++_static"
@@ -56,6 +60,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(project(":core:packages"))
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.kotlinx.coroutines.test)

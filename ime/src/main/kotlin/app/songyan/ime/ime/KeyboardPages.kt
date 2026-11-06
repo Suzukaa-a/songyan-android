@@ -424,7 +424,8 @@ internal object KeyboardPages {
 
     /**
      * The letters page: the chosen Chinese layout (or the English QWERTY page) with Shift and Delete
-     * folded into the last letter row, then the footer row (see [lettersFooter]).
+     * folded into the last letter row where the shape carries them, then the footer row (see
+     * [lettersFooter]).
      */
     private fun letters(config: Config): BuiltPage {
         val main = mainLayout(config)
@@ -437,17 +438,6 @@ internal object KeyboardPages {
             } else {
                 null
             }
-        val rows =
-            when {
-                authoredEnglish != null ->
-                    drawnRows(authoredEnglish.rows, config).map { row ->
-                        LayoutRow(row.keys.map { englishKey(it) })
-                    }
-                config.englishDirectInput -> englishRows()
-                else -> drawnRows(chineseRows(config), config)
-            }
-        // A password field has no candidates to peek at, so its digits get a row of their own.
-        val digitRows = if (config.field == FieldKind.PASSWORD) listOf(digitRow()) else emptyList()
         // The 9-key shell draws its own footer and editing rail; a nine-key layout it cannot draw
         // falls back to these rows and gets the generated footer like every other layout.
         val footer =
@@ -461,6 +451,18 @@ internal object KeyboardPages {
                     LayoutBottomRow.authored(main)?.filter { railKeyDrawn(it, config) } ?: lettersFooter(config)
                 else -> lettersFooter(config)
             }
+        // The footer is known before the rows: a pad that edits through it keeps the shell's keys out.
+        val rows =
+            when {
+                authoredEnglish != null ->
+                    drawnRows(authoredEnglish.rows, config).map { row ->
+                        LayoutRow(row.keys.map { englishKey(it) })
+                    }
+                config.englishDirectInput -> englishRows()
+                else -> drawnRows(chineseRows(config, footer), config)
+            }
+        // A password field has no candidates to peek at, so its digits get a row of their own.
+        val digitRows = if (config.field == FieldKind.PASSWORD) listOf(digitRow()) else emptyList()
         val cuts =
             if (authoredEnglish != null) {
                 LayoutSplitConfiguration.resolving(authoredEnglish.split, main.split)
@@ -495,7 +497,7 @@ internal object KeyboardPages {
     ): LayoutSplitConfiguration {
         val halves = main.split?.halves
         if (halves == null || authoredEnglish || config.englishDirectInput) return split.copy(halves = null)
-        val letters = chineseHalves(config.layout, main, halves, config) ?: return split.copy(halves = null)
+        val letters = chineseHalves(config.layout, main, halves, config, footer) ?: return split.copy(halves = null)
         val digits = digitRows.map { LayoutSplitRow(it.keys.take(DIGIT_COLUMNS / 2), it.keys.drop(DIGIT_COLUMNS / 2)) }
         val footerHalves =
             if (footer.isEmpty()) emptyList() else listOf(split.copy(rowBreaks = emptyList()).cut(0, footer))
@@ -507,6 +509,7 @@ internal object KeyboardPages {
         base: LayoutDefinition,
         halves: List<LayoutSplitRow>,
         config: Config,
+        footer: List<LayoutKey>,
     ): List<LayoutSplitRow>? {
         if (halves.size != base.rows.size) return null
 
@@ -528,6 +531,8 @@ internal object KeyboardPages {
                     )
                 }.toMutableList()
         if (letters.isEmpty()) return letters
+        // A pad taller than the shipped shapes edits through its own footer instead of the shell.
+        if (!shellEditsLastLetterRow(base, footer)) return letters
         val last = letters.last()
         val hasShift = last.keys.any { it.action.type == LayoutActionKind.SHIFT }
         val hasDelete = last.keys.any { it.action.type == LayoutActionKind.BACKSPACE }
@@ -592,7 +597,10 @@ internal object KeyboardPages {
         )
     }
 
-    private fun chineseRows(config: Config): List<LayoutRow> {
+    private fun chineseRows(
+        config: Config,
+        footer: List<LayoutKey>,
+    ): List<LayoutRow> {
         val layout = config.layout
         val base = mainLayout(config)
         // A nine-key definition the phone shell cannot draw falls back to the row renderer.
@@ -609,6 +617,8 @@ internal object KeyboardPages {
                     LayoutRow(row.keys.map { chineseLetterKey(mergedFace(it), config, nativeDefaults) })
                 }.toMutableList()
         if (rows.isEmpty()) return rows
+        // A pad taller than the shipped shapes edits through its own footer instead of the shell.
+        if (!shellEditsLastLetterRow(base, footer)) return rows
         // A layout that carries its own Shift or Delete keeps them; the bundled ones do not.
         val last = rows.last().keys
         val hasShift = last.any { it.action.type == LayoutActionKind.SHIFT }
@@ -618,6 +628,23 @@ internal object KeyboardPages {
                 (if (hasShift) emptyList() else listOf(SHIFT)) + last + if (hasDelete) emptyList() else listOf(DELETE),
             )
         return rows
+    }
+
+    /**
+     * Whether the 26-key shell folds its own Shift and Delete into the last letter row. The shipped
+     * shapes declare three letter rows, which is the shape the pair was made for; the bundled cangjie
+     * pad keeps it too even though its footer leaves Delete out. A taller pad edits through the footer
+     * it declares: the zhuyin pad's fourth encoding row would otherwise draw Delete twice and a Shift
+     * it has no use for. Anything else keeps the old behavior, so custom layouts and the shipped
+     * shapes are untouched.
+     */
+    private fun shellEditsLastLetterRow(
+        main: LayoutDefinition,
+        footer: List<LayoutKey>,
+    ): Boolean {
+        val letterRows = main.rows.size - if (LayoutBottomRow.index(main) != null) 1 else 0
+        if (letterRows < 4) return true
+        return footer.none { it.action.type == LayoutActionKind.BACKSPACE }
     }
 
     /**

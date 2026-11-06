@@ -94,6 +94,8 @@
     <string name="layout_name_14">14 键</string>
     <string name="layout_name_18">18 键</string>
     <string name="layout_name_9">9 键</string>
+    <string name="layout_name_zhuyin41">注音 41 键</string>
+    <string name="layout_name_cangjie26">仓颉 26 键</string>
     <string name="layout_unavailable_note">键盘暂时还不能用这个布局。</string>
 
     <!-- 输入选项 -->

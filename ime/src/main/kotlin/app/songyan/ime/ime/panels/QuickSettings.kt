@@ -75,6 +75,8 @@ data class QuickSettingsState(
     val oneHandAvailable: Boolean = true,
     val keyHeight: KeyHeight = KeyHeight.DEFAULT,
     val layout: KeyboardLayoutKind = KeyboardLayoutKind.QWERTY26,
+    /** The name the keyboard's main layout shows; null keeps the shape's own name. */
+    val layoutName: String? = null,
     val colorMode: ColorMode = ColorMode.SYSTEM,
     /** Whether key presses make a sound right now (the user's choice and the system's switch together). */
     val soundOn: Boolean = true,

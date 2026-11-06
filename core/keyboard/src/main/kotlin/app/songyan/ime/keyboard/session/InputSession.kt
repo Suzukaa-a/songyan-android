@@ -444,10 +444,12 @@ class InputSession(
                 }
 
                 KeyAction.Space ->
-                    if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
-                        commitComposition()
-                    } else {
-                        apply(engine.processKey(EngineBackend.SPACE_KEY))
+                    when {
+                        // Space can be a first-tone code rather than a candidate choice.
+                        inputLanguage.family == InputSchemeFamily.ZHUYIN && !snapshot.isAsciiMode ->
+                            apply(engine.processKey(EngineBackend.SPACE_KEY))
+                        snapshot.isComposing && confirmationTarget?.invoke() != null -> commitComposition()
+                        else -> apply(engine.processKey(EngineBackend.SPACE_KEY))
                     }
                 KeyAction.Backspace -> {
                     var next = engine.processKey(EngineBackend.BACKSPACE_KEY)

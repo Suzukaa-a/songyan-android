@@ -14,6 +14,7 @@ internal fun KeyboardController.quickSettingsState(): QuickSettingsState =
         oneHandAvailable = shell.isAvailable(),
         keyHeight = KeyboardGeometry.keyHeight,
         layout = layoutKind,
+        layoutName = layoutName(context, mainDefinition(), layoutKind),
         colorMode = colorMode,
         soundOn = feedback.soundActive,
         soundBlockedBySystem = !feedback.soundAllowedBySystem,

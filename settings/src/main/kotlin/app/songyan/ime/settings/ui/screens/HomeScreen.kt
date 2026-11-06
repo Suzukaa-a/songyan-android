@@ -60,6 +60,7 @@ import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.StatusCard
 import app.songyan.ime.settings.ui.components.StatusLine
 import app.songyan.ime.settings.ui.components.importCardOf
+import app.songyan.ime.settings.ui.text
 
 /**
  * Home: the two places to act (what is installed, what is on the keyboard) plus the remaining
@@ -375,7 +376,7 @@ private fun schemesSummary(state: SettingsUiState): String {
  */
 @Composable
 private fun keyboardSummary(state: SettingsUiState): String {
-    val layoutName = stringResource(state.currentLayout.nameRes)
+    val layoutName = state.mainLayout?.displayName?.text() ?: stringResource(state.currentLayout.nameRes)
     val schemeName = state.inUseScheme?.name.orEmpty()
     val combination = listOfNotNull(schemeName.takeIf { it.isNotEmpty() }, layoutName).joinToString(" · ")
     return stringResource(R.string.home_summary_keyboard, combination)

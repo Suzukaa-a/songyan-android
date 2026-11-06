@@ -79,6 +79,8 @@
     <string name="keyboard_layout_18">18 鍵</string>
     <string name="keyboard_layout_9">9 鍵</string>
     <string name="keyboard_layout_26">26 鍵</string>
+    <string name="keyboard_layout_zhuyin41">注音 41 鍵</string>
+    <string name="keyboard_layout_cangjie26">倉頡 26 鍵</string>
 
     <!-- IME status overlay before a published generation exists. -->
     <string name="dictionary_import_error_row">「%1$s」第 %2$d 行的列數不對。</string>

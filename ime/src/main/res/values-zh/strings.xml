@@ -36,6 +36,8 @@
     <string name="ime_layout_merged14">14 键</string>
     <string name="ime_layout_merged18">18 键</string>
     <string name="ime_layout_phone9">9 键</string>
+    <string name="ime_layout_zhuyin41">注音 41 键</string>
+    <string name="ime_layout_cangjie26">仓颉 26 键</string>
     <string name="ime_preparing">正在准备输入方案</string>
     <string name="ime_unavailable">输入方案尚未就绪</string>
     <string name="ime_expand">展开候选</string>

@@ -35,6 +35,8 @@
     <string name="ime_layout_merged14">14 キー</string>
     <string name="ime_layout_merged18">18 キー</string>
     <string name="ime_layout_phone9">9 キー</string>
+    <string name="ime_layout_zhuyin41">注音 41キー</string>
+    <string name="ime_layout_cangjie26">倉頡 26キー</string>
     <string name="ime_preparing">入力パックを準備しています</string>
     <string name="ime_unavailable">入力パックの準備ができていません</string>
     <string name="ime_expand">候補を広げる</string>

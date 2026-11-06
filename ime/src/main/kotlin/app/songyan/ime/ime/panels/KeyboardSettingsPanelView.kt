@@ -223,7 +223,7 @@ class KeyboardSettingsPanelView(
                 )
             QuickSetting.KEY_HEIGHT, QuickSetting.APPEARANCE ->
                 context.getString(optionLabel(tile.setting, tile.valueKey))
-            QuickSetting.LAYOUT -> context.getString(layoutName(tile.valueKey))
+            QuickSetting.LAYOUT -> state.layoutName ?: context.getString(layoutName(tile.valueKey))
             QuickSetting.KEY_SOUND ->
                 context.getString(
                     when {

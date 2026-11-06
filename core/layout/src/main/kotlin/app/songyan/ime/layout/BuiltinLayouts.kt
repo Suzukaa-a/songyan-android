@@ -1,5 +1,7 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+
 /**
  * Independently authored layout data, also available as editable JSON in resources/layouts.
  *
@@ -61,6 +63,48 @@ object BuiltinLayouts {
                     ) + listOf(controls),
                 note = "部分键由两个字母合用，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。",
                 split = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.AUTOMATIC),
+            )
+
+    /**
+     * The Dachen zhuyin pad: four rows of bopomofo caps, each sending the ASCII code the
+     * rime-bopomofo speller declares. Digits and punctuation are part of that alphabet, so those
+     * caps send codes too; a literal cap would commit text instead of spelling a syllable.
+     *
+     * It is a physical layout of one scheme family rather than a shipped key shape, so it keeps the
+     * 26-key identity transport: pairings and the family rules already speak that wire.
+     */
+    val zhuyin41: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = InputLayoutPolicy.ZHUYIN_LAYOUT,
+                name = "注音 41 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.QWERTY26),
+                rows =
+                    listOf(
+                        codeRow("ㄅㄉˇˋㄓˊ˙ㄚㄞㄢㄦ", "1234567890-"),
+                        codeRow("ㄆㄊㄍㄐㄔㄗㄧㄛㄟㄣ", "qwertyuiop"),
+                        codeRow("ㄇㄋㄎㄑㄕㄘㄨㄜㄠㄤ", "asdfghjkl;"),
+                        codeRow("ㄈㄌㄏㄒㄖㄙㄩㄝㄡㄥ", "zxcvbnm,./"),
+                    ) + listOf(zhuyinControlRow()),
+            )
+
+    /**
+     * The cangjie pad: the 26-key arrangement keeps its positions, the main cap shows the radical and
+     * the corner badge shows the letter the engine actually reads. A radical cap is a face, never a
+     * literal, so tapping spells a code instead of committing a character.
+     */
+    val cangjie26: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = InputLayoutPolicy.CANGJIE_LAYOUT,
+                name = "仓颉 26 键",
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.QWERTY26),
+                rows =
+                    listOf(
+                        radicalRow("手田水口廿卜山戈人心", "qwertyuiop"),
+                        radicalRow("日尸木火土竹十大中", "asdfghjkl"),
+                        radicalRow("重難金女月弓一", "zxcvbnm"),
+                    ) + listOf(cangjieControlRow()),
             )
 
     val phone9: LayoutDefinition
@@ -182,7 +226,7 @@ object BuiltinLayouts {
 
     /** The ordered builtin layouts; the registry starts from these. */
     val all: List<LayoutDefinition>
-        get() = listOf(qwerty26, merged14, merged18, phone9)
+        get() = listOf(qwerty26, merged14, merged18, phone9, zhuyin41, cangjie26)
 
     fun byId(id: String): LayoutDefinition? = all.firstOrNull { it.id == id }
 
@@ -439,6 +483,78 @@ object BuiltinLayouts {
                     LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)),
                 ),
             )
+
+    /**
+     * The authored footer of a scheme-driven pad. The Android shells draw their own control row from
+     * [KeyboardControlPolicy]; this data keeps the same keys so the layout editor, the iOS extension
+     * and the interop files agree: globe, 123, 中/英, the engine space, Delete and Return.
+     *
+     * Every key is title-automatic: the pad belongs to a traditional input language, so the host
+     * paints its localized names (for example 空白 for the space bar) instead of these authored ones.
+     */
+    private fun zhuyinControlRow(): LayoutRow =
+        LayoutRow(
+            listOf(
+                automaticKey("🌐", LayoutAction(LayoutActionKind.GLOBE)),
+                automaticKey("123", LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC)),
+                automaticKey("中/英", LayoutAction.languageSwitch()),
+                automaticKey("空格", LayoutAction(LayoutActionKind.SPACE), width = 4.0),
+                automaticKey("⌫", LayoutAction(LayoutActionKind.BACKSPACE)),
+                automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER)),
+            ),
+        )
+
+    /**
+     * The cangjie pad's footer. It has no Delete: the 26-key shell draws Delete itself at the end of
+     * the last letter row, and a second one here would be drawn twice.
+     */
+    private fun cangjieControlRow(): LayoutRow =
+        LayoutRow(
+            listOf(
+                automaticKey("🌐", LayoutAction(LayoutActionKind.GLOBE)),
+                automaticKey("123", LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC)),
+                automaticKey("中/英", LayoutAction.languageSwitch()),
+                automaticKey("空格", LayoutAction(LayoutActionKind.SPACE), width = 4.0),
+                automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER)),
+            ),
+        )
+
+    /** A control key whose title the host resolves from the running input language. */
+    private fun automaticKey(
+        label: String,
+        action: LayoutAction,
+        width: Double? = null,
+    ): LayoutKey = LayoutKey(label = label, width = width, action = action, titleMode = LayoutKeyTitleMode.AUTOMATIC)
+
+    /** Caps paired one-to-one with the codes they send; a code may be a digit or a mark, not a letter only. */
+    private fun codeRow(
+        caps: String,
+        codes: String,
+    ): LayoutRow {
+        require(caps.length == codes.length) { "cap/code count mismatch: " + caps }
+        return LayoutRow(
+            codes.indices.map { index ->
+                LayoutKey(caps[index].toString(), action = LayoutAction.code(codes[index].toString()))
+            },
+        )
+    }
+
+    /** A radical cap with the Latin letter in the corner, because the letter is what the engine reads. */
+    private fun radicalRow(
+        radicals: String,
+        letters: String,
+    ): LayoutRow {
+        require(radicals.length == letters.length) { "radical/letter count mismatch: " + radicals }
+        return LayoutRow(
+            letters.indices.map { index ->
+                LayoutKey(
+                    label = radicals[index].toString(),
+                    secondaryLabel = letters[index].uppercase(),
+                    action = LayoutAction.code(letters[index].toString()),
+                )
+            },
+        )
+    }
 
     private fun literalOption(value: String): LayoutOption =
         LayoutOption(label = value, action = LayoutAction.literal(value))

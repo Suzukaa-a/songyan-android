@@ -209,6 +209,7 @@ internal enum class ControlKey {
 internal class FeatureHost(
     val backend: EngineBackend,
     layout: String = "qwerty26",
+    schemaID: String = "",
 ) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val context: Context = instrumentation.targetContext
@@ -322,7 +323,7 @@ internal class FeatureHost(
     private val preferences =
         object : KeyboardPreferencesSource {
             override val layoutId = MutableStateFlow(layout)
-            override val activeSchemaId = MutableStateFlow("")
+            override val activeSchemaId = MutableStateFlow(schemaID)
             override val oneHand = oneHandFlow
             override val keyHeight = keyHeightFlow
             override val bottomGapDp = bottomGapFlow

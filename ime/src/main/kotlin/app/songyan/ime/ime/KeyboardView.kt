@@ -45,6 +45,8 @@ data class KeyboardFaces(
     val language: InputLanguage = InputLanguage.ZH_HANS,
     /** A composition is open: the space and return keys name what they do next. */
     val composing: Boolean = false,
+    /** The main layout the keyboard draws, so a jump name can say which board its page belongs to. */
+    val mainLayoutId: String? = null,
 )
 
 class KeyboardView(

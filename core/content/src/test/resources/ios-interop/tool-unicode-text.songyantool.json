@@ -1,0 +1,39 @@
+{
+  "formatVersion" : 1,
+  "id" : "unicode-text",
+  "name" : {
+    "en" : "Text tidy (1)",
+    "ja" : "文字の整理（一）",
+    "zh-Hans" : "文字整理（一）",
+    "zh-Hant" : "文字整理（一）"
+  },
+  "steps" : [
+    {
+      "pattern" : "(\\p{L}+)\\s+(\\p{L}+)",
+      "replacement" : "$2 $1",
+      "type" : "replace"
+    },
+    {
+      "table" : {
+        "…" : "…",
+        "℡" : "Tel",
+        "①" : "1",
+        "　" : " ",
+        "🥰" : "😍"
+      },
+      "type" : "map"
+    },
+    {
+      "mode" : "toFull",
+      "type" : "width"
+    },
+    {
+      "pattern" : "「{text}」※",
+      "type" : "template"
+    },
+    {
+      "config" : "t2s",
+      "type" : "opencc"
+    }
+  ]
+}

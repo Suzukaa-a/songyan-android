@@ -122,9 +122,16 @@ class KeyboardController(
     /** The system asked for the keyboard to draw its own input method switcher (API 35+). */
     internal var customSwitcherRequested = false
 
-    /** English direct input: the editor forces ASCII, the field is private, or the session is in English mode. */
+    /**
+     * English direct input: the editor forces ASCII, the field is private, the session is in English
+     * mode, or Rime owns ASCII mode itself (a schema switch or a key binding). The last one still
+     * sends keys to the engine; the front end only follows it for the faces and the marks.
+     */
     internal val englishInput: Boolean
-        get() = policy.ascii || privateDirectInput || session.takeIf { ready }?.mode == InputMode.ENGLISH
+        get() =
+            policy.ascii ||
+                privateDirectInput ||
+                session.takeIf { ready }?.let { it.mode == InputMode.ENGLISH || it.snapshot.isAsciiMode } == true
 
     /**
      * Whether the marks the open page types and shows are ASCII now: the 中/英 branch the user

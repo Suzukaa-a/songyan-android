@@ -11,14 +11,26 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
 import app.songyan.ime.layout.LayoutPageJump
 import app.songyan.ime.layout.LayoutPageTarget
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 internal suspend fun KeyboardController.toggleInputMode(active: InputSession?) {
     if (active == null || policy.ascii || privateDirectInput) return
-    val target = if (active.mode == InputMode.ENGLISH) InputMode.CHINESE else InputMode.ENGLISH
-    active.setMode(target)
-    active.setAutomaticShift(automaticShift)
-    if (target == InputMode.ENGLISH) callbacks.automaticCapsWanted()
+    if (active.mode == InputMode.CHINESE && active.snapshot.isAsciiMode) {
+        // The engine owns ASCII mode (a schema switch or a key binding put it there): turn it off.
+        try {
+            active.setOption("ascii_mode", false)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            callbacks.error(error)
+        }
+    } else {
+        val target = if (active.mode == InputMode.ENGLISH) InputMode.CHINESE else InputMode.ENGLISH
+        active.setMode(target)
+        active.setAutomaticShift(automaticShift)
+        if (target == InputMode.ENGLISH) callbacks.automaticCapsWanted()
+    }
     symbolMarksOverride = null
     updateSwipe(active)
     resetEnglishWord()

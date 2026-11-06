@@ -34,6 +34,7 @@ import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -1600,6 +1601,52 @@ class RealEngineEditorTest {
             host.tap("n")
             host.tap("i")
             host.awaitComposing()
+        }
+
+    @Test
+    fun oneLanguageSwitchTurnsOffTheAsciiModeRimeOwns() =
+        withHost { host ->
+            host.start()
+            // Rime itself owns ASCII mode here (a schema switch, or a key binding on a hardware
+            // keyboard) while the front end is still Chinese: only the snapshot shows it.
+            host.main { host.controller.enqueue { host.controller.session?.setOption("ascii_mode", true) } }
+            host.awaitIdle()
+
+            fun engineAsciiMode(): Boolean =
+                host.main2 {
+                    host.controller.session
+                        ?.snapshot
+                        ?.isAsciiMode == true
+                }
+            assertTrue("the engine is in ASCII mode", engineAsciiMode())
+            assertEquals(InputMode.CHINESE, host.main2 { host.controller.session?.mode })
+            // The keyboard already shows English while Rime owns ASCII mode, so its language key
+            // offers the way back — and one press turns that option off. Handing the front end
+            // English instead would leave the engine ASCII with no press able to return.
+            val toChinese = host.string(R.string.ime_language_to_chinese)
+            assertTrue("the keyboard shows English: " + host.keyLabels(), toChinese in host.keyLabels())
+            // The marks follow the same face: the letters footer offers the ASCII comma, not the
+            // fullwidth one, while the engine is in ASCII mode.
+            val asciiComma = ","
+            val chineseComma = "，"
+            assertTrue("ASCII marks: " + host.keyLabels(), asciiComma in host.keyLabels())
+            assertFalse("no fullwidth comma: " + host.keyLabels(), chineseComma in host.keyLabels())
+            host.tap(toChinese)
+            host.awaitIdle()
+            assertFalse("one press turns Rime's ASCII mode off", engineAsciiMode())
+            assertEquals(InputMode.CHINESE, host.main2 { host.controller.session?.mode })
+            assertTrue(
+                "the keyboard shows Chinese again: " + host.keyLabels(),
+                host.string(R.string.ime_language_to_english) in host.keyLabels(),
+            )
+            assertTrue("Chinese marks are back: " + host.keyLabels(), chineseComma in host.keyLabels())
+            host.tap("n")
+            host.tap("i")
+            host.awaitComposing()
+            val you = host.barLabels().firstOrNull { it.startsWith("你") }
+            assertTrue("Chinese candidates are back: " + host.barLabels(), you != null)
+            host.touchCandidate(you!!)
+            host.awaitField("你")
         }
 
     @Test

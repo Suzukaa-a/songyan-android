@@ -53,7 +53,7 @@ internal fun KeyboardController.render() {
     ) {
         callbacks.preedit(if (snapshot.isComposing) marked else "")
     }
-    val english = englishNow()
+    val english = englishInput
     val currentPage = if (policy.numeric) KeyboardPageKind.NUMERIC else page
     val marksAscii = asciiMarksNow
     val catalog = KeyboardLayoutCatalog.snapshot.value
@@ -299,10 +299,6 @@ internal fun KeyboardController.builtinDefinition(kind: KeyboardLayoutKind) =
 /** The editor's own action label wins: it is the string the editor will act on. */
 internal fun KeyboardController.enterLabel(): String =
     policy.customActionLabel ?: keyNames.chinese().getString(enterKeyLabelRes(policy.action))
-
-/** Whether the keyboard is in English mode. */
-internal fun KeyboardController.englishNow(): Boolean =
-    policy.ascii || privateDirectInput || session.takeIf { ready }?.mode == InputMode.ENGLISH
 
 /**
  * The localized face of the Enter key for an [EditorInfo.IME_MASK_ACTION] action.

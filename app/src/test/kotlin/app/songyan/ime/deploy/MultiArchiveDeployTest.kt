@@ -267,7 +267,8 @@ class MultiArchiveDeployTest {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
             for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(wrapper + "/" + path))
+                // The pinned request and served archive are built separately and must have identical bytes.
+                zip.putNextEntry(ZipEntry(wrapper + "/" + path).apply { time = 0 })
                 zip.write(text.toByteArray())
                 zip.closeEntry()
             }

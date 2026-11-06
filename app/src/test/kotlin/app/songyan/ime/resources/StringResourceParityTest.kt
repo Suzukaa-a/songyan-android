@@ -193,6 +193,9 @@ class StringResourceParityTest {
                 "settings/appearance_name_ink",
                 "settings/schemes_recommended_rime_ice_name",
                 "settings/schemes_recommended_wanxiang_name",
+                "settings/schemes_recommended_bopomofo_name",
+                "settings/schemes_recommended_quick_name",
+                "settings/schemes_recommended_cantonese_name",
             )
     }
 }

@@ -26,6 +26,15 @@ object DeployContract {
     /** A decimal string, so the request decoder only reads string extras. */
     const val EXTRA_MAX_BYTES = "maxBytes"
 
+    /** The pinned archives of a recommended entry; one "url\tsha256\tbytes" line each, entry first. */
+    const val EXTRA_ARCHIVES = "archives"
+
+    /** Picked ZIPs already staged in the request's incoming directory, one name per line, entry first. */
+    const val EXTRA_PACKAGE_FILES = "packageFiles"
+
+    /** The input methods a recommended entry offers, one schema id per line. */
+    const val EXTRA_SCHEMA_IDS = "schemaIds"
+
     /**
      * Debug builds only: the deploy service acts as if the daily dataSync limit ran out right after
      * it started, so device tests reach that path without changing device settings.
@@ -53,6 +62,15 @@ object DeployContract {
                 request.sourceId?.let { putExtra(EXTRA_SOURCE_ID, it) }
                 request.url?.let { putExtra(EXTRA_URL, it) }
                 request.maxBytes?.let { putExtra(EXTRA_MAX_BYTES, it.toString()) }
+                if (request.archives.isNotEmpty()) {
+                    putExtra(EXTRA_ARCHIVES, DeployRequest.archiveExtra(request.archives))
+                }
+                if (request.packageFiles.isNotEmpty()) {
+                    putExtra(EXTRA_PACKAGE_FILES, request.packageFiles.joinToString("\n"))
+                }
+                if (request.advertisedSchemas.isNotEmpty()) {
+                    putExtra(EXTRA_SCHEMA_IDS, request.advertisedSchemas.joinToString("\n"))
+                }
                 if (limitUsedUpForTests) putExtra(EXTRA_TEST_LIMIT_USED_UP, true)
             }
 

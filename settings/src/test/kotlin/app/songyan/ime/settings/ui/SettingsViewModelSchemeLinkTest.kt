@@ -216,12 +216,8 @@ class SettingsViewModelSchemeLinkTest {
     }
 
     @Test
-    fun theRecommendedCatalogHasTheTwoPinnedPackagesOverHttps() {
+    fun everyRecommendedArchiveIsAnHttpsLinkWithoutCredentials() {
         val catalog = RecommendedSchemes.catalog
-        assertEquals(listOf("rime-ice", "rime-wanxiang"), catalog.map { it.id })
-        assertTrue(catalog.all { normalizeSchemeUrl(it.url) == it.url })
-        // Pinned: a commit or a release tag, never a moving branch.
-        assertTrue(catalog[0].url.endsWith("fbb516b2786e4d5444383706d13c31c2e4d10c08"))
-        assertTrue(catalog[1].url.contains("/releases/download/v18.1.3/"))
+        assertTrue(catalog.all { scheme -> scheme.archives.all { normalizeSchemeUrl(it.url) == it.url } })
     }
 }

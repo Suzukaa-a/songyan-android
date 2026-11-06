@@ -2,6 +2,7 @@ package app.songyan.ime.deploy
 
 import android.util.Log
 import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.packages.CompactSchemaAdapter
@@ -62,6 +63,9 @@ internal class KeyboardCompanions(
         val adapters = ArrayList<KeyboardResourceSet.EncodingAdapter>()
         for (source in schemaIds.distinct()) {
             if (cancelled()) throw InterruptedException("companion generation cancelled")
+            val family = InputLayoutPolicy.familyOf(source, engine.schemaValue(source, "speller/alphabet").orEmpty())
+            // A forbidden layout cannot be used; exporting a shape dictionary's full spelling map can exhaust the heap.
+            if (COMPACT_LAYOUTS.none { InputLayoutPolicy.allows(it, family) }) continue
             adapters +=
                 if (source in reuse) existing.filter { it.sourceSchemaID == source } else companionsOf(source, engine)
         }

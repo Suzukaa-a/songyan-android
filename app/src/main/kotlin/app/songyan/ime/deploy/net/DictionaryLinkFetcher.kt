@@ -18,6 +18,7 @@ import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.UnknownHostException
+import java.security.MessageDigest
 
 /** One HTTP response as the fetcher needs it; abstracted so redirects and limits are JVM-testable. */
 interface HttpResponse : AutoCloseable {
@@ -137,16 +138,27 @@ class DictionaryLinkFetcher(
         maxBytes: Long,
         cancelled: () -> Boolean = { false },
         progress: DownloadProgress = DownloadProgress.NONE,
+        expectedSha256: String? = null,
     ): Long {
         val uri = normalizeArchive(url) ?: throw problem(DictionaryImportProblemKind.UNSUPPORTED_URL)
         target.parentFile?.mkdirs()
-        val size = download(uri, target, maxBytes, clock() + archiveTotalTimeMs, cancelled, progress)
+        val size =
+            try {
+                download(uri, target, maxBytes, clock() + archiveTotalTimeMs, cancelled, progress, expectedSha256)
+            } catch (e: Throwable) {
+                // A refused download leaves no partial file for a later step to read.
+                target.delete()
+                throw e
+            }
         if (!startsWithZipSignature(target)) {
             target.delete()
             throw problem(DictionaryImportProblemKind.NOT_ZIP)
         }
         return size
     }
+
+    private fun hex(bytes: ByteArray): String =
+        bytes.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
     private fun startsWithZipSignature(file: File): Boolean =
         try {
@@ -155,7 +167,11 @@ class DictionaryLinkFetcher(
             false
         }
 
-    /** Streams one file into [target]; returns its size. */
+    /**
+     * Streams one file into [target]; returns its size. [expectedSha256] pins the bytes when the
+     * caller has one (a catalogue entry does): the digest is computed while the body arrives, so a
+     * different upstream file is refused without reading it twice.
+     */
     private fun download(
         start: URI,
         target: File,
@@ -163,6 +179,7 @@ class DictionaryLinkFetcher(
         deadline: Long,
         cancelled: () -> Boolean,
         progress: DownloadProgress = DownloadProgress.NONE,
+        expectedSha256: String? = null,
     ): Long {
         var current = start
         var redirects = 0
@@ -203,13 +220,20 @@ class DictionaryLinkFetcher(
                 }
                 if (it.contentLength > budget) throw problem(DictionaryImportProblemKind.FILE_TOO_LARGE)
                 val expected = it.contentLength.takeIf { length -> length > 0 }
-                return copyCapped(
-                    it.body,
-                    target,
-                    budget,
-                    deadline,
-                    cancelled,
-                ) { bytes -> progress.update(bytes, expected) }
+                val digest = expectedSha256?.let { MessageDigest.getInstance("SHA-256") }
+                val size =
+                    copyCapped(
+                        it.body,
+                        target,
+                        budget,
+                        deadline,
+                        cancelled,
+                        digest,
+                    ) { bytes -> progress.update(bytes, expected) }
+                if (digest != null && hex(digest.digest()) != expectedSha256) {
+                    throw problem(DictionaryImportProblemKind.CHECKSUM_MISMATCH)
+                }
+                return size
             }
         }
     }
@@ -220,6 +244,7 @@ class DictionaryLinkFetcher(
         budget: Long,
         deadline: Long,
         cancelled: () -> Boolean,
+        digest: MessageDigest?,
         copied: (Long) -> Unit,
     ): Long {
         var total = 0L
@@ -232,6 +257,7 @@ class DictionaryLinkFetcher(
                     if (read < 0) break
                     total += read
                     if (total > budget) throw problem(DictionaryImportProblemKind.FILE_TOO_LARGE)
+                    digest?.update(buffer, 0, read)
                     output.write(buffer, 0, read)
                     copied(total)
                 }

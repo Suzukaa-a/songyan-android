@@ -56,6 +56,8 @@
     <string name="scheme_import_error_invalid_scheme">输入方案里的配置文件有误，请检查文件内容。</string>
     <string name="scheme_import_error_encoding">输入方案里有文件不是 UTF-8 文本。</string>
     <string name="scheme_import_error_missing_dependency">输入方案缺少这些文件：%s。</string>
+    <string name="scheme_import_error_checksum">下载的文件与这个输入方案记录的校验值不一致，没有安装。</string>
+    <string name="scheme_import_error_conflicting_files">这个输入方案的两个压缩包提供了同名但内容不同的文件：%s。请只保留一个压缩包。</string>
     <string name="scheme_import_error_invalid_model">输入方案里的语法模型文件不可用。</string>
     <string name="scheme_import_error_builtin_customization">这个输入方案会改动松烟自带的输入方式，暂不支持。</string>
     <string name="scheme_import_error_read">无法读取这个文件。</string>

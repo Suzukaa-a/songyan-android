@@ -56,6 +56,8 @@
     <string name="scheme_import_error_invalid_scheme">入力パックの設定ファイルに誤りがあります。内容を確認してください。</string>
     <string name="scheme_import_error_encoding">入力パックに UTF-8 でないファイルがあります。</string>
     <string name="scheme_import_error_missing_dependency">入力パックに次のファイルがありません：%s。</string>
+    <string name="scheme_import_error_checksum">ダウンロードしたファイルが、この入力パックの記録された照合値と一致しないため、何もインストールしていません。</string>
+    <string name="scheme_import_error_conflicting_files">この入力パックの 2 つのアーカイブが、同じ名前で内容の違うファイルを提供しています：%s。どちらか一方だけを残してください。</string>
     <string name="scheme_import_error_invalid_model">入力パックの文法モデルは使えません。</string>
     <string name="scheme_import_error_builtin_customization">この入力パックは松煙標準の入力方式を変更するため、対応していません。</string>
     <string name="scheme_import_error_read">このファイルを読み取れません。</string>

@@ -19,6 +19,9 @@ internal enum class SchemeImportProblemKind {
     /** A member path is absolute, escapes the archive or repeats. */
     UNSAFE_CONTENTS,
 
+    /** Two archives of the package fill the same runtime file differently. */
+    CONFLICTING_FILES,
+
     /** The package carries learning data. */
     USER_DATA,
     MISSING_SCHEMA,
@@ -81,6 +84,7 @@ internal object SchemeImportProblems {
             SchemePackageImportError.Reason.MISSING_DEPENDENCY -> SchemeImportProblemKind.MISSING_DEPENDENCY
             SchemePackageImportError.Reason.INVALID_MODEL -> SchemeImportProblemKind.INVALID_MODEL
             SchemePackageImportError.Reason.BUILTIN_CUSTOMIZATION -> SchemeImportProblemKind.BUILTIN_CUSTOMIZATION
+            SchemePackageImportError.Reason.CONFLICTING_FILE -> SchemeImportProblemKind.CONFLICTING_FILES
         }
 
     /** Kinds a second attempt can fix without changing the file. */
@@ -124,5 +128,6 @@ internal object SchemeImportProblems {
             SchemeImportProblemKind.DICTIONARY_STACK -> R.string.scheme_import_error_dictionary_stack
             SchemeImportProblemKind.UPDATE_TARGET_MISSING -> R.string.scheme_update_error_missing
             SchemeImportProblemKind.KEYBOARD_COMPANION -> R.string.scheme_import_error_keyboard_companion
+            SchemeImportProblemKind.CONFLICTING_FILES -> R.string.scheme_import_error_conflicting_files
         }
 }

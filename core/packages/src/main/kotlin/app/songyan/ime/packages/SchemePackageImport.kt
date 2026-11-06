@@ -7,6 +7,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipException
@@ -64,6 +65,9 @@ class SchemePackageImportError(
 
         /** A `*.custom.yaml` patches one of the app's own built-in input methods. */
         BUILTIN_CUSTOMIZATION,
+
+        /** Two archives of one package fill the same runtime path with different bytes. */
+        CONFLICTING_FILE,
     }
 }
 
@@ -96,7 +100,12 @@ data class PreparedSchemeImport(
     val primarySchemaId: String get() = schemes.first().schemaId
 }
 
-/** Import caps; tests lower them to exercise the boundaries without allocating huge inputs. */
+/**
+ * Import caps; tests lower them to exercise the boundaries without allocating huge inputs.
+ * [archiveBytes] bounds the compressed size of all archives of one package together: they are
+ * downloaded and merged as one import, so several archives each under the cap must still not add up
+ * past it.
+ */
 class SchemePackageLimits(
     val archiveBytes: Long = RecipeResourceBudget.ARCHIVE_FILE.toLong(),
     val entryCount: Int = SchemePackageImportBuilder.MAX_ENTRY_COUNT,
@@ -138,6 +147,9 @@ object SchemePackageImportBuilder {
     private const val REVISION_HEX = 40
     private val SCHEMA_ID = Regex("[A-Za-z0-9_.-]+")
 
+    /** The `schema_list` block the app's prelude supplement writes into a generated default.yaml. */
+    private val SCHEMA_LIST_BLOCK = Regex("(?m)^schema_list:\n(?:  - schema: [^\n]+\n)*")
+
     /**
      * Files Rime or the app may read from a source: configuration, dictionaries, Lua, OpenCC data,
      * grammar and prediction models, text tables and notices. Everything else in a repository
@@ -145,9 +157,6 @@ object SchemePackageImportBuilder {
      */
     private val STAGED_EXTENSIONS =
         setOf("yaml", "yml", "txt", "json", "lua", "ocd2", "ocd", "gram", "db", "md", "csv", "tsv", "dict", "schema")
-
-    /** Extension-less notices commonly shipped with packages. */
-    private val NOTICE_NAMES = setOf("LICENSE", "LICENCE", "COPYING", "AUTHORS", "NOTICE", "README")
 
     /** Bundled input methods a package must not try to patch: they are not part of its source. */
     private val BUILTIN_CONFIG = Regex("""^(?:songyan_[A-Za-z0-9_]+|keyboard_[0-9a-f]+_[0-9]+)$""")
@@ -162,10 +171,59 @@ object SchemePackageImportBuilder {
         supplement: (File) -> Unit = {},
         limits: SchemePackageLimits = SchemePackageLimits(),
         cancelled: () -> Boolean = { false },
+    ): PreparedSchemeImport =
+        prepareArchives(
+            archives = listOf(archive),
+            target = target,
+            supplement = supplement,
+            limits = limits,
+            cancelled = cancelled,
+        )
+
+    /**
+     * Turns the pinned upstream archives of one catalogue entry into a single Rime source. The first
+     * archive is the entry package: its files keep their package-relative paths, so its
+     * default.yaml stays authoritative. Later archives contribute the files the entry depends on at
+     * those same paths, because librime resolves a dependency by name at the source root.
+     *
+     * [advertisedSchemas] names the input methods the entry offers. A package such as rime-bopomofo
+     * ships several root schemas (its own and its reverse-lookup tables) and no default.yaml; without
+     * the declaration every one of them would be offered as an input method. The package's own
+     * default.yaml and default.custom.yaml stay authoritative; when they select anything but the
+     * advertised list the import is refused rather than silently overriding the catalogue.
+     */
+    fun prepareArchives(
+        archives: List<File>,
+        target: File,
+        supplement: (File) -> Unit = {},
+        limits: SchemePackageLimits = SchemePackageLimits(),
+        advertisedSchemas: List<String> = emptyList(),
+        cancelled: () -> Boolean = { false },
     ): PreparedSchemeImport {
-        val extracted = extract(archive, target, limits, cancelled)
+        if (archives.isEmpty()) fail(SchemePackageImportError.Reason.INVALID_ZIP, "no archive")
+        val extracted = extractArchives(archives, target, limits, cancelled)
+        for (id in advertisedSchemas) {
+            if (!SCHEMA_ID.matches(id) || !File(target, id + SCHEMA_SUFFIX).isFile) {
+                fail(SchemePackageImportError.Reason.MISSING_SCHEMA, "$id$SCHEMA_SUFFIX is advertised but not shipped")
+            }
+        }
+        // A package that ships its own default.yaml decides its input methods itself.
+        val ownConfiguration = File(target, DEFAULT_CONFIG).isFile
         supplement(target)
-        return inspect(target, extracted)
+        if (advertisedSchemas.isNotEmpty() && !ownConfiguration) {
+            writeAdvertisedSchemas(target, advertisedSchemas)
+        }
+        val prepared = inspect(target, extracted)
+        if (advertisedSchemas.isNotEmpty() && prepared.schemaIds != advertisedSchemas) {
+            // An existing default.yaml or default.custom.yaml may patch the list the generation just
+            // wrote. Deleting the author's patch would change the package; refusing keeps it visible.
+            fail(
+                SchemePackageImportError.Reason.INVALID_SCHEMA,
+                "the package configuration enables " + prepared.schemaIds +
+                    " but the entry advertises " + advertisedSchemas,
+            )
+        }
+        return prepared
     }
 
     private class Extracted(
@@ -178,114 +236,297 @@ object SchemePackageImportBuilder {
         val path: String,
     )
 
-    private fun extract(
-        archive: File,
+    /** What fills one package-relative path: the archive that provided it and the digest of its bytes. */
+    private class Claim(
+        val label: String,
+        val digest: String,
+    )
+
+    /** Where documentation a later archive also ships is kept without losing either copy. */
+    private const val ATTRIBUTION_ROOT = "source-repositories"
+
+    /**
+     * Name prefix of the scratch directory entries are compared in. It is created beside the package
+     * tree, never inside it: a package may legitimately ship a top-level `.merge/` directory, and
+     * cleaning the scratch must not swallow the package's own files.
+     */
+    private const val MERGE_SCRATCH_PREFIX = ".merge-"
+
+    /**
+     * Extracts [archives] into [target] as one package. The entry archive's files keep their
+     * package-relative paths; a later archive's file lands at the same path unless that would lose
+     * one of the copies — identical bytes are one file, documentation moves under that archive's
+     * attribution path, and a runtime file two archives fill differently is refused.
+     */
+    private fun extractArchives(
+        archives: List<File>,
         target: File,
         limits: SchemePackageLimits,
         cancelled: () -> Boolean,
     ): Extracted {
+        val canonicalTarget = target.canonicalFile
+        if (!canonicalTarget.mkdirs() && !canonicalTarget.isDirectory) {
+            throw IOException("cannot create $target")
+        }
+        val claims = HashMap<String, Claim>()
+        val identities = sortedMapOf<String, String>()
+        val skipped = LinkedHashSet<String>()
+        val totals = longArrayOf(0L, 0L)
+        val buffer = ByteArray(BUFFER_BYTES)
+        val scratch = createScratch(canonicalTarget)
+        try {
+            var archiveBytes = 0L
+            for ((index, archive) in archives.withIndex()) {
+                if (cancelled()) throw InterruptedException("import cancelled")
+                archiveBytes = validateArchive(archive, limits, archiveBytes)
+                openZip(archive).use { zip ->
+                    val entries = listEntries(zip, limits)
+                    // One enclosing directory (a GitHub "Download ZIP") is the package root;
+                    // classification uses the package-relative path while subdirectories are kept.
+                    val wrapper = wrapperOf(entries)
+                    val label = archiveLabel(archive, wrapper, index)
+                    for (entry in entries) {
+                        if (cancelled()) throw InterruptedException("import cancelled")
+                        val logical =
+                            if (wrapper != null) entry.path.removePrefix(wrapper).removePrefix("/") else entry.path
+                        if (entry.zip.isDirectory || logical.isEmpty()) continue
+                        if (logical.endsWith(".gram")) validateModelPath(logical)
+                        if (!isStaged(logical)) {
+                            skipped += logical
+                            continue
+                        }
+                        if (index > 0 && logical.equals(DEFAULT_CONFIG, ignoreCase = true)) {
+                            // The entry archive owns the package's configuration; a dependency's
+                            // default.yaml lists that upstream's input methods, not this package's.
+                            continue
+                        }
+                        val model = RecipeResourceBudget.isModel(logical)
+                        val fileCap = if (model) limits.modelFileBytes else limits.sourceFileBytes
+                        if (entry.zip.size > fileCap) {
+                            fail(
+                                SchemePackageImportError.Reason.TOO_LARGE,
+                                logical + " exceeds " + fileCap + " bytes",
+                            )
+                        }
+                        val staged = File(scratch, "$index/$logical")
+                        val digest =
+                            writeEntry(
+                                zip = zip,
+                                entry = entry.zip,
+                                logical = logical,
+                                destination = staged,
+                                fileCap = fileCap,
+                                model = model,
+                                limits = limits,
+                                totals = totals,
+                                buffer = buffer,
+                                cancelled = cancelled,
+                            )
+                        val owner = claims[logical.lowercase()]
+                        val claimedPath =
+                            when {
+                                owner == null -> logical
+                                owner.digest == digest -> null
+                                SchemeSourceCheck.isRuntimeSourceFile(logical) ->
+                                    throw SchemePackageImportError(
+                                        SchemePackageImportError.Reason.CONFLICTING_FILE,
+                                        "$logical differs between " + owner.label + " and " + label,
+                                        listOf(logical),
+                                    )
+
+                                else -> attributionPath(logical, label, claims)
+                            }
+                        if (claimedPath == null) {
+                            staged.delete()
+                            continue
+                        }
+                        val destination = File(canonicalTarget, claimedPath)
+                        if (!destination.canonicalPath.startsWith(canonicalTarget.path + File.separator)) {
+                            fail(SchemePackageImportError.Reason.UNSAFE_PATH, claimedPath)
+                        }
+                        destination.parentFile?.mkdirs()
+                        if (!staged.renameTo(destination)) {
+                            staged.copyTo(destination, overwrite = true)
+                            staged.delete()
+                        }
+                        claims[claimedPath.lowercase()] = Claim(label, digest)
+                        identities[claimedPath] = digest
+                    }
+                }
+            }
+        } finally {
+            scratch.deleteRecursively()
+        }
+        val identity = identities.entries.joinToString("\n") { it.key + it.value }
+        return Extracted(
+            identity = sha256Hex(identity.toByteArray(StandardCharsets.UTF_8)).take(IDENTITY_HEX),
+            skipped = skipped.toList(),
+        )
+    }
+
+    /**
+     * Creates the scratch directory entries are compared in, beside the package tree. [target] has
+     * just been created, so its parent exists; the directory is removed in [extractArchives]'s
+     * finally block like any other temporary.
+     */
+    private fun createScratch(target: File): File {
+        val parent = requireNotNull(target.parentFile) { "package target has no parent: $target" }
+        return Files.createTempDirectory(parent.toPath(), MERGE_SCRATCH_PREFIX).toFile()
+    }
+
+    /**
+     * Checks an archive before it is opened: present, within the archive budget, and a ZIP. Returns
+     * the compressed bytes of the archives checked so far: the cap covers all of them together, not
+     * each one on its own.
+     */
+    private fun validateArchive(
+        archive: File,
+        limits: SchemePackageLimits,
+        alreadyBytes: Long,
+    ): Long {
         if (!archive.isFile) fail(SchemePackageImportError.Reason.INVALID_ZIP, "missing archive")
-        if (archive.length() > limits.archiveBytes) {
-            fail(SchemePackageImportError.Reason.TOO_LARGE, "archive is " + archive.length() + " bytes")
+        val length = archive.length()
+        if (length > limits.archiveBytes) {
+            fail(SchemePackageImportError.Reason.TOO_LARGE, "archive is " + length + " bytes")
+        }
+        val total = alreadyBytes + length
+        if (total > limits.archiveBytes) {
+            fail(SchemePackageImportError.Reason.TOO_LARGE, "archives total " + total + " bytes")
         }
         if (!hasZipMagic(archive)) fail(SchemePackageImportError.Reason.INVALID_ZIP, "not a ZIP archive")
-        val zipFile =
-            try {
-                ZipFile(archive, StandardCharsets.UTF_8)
-            } catch (error: ZipException) {
-                // The JDK refuses a central directory whose names are not UTF-8 while opening. If the
-                // same archive reads as GBK, the user needs to re-zip it, not find another package.
-                if (opensAsGbk(archive)) {
-                    fail(SchemePackageImportError.Reason.UNSUPPORTED_NAME_ENCODING, error.message ?: "non-UTF-8 names")
-                }
-                fail(SchemePackageImportError.Reason.INVALID_ZIP, error.message ?: "corrupt archive")
-            } catch (error: IllegalArgumentException) {
-                fail(SchemePackageImportError.Reason.UNSUPPORTED_NAME_ENCODING, error.message ?: "malformed entry name")
-            } catch (error: IOException) {
-                fail(SchemePackageImportError.Reason.INVALID_ZIP, error.message ?: "unreadable archive")
+        return total
+    }
+
+    private fun openZip(archive: File): ZipFile =
+        try {
+            ZipFile(archive, StandardCharsets.UTF_8)
+        } catch (error: ZipException) {
+            // The JDK refuses a central directory whose names are not UTF-8 while opening. If the
+            // same archive reads as GBK, the user needs to re-zip it, not find another package.
+            if (opensAsGbk(archive)) {
+                fail(SchemePackageImportError.Reason.UNSUPPORTED_NAME_ENCODING, error.message ?: "non-UTF-8 names")
             }
-        zipFile.use { zip ->
-            val entries = listEntries(zip, limits)
-            // One enclosing directory (a GitHub "Download ZIP") is the package root; classification
-            // uses the package-relative path while every subdirectory is preserved.
-            val roots = entries.map { it.path.substringBefore('/') }.toSet()
-            val wrapper =
-                roots.singleOrNull()?.takeIf { root ->
-                    entries.all { it.zip.isDirectory || it.path.contains('/') } && root.isNotEmpty()
-                }
-            val canonicalTarget = target.canonicalFile
-            if (!canonicalTarget.mkdirs() && !canonicalTarget.isDirectory) {
-                throw IOException("cannot create $target")
-            }
-            val identities = sortedMapOf<String, String>()
-            val skipped = ArrayList<String>()
-            var sources = 0L
-            var models = 0L
-            val buffer = ByteArray(BUFFER_BYTES)
-            for (entry in entries) {
-                if (cancelled()) throw InterruptedException("import cancelled")
-                val logical = if (wrapper != null) entry.path.removePrefix(wrapper).removePrefix("/") else entry.path
-                if (entry.zip.isDirectory || logical.isEmpty()) continue
-                if (logical.endsWith(".gram")) validateModelPath(logical)
-                if (!isStaged(logical)) {
-                    skipped += logical
-                    continue
-                }
-                val model = RecipeResourceBudget.isModel(logical)
-                val fileCap = if (model) limits.modelFileBytes else limits.sourceFileBytes
-                if (entry.zip.size > fileCap) {
-                    fail(SchemePackageImportError.Reason.TOO_LARGE, logical + " exceeds " + fileCap + " bytes")
-                }
-                val destination = File(canonicalTarget, logical)
-                if (!destination.canonicalPath.startsWith(canonicalTarget.path + File.separator)) {
-                    fail(SchemePackageImportError.Reason.UNSAFE_PATH, logical)
-                }
-                destination.parentFile?.mkdirs()
-                val digest = MessageDigest.getInstance("SHA-256")
-                var written = 0L
-                try {
-                    zip.getInputStream(entry.zip).use { input ->
-                        FileOutputStream(destination).use { output ->
-                            while (true) {
-                                val read = input.read(buffer)
-                                if (read < 0) break
-                                if (read == 0) continue
-                                written += read
-                                // Actual bytes count, never the declared size: a lying header must not
-                                // let an entry expand past its budget.
-                                if (written > fileCap) {
-                                    fail(
-                                        SchemePackageImportError.Reason.TOO_LARGE,
-                                        logical + " exceeds " + fileCap + " bytes",
-                                    )
-                                }
-                                if (model) models += read else sources += read
-                                if (sources > limits.sourceTotalBytes || models > limits.modelTotalBytes) {
-                                    fail(
-                                        SchemePackageImportError.Reason.TOO_LARGE,
-                                        "expanded package exceeds its total budget",
-                                    )
-                                }
-                                digest.update(buffer, 0, read)
-                                output.write(buffer, 0, read)
-                            }
+            fail(SchemePackageImportError.Reason.INVALID_ZIP, error.message ?: "corrupt archive")
+        } catch (error: IllegalArgumentException) {
+            fail(SchemePackageImportError.Reason.UNSUPPORTED_NAME_ENCODING, error.message ?: "malformed entry name")
+        } catch (error: IOException) {
+            fail(SchemePackageImportError.Reason.INVALID_ZIP, error.message ?: "unreadable archive")
+        }
+
+    /** The single enclosing directory an archive wraps its files in, or null. */
+    private fun wrapperOf(entries: List<Entry>): String? {
+        val roots = entries.map { it.path.substringBefore('/') }.toSet()
+        return roots.singleOrNull()?.takeIf { root ->
+            entries.all { it.zip.isDirectory || it.path.contains('/') } && root.isNotEmpty()
+        }
+    }
+
+    /** A safe single path segment naming the archive a documentation file came from. */
+    private fun archiveLabel(
+        archive: File,
+        wrapper: String?,
+        index: Int,
+    ): String {
+        val raw = wrapper ?: archive.name.substringBeforeLast('.')
+        val cleaned =
+            raw
+                .map { character -> if (character.isLetterOrDigit() || character in "-_.") character else '-' }
+                .joinToString("")
+                .trim('-', '.')
+        return cleaned.ifEmpty { "archive-" + (index + 1) }
+    }
+
+    /** Where one archive's copy of a shared documentation file goes, without either copy winning. */
+    private fun attributionPath(
+        logical: String,
+        label: String,
+        claims: Map<String, Claim>,
+    ): String {
+        var candidate = "$ATTRIBUTION_ROOT/$label/$logical"
+        var attempt = 2
+        while (claims.containsKey(candidate.lowercase())) {
+            candidate = "$ATTRIBUTION_ROOT/$label-$attempt/$logical"
+            attempt++
+        }
+        return candidate
+    }
+
+    /**
+     * Streams one archive entry into [destination], hashing it on the way. Actual bytes count,
+     * never the declared size: a lying header must not let an entry expand past its budget.
+     */
+    private fun writeEntry(
+        zip: ZipFile,
+        entry: ZipEntry,
+        logical: String,
+        destination: File,
+        fileCap: Long,
+        model: Boolean,
+        limits: SchemePackageLimits,
+        totals: LongArray,
+        buffer: ByteArray,
+        cancelled: () -> Boolean,
+    ): String {
+        destination.parentFile?.mkdirs()
+        val digest = MessageDigest.getInstance("SHA-256")
+        var written = 0L
+        try {
+            zip.getInputStream(entry).use { input ->
+                FileOutputStream(destination).use { output ->
+                    while (true) {
+                        if (cancelled()) throw InterruptedException("import cancelled")
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        if (read == 0) continue
+                        written += read
+                        if (written > fileCap) {
+                            fail(
+                                SchemePackageImportError.Reason.TOO_LARGE,
+                                logical + " exceeds " + fileCap + " bytes",
+                            )
                         }
+                        totals[if (model) 1 else 0] += read
+                        if (totals[0] > limits.sourceTotalBytes || totals[1] > limits.modelTotalBytes) {
+                            fail(
+                                SchemePackageImportError.Reason.TOO_LARGE,
+                                "expanded package exceeds its total budget",
+                            )
+                        }
+                        digest.update(buffer, 0, read)
+                        output.write(buffer, 0, read)
                     }
-                } catch (error: ZipException) {
-                    fail(
-                        SchemePackageImportError.Reason.INVALID_ZIP,
-                        logical + ": " + (error.message ?: "corrupt entry"),
-                    )
                 }
-                if (model && written == 0L) fail(SchemePackageImportError.Reason.INVALID_MODEL, "$logical is empty")
-                identities[logical] = hex(digest.digest())
             }
-            val identity = identities.entries.joinToString("\n") { it.key + it.value }
-            return Extracted(
-                identity = sha256Hex(identity.toByteArray(StandardCharsets.UTF_8)).take(IDENTITY_HEX),
-                skipped = skipped,
+        } catch (error: ZipException) {
+            fail(
+                SchemePackageImportError.Reason.INVALID_ZIP,
+                logical + ": " + (error.message ?: "corrupt entry"),
             )
         }
+        if (model && written == 0L) fail(SchemePackageImportError.Reason.INVALID_MODEL, "$logical is empty")
+        return hex(digest.digest())
+    }
+
+    /**
+     * Writes the input methods a catalogue entry offers into its configuration, when the package
+     * ships none: the app's prelude supplement would otherwise list every root schema the merged
+     * archives contain, offering reverse-lookup tables and dependency schemas as input methods.
+     */
+    private fun writeAdvertisedSchemas(
+        target: File,
+        advertised: List<String>,
+    ) {
+        val file = File(target, DEFAULT_CONFIG)
+        val text = if (file.isFile) file.readText() else ""
+        val block = "schema_list:\n" + advertised.joinToString("") { "  - schema: $it\n" }
+        val replaced = SCHEMA_LIST_BLOCK.replace(text) { block }
+        val written =
+            when {
+                replaced != text -> replaced
+                text.isBlank() -> "config_version: \"1\"\n" + block
+                else -> fail(SchemePackageImportError.Reason.INVALID_SCHEMA, "$DEFAULT_CONFIG has no schema_list")
+            }
+        file.writeText(written)
     }
 
     /** Validates every entry name before anything touches the disk. */
@@ -352,7 +593,7 @@ object SchemePackageImportBuilder {
         // VCS metadata and a precompiled build tree are never source: librime recompiles from source.
         if (components.first() == ".git" || components.first() == "build") return false
         val name = components.last()
-        if (name in NOTICE_NAMES) return true
+        if (SchemeSourceCheck.isNotice(name)) return true
         val dot = name.lastIndexOf('.')
         if (dot <= 0) return false
         val extension = name.substring(dot + 1).lowercase()

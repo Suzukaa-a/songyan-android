@@ -22,6 +22,7 @@ import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.OnboardingProgress
 import app.songyan.ime.settings.state.PackageLearningResult
+import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.state.SchemeImportGateway
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
@@ -433,6 +434,8 @@ class SettingsViewModel(
 
     fun importSchemeFromLink(url: String) = importTasks.importSchemeFromLink(url)
 
+    fun importRecommendedScheme(scheme: RecommendedScheme) = importTasks.importRecommendedScheme(scheme)
+
     fun updateScheme(sourceId: String) = importTasks.updateScheme(sourceId)
 
     fun importIncomingPackage() = importTasks.importIncomingPackage()
@@ -616,7 +619,18 @@ class SettingsImportTasks(
         runSchemeImport { schemeGateway.importFromTree(uri) }
     }
 
-    /** Downloads and imports a scheme package from an https link. */
+    /** Downloads and installs a recommended entry: its pinned archives, every one checked. */
+    fun importRecommendedScheme(scheme: RecommendedScheme) {
+        if (schemeImport.value is SchemeImportUiState.Running ||
+            schemeImport.value is SchemeImportUiState.MergingLearning
+        ) {
+            return
+        }
+        runSchemeImport { progress ->
+            schemeGateway.importRecommendedScheme(scheme.archives, scheme.advertisedSchemas, progress)
+        }
+    }
+
     fun importSchemeFromLink(url: String) {
         if (schemeImport.value is SchemeImportUiState.Running ||
             schemeImport.value is SchemeImportUiState.MergingLearning

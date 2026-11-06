@@ -41,6 +41,7 @@ class DeployPipeline(
     /** Whether the device has a network; lets the downloader explain a failed lookup. */
     online: () -> Boolean = { true },
     private val fetcher: DictionaryLinkFetcher = DictionaryLinkFetcher(online = online),
+    private val schemeArchiveBytes: Long = SchemePackageLimits().archiveBytes,
 ) {
     private val catalog = SourceCatalog(storage)
     private val packageLearning = PackageLearning(storage)
@@ -112,26 +113,54 @@ class DeployPipeline(
                 }
 
                 DeployMode.IMPORT_SCHEME ->
-                    importScheme(File(incoming, PACKAGE_FILE), staged, cancelled, request.requestId)
+                    importScheme(
+                        stagedArchives(request, incoming),
+                        staged,
+                        cancelled,
+                        request.requestId,
+                        advertisedSchemas = request.advertisedSchemas,
+                    )
                 DeployMode.IMPORT_SCHEME_URL -> {
-                    val url = request.url ?: return failed(DictionaryImportProblemKind.UNSUPPORTED_URL.name)
                     val update = request.sourceId
                     if (update != null && !(SourceIds.isScheme(update) && catalog.read(update) != null)) {
                         return failed(SchemeImportProblemKind.UPDATE_TARGET_MISSING.name)
                     }
-                    val archive = File(incoming, PACKAGE_FILE)
-                    val size =
-                        fetcher.fetchArchive(
-                            url,
-                            archive,
-                            SchemePackageLimits().archiveBytes,
+                    if (request.archives.isEmpty()) {
+                        val url = request.url ?: return failed(DictionaryImportProblemKind.UNSUPPORTED_URL.name)
+                        val archive = File(incoming, PACKAGE_FILE)
+                        val size =
+                            fetcher.fetchArchive(
+                                url,
+                                archive,
+                                SchemePackageLimits().archiveBytes,
+                                cancelled,
+                                progress,
+                            )
+                        // A finished download reports a full total even when the server announced none.
+                        progress.update(size, size)
+                        val origin = DictionaryLinkFetcher.normalizeArchive(url)?.toString()
+                        importScheme(
+                            listOf(archive),
+                            staged,
                             cancelled,
-                            progress,
+                            request.requestId,
+                            update,
+                            origin,
+                            request.advertisedSchemas,
                         )
-                    // A finished download reports a full total even when the server announced none.
-                    progress.update(size, size)
-                    val origin = DictionaryLinkFetcher.normalizeArchive(url)?.toString()
-                    importScheme(archive, staged, cancelled, request.requestId, update, origin)
+                    } else {
+                        val archives = downloadPinnedArchives(request.archives, incoming, cancelled, progress)
+                        val origin = DictionaryLinkFetcher.normalizeArchive(request.archives.first().url)?.toString()
+                        importScheme(
+                            archives,
+                            staged,
+                            cancelled,
+                            request.requestId,
+                            update,
+                            origin,
+                            request.advertisedSchemas,
+                        )
+                    }
                 }
                 DeployMode.ACTIVATE_SOURCE -> published(coordinator.activateSource(request.sourceId.orEmpty()))
                 DeployMode.DELETE_SOURCE ->
@@ -205,25 +234,36 @@ class DeployPipeline(
     }
 
     /**
-     * [update] names the stored package this archive is a new version of; [origin] is the link it
-     * was downloaded from. A file import of a package that is already stored keeps its link.
+     * [archives] are the ZIPs of one package, the entry first: a picked file, or the pinned archives
+     * of a recommended entry (already downloaded and checked by the caller). [update] names the
+     * stored package this is a new version of; [origin] is the link it was downloaded from. A file
+     * import of a package that is already stored keeps its link.
      */
     private suspend fun importScheme(
-        archive: File,
+        archives: List<File>,
         staged: File,
         cancelled: () -> Boolean,
         requestId: String,
         update: String? = null,
         origin: String? = null,
+        advertisedSchemas: List<String> = emptyList(),
     ): RequestStatus {
-        if (!archive.isFile) return failed(SchemeImportProblemKind.READ_FAILED.name)
+        if (archives.isEmpty() || archives.any { !it.isFile }) return failed(SchemeImportProblemKind.READ_FAILED.name)
         val checkStart = SystemClock.elapsedRealtime()
-        val prepared = builder.buildScheme(archive, staged, cancelled, sourceId = update, origin = origin)
+        val prepared =
+            builder.buildScheme(
+                archives,
+                staged,
+                cancelled,
+                sourceId = update,
+                origin = origin,
+                advertisedSchemas = advertisedSchemas,
+            )
         Log.i(DeployTimer.TAG, "scheme package checked in " + (SystemClock.elapsedRealtime() - checkStart) + " ms")
         // Learned-word snapshots only wait for the user's answer; the import never depends on them.
-        val snapshots = packageLearning.stage(archive, requestId)
-        // The archive is no longer needed; free the space before the deploy copies the tree.
-        archive.delete()
+        val snapshots = packageLearning.stage(archives.first(), requestId)
+        // The archives are no longer needed; free the space before the deploy copies the tree.
+        archives.forEach { it.delete() }
         val status =
             try {
                 if (cancelled()) failed(CANCELLED) else installScheme(prepared, cancelled, update)
@@ -317,6 +357,47 @@ class DeployPipeline(
             }
         return catalog.list() + listOfNotNull(trashed)
     }
+
+    /**
+     * Downloads the pinned archives of a recommended entry, entry first. Every archive must match
+     * the digest the catalogue names: a different byte is refused here, so a package can never mix
+     * in another upstream's file. [progress] counts the archives as one download, because that is
+     * what the user is waiting for.
+     */
+    private fun downloadPinnedArchives(
+        archives: List<PinnedArchive>,
+        incoming: File,
+        cancelled: () -> Boolean,
+        progress: DownloadProgress,
+    ): List<File> {
+        val total = archives.sumOf { it.bytes }.takeIf { it > 0 }
+        val limit = schemeArchiveBytes
+        var offset = 0L
+        return archives.mapIndexed { index, archive ->
+            val target = File(incoming, PINNED_PREFIX + index + ".zip")
+            val size =
+                fetcher.fetchArchive(
+                    archive.url,
+                    target,
+                    limit - offset,
+                    cancelled,
+                    DownloadProgress { bytes, _ -> progress.update(offset + bytes, total) },
+                    archive.sha256,
+                )
+            offset += size
+            progress.update(offset, total)
+            target
+        }
+    }
+
+    /**
+     * The staged ZIPs of an import, entry first: the picked file names the settings process wrote,
+     * or the one fixed name a single-file import uses.
+     */
+    private fun stagedArchives(
+        request: DeployRequest,
+        incoming: File,
+    ): List<File> = request.packageFiles.ifEmpty { listOf(PACKAGE_FILE) }.map { File(incoming, it) }
 
     /** The picked files, named by the path the settings process gave them under `files/`. */
     private fun dictionaryFiles(incoming: File): List<DictionarySourceFile> {
@@ -418,6 +499,9 @@ class DeployPipeline(
 
         /** Under a request's incoming directory: the picked scheme package. */
         const val PACKAGE_FILE = "package.zip"
+
+        /** Under a request's incoming directory: the downloaded archives of a recommended entry. */
+        private const val PINNED_PREFIX = "pinned-"
         private const val DOWNLOADS = "downloads"
         const val STAGED_PREFIX = "staged-"
     }

@@ -32,7 +32,7 @@ internal fun CandidateBarView.activateControl(localIndex: Int) {
     when (controls.getOrNull(localIndex)) {
         Control.EXPAND -> setExpanded(true)
         Control.BACK -> setExpanded(false)
-        Control.BACKSPACE -> onBackspace(snapshot.isComposing)
+        Control.BACKSPACE -> onBackspace()
         Control.RETYPE -> onRetype()
         null -> Unit
     }
@@ -46,8 +46,6 @@ internal fun CandidateBarView.commitPopupCharacter(index: Int) {
 }
 
 internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
-    // A new touch is a new hold: steps queued by the previous one must not delete for it.
-    holdEpoch++
     ui.removeCallbacks(repeatBackspace)
     gestureX = event.x
     gestureY = event.y
@@ -98,9 +96,9 @@ internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
     if (down >= 0 || downReading >= 0 || downControl >= 0) onPressFeedback()
     if (controls.getOrNull(downControl) == Control.BACKSPACE) {
         backspaceStartedComposing = snapshot.isComposing
-        onBackspace(backspaceStartedComposing)
+        onBackspace()
         if (canRepeatBackspace) {
-            repeatHoldEpoch = holdEpoch
+            backspaceHold = Any()
             ui.postDelayed(repeatBackspace, ViewConfiguration.getLongPressTimeout().toLong())
         }
     }
@@ -191,6 +189,7 @@ internal fun CandidateBarView.canOverscroll(): Boolean = snapshot.candidates.isN
 internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     ui.removeCallbacks(longPress)
     ui.removeCallbacks(repeatBackspace)
+    backspaceHold = null
     velocity?.addMovement(event)
     if (menu != null) {
         val open = menu
@@ -243,8 +242,6 @@ internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     val press = pressed
     val control = downControl
     val reading = downReading
-    // The touch ends here: a held Delete's queued steps belong to it and must not run for the next one.
-    holdEpoch++
     pressed = null
     downControl = -1
     downReading = -1

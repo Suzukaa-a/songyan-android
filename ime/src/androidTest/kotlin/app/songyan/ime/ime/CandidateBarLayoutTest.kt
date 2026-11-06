@@ -56,7 +56,7 @@ class CandidateBarLayoutTest {
         var secondTouch: (() -> Boolean)? = null
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val bar = CandidateBarView(context)
-            bar.onRepeatBackspace = { _, stillHeld -> steps += stillHeld }
+            bar.onRepeatBackspace = { stillHeld -> steps += stillHeld }
             bar.update(
                 EngineSnapshot(
                     schemaID = "s",

@@ -28,7 +28,7 @@ import kotlinx.serialization.json.jsonObject
  */
 object CompactSchemaAdapter {
     /** Generation / adapter behaviour version; any change to generated artifacts must bump it. */
-    const val DISPLAY_GENERATOR_VERSION = 10
+    const val DISPLAY_GENERATOR_VERSION = 11
 
     /** The wire version of `keyboard_adapter` (iOS `SchemaDisplayCapability.supportedVersion`). */
     private const val DISPLAY_WIRE_VERSION = app.songyan.ime.keyboard.display.SchemaDisplayCapability.SUPPORTED_VERSION

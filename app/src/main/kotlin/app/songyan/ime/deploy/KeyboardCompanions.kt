@@ -104,7 +104,8 @@ internal class KeyboardCompanions(
         val nativeDigits =
             !isTableSource &&
                 CompactSchemaAdapter.tokenAliasDomain(projection) != null &&
-                CompactSchemaAdapter.isNumericCodeSource(projection)
+                CompactSchemaAdapter.isNumericCodeSource(projection) &&
+                !CompactSchemaAdapter.declaresLetterClassPrefixSource(projection)
         if (nativeDigits) {
             result += adapter(source, source, KeyboardLayoutKind.PHONE9, engine)
         }

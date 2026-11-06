@@ -118,6 +118,37 @@ class KeyboardCompanionsTest {
         }
 
     @Test
+    fun anExplicitNumericPrefixLockGetsACompanionWhilePlainDigitsStayNative() =
+        runBlocking {
+            for (opted in listOf(false, true)) {
+                val (sourceDir, workDir, engine) = setUp(name = "numeric-$opted")
+                engine.projectionBytes =
+                    """
+                    {"source_schema":"$source","translator_namespace":"translator",
+                    "dictionary":"songyan_basic","producer_class":"script_translator",
+                    "alphabet":"23456789abcdefghijklmnopqrstuvwxyz","algebra":[],
+                    "prefix_declaration":"${if (opted) "letter_class_v1" else ""}",
+                    "syllables":{"ba":[{"text":"22","normal":true,"correction":false}]}}
+                    """.trimIndent().toByteArray()
+
+                KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(engine)
+
+                val nine =
+                    EncodingAdapterRegistry
+                        .read(engine.compiledDir, setOf(source))
+                        .single { it.layout == KeyboardLayoutKind.PHONE9 }
+                if (opted) {
+                    assertTrue(nine.schemaID != source)
+                    assertTrue(
+                        File(workDir, "${nine.schemaID}.schema.yaml").readText().contains("prefix_token_rewrite_v4"),
+                    )
+                } else {
+                    assertEquals(source, nine.schemaID)
+                }
+            }
+        }
+
+    @Test
     fun aNineKeyCompanionWhoseDigitsAreSwallowedIsSkipped() =
         runBlocking {
             val (sourceDir, workDir, engine) = setUp()

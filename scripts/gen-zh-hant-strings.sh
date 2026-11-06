@@ -55,6 +55,7 @@ if $check; then
 fi
 
 python3 - "$root" "$out_root" "$opencc_bin" "$opencc_config" <<'PY'
+import json
 import os
 import re
 import subprocess
@@ -65,35 +66,10 @@ root, out_root, opencc_bin, opencc_config = sys.argv[1:5]
 modules = ("app", "ime", "settings")
 source_dir = "values-zh"
 target_dir = "values-b+zh+Hant"
-
-# Taiwan wording corrections applied after s2twp; the left side is the s2twp result or the
-# source term. Longer left sides come first so a short term cannot break a longer phrase.
-replacements = [
-    ("學習數據", "學習資料"),
-    ("自定義", "自訂"),
-    ("錯鍵糾正", "錯字修正"),
-    ("鍵盤佈局", "鍵盤配置"),
-    ("鍵盤布局", "鍵盤配置"),
-    ("学习数据", "學習資料"),
-    ("错键纠正", "錯字修正"),
-    ("键盘布局", "鍵盤配置"),
-    ("候選欄", "候選列"),
-    ("候选栏", "候選列"),
-    ("剪貼板", "剪貼簿"),
-    ("剪贴板", "剪貼簿"),
-    ("松菸", "松煙"),
-    ("松烟", "松煙"),
-    ("點按", "輕觸"),
-    ("点按", "輕觸"),
-    ("全角", "全形"),
-    ("半角", "半形"),
-    ("數據", "資料"),
-    ("数据", "資料"),
-    ("替換", "取代"),
-    ("替换", "取代"),
-    # s2twp turns "方案准备" into 准備, but the correct Traditional form is 準備.
-    ("准備", "準備"),
-]
+# Shared Taiwan wording is owned by the iOS manifest source, not copied into this script.
+with open(os.path.join(root, "scripts", "zh-Hant-overrides.json"), encoding="utf-8") as stream:
+    shared_wording = json.load(stream)
+replacements = shared_wording["replacements"]
 replacements.sort(key=lambda pair: -len(pair[0]))
 banned = sorted({left for left, _ in replacements}, key=len, reverse=True)
 

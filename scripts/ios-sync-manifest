@@ -31,6 +31,8 @@ Resources/Legal/licenses/ settings/src/main/assets/legal/licenses/
 Resources/Layouts/ core/layout/src/main/resources/layouts/
 Packages/QuickContentKit/Sources/QuickContentKit/Resources/default-symbols.json core/content/src/main/resources/default-symbols.json
 
+Tools/Localization/zh-Hant-overrides.json scripts/zh-Hant-overrides.json
+
 # --- Engine fixtures (androidTest assets) --------------------------------
 Tests/EngineFixtures/Builtin/ core/rime/src/androidTest/assets/engine-fixtures/builtin/
 Tests/EngineFixtures/Traditional/ core/rime/src/androidTest/assets/engine-fixtures/traditional/

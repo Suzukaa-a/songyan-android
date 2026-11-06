@@ -61,6 +61,7 @@ import app.songyan.ime.ime.keyboardCallbacks
 import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.prefs.LogAndContinue
@@ -448,6 +449,8 @@ class SongyanInputMethodService : InputMethodService() {
                     confirmComposition = { confirmCompositionForInsert() },
                     insert = { text -> commitQuickText(text) },
                     onChange = { controller?.onTextInserted() },
+                    // Dates follow the input language, so the text matches what the user types.
+                    inputLanguage = { controller?.inputLanguage ?: InputLanguage.ZH_HANS },
                 )
         }
         clipboardRecorder.start()

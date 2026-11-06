@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.Rect
@@ -18,6 +19,7 @@ import app.songyan.ime.content.CommonPhrase
 import app.songyan.ime.content.SymbolCatalog
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
+import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -227,6 +229,12 @@ internal class FeatureHost(
     var chipTtlMs = ToolbarChipPolicy.DEFAULT_TTL_MS
     private var hostWidth = 0
 
+    /** The app's quick-insert seam; null leaves the rows the panel has without it. */
+    @Volatile var quickInsert: QuickInsertHost? = null
+
+    /** The window the keyboard surface lives in, once [attachTo] was called. */
+    private var attachedWindow: Activity? = null
+
     /** Clipboard history as the panel stored it; off like a fresh install. */
     @Volatile var clipboardEnabled = false
 
@@ -406,6 +414,7 @@ internal class FeatureHost(
                     ),
                     preferences,
                     quickContentDataSource = data,
+                    quickInsert = quickInsert,
                     copiedChipSource =
                         if (chips) {
                             CopiedChipSource(
@@ -429,11 +438,33 @@ internal class FeatureHost(
     }
 
     fun relayout() {
+        // An attached surface is laid out by its window; measuring it by hand would fight it.
+        if (attachedWindow != null) return
         controller.view.measure(
             View.MeasureSpec.makeMeasureSpec(hostWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(4000, View.MeasureSpec.AT_MOST),
         )
         controller.view.layout(0, 0, hostWidth, controller.view.measuredHeight)
+    }
+
+    /**
+     * Shows the keyboard in [activity]'s window. Accessibility clients — UiAutomation among them —
+     * only read a view tree attached to a window, and a view only announces a changed subtree from
+     * one, so a test of what a screen reader reads must attach before it opens a panel.
+     */
+    fun attachTo(activity: Activity) {
+        attachedWindow = activity
+        main { activity.setContentView(controller.view) }
+        assertTrue(
+            "the window never laid the keyboard surface out",
+            await {
+                main2 {
+                    controller.view.isAttachedToWindow &&
+                        controller.view.width > 0 &&
+                        controller.view.height > 0
+                }
+            },
+        )
     }
 
     fun text(): String = main2 { field.text.toString() }

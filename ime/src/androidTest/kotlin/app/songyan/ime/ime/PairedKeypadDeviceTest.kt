@@ -105,7 +105,7 @@ class PairedKeypadDeviceTest {
     @Test
     fun the123KeyOpensThePairedKeypadInChinese() =
         withPairedKeypad { host ->
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             assertThePadIsDrawn(host)
             host.tap("5")
@@ -115,8 +115,8 @@ class PairedKeypadDeviceTest {
     @Test
     fun the123KeyOpensThePairedKeypadInEnglish() =
         withPairedKeypad { host ->
-            host.tap(host.string(R.string.ime_language_to_english))
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
+            host.tapNumbersPage()
             host.awaitIdle()
             assertThePadIsDrawn(host)
             host.tap("5")
@@ -137,19 +137,19 @@ class PairedKeypadDeviceTest {
     fun the26KeyPadIsTheNineKeyPad() {
         lateinit var paired: Map<String, KeyBounds>
         withPairedKeypad { host ->
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             paired = host.padKeys()
             // The space bar stands in the right column and types a space.
             host.tap("5")
-            host.tap(host.string(R.string.ime_space))
+            host.tapControl(ControlKey.SPACE)
             host.assertText("5 ")
         }
         KeyboardLayoutCatalog.install(LayoutRegistry.create())
         val host = FeatureHost(engine.backend(), "phone9")
         try {
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             // Same keys in the same places, so the pad feels the same whichever letters it is paired with.
             assertEquals(host.padKeys(), paired)
@@ -166,7 +166,7 @@ class PairedKeypadDeviceTest {
         val host = FeatureHost(engine.backend(), "qwerty26")
         try {
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             host.main2 {
                 val view = host.find(KeyboardView::class.java)
@@ -208,7 +208,7 @@ class PairedKeypadDeviceTest {
         val host = FeatureHost(engine.backend(), "phone9")
         try {
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             val labels = host.labelsOf(KeyboardView::class.java)
             assertTrue(labels.toString(), listOf("甲", "乙", "丙").all { it in labels })

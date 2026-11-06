@@ -8,6 +8,8 @@ import app.songyan.ime.ime.panels.EmojiPanelView
 import app.songyan.ime.ime.panels.PhraseClipboardPanelView
 import app.songyan.ime.ime.panels.SymbolPanelView
 import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutKey
@@ -158,6 +160,90 @@ class KeyNamesDeviceTest {
                 assertEquals("space", view.face(custom, true))
             }
         }
+    }
+
+    private fun generatedFooter(
+        page: KeyboardPageKind,
+        language: InputLanguage,
+    ) = KeyboardPages
+        .definition(
+            page,
+            KeyboardPages.Config(
+                layout = KeyboardLayoutKind.QWERTY26,
+                englishDirectInput = false,
+                symbolMarksAscii = false,
+                languageSwitch = true,
+                lettersReachable = true,
+                everydayMarksPage = false,
+                inputLanguage = language,
+            ),
+        ).rows
+        .last()
+        .keys
+
+    @Test
+    fun theNativePageFootersFollowTheInputLanguage() {
+        onMain {
+            val view = KeyboardView(context(Locale.ENGLISH))
+            val expected =
+                listOf(
+                    Triple(InputLanguage.ZH_HANS, "返回", "更多"),
+                    Triple(InputLanguage.ZH_HANT, "返回", "更多"),
+                    Triple(InputLanguage.JA, "戻る", "その他"),
+                )
+            for ((language, back, more) in expected) {
+                view.faces = KeyboardFaces(language = language, page = KeyboardPageKind.NUMERIC)
+                val numericBack =
+                    generatedFooter(KeyboardPageKind.NUMERIC, language)
+                        .single { it.action.pageSwitchTarget == LayoutPageTarget.LETTERS }
+                assertEquals("123 page back, $language", back, view.face(numericBack, false))
+
+                view.faces = KeyboardFaces(language = language, page = KeyboardPageKind.SYMBOLS)
+                val symbols = generatedFooter(KeyboardPageKind.SYMBOLS, language)
+                val symbolsBack = symbols.single { it.action.pageSwitchTarget == LayoutPageTarget.LETTERS }
+                val moreKey =
+                    symbols.single {
+                        it.action.type == LayoutActionKind.MODE_SWITCH &&
+                            it.action.value == KeyboardPages.SYMBOL_PANEL_MODE
+                    }
+                assertEquals("symbol page back, $language", back, view.face(symbolsBack, false))
+                assertEquals("symbol panel key, $language", more, view.face(moreKey, false))
+            }
+        }
+    }
+
+    @Test
+    fun anAuthoredFooterTitleSurvivesTheInputLanguage() {
+        onMain {
+            val view = KeyboardView(context(Locale.ENGLISH))
+            view.faces = KeyboardFaces(language = InputLanguage.JA, page = KeyboardPageKind.SYMBOLS)
+            val customBack =
+                LayoutKey(
+                    label = "back",
+                    action = LayoutAction.pageSwitch(LayoutPageTarget.LETTERS),
+                    titleMode = LayoutKeyTitleMode.CUSTOM,
+                )
+            val customMore =
+                LayoutKey(
+                    label = "more",
+                    action = LayoutAction(LayoutActionKind.MODE_SWITCH, KeyboardPages.SYMBOL_PANEL_MODE),
+                    titleMode = LayoutKeyTitleMode.CUSTOM,
+                )
+            // A page saved before title modes existed is authored content too.
+            val legacyBack = LayoutKey("落回", action = LayoutAction.pageSwitch(LayoutPageTarget.LETTERS))
+            assertEquals("back", view.face(customBack, false))
+            assertEquals("more", view.face(customMore, false))
+            assertEquals("落回", view.face(legacyBack, false))
+        }
+    }
+
+    @Test
+    fun theNineKeyShellBackKeySharesTheSameFaces() {
+        val names = names(Locale.ENGLISH)
+        assertEquals("返回", names.returnToLettersDrawn(InputLanguage.ZH_HANS))
+        assertEquals("返回", names.returnToLettersDrawn(InputLanguage.ZH_HANT))
+        assertEquals("戻る", names.returnToLettersDrawn(InputLanguage.JA))
+        assertEquals("ABC", names.returnToLettersDrawn(InputLanguage.JA, english = true))
     }
 
     @Test

@@ -288,6 +288,12 @@ class KeyboardView(
     internal var railIndices: Set<Int> = emptySet()
     internal var railChoices: List<String> = emptyList()
 
+    /** Every engine-backed rail choice, including the ones the three-slot window does not show. */
+    internal var railChoiceCount: Int = 0
+
+    /** The first choice the window shows; assistive technology scrolls this by whole slots. */
+    internal var railChoiceFirst: Int = 0
+
     /** How many leading rail choices are already applied: drawn as chosen, not tappable. */
     internal var railSelectedCount: Int = 0
     internal var swipeConfig: MergedSwipeConfig? = null
@@ -355,6 +361,7 @@ class KeyboardView(
             // same places, so there is nothing to solve again.
             applyKeyFaces()
             invalidate()
+            announceItemsChanged()
             return
         }
         shell = null
@@ -362,6 +369,8 @@ class KeyboardView(
         railIndices = emptySet()
         railChoices = emptyList()
         railSelectedCount = 0
+        railChoiceCount = 0
+        railChoiceFirst = 0
         layout = definition
         this.rails = rails
         this.faces = faces
@@ -370,6 +379,7 @@ class KeyboardView(
         rebuild()
         logKeyBoundsOnce()
         invalidate()
+        announceItemsChanged()
     }
 
     /**
@@ -384,11 +394,15 @@ class KeyboardView(
         faces: KeyboardFaces = KeyboardFaces(),
         railChoices: List<String> = emptyList(),
         railSelected: Int = 0,
+        railChoiceCount: Int = railChoices.size,
+        railChoiceFirst: Int = 0,
     ) {
         if (shell?.key == config &&
             layout == null &&
             this.railChoices == railChoices &&
             railSelectedCount == railSelected &&
+            this.railChoiceCount == railChoiceCount &&
+            this.railChoiceFirst == railChoiceFirst &&
             shifted == shift &&
             capsLocked == locked &&
             actionLabel == enterLabel &&
@@ -404,6 +418,8 @@ class KeyboardView(
             }
         this.railChoices = railChoices
         railSelectedCount = railSelected
+        this.railChoiceCount = railChoiceCount
+        this.railChoiceFirst = railChoiceFirst
         shifted = shift
         capsLocked = locked
         actionLabel = enterLabel
@@ -412,6 +428,7 @@ class KeyboardView(
         rebuild()
         logKeyBoundsOnce()
         invalidate()
+        announceItemsChanged()
     }
 
     /** Draws the dial pad of a number, phone or date editor. */
@@ -426,6 +443,8 @@ class KeyboardView(
         shell = ShellModel(pad, numeric = true) { width, height -> EditorDigitLayouts.build(pad, width, height) }
         railChoices = emptyList()
         railSelectedCount = 0
+        railChoiceCount = 0
+        railChoiceFirst = 0
         shifted = false
         capsLocked = false
         actionLabel = enterLabel
@@ -434,6 +453,7 @@ class KeyboardView(
         rebuild()
         logKeyBoundsOnce()
         invalidate()
+        announceItemsChanged()
     }
 
     /**
@@ -806,6 +826,42 @@ class KeyboardView(
         accessibleCursorMode = active
         invalidate()
         sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+    }
+
+    /**
+     * The nine-key rail shows three slots of a longer engine-backed list. Assistive technology cannot
+     * drag it, so the surface offers the same one-slot step a finger takes: forward only while a whole
+     * window is still hidden, backward only once the window has left the first choice.
+     */
+    override fun hostScrollActions(): List<AccessibilityNodeInfo.AccessibilityAction> {
+        if (railChoices.isEmpty()) return emptyList()
+        return buildList {
+            if (railChoiceFirst > 0) add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD)
+            if (railChoiceFirst < railChoiceCount - T9RailPolicy.VISIBLE_SLOTS) {
+                add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD)
+            }
+        }
+    }
+
+    /**
+     * Scrolls the rail one slot through the same route a drag takes, then re-reads the labels the
+     * slots were given. A step the rail does not take reports failure instead of a scroll.
+     */
+    override fun performHostAction(action: Int): Boolean {
+        val steps =
+            when (action) {
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> 1
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> -1
+                else -> return false
+            }
+        if (hostScrollActions().none { it.id == action }) return false
+        val first = railChoiceFirst
+        onRailScroll(steps)
+        if (railChoiceFirst == first) return false
+        // Every slot swapped the choice it draws; clients must not reuse the labels they cached.
+        announceItemsChanged()
+        invalidate()
+        return true
     }
 
     override fun itemCustomActions(index: Int): List<AccessibilityNodeInfo.AccessibilityAction> {

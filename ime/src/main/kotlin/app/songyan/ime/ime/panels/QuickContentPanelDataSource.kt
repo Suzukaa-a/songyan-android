@@ -10,6 +10,12 @@ data class QuickContentPanelContent(
     val phrases: List<CommonPhrase>,
     val clipboard: List<String>,
     val clipboardEnabled: Boolean,
+    /**
+     * Whether [catalog] is the bundled default. Built-in category names are display strings and are
+     * localized; a user-imported catalog keeps the author's names. A caller that cannot tell passes
+     * false, which leaves every name as it is.
+     */
+    val builtinCatalog: Boolean = false,
 )
 
 /**

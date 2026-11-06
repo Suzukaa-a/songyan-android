@@ -112,6 +112,7 @@ class PhraseClipboardPanelView(
         }
         quickRows = rows
         invalidate()
+        announceItemsChanged()
     }
 
     /** The section the next opening shows; applied as soon as the rail exists. */

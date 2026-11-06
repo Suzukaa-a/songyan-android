@@ -23,6 +23,7 @@ class RepositoryQuickContentPanelDataSource(
             phrases = panels.phrases,
             clipboard = panels.clipboard,
             clipboardEnabled = panels.clipboardEnabled,
+            builtinCatalog = !panels.symbols.customCatalog,
         )
     }
 

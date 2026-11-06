@@ -347,6 +347,7 @@ abstract class QuickContentPanelView(
         contentScrollDp = 0.0
         invalidate()
         onRailSelected(index)
+        announceItemsChanged()
     }
 
     /** Back to the top of the content. The rail stays where it is: the user just tapped something in it. */

@@ -50,6 +50,13 @@ internal fun KeyboardView.face(
         // Only the keyboard's own key is renamed for the ear; an author's label is what they wrote.
         LayoutActionKind.CLEAR_INPUT ->
             if (spoken && isKeyName(key.label, R.string.ime_clear)) names.getString(R.string.ime_clear) else key.label
+        // The generated symbol-panel key is a control key; a page the author wrote keeps its label.
+        LayoutActionKind.MODE_SWITCH ->
+            if (key.titleMode == LayoutKeyTitleMode.AUTOMATIC && key.action.value == KeyboardPages.SYMBOL_PANEL_MODE) {
+                keyNames.symbolPanelDrawn(faces.language)
+            } else {
+                key.face(faces.symbolMarksAscii)
+            }
         LayoutActionKind.LAYOUT_PAGE_SWITCH -> if (spoken) jumpName(key) else key.label
         else -> {
             val base =
@@ -107,11 +114,13 @@ internal fun KeyboardView.pageSwitchFace(
 ): String {
     val names = keyNames.chinese()
     return when (action.pageSwitchTarget) {
-        // The Chinese keyboard says "返回"; the English one names where it goes, "ABC".
+        // The Chinese keyboard says "返回", Japanese 戻る; the English page names where it goes, "ABC".
+        // A page the author wrote keeps the label it saved.
         LayoutPageTarget.LETTERS ->
             when {
                 spoken -> names.getString(R.string.ime_return_to_letters)
                 faces.english -> names.getString(R.string.ime_back)
+                key.titleMode == LayoutKeyTitleMode.AUTOMATIC -> keyNames.returnToLettersDrawn(faces.language)
                 else -> key.label
             }
         LayoutPageTarget.NUMERIC ->

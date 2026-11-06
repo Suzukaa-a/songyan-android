@@ -131,12 +131,16 @@ internal fun KeyboardController.render() {
         PhoneKeypadLayout.cyclesFirstKey(phoneDefinition)
     if (phoneShell) {
         val names = keyNames.chinese()
-        val railWindow =
+        val items =
             if (currentPage == null && snapshot.isComposing) {
-                T9RailPolicy.window(railItems(), railScroll)
+                railItems()
             } else {
                 emptyList()
             }
+        // The window is all the view draws; the full count and the first shown index let assistive
+        // technology scroll the choices the three slots do not show.
+        val railFirst = T9RailPolicy.clampScroll(items.size, railScroll)
+        val railWindow = T9RailPolicy.window(items, railScroll)
         // A password field's pages share its taller key area; the shell stretches into it.
         keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
         keyboard.syllableHints = emptyMap()
@@ -159,12 +163,7 @@ internal fun KeyboardController.render() {
                             language = keyNames.languageKeyDrawn(language) ?: "中/英",
                             space = keyNames.space(language, visible.isComposing),
                             symbols = keyNames.symbolPageDrawn(language),
-                            back =
-                                if (english) {
-                                    context.getString(R.string.ime_back)
-                                } else {
-                                    context.getString(R.string.ime_back_chinese)
-                                },
+                            back = keyNames.returnToLettersDrawn(language, english),
                             zero = "0",
                             enter = enterLabel(),
                             clear = names.getString(R.string.ime_clear),
@@ -177,6 +176,8 @@ internal fun KeyboardController.render() {
             faces = faces,
             railChoices = railWindow.map { it.label },
             railSelected = railWindow.count { it.selected },
+            railChoiceCount = items.size,
+            railChoiceFirst = railFirst,
         )
         if (phoneDefinition != null) scheduleReadingRail(active, snapshot) else clearRail()
         return

@@ -53,7 +53,9 @@ class SymbolPanelView(
     private var selectedCategoryId: String? = null
     private var recentsSelected = true
 
-    override val titleText: String get() = keyNames.chinese().getString(R.string.ime_panel_symbols_title)
+    // Panel chrome (title, rail, empty states) is app UI, so it follows the app language; only
+    // the key faces of the bottom bar follow the input language.
+    override val titleText: String get() = context.getString(R.string.ime_panel_symbols_title)
 
     /**
      * Pushes the current catalog and recent symbols.
@@ -64,6 +66,7 @@ class SymbolPanelView(
     fun update(
         catalog: SymbolCatalog,
         recents: List<String>,
+        builtinCatalog: Boolean = false,
     ) {
         val browsing = captureBrowsingState()
         this.catalog = catalog
@@ -72,11 +75,19 @@ class SymbolPanelView(
         val categories = ArrayList<SymbolCategory?>()
         // "Recent" is always the first slot, filled or not: a slot that appears after the first use
         // would push every category down and move the one the user is looking at.
-        labels += keyNames.chinese().getString(R.string.ime_panel_recent)
+        // The rail's recent slot is built-in panel chrome, so it follows the app language like the
+        // category titles below it; only key faces follow the input language.
+        labels += context.getString(R.string.ime_panel_recent)
         categories += null
         for (category in catalog.orderedCategories) {
             if (catalog.itemsIn(category.id).isEmpty()) continue
-            labels += category.name
+            labels +=
+                SymbolCategoryTitles.catalogTitle(
+                    authorName = category.name,
+                    id = category.id,
+                    builtinCatalog = builtinCatalog,
+                    lookup = context::getString,
+                )
             categories += category
         }
         railCategories = categories
@@ -169,9 +180,9 @@ class SymbolPanelView(
 
     override fun emptyMessage(): String =
         if (recentsSelected && catalog.orderedCategories.isNotEmpty()) {
-            keyNames.chinese().getString(R.string.ime_panel_recent_empty)
+            context.getString(R.string.ime_panel_recent_empty)
         } else {
-            keyNames.chinese().getString(R.string.ime_panel_symbols_empty)
+            context.getString(R.string.ime_panel_symbols_empty)
         }
 
     /** An empty recent list needs no way out; only an empty library points at the settings. */
@@ -179,7 +190,7 @@ class SymbolPanelView(
         if (recentsSelected && catalog.orderedCategories.isNotEmpty()) {
             null
         } else {
-            keyNames.chinese().getString(R.string.ime_panel_open_settings)
+            context.getString(R.string.ime_panel_open_settings)
         }
 
     override fun onEmptyAction() {

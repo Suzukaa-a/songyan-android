@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * quick insert closes it. The settings panel stays open while settings change.
  */
 class QuickContentPanels(
-    context: Context,
+    private val context: Context,
     private val host: QuickContentHost,
     private val scope: CoroutineScope,
     private val dataSource: QuickContentPanelDataSource,
@@ -352,11 +352,11 @@ class QuickContentPanels(
     private suspend fun refreshSymbols() {
         val loaded = dataSource.loadContent()
         content = loaded
-        symbols.update(loaded.catalog, loaded.recentSymbols)
+        symbols.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
     }
 
     private fun applyContent(loaded: QuickContentPanelContent) {
-        symbols.update(loaded.catalog, loaded.recentSymbols)
+        symbols.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
         applySymbolPage(loaded)
         phrases.update(loaded.phrases.map { it.text }, loaded.clipboard, loaded.clipboardEnabled)
     }
@@ -371,14 +371,36 @@ class QuickContentPanels(
                     loaded.catalog.orderedCategories.map { category ->
                         SymbolPageCategories.LibrarySet(
                             category.id,
-                            category.name,
+                            SymbolCategoryTitles.catalogTitle(
+                                authorName = category.name,
+                                id = category.id,
+                                builtinCatalog = loaded.builtinCatalog,
+                                lookup = context::getString,
+                            ),
                             loaded.catalog.itemsIn(category.id).map { it.text },
                         )
                     },
                     request.leadingMarks,
                     request.inputLanguage,
                 )
-        symbolPage.update(categories, request.asciiMarks, reopen = symbolPageFresh)
+        // Only a page derived from built-in data has built-in tab titles; a saved page keeps the
+        // names its author gave it, even when it started as a copy of the built-in one.
+        val titled =
+            if (request.categories == null) {
+                categories.map { category ->
+                    category.withName(
+                        SymbolCategoryTitles.pageTitle(
+                            authorName = category.name,
+                            id = category.id,
+                            builtinPage = true,
+                            lookup = context::getString,
+                        ),
+                    )
+                }
+            } else {
+                categories
+            }
+        symbolPage.update(titled, request.asciiMarks, reopen = symbolPageFresh)
         symbolPageFresh = false
     }
 }

@@ -247,6 +247,16 @@ class KeyboardController(
      */
     internal val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
     internal var session: InputSession? = null
+
+    /**
+     * The input language of the active scheme, read from the session's cached profile.
+     *
+     * The profile is resolved when the scheme or one of its script switches changes, never here:
+     * this is a plain field read, safe for callers that need it outside the drawing path.
+     */
+    val inputLanguage: InputLanguage
+        get() = session?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+
     internal var pendingBackend: EngineBackend? = null
     internal var policy = EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE)
 

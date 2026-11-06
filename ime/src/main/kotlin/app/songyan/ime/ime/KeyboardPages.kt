@@ -20,6 +20,7 @@ import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutKeyTitleMode
 import app.songyan.ime.layout.LayoutOption
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
@@ -731,16 +732,40 @@ internal object KeyboardPages {
         const val PAGE_ALONE = PAGE + LANGUAGE
     }
 
+    /**
+     * A generated footer key. Control keys carry the automatic title mode: their face is the host's
+     * to name from the input language, and the label is only the fallback the editor shows. A key
+     * whose label is the text it types (the marks) leaves the mode unset.
+     */
     private fun footerKey(
         label: String,
         action: LayoutAction,
         weight: Double,
         longPress: List<LayoutOption>? = null,
-    ) = LayoutKey(label, width = weight, action = action, longPress = longPress)
+        titleMode: LayoutKeyTitleMode? = null,
+    ) = LayoutKey(label, width = weight, action = action, longPress = longPress, titleMode = titleMode)
 
-    private val SPACE_KEY = footerKey("空格", LayoutAction(LayoutActionKind.SPACE), FooterWeight.SPACE)
-    private val GLOBE_KEY = footerKey("🌐", LayoutAction(LayoutActionKind.GLOBE), FooterWeight.GLOBE)
-    private val ENTER_KEY = footerKey("⏎", LayoutAction(LayoutActionKind.ENTER), FooterWeight.ENTER)
+    private val SPACE_KEY =
+        footerKey(
+            "空格",
+            LayoutAction(LayoutActionKind.SPACE),
+            FooterWeight.SPACE,
+            titleMode = LayoutKeyTitleMode.AUTOMATIC,
+        )
+    private val GLOBE_KEY =
+        footerKey(
+            "🌐",
+            LayoutAction(LayoutActionKind.GLOBE),
+            FooterWeight.GLOBE,
+            titleMode = LayoutKeyTitleMode.AUTOMATIC,
+        )
+    private val ENTER_KEY =
+        footerKey(
+            "⏎",
+            LayoutAction(LayoutActionKind.ENTER),
+            FooterWeight.ENTER,
+            titleMode = LayoutKeyTitleMode.AUTOMATIC,
+        )
 
     private fun option(text: String) = LayoutOption(text, LayoutAction.literal(text))
 
@@ -783,7 +808,13 @@ internal object KeyboardPages {
                 else -> commaKey(ascii)
             }
         return footer(
-            page = footerKey("123", LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC), FooterWeight.PAGE),
+            page =
+                footerKey(
+                    "123",
+                    LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC),
+                    FooterWeight.PAGE,
+                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                ),
             pageReachable = config.lettersReachable,
             beside = fieldMark?.copy(width = FooterWeight.LANGUAGE),
             languageSwitch = config.languageSwitch,
@@ -813,7 +844,13 @@ internal object KeyboardPages {
             if (globe) add(GLOBE_KEY)
             val second =
                 when {
-                    languageSwitch -> footerKey("中/英", LayoutAction.languageSwitch(), FooterWeight.LANGUAGE)
+                    languageSwitch ->
+                        footerKey(
+                            "中/英",
+                            LayoutAction.languageSwitch(),
+                            FooterWeight.LANGUAGE,
+                            titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                        )
                     else -> beside
                 }
             if (pageReachable) {
@@ -862,7 +899,13 @@ internal object KeyboardPages {
     private fun numericFooter(config: Config): List<LayoutKey> {
         val side = spaceSideMarks(config, symbolPage = false)
         return footer(
-            page = footerKey("返回", LayoutAction.pageSwitch(LayoutPageTarget.LETTERS), FooterWeight.PAGE),
+            page =
+                footerKey(
+                    "返回",
+                    LayoutAction.pageSwitch(LayoutPageTarget.LETTERS),
+                    FooterWeight.PAGE,
+                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                ),
             pageReachable = true,
             beside = null,
             languageSwitch = config.languageSwitch,
@@ -882,11 +925,23 @@ internal object KeyboardPages {
     private fun symbolsFooter(config: Config): List<LayoutKey> {
         val side = spaceSideMarks(config, symbolPage = true)
         return footer(
-            page = footerKey("返回", LayoutAction.pageSwitch(LayoutPageTarget.LETTERS), FooterWeight.PAGE),
+            page =
+                footerKey(
+                    "返回",
+                    LayoutAction.pageSwitch(LayoutPageTarget.LETTERS),
+                    FooterWeight.PAGE,
+                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                ),
             pageReachable = true,
             beside = null,
             languageSwitch = config.languageSwitch,
-            right = footerKey("更多", LayoutAction(LayoutActionKind.MODE_SWITCH, SYMBOL_PANEL_MODE), FooterWeight.MARK),
+            right =
+                footerKey(
+                    "更多",
+                    LayoutAction(LayoutActionKind.MODE_SWITCH, SYMBOL_PANEL_MODE),
+                    FooterWeight.MARK,
+                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                ),
             globe = config.showsGlobe,
             spaceLeft = side?.first,
             spaceRight = side?.second,

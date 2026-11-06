@@ -55,26 +55,21 @@ class EverydayMarksDeviceTest {
 
     private fun FeatureHost.openKeypadSymbols(lacking: String) {
         if ("9" !in labels()) {
-            tap(string(R.string.ime_open_numbers_page))
+            tapNumbersPage()
             awaitIdle()
         }
         // The pairing's digit pad, not the row 123 page that carries the mark itself.
         assertTrue(labels().toString(), "9" in labels() && lacking !in labels())
-        tap(string(R.string.ime_open_symbols_page))
+        tapSymbolsPage()
         awaitIdle()
     }
 
-    /** Delete and the third-row switch, where the page draws them. */
+    /** Delete and the third-row switches, where the page draws them. */
     private fun FeatureHost.controlBounds(): List<KeyBounds> =
-        main2 {
-            val view = find(KeyboardView::class.java)
-            view.keys.indices
-                .filter { index ->
-                    val action = view.keys[index].action
-                    action.type == LayoutActionKind.BACKSPACE ||
-                        action.pageSwitchTarget == LayoutPageTarget.SYMBOLS ||
-                        action.pageSwitchTarget == LayoutPageTarget.NUMERIC
-                }.map { view.bounds[it] }
+        actionBoundsOf { action ->
+            action.type == LayoutActionKind.BACKSPACE ||
+                action.pageSwitchTarget == LayoutPageTarget.SYMBOLS ||
+                action.pageSwitchTarget == LayoutPageTarget.NUMERIC
         }
 
     @Test
@@ -88,7 +83,7 @@ class EverydayMarksDeviceTest {
             host.tap("¥")
             host.assertText("¥")
             // Its page switch turns to the usual symbol rows, whose switch and Delete stand exactly where they did.
-            host.tap(host.string(R.string.ime_open_more_symbols))
+            host.tapSymbolsPage()
             host.awaitIdle()
             assertTrue(host.labels().toString(), "《" in host.labels() && "¥" !in host.labels())
             assertEquals(host.controlBounds(), firstControls)
@@ -97,10 +92,10 @@ class EverydayMarksDeviceTest {
     @Test
     fun theKeypadPairingTypesAmpersandWithEnglishMarks() =
         withHost(KeyboardPagePresets.numericKeypad.id) { host ->
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             // The pad's language key switches the marks to English ones.
-            host.tap(host.string(R.string.ime_language_to_english_symbols))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.awaitIdle()
             host.openKeypadSymbols("&")
             assertTrue(host.labels().toString(), "&" in host.labels())
@@ -111,14 +106,14 @@ class EverydayMarksDeviceTest {
     @Test
     fun theFullKeyboard123PairingKeepsTheSymbolPage() =
         withHost(KeyboardPagePresets.numericAutomatic.id) { host ->
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             val labels = host.labels()
             assertTrue(labels.toString(), "【" in labels)
             assertFalse(labels.toString(), "¥" in labels)
-            assertFalse(labels.toString(), host.string(R.string.ime_open_more_symbols) in labels)
+            assertFalse(labels.toString(), host.hasAction { it.pageSwitchTarget == LayoutPageTarget.SYMBOLS })
         }
 
     companion object {

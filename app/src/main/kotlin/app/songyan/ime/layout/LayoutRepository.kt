@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import app.songyan.ime.content.QuickContentRepository
 import app.songyan.ime.ime.KeyboardLayoutCatalog
+import app.songyan.ime.ime.panels.SymbolCategoryTitles
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.state.LayoutImportOutcome
@@ -63,15 +64,34 @@ class LayoutRepository internal constructor(
         withContext(Dispatchers.IO) {
             val directory = contentDirectory ?: return@withContext super.symbolPageCategories()
             val symbols = QuickContentRepository(directory).loadSymbols()
+            val builtinCatalog = !symbols.customCatalog
             val library =
                 symbols.catalog.orderedCategories.map { category ->
                     SymbolPageCategories.LibrarySet(
                         category.id,
-                        category.name,
+                        SymbolCategoryTitles.catalogTitle(
+                            authorName = category.name,
+                            id = category.id,
+                            builtinCatalog = builtinCatalog,
+                            lookup = context::getString,
+                        ),
                         symbols.catalog.itemsIn(category.id).map { it.text },
                     )
                 }
-            SymbolPageCategories.snapshot(symbols.recents, library, BuiltinLayouts.t9QuickSymbolValues("", false))
+            // The snapshot carries the built-in page's own tabs; a layout copied from it starts with
+            // the display titles. Library sets keep the author's names for a custom catalog.
+            SymbolPageCategories
+                .snapshot(symbols.recents, library, BuiltinLayouts.t9QuickSymbolValues("", false))
+                .map { category ->
+                    category.withName(
+                        SymbolCategoryTitles.pageTitle(
+                            authorName = category.name,
+                            id = category.id,
+                            builtinPage = true,
+                            lookup = context::getString,
+                        ),
+                    )
+                }
         }
 
     override suspend fun importFrom(uri: Uri): LayoutImportOutcome =

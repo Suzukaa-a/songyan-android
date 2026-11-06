@@ -131,6 +131,38 @@ class SymbolCatalogStoreTest {
     }
 
     @Test
+    fun theBundledCatalogIsReportedAsBundled() {
+        val store = SymbolCatalogStore(root.resolve("store"))
+        val loaded = store.loadActiveWithSource()
+        assertEquals(SymbolCatalogSource.BUNDLED, loaded.source)
+        assertTrue(loaded.catalog.items.size >= 80)
+        // The plain accessor still returns the same catalog.
+        assertEquals(loaded.catalog, store.loadActive())
+    }
+
+    @Test
+    fun anImportedCatalogIsReportedAsCustom() {
+        val store = SymbolCatalogStore(root.resolve("store"))
+        store.importCatalog(firstCatalog.toByteArray())
+        val loaded = store.loadActiveWithSource()
+        assertEquals(SymbolCatalogSource.CUSTOM, loaded.source)
+        assertEquals(1, loaded.catalog.items.size)
+    }
+
+    @Test
+    fun aCorruptCustomCatalogFallsBackToBundledAndSaysSo() {
+        val directory = temporary.newFolder("custom").toPath()
+        Files.write(directory.resolve(SymbolCatalogStore.ACTIVE_FILE_NAME), "broken".toByteArray())
+        val reported = ArrayList<ContentException>()
+        val loaded =
+            SymbolCatalogStore(directory).loadActiveWithSource { reported += it }
+        // The file exists but its content is unusable, so the shown catalog is the bundled one.
+        assertEquals(SymbolCatalogSource.BUNDLED, loaded.source)
+        assertEquals(1, reported.size)
+        assertTrue(loaded.catalog.items.size >= 80)
+    }
+
+    @Test
     fun corruptCustomFallsBackToBundled() {
         val directory = temporary.newFolder("custom").toPath()
         Files.write(directory.resolve(SymbolCatalogStore.ACTIVE_FILE_NAME), "broken".toByteArray())

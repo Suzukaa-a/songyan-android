@@ -38,15 +38,6 @@ class KeyboardHeightStableDeviceTest(
             host.controller.view.measuredHeight to keys.maxOfOrNull { it.bottom.roundToInt() }
         }
 
-    private fun tapFirst(
-        host: FeatureHost,
-        vararg labels: String,
-    ) {
-        val shown = host.labelsOf(KeyboardView::class.java)
-        host.tap(requireNotNull(labels.firstOrNull { it in shown }) { "none of ${labels.toList()} in $shown" })
-        host.awaitIdle()
-    }
-
     @After
     fun restoreTheBundledCatalog() {
         KeyboardLayoutCatalog.install(LayoutRegistry.create())
@@ -78,19 +69,16 @@ class KeyboardHeightStableDeviceTest(
         try {
             host.start(inputType = inputType)
             if (english) {
-                host.tap(host.string(R.string.ime_language_to_english))
+                host.tapControl(ControlKey.LANGUAGE_TOGGLE)
                 host.awaitIdle()
             }
             val letters = heightNow(host)
-            val numbersLabel = host.string(R.string.ime_open_numbers_page)
-            val symbolsLabel = host.string(R.string.ime_open_symbols_page)
-            val lettersLabel = host.string(R.string.ime_return_to_letters)
-            tapFirst(host, numbersLabel)
+            host.tapNumbersPage()
             val numbers = heightNow(host)
-            tapFirst(host, symbolsLabel, host.string(R.string.ime_symbols))
+            host.tapSymbolsPage()
             val symbols = heightNow(host)
             // A nine-key symbol page is a panel that has its own way back; the rows pages return here.
-            if (host.labelsOf(KeyboardView::class.java).isNotEmpty()) tapFirst(host, numbersLabel, lettersLabel)
+            if (host.labelsOf(KeyboardView::class.java).isNotEmpty()) host.tapControl(ControlKey.RETURN_TO_LETTERS)
             val back = heightNow(host)
             val pages = listOf(numbers, symbols, back)
             assertTrue(

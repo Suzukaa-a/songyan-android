@@ -113,6 +113,28 @@ internal class KeyNames(
             },
         )
 
+    /** The drawn return-to-letters face: Chinese 返回, Japanese 戻る; an English page names ABC. */
+    fun returnToLettersDrawn(
+        language: InputLanguage,
+        english: Boolean = false,
+    ): String =
+        chinese.getString(
+            when {
+                english -> R.string.ime_back
+                language == InputLanguage.JA -> R.string.input_back_ja
+                else -> R.string.ime_back_chinese
+            },
+        )
+
+    /** The drawn symbol-panel face (更多): the Chinese 更多, Japanese その他. */
+    fun symbolPanelDrawn(language: InputLanguage): String =
+        chinese.getString(
+            when (language) {
+                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT -> R.string.input_more_chinese
+                InputLanguage.JA -> R.string.input_more_ja
+            },
+        )
+
     private fun hansLanguageKey(
         symbols: Boolean,
         targetChinese: Boolean,

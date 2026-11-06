@@ -34,6 +34,7 @@ import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutSplitConfiguration
@@ -41,6 +42,7 @@ import app.songyan.ime.layout.ShuangpinHintPresets
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -574,6 +576,61 @@ class RealEngineEditorTest {
             }
             host.awaitIdle()
             assertEquals("", host.text())
+        }
+
+    /**
+     * The keyboard is still busy with a press when its field ends: that press was made for the field
+     * and must not be typed into the one that replaces it, while the new field's own press is typed
+     * there and only there.
+     */
+    @Test
+    fun aPressQueuedWhenItsFieldEndsIsNotTypedIntoTheNextField() =
+        withHost { host ->
+            host.start()
+            val queue = CompletableDeferred<Unit>()
+            // Hold the keyboard's operation queue so the press is still queued when the field ends:
+            // the engine answering a press opens the same window while typing.
+            host.main { host.controller.enqueue { queue.await() } }
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "h")) }
+            var left: EditText? = null
+            // The system finishes the old input before it starts the next field.
+            host.main {
+                host.connection.finishComposingText()
+                host.finishInput()
+                left = host.switchField(restarting = false)
+            }
+            // The new field's own press, made while its session is still being prepared.
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "n")) }
+            host.main { queue.complete(Unit) }
+            // Only the new field's letter: the finished field's press is dropped, not the new one's.
+            host.awaitField("n")
+            assertEquals("n", host.backend.currentSnapshot().rawInput)
+            var leftText = ""
+            host.main { leftText = left!!.text.toString() }
+            assertEquals("the field that ended does not take it", "", leftText)
+        }
+
+    /**
+     * A restart of the same field does not finish its input, so a press queued for it is still its
+     * own and arrives once the restarted session is ready.
+     */
+    @Test
+    fun aPressQueuedForARestartOfItsFieldIsStillTyped() =
+        withHost { host ->
+            host.start()
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "n")) }
+            // onStartInput(restarting = true) on the same field, as the service does on a restart.
+            host.main {
+                val keep = host.editor.startInput(host.info, restarting = true)
+                val policy = EditorPolicy.from(host.info)
+                host.controller.configure(policy)
+                host.controller.startInput(policy, keep)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            host.awaitField("n")
         }
 
     @Test
@@ -2676,13 +2733,13 @@ class RealEngineEditorTest {
          * its composition itself when it loses focus, and the new one starts on the same connection
          * (restarting = true). Returns the field that was left.
          */
-        fun switchField(): EditText {
+        fun switchField(restarting: Boolean = true): EditText {
             val left = field
             connection.finishComposingText()
             field = EditText(context)
             field.inputType = InputType.TYPE_CLASS_TEXT
             connect()
-            beginInput(restarting = true)
+            beginInput(restarting = restarting)
             return left
         }
 

@@ -403,6 +403,14 @@ class KeyboardController(
      * restarted its input or the keyboard was still binding.
      */
     internal val heldKeys = ArrayDeque<Pair<LayoutAction, Boolean>>()
+
+    /**
+     * Bumped when an input finishes: the presses still queued for it were meant for that field and
+     * must not type into the field that replaces it. A restart of the same field does not finish its
+     * input (it only starts it again), so the epoch stays and its queued presses still arrive.
+     */
+    private var keyEpoch = 0
+
     private val worker =
         scope.launch {
             for ((token, operation) in operations) {
@@ -534,7 +542,7 @@ class KeyboardController(
         if (!retired) operations.trySend(generation to action)
     }
 
-    /** Key presses outlive an input restart: they belong to whatever editor is current when they run. */
+    /** Queued presses survive a restart, but not the end of their input connection. */
     internal fun enqueueKey(
         action: LayoutAction,
         t9FirstKey: Boolean = false,
@@ -547,7 +555,8 @@ class KeyboardController(
             }
             return
         }
-        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey) })
+        val epoch = keyEpoch
+        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, epoch) })
     }
 
     /**
@@ -565,7 +574,9 @@ class KeyboardController(
     private suspend fun dispatchOrHold(
         action: LayoutAction,
         t9FirstKey: Boolean,
+        epoch: Int,
     ) {
+        if (epoch != keyEpoch) return
         if (!ready && pendingBackend != null) {
             val held = heldKeys.size < MAX_HELD_KEYS
             if (held) heldKeys.addLast(action to t9FirstKey)
@@ -775,6 +786,8 @@ class KeyboardController(
     fun finishInput() {
         inlineSuggestions.clear()
         generation++
+        keyEpoch++
+        heldKeys.clear()
         candidates.abandonLoad()
         ready = false
         resetEnglishWord()

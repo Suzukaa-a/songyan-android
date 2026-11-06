@@ -191,7 +191,7 @@
 | `core/content/src/main/resources/default-symbols.json` | 默认符号库（同步自 iOS） |
 | `ime/src/main/assets/emoji/` | 表情目录 `emoji-data.tsv`（Unicode emoji-test 与 CLDR 中英注释，由 [generate-emoji-data.py](../scripts/generate-emoji-data.py) 生成，输入与用法见脚本头）、`NOTICE.md` 与 Unicode-3.0 许可文本；许可屏经 `LicenseCatalog` 读取 |
 | `filesDir/content/`、`filesDir/content/symbols/`、`filesDir/content/emoji/` | 常用语、剪贴板历史、符号库与最近使用的表情数据（`core:content` 的 store 读写；运行时目录） |
-| `*/src/main/res/values/`、`values-zh/` | 字符串：默认集是英文，中文在 `values-zh/`，两套键必须一致（`ResourceContractTest`）；不随语言变化的字形与键名放默认集并标 `translatable="false"`；`app/src/main/res/xml/locales_config.xml` 给 Android 13+ 按应用选语言 |
+| `*/src/main/res/values/`、`values-zh/`、`values-b+zh+Hant/`、`values-ja/` | 默认英文、简体中文、繁体中文、日语覆盖相同的字符串与复数资源名；[StringResourceParityTest](../app/src/test/kotlin/app/songyan/ime/resources/StringResourceParityTest.kt) 校验键集、格式参数和日语同文白名单。[gen-zh-hant-strings.sh](../scripts/gen-zh-hant-strings.sh) 用 OpenCC 1.1.9 CLI 读取同步的配置与字典，从简体资源经 s2twp、台湾术语及按资源名的文案覆盖生成繁体，`--check` 比较整套输出。固定字形与键名仅在默认集标 `translatable="false"`；[locales_config.xml](../app/src/main/res/xml/locales_config.xml) 声明按应用语言，APK 过滤保留繁体 script 限定符 |
 | `settings/src/main/assets/legal/` | 引擎与共享数据的第三方声明 `ThirdPartyNotices.txt` 与许可文本 `licenses/`（同步自 iOS；iOS 独有的组件不同步） |
 | `settings/src/main/assets/legal-android/` | Android 独有的第三方声明 `AndroidNotices.txt`（Kotlin / kotlinx、AndroidX / Compose、SnakeYAML Engine、Okio、Guava ListenableFuture、JSpecify、Protocol Buffers）与 `licenses/` 下的补充许可文本；Apache-2.0 文本复用 `app/.../rime/starter/Apache-2.0.txt`；关于 → 第三方许可经 `LicenseCatalog` 把它们与起步词库、表情数据的声明一起读取 |
 | `app/src/main/res/drawable/ic_launcher_*.xml`、`mipmap-anydpi-v26/ic_launcher.xml` | 自适应启动图标（前景 / 背景 / 单色） |

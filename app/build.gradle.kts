@@ -80,7 +80,7 @@ android {
     }
     androidResources {
         // Dependency translations must not claim languages the app does not translate.
-        localeFilters += listOf("en", "zh")
+        localeFilters += listOf("en", "zh", "b+zh+Hant", "ja")
     }
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

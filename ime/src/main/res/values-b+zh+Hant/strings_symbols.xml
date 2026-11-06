@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 內建符號庫分類與內建符號頁分類 -->
+    <string name="ime_symbol_category_math">數學</string>
+    <string name="ime_symbol_category_numbers">序號</string>
+    <string name="ime_symbol_category_arrows">箭頭</string>
+    <string name="ime_symbol_category_units">單位</string>
+    <string name="ime_symbol_category_currency">貨幣</string>
+    <string name="ime_symbol_category_shapes">圖形</string>
+    <string name="ime_symbol_category_letters">希臘</string>
+    <string name="ime_symbol_category_special">其他</string>
+    <string name="ime_symbol_category_kaomoji">顏文字</string>
+    <string name="ime_symbol_category_punctuation">標點</string>
+
+    <string name="ime_symbol_page_common">常用</string>
+    <string name="ime_symbol_page_recent">最近</string>
+    <string name="ime_symbol_page_chinese">中文</string>
+    <string name="ime_symbol_page_english">英文</string>
+    <string name="ime_symbol_page_brackets">括號</string>
+</resources>

@@ -52,4 +52,8 @@
     <string name="ime_qs_label_value">%1$s，%2$s</string>
     <string name="ime_qs_option_selected">%1$s，已选</string>
     <string name="ime_qs_engine_character_form">字形</string>
+    <string name="ime_qs_script_simplified">简体</string>
+    <string name="ime_qs_script_traditional">繁體</string>
+    <string name="ime_qs_script_taiwan">臺灣</string>
+    <string name="ime_qs_script_hong_kong">香港</string>
 </resources>

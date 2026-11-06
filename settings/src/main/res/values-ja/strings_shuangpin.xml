@@ -1,0 +1,73 @@
+<resources>
+    <!-- 双拼のヒント -->
+    <string name="shuangpin_title">双拼のヒント</string>
+    <string name="shuangpin_entry_on">使用中：%1$s</string>
+    <string name="shuangpin_entry_off">オフ</string>
+    <string name="shuangpin_switch">文字キーに双拼のヒントを表示する</string>
+    <string name="shuangpin_current">現在のヒント：%1$s</string>
+    <string name="shuangpin_footer">使っている双拼の入力方式に合ったヒントを選んでください。</string>
+    <string name="shuangpin_presets_section">ヒントのプリセット</string>
+    <string name="shuangpin_presets_note">プリセットをタップすると使えます。「小鹤双拼」のヒントは内蔵のプリセットで、コピーしてから変更できます。</string>
+    <string name="shuangpin_builtin_count">内蔵 · %1$d 文字にヒントあり</string>
+    <string name="shuangpin_count">%1$d 文字にヒントあり</string>
+    <string name="shuangpin_more">その他の操作</string>
+    <string name="shuangpin_copy">コピー</string>
+    <string name="shuangpin_edit">編集</string>
+    <string name="shuangpin_export">エクスポート</string>
+    <string name="shuangpin_delete">削除</string>
+    <string name="shuangpin_copy_suffix">%1$sのコピー</string>
+    <string name="shuangpin_imported_suffix">（インポート）</string>
+    <string name="shuangpin_new">ヒントのプリセットを新規作成</string>
+    <string name="shuangpin_import_file">ファイルからインポート</string>
+    <string name="shuangpin_import_link">リンクからインポート</string>
+    <string name="shuangpin_link_title">リンクからヒントをインポート</string>
+    <string name="shuangpin_link_body">エクスポートしたヒントファイルの https リンクを入力してください。</string>
+    <string name="shuangpin_link_confirm">インポート</string>
+    <string name="shuangpin_link_stop">中止</string>
+    <string name="shuangpin_downloading">ダウンロードしています…</string>
+    <string name="shuangpin_link_invalid">https:// で始まるリンクを入力してください。</string>
+    <string name="shuangpin_download_failed">ダウンロードできませんでした。しばらくしてからやり直してください。</string>
+    <string name="shuangpin_export_all">すべての設定をエクスポート</string>
+    <string name="shuangpin_reset">既定に戻す</string>
+    <string name="shuangpin_reset_title">既定に戻しますか？</string>
+    <string name="shuangpin_reset_body">カスタムのヒントはすべて削除され、双拼のヒントはオフになります。先に現在のファイルをエクスポートできます。</string>
+    <string name="shuangpin_delete_title">ヒントのプリセット「%1$s」を削除しますか？</string>
+    <string name="shuangpin_damaged">キーボードがこの設定を読み取れないため、ヒントは表示されません。既定に戻すとやり直せます。</string>
+    <string name="shuangpin_cancel">キャンセル</string>
+    <string name="shuangpin_save">保存する</string>
+
+    <string name="shuangpin_editor_new_title">ヒントのプリセットを新規作成</string>
+    <string name="shuangpin_editor_edit_title">ヒントのプリセットを編集</string>
+    <string name="shuangpin_editor_name">名前</string>
+    <string name="shuangpin_editor_default_name">自分の双拼のヒント</string>
+    <string name="shuangpin_editor_row">%1$d 行目</string>
+    <string name="shuangpin_editor_too_long">長すぎます。最大 %1$d バイトです。</string>
+    <string name="shuangpin_editor_name_required">名前を入力してください。</string>
+    <string name="shuangpin_editor_discard_title">変更を破棄しますか？</string>
+    <string name="shuangpin_editor_discard">破棄</string>
+
+    <string name="shuangpin_saved">ヒントのプリセット「%1$s」を保存しました。</string>
+    <string name="shuangpin_imported">ヒントのプリセット「%1$s」をインポートしました。</string>
+    <string name="shuangpin_deleted">ヒントのプリセット「%1$s」を削除しました。</string>
+    <string name="shuangpin_exported">エクスポートしました。</string>
+    <string name="shuangpin_reset_done">既定に戻しました。</string>
+    <string name="shuangpin_file_unreadable">選択したファイルを読み取れませんでした。もう一度選んでください。</string>
+    <string name="shuangpin_write_failed">操作が完了しませんでした。もう一度お試しください。</string>
+
+    <string name="shuangpin_error_too_large">ヒントファイルが大きすぎます。256 KB 以内にしてください。</string>
+    <string name="shuangpin_error_malformed">ヒントファイルを読み取れません。ヒントのプリセットファイルを選んでください。</string>
+    <string name="shuangpin_error_unknown_field">ヒントファイルに未対応のフィールド「%1$s」があります。ファイルを確認してください。</string>
+    <string name="shuangpin_error_missing_field">ヒントファイルに「%1$s」がありません。入力してからもう一度インポートしてください。</string>
+    <string name="shuangpin_error_wrong_type">ヒントファイルの「%1$s」の種類が正しくありません。ファイルを確認してください。</string>
+    <string name="shuangpin_error_version">このヒントファイルのバージョンには対応していません。</string>
+    <string name="shuangpin_error_id">ヒントファイルの ID は使えません。半角英数字、ハイフン、アンダースコアだけで、64 バイト以内にしてください。</string>
+    <string name="shuangpin_error_name">この名前は使えません。必ず入力し、128 バイト以内にしてください。</string>
+    <string name="shuangpin_error_too_many_hints">ヒントは最大 26 個です。</string>
+    <string name="shuangpin_error_letter">「%1$s」は使えません。キー名は英小文字 1 文字（a–z）にしてください。</string>
+    <string name="shuangpin_error_duplicate_letter">「%1$s」は使えません。同じ文字は 1 回だけにしてください。</string>
+    <string name="shuangpin_error_hint_too_long">%1$s のヒントが長すぎます。最大 16 バイトです。</string>
+    <string name="shuangpin_error_line_break">%1$s のヒントに改行は使えません。</string>
+    <string name="shuangpin_error_too_many_presets">プリセットは最大 64 個です。使っていないプリセットを先に削除してください。</string>
+    <string name="shuangpin_error_duplicate_preset">ヒントの設定に重複したプリセットがあります。</string>
+    <string name="shuangpin_error_missing_selection">ヒントの設定に、使用中のプリセットがありません。</string>
+</resources>

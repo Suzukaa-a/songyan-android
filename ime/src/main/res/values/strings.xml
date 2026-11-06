@@ -60,6 +60,9 @@
     <string name="input_language_to_chinese_ja" translatable="false">英語（タップで中国語に切り替え）</string>
     <string name="input_language_to_english_symbols_ja" translatable="false">中国語の記号（タップで英語の記号に切り替え）</string>
     <string name="input_language_to_chinese_symbols_ja" translatable="false">英語の記号（タップで中国語の記号に切り替え）</string>
+    <string name="input_back_ja" translatable="false">戻る</string>
+    <string name="input_more_chinese" translatable="false">更多</string>
+    <string name="input_more_ja" translatable="false">その他</string>
     <string name="ime_menu_input_method">Input method</string>
     <string name="ime_menu_layout">Keyboard layout</string>
     <string name="ime_menu_close">Close</string>

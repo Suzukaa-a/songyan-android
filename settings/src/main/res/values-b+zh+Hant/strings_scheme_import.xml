@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_cancelling">正在取消…</string>
+    <!-- 輸入方案 · 方案包 -->
+    <string name="schemes_scheme_import_file">匯入輸入方案</string>
+    <string name="schemes_scheme_import_note">支援 .zip 檔案、資料夾，或 ZIP 下載連結與 GitHub 倉庫地址。匯入已有方案的新版本會取代舊版本，學到的詞和語法模型都保留。</string>
+    <string name="schemes_scheme_import_unavailable">現在不能匯入輸入方案，請稍後再試。</string>
+    <string name="schemes_scheme_importing">正在匯入輸入方案…</string>
+    <string name="schemes_scheme_downloading">正在下載輸入方案…</string>
+    <string name="schemes_scheme_importing_note">較大的輸入方案需要幾分鐘。</string>
+    <string name="transfer_downloaded_of">已下載 %1$s / %2$s</string>
+    <string name="transfer_downloaded">已下載 %1$s</string>
+    <string name="schemes_scheme_import_success">輸入方案已匯入。</string>
+    <string name="schemes_scheme_import_success_named">已匯入「%1$s」</string>
+    <string name="schemes_scheme_import_failed">匯入失敗，請重試。</string>
+
+    <!-- 輸入方案 · 我的輸入方案 -->
+    <string name="schemes_sources_section">我的輸入方案</string>
+    <string name="schemes_source_kind_builtin">內建</string>
+    <string name="schemes_source_kind_dictionary">內建輸入方式 · 匯入的詞庫</string>
+    <string name="schemes_source_kind_scheme">匯入的輸入方案</string>
+    <string name="schemes_source_use">使用</string>
+    <string name="schemes_source_delete">刪除</string>
+    <string name="schemes_source_delete_title">刪除「%1$s」？</string>
+    <string name="schemes_source_delete_body">已經學會的詞會保留，再次匯入時恢復。</string>
+    <string name="schemes_source_working">正在處理…</string>
+    <string name="schemes_source_failed">操作沒有完成，請重試。</string>
+
+    <!-- 輸入方案 · 資料夾、連結、推薦、更新 -->
+    <string name="schemes_scheme_import_folder">匯入資料夾</string>
+    <string name="schemes_scheme_import_link">從連結匯入</string>
+    <string name="schemes_scheme_link_label">ZIP 連結或 GitHub 倉庫地址</string>
+    <string name="schemes_scheme_link_invalid">請輸入以 https 開頭的連結。</string>
+    <string name="schemes_scheme_link_note">輕觸「下載」後才會聯網，檔案最大 1.5 GB。</string>
+    <string name="schemes_scheme_link_confirm">下載</string>
+    <string name="schemes_recommended_section">推薦</string>
+    <string name="schemes_recommended_rime_ice_name">霧凇拼音</string>
+    <string name="schemes_recommended_rime_ice_detail">全拼與多種雙拼，詞庫豐富 · GPL-3.0</string>
+    <string name="schemes_recommended_wanxiang_name">永珍拼音</string>
+    <string name="schemes_recommended_wanxiang_detail">全拼與多種雙拼，另需下載約 400 MB 的模型 · CC-BY-4.0</string>
+    <string name="schemes_recommended_confirm_title">下載「%1$s」？</string>
+    <string name="schemes_recommended_confirm_body">會從 GitHub 下載這個輸入方案，檔案較大時建議連線 Wi-Fi。</string>
+    <string name="schemes_recommended_confirm">下載</string>
+    <string name="schemes_incoming_title">匯入收到的輸入方案？</string>
+    <string name="schemes_incoming_body">其他 App 想把一個 ZIP 檔案作為輸入方案匯入松煙。</string>
+    <string name="schemes_incoming_confirm">匯入</string>
+    <string name="schemes_status_update_available">有新版本</string>
+    <string name="schemes_status_damaged">已損壞</string>
+    <string name="schemes_source_damaged_note">檔案缺失，請刪除後重新匯入。</string>
+    <string name="schemes_source_update">更新</string>
+    <string name="schemes_source_use_new">使用新版本</string>
+    <string name="schemes_source_deleted">已刪除「%1$s」</string>
+    <string name="schemes_source_undo">撤銷</string>
+    <string name="schemes_update_up_to_date">已是最新版本。</string>
+    <string name="schemes_update_up_to_date_named">「%1$s」已是最新版本。</string>
+    <string name="schemes_update_success_named">已更新「%1$s」</string>
+
+    <!-- 輸入方案 · 方案包帶來的用詞記錄 -->
+    <plurals name="schemes_scheme_learning_question">
+        <item quantity="other">這個方案包帶有 %d 份詞庫的用詞記錄，要一起併入嗎？</item>
+    </plurals>
+    <string name="schemes_scheme_learning_merge">併入</string>
+    <string name="schemes_scheme_learning_use_and_merge">使用並併入</string>
+    <string name="schemes_scheme_learning_decline">不併入</string>
+    <string name="schemes_scheme_learning_merging">正在併入用詞記錄…</string>
+    <string name="schemes_grammar_needed">需要這個語法模型才能使用，請先下載或匯入。</string>
+    <string name="schemes_grammar_model_n">語法模型 %1$d</string>
+    <string name="schemes_grammar_download">下載語法模型（約 %1$d MB）</string>
+    <string name="schemes_grammar_from_file">從檔案匯入語法模型</string>
+    <string name="schemes_grammar_later">稍後</string>
+    <string name="schemes_grammar_imported">語法模型已匯入。到「輸入選項 → 糾錯與聯想」選擇它，就能用上。</string>
+    <string name="schemes_grammar_choose">去選擇</string>
+    <!-- Input scheme detail -->
+    <string name="schemes_detail_status_section">狀態</string>
+    <string name="schemes_detail_not_found">未找到輸入方案。</string>
+    <string name="schemes_detail_from_link">來自 %1$s</string>
+    <string name="schemes_detail_from_file">來自本機檔案</string>
+    <string name="schemes_detail_update_section">來源與更新</string>
+    <string name="schemes_detail_reimport_note">想換新版本，重新匯入同一個輸入方案即可。</string>
+    <string name="schemes_detail_builtin_note">內建輸入方案隨松煙一起更新，不能刪除。</string>
+    <string name="schemes_detail_stop_using">停止使用</string>
+    <string name="schemes_detail_stop_using_note">停止使用後，鍵盤將改用「%1$s」。</string>
+</resources>

@@ -609,6 +609,30 @@ class InputSession(
     }
 
     /**
+     * Moves the engine's composition caret by [offset] characters without confirming anything.
+     *
+     * This is the composition caret, not the editor's: nothing is committed and no text is typed.
+     * Returns whether the caret really moved; false when idle, when the backend cannot move the
+     * caret natively (the default), or when the engine reported the same caret position afterwards.
+     */
+    suspend fun moveCompositionCaret(offset: Int): Boolean {
+        if (!inputAvailable() || offset == 0) return false
+        if (!snapshot.isComposing) return false
+        val before = snapshot.preeditCaretByte
+        val moved =
+            try {
+                engine.moveCompositionCaret(offset)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                onError?.invoke(error)
+                return false
+            } ?: return false
+        apply(moved)
+        return snapshot.isComposing && snapshot.preeditCaretByte != before
+    }
+
+    /**
      * Dismisses post-commit prediction. A no-op returning true when there is none; returns false if
      * dismissal fails, keeping the current state and never picking a word for the user.
      */

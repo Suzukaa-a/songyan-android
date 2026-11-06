@@ -64,9 +64,18 @@ class RomajiLayoutTest {
     }
 
     @Test
-    fun theJapaneseBoardIsTheSeventhBundledPreset() {
+    fun theJapaneseBoardsAreTheSeventhAndEighthBundledPresets() {
         assertEquals(
-            listOf("qwerty26", "merged14", "merged18", "phone9", "zhuyin41", "cangjie26", "romaji26"),
+            listOf(
+                "qwerty26",
+                "merged14",
+                "merged18",
+                "phone9",
+                "zhuyin41",
+                "cangjie26",
+                "romaji26",
+                "kana12",
+            ),
             BuiltinLayouts.all.map { it.id },
         )
         // The six existing boards keep their row shapes and authored footers.
@@ -214,12 +223,13 @@ class RomajiLayoutTest {
     }
 
     @Test
-    fun theUnregisteredKanaBoardIsNotDefaulted() {
-        // kana12 has not shipped in this build: nothing may name or resolve it.
-        assertNull(BuiltinLayouts.byId(InputLayoutPolicy.KANA_LAYOUT))
+    fun theShippedKanaBoardIsNeverTheDefault() {
+        // Both Japanese boards ship; the family still defaults to the romaji one and a kana board is
+        // only ever chosen, never guessed from the catalog.
+        assertEquals("kana12", requireNotNull(BuiltinLayouts.byId(InputLayoutPolicy.KANA_LAYOUT)).id)
         val registry = LayoutRegistry.create()
-        assertNull(registry.resolvedLayout(InputLayoutPolicy.KANA_LAYOUT))
-        assertTrue(registry.mainLayoutCandidates(key("kagiroi")).map { it.id }.none { it == "kana12" })
+        assertEquals("kana12", requireNotNull(registry.resolvedLayout(InputLayoutPolicy.KANA_LAYOUT)).id)
+        assertTrue(registry.mainLayoutCandidates(key("kagiroi")).map { it.id }.any { it == "kana12" })
         // A Japanese scheme cannot use 9 keys; the identity shape answers with the romaji board.
         assertEquals("romaji26", registry.defaultMainLayoutId(key("kagiroi", KeyboardLayoutKind.PHONE9)))
         // A catalog that predates the board still defaults to it: bundled boards ship in code.

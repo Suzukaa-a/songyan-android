@@ -13,8 +13,8 @@ import org.junit.Test
  * The registry's share of the layout availability rules: which physical layouts a scheme family may
  * pair with, which one a keyboard defaults to, and how a pairing saved before the rule reads now.
  *
- * The zhuyin, cangjie and romaji boards ship as builtin layouts; the twelve-key kana pad is still a
- * reserved id, so this class stands in for the layout file that will ship with it.
+ * The zhuyin, cangjie, romaji and twelve-key kana boards all ship as builtin layouts, so every
+ * family-owned id here is the real declaration the app registers.
  */
 class LayoutRegistryFamilyTest {
     private fun physical(
@@ -25,10 +25,7 @@ class LayoutRegistryFamilyTest {
             .copyWithId(id, id)
             .copy(input = LayoutInput(schemaID = schemaID, builtinLayout = LayoutInput.Builtin.QWERTY26))
 
-    /** The twelve-key kana pad has not shipped yet, so a stand-in carries its reserved id. */
-    private val reserved = listOf(physical("kana12"))
-
-    private fun registry(layouts: List<LayoutDefinition> = BuiltinLayouts.all + reserved): LayoutRegistry =
+    private fun registry(layouts: List<LayoutDefinition> = BuiltinLayouts.all): LayoutRegistry =
         LayoutRegistry.create(layouts = layouts)
 
     private fun key(
@@ -63,7 +60,7 @@ class LayoutRegistryFamilyTest {
     }
 
     @Test
-    fun aReservedPhysicalLayoutOnlyServesItsOwnFamily() {
+    fun aFamilyOwnedPhysicalLayoutOnlyServesItsOwnFamily() {
         val registry = registry()
         assertTrue("cangjie26" in candidates(registry, "cangjie5", KeyboardLayoutKind.QWERTY26))
         assertTrue("cangjie26" in candidates(registry, "quick5", KeyboardLayoutKind.QWERTY26))
@@ -79,7 +76,7 @@ class LayoutRegistryFamilyTest {
 
     @Test
     fun anUnknownPhysicalLayoutServesEveryFamily() {
-        val registry = registry(BuiltinLayouts.all + reserved + physical("mine26"))
+        val registry = registry(BuiltinLayouts.all + physical("mine26"))
         for (schemaID in listOf("bopomofo_tw", "cangjie5", "kagiroi", "jyut6ping3", "rime_ice")) {
             assertTrue(
                 "$schemaID keeps a user layout",
@@ -122,7 +119,7 @@ class LayoutRegistryFamilyTest {
         val saved = KeyboardComposition(mainLayoutID = "zhuyin41")
         val registry =
             LayoutRegistry.create(
-                layouts = BuiltinLayouts.all + reserved,
+                layouts = BuiltinLayouts.all,
                 compositions = mapOf("cangjie5:qwerty26" to saved),
             )
         // The user's saved pairing is kept as saved, so switching back to a matching scheme restores it.
@@ -190,7 +187,7 @@ class LayoutRegistryFamilyTest {
         val saved = KeyboardComposition(mainLayoutID = "cangjie26")
         val registry =
             LayoutRegistry.create(
-                layouts = BuiltinLayouts.all + reserved,
+                layouts = BuiltinLayouts.all,
                 compositions = mapOf("$alias:qwerty26" to saved),
             )
         assertEquals("cangjie26", registry.compositions.getValue("$alias:qwerty26").mainLayoutID)
@@ -201,7 +198,7 @@ class LayoutRegistryFamilyTest {
         // A folded pairing saved for the alias id reads through the family's identity layout too.
         val folded =
             LayoutRegistry.create(
-                layouts = BuiltinLayouts.all + reserved,
+                layouts = BuiltinLayouts.all,
                 compositions = mapOf("$alias:phone9" to KeyboardComposition(mainLayoutID = "phone9")),
             )
         assertEquals(
@@ -213,8 +210,13 @@ class LayoutRegistryFamilyTest {
 
     @Test
     fun aPhysicalLayoutBoundToAnotherSchemaCannotBecomeADefault() {
-        val registry = registry(BuiltinLayouts.all + listOf(physical("kana12", schemaID = "luna_pinyin")))
-        // kana12 belongs to the Japanese family: its schema binding must not let a Latin scheme default to it.
+        // The explicit binding replaces the shipped board for this catalog; the reserved id stays
+        // the Japanese family's, so the binding must not let a Latin scheme default to it.
+        val registry =
+            registry(
+                BuiltinLayouts.all.filterNot { it.id == "kana12" } +
+                    physical("kana12", schemaID = "luna_pinyin"),
+            )
         assertEquals("qwerty26", registry.defaultMainLayoutId(key("luna_pinyin", KeyboardLayoutKind.QWERTY26)))
         assertFalse("kana12" in candidates(registry, "luna_pinyin", KeyboardLayoutKind.QWERTY26))
     }

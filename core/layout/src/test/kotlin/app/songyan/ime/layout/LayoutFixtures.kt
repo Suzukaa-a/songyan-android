@@ -9,9 +9,11 @@ object LayoutFixtures {
     const val ZHUYIN41 = "layouts/zhuyin41.json"
     const val CANGJIE26 = "layouts/cangjie26.json"
     const val ROMAJI26 = "layouts/romaji26.json"
+    const val KANA12 = "layouts/kana12.json"
 
     /** Every synced author example; the extended boards arrive with the iOS layout commits. */
-    val all: List<String> = listOf(QWERTY26, MERGED14, MERGED18, PHONE9, ZHUYIN41, CANGJIE26, ROMAJI26)
+    val all: List<String> =
+        listOf(QWERTY26, MERGED14, MERGED18, PHONE9, ZHUYIN41, CANGJIE26, ROMAJI26, KANA12)
 
     fun readText(path: String): String =
         LayoutFixtures::class.java.classLoader!!.getResourceAsStream(path)?.use {

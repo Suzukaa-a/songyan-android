@@ -7,7 +7,7 @@ object LayoutBottomRow {
             index >= 0 &&
                 (
                     layout.rows[index].keys.any { it.action.type == LayoutActionKind.SPACE } ||
-                        layout.rows[index].keys.none { it.action.type == LayoutActionKind.CODE }
+                        layout.rows[index].keys.none { it.action.isEngineInput }
                 )
         }
 

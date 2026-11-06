@@ -123,6 +123,28 @@ object BuiltinLayouts {
                 rows = romajiRows() + listOf(controls),
             )
 
+    /**
+     * The Japanese twelve-key (kana12) board: the 4 x 3 kana grid between a leading rail
+     * (composition caret left, 記号, あ/A, the system keyboard switch) and a trailing rail (delete,
+     * space, Return spanning the lower two rows). The grid carries the tap key of each row only:
+     * flick and repeated-tap targets belong to the kana input model, so a cap names its row and the
+     * handler spells that row's kana into the engine. Because the fourth row types kana it is
+     * content, not a control row, so neither the 26-key Shift/Delete chrome nor the automatic footer
+     * replaces it; the leading rail's globe is the only keyboard switch, which keeps the four rows
+     * intact.
+     */
+    val kana12: LayoutDefinition
+        get() =
+            LayoutDefinition(
+                id = InputLayoutPolicy.KANA_LAYOUT,
+                name = "假名 12 键",
+                // The encoding kind stays the 26-key one: the board is a layout of its own,
+                // identified by its id, so no new shape and no new engine case come with it.
+                input = LayoutInput(builtinLayout = LayoutInput.Builtin.QWERTY26),
+                rows = kana12Rows(),
+                auxiliaryAreas = listOf(kana12LeadingRail(), kana12TrailingRail()),
+            )
+
     val phone9: LayoutDefinition
         get() =
             LayoutDefinition(
@@ -242,7 +264,7 @@ object BuiltinLayouts {
 
     /** The ordered builtin layouts; the registry starts from these. */
     val all: List<LayoutDefinition>
-        get() = listOf(qwerty26, merged14, merged18, phone9, zhuyin41, cangjie26, romaji26)
+        get() = listOf(qwerty26, merged14, merged18, phone9, zhuyin41, cangjie26, romaji26, kana12)
 
     fun byId(id: String): LayoutDefinition? = all.firstOrNull { it.id == id }
 
@@ -659,4 +681,68 @@ object BuiltinLayouts {
         rows[2] = LayoutRow(rows[2].keys + longVowelKey)
         return rows
     }
+
+    // MARK: - Japanese twelve-key board
+
+    /**
+     * あ か さ / た な は / ま や ら: the tap glyph of each row with the row id the kana handler turns
+     * into romaji, in drawn order.
+     */
+    private val kana12Grid: List<List<Pair<String, String>>> =
+        listOf(
+            listOf("あ" to "a", "か" to "ka", "さ" to "sa"),
+            listOf("た" to "ta", "な" to "na", "は" to "ha"),
+            listOf("ま" to "ma", "や" to "ya", "ら" to "ra"),
+        )
+
+    /**
+     * 小゛゜ わ 、。?!: the modifier edits the kana just typed, わ taps its row, and the last cap
+     * types its tap mark (。 ？ ！ … are flick targets of the kana model).
+     */
+    private fun kana12BottomRow(): LayoutRow =
+        LayoutRow(
+            listOf(
+                LayoutKey("小゛゜", action = LayoutAction.kanaModifier),
+                LayoutKey("わ", action = LayoutAction.kana("wa")),
+                LayoutKey("、。?!", action = LayoutAction.literal("、")),
+            ),
+        )
+
+    private fun kana12Rows(): List<LayoutRow> =
+        kana12Grid.map { row ->
+            LayoutRow(row.map { (cap, rowID) -> LayoutKey(cap, action = LayoutAction.kana(rowID)) })
+        } + listOf(kana12BottomRow())
+
+    /**
+     * Four keys, one per grid row. Every face is automatic, so the board reads 記号 and あ/A for
+     * Japanese; only the named caret key keeps its stored face because no control draws it.
+     */
+    private fun kana12LeadingRail(): LayoutAuxiliaryArea =
+        LayoutAuxiliaryArea(
+            position = LayoutAuxiliaryArea.Position.LEADING,
+            role = LayoutAuxiliaryArea.Role.EDITING,
+            keys =
+                listOf(
+                    LayoutKey("←", action = LayoutAction.cursorLeft),
+                    automaticKey("記号", LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS)),
+                    automaticKey("あ/A", LayoutAction.languageSwitch()),
+                    automaticKey("🌐", LayoutAction(LayoutActionKind.GLOBE)),
+                ),
+        )
+
+    /**
+     * Delete, space and Return; Return's span is two rows, the existing rail width field, so the
+     * rail covers the same four rows as the grid without a height metadata of its own.
+     */
+    private fun kana12TrailingRail(): LayoutAuxiliaryArea =
+        LayoutAuxiliaryArea(
+            position = LayoutAuxiliaryArea.Position.TRAILING,
+            role = LayoutAuxiliaryArea.Role.EDITING,
+            keys =
+                listOf(
+                    automaticKey("⌫", LayoutAction(LayoutActionKind.BACKSPACE)),
+                    automaticKey("空格", LayoutAction(LayoutActionKind.SPACE)),
+                    automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER), width = 2.0),
+                ),
+        )
 }

@@ -3,6 +3,7 @@ package app.songyan.ime.ime.panels
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
@@ -36,6 +37,50 @@ class QuickSettingsModelTest {
             "s2tw",
             QuickSettingsModel.tiles(selected).first { it.setting == QuickSetting.ENGINE_OPTION }.valueKey,
         )
+    }
+
+    @Test
+    fun characterFormChoicesCarryTheKnownBundledScriptState() {
+        val names = listOf("simplification", "zht", "zh_tw", "zh_hk")
+        val states =
+            listOf(
+                BuiltinScriptState.SIMPLIFIED,
+                BuiltinScriptState.TRADITIONAL,
+                BuiltinScriptState.TAIWAN,
+                BuiltinScriptState.HONG_KONG,
+            )
+        val group =
+            QuickSettingsModel
+                .tiles(
+                    QuickSettingsState(
+                        engineOptions =
+                            names.mapIndexed { index, name ->
+                                EngineOptionTile(
+                                    name,
+                                    EngineOptionKind.TRADITIONAL,
+                                    index == 0,
+                                    names,
+                                    null,
+                                    states[index],
+                                )
+                            },
+                    ),
+                ).single { it.setting == QuickSetting.ENGINE_OPTION }
+        assertEquals(states, group.options.map { it.knownScriptState })
+
+        // An author's group with the same option names keeps its own labels and carries no known state.
+        val custom =
+            QuickSettingsModel
+                .tiles(
+                    QuickSettingsState(
+                        engineOptions =
+                            names.mapIndexed { index, name ->
+                                EngineOptionTile(name, EngineOptionKind.TRADITIONAL, index == 0, names, "原字")
+                            },
+                    ),
+                ).single { it.setting == QuickSetting.ENGINE_OPTION }
+        assertTrue(custom.options.all { it.knownScriptState == null })
+        assertEquals(listOf("原字", "原字", "原字", "原字"), custom.options.map { it.label })
     }
 
     private fun tile(

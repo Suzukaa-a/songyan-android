@@ -3,6 +3,7 @@ package app.songyan.ime.ime.panels
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 
@@ -60,6 +61,8 @@ data class EngineOptionTile(
     val on: Boolean,
     val choiceGroup: List<String> = emptyList(),
     val choiceLabel: String? = null,
+    /** The bundled scheme's known script state; its wording comes from resources instead of [choiceLabel]. */
+    val knownScriptState: BuiltinScriptState? = null,
 )
 
 /**
@@ -112,6 +115,8 @@ data class QuickOption(
     /** What choosing it asks for. */
     val change: QuickSettingChange,
     val label: String? = null,
+    /** The known bundled script state; its label is taken from resources instead of [label]. */
+    val knownScriptState: BuiltinScriptState? = null,
 )
 
 /** One tile of the grid. */
@@ -209,6 +214,7 @@ object QuickSettingsModel {
                                         it.on,
                                         QuickSettingChange.EngineOption(it.name, true),
                                         it.choiceLabel,
+                                        it.knownScriptState,
                                     )
                                 },
                         )

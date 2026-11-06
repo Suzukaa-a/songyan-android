@@ -31,6 +31,7 @@ internal fun KeyboardController.quickSettingsState(): QuickSettingsState =
                         it.value,
                         it.descriptor.choiceGroup,
                         it.descriptor.choiceLabel,
+                        it.descriptor.knownScriptState,
                     )
                 },
     )

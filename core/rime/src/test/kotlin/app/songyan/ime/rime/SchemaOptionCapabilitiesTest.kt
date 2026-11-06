@@ -1,6 +1,8 @@
 package app.songyan.ime.rime
 
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -279,6 +281,94 @@ class SchemaOptionCapabilitiesTest {
             },
         )
         assertTrue(parse(yaml, setOf("t2s.json", "t2tw.json")).isEmpty())
+    }
+
+    /** The bundled schemes' real declaration, as the compiled build carries it. */
+    private val canonicalFourStates =
+        """
+        schema:
+          schema_id: songyan_quanpin
+        engine:
+          filters:
+            - simplifier@zht
+            - simplifier@zh_tw
+            - simplifier@zh_hk
+            - uniquifier
+        switches:
+          - options: [simplification, zht, zh_tw, zh_hk]
+            states: [简体, 繁體, 臺灣, 香港]
+            reset: 0
+        zht:
+          option_name: zht
+          opencc_config: s2t.json
+        zh_tw:
+          option_name: zh_tw
+          opencc_config: s2twp.json
+        zh_hk:
+          option_name: zh_hk
+          opencc_config: s2hk.json
+        """.trimIndent()
+
+    private fun parseBuiltin(
+        yaml: String,
+        schemaID: String = BuiltinTemplateSchemas.QUANPIN,
+    ) = SchemaOptionCapabilities.parse(
+        "pinyin",
+        schemaID,
+        yaml,
+        { true },
+    ) { config ->
+        if (config in setOf("s2t.json", "s2twp.json", "s2hk.json")) EngineOptionKind.TRADITIONAL else null
+    }
+
+    @Test
+    fun theBundledSchemesFourStateGroupCarriesItsKnownStates() {
+        val found = parseBuiltin(canonicalFourStates)
+        assertEquals(listOf("simplification", "zht", "zh_tw", "zh_hk"), found.map { it.name })
+        assertEquals(
+            listOf(
+                BuiltinScriptState.SIMPLIFIED,
+                BuiltinScriptState.TRADITIONAL,
+                BuiltinScriptState.TAIWAN,
+                BuiltinScriptState.HONG_KONG,
+            ),
+            found.map { it.knownScriptState },
+        )
+        // The group itself is unchanged: same labels, same members, same default.
+        assertEquals(listOf("简体", "繁體", "臺灣", "香港"), found.map { it.choiceLabel })
+        assertEquals(listOf(true, false, false, false), found.map { it.defaultValue })
+    }
+
+    @Test
+    fun theFourStatesAreKnownOnlyForTheBundledSchemes() {
+        // An author's scheme with the same option names keeps its own labels and is never reworded.
+        val found = parseBuiltin(canonicalFourStates, schemaID = "rime_ice")
+        assertEquals(4, found.size)
+        assertTrue(found.all { it.knownScriptState == null })
+        assertEquals(listOf("简体", "繁體", "臺灣", "香港"), found.map { it.choiceLabel })
+    }
+
+    @Test
+    fun customLabelsOnTheBundledGroupKeepTheirOwnWording() {
+        val custom = canonicalFourStates.replace("[简体, 繁體, 臺灣, 香港]", "[简, 繁, 台, 港]")
+        val found = parseBuiltin(custom)
+        assertEquals(listOf("简", "繁", "台", "港"), found.map { it.choiceLabel })
+        assertTrue(found.all { it.knownScriptState == null })
+    }
+
+    @Test
+    fun onlyTheCompleteGroupInItsDeclaredOrderIsTheBundledFourStates() {
+        val incomplete =
+            canonicalFourStates
+                .replace("[simplification, zht, zh_tw, zh_hk]", "[simplification, zht, zh_tw]")
+                .replace("[简体, 繁體, 臺灣, 香港]", "[简体, 繁體, 臺灣]")
+        assertTrue(parseBuiltin(incomplete).all { it.knownScriptState == null })
+
+        val reordered =
+            canonicalFourStates
+                .replace("[simplification, zht, zh_tw, zh_hk]", "[simplification, zh_tw, zht, zh_hk]")
+                .replace("[简体, 繁體, 臺灣, 香港]", "[简体, 臺灣, 繁體, 香港]")
+        assertTrue(parseBuiltin(reordered).all { it.knownScriptState == null })
     }
 
     @Test

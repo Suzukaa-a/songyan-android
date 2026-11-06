@@ -220,6 +220,12 @@ data class EngineOptionDescriptor(
     val choiceLabel: String? = null,
     /** The OpenCC config (`s2t`, `s2twp`) a script switch declares; null for other switches. */
     val scriptConfig: String? = null,
+    /**
+     * The bundled scheme's script state this member is, or null when the schema is not one of the
+     * bundled pinyin schemes declaring the complete canonical four-state group. Author-defined
+     * groups keep null and are worded by their own labels.
+     */
+    val knownScriptState: BuiltinScriptState? = null,
 ) {
     val id: String get() = name
 }

@@ -11,6 +11,7 @@ import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
 import app.songyan.ime.ime.PanelIcon
 import app.songyan.ime.ime.R
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import kotlin.math.floor
@@ -184,7 +185,7 @@ class KeyboardSettingsPanelView(
         setting: QuickSetting,
         option: QuickOption,
     ): Cell {
-        val label = option.label ?: context.getString(optionLabel(setting, option.key))
+        val label = optionText(setting, option)
         return Cell(
             icon =
                 if (setting ==
@@ -233,7 +234,7 @@ class KeyboardSettingsPanelView(
                 )
             QuickSetting.ENGINE_OPTION ->
                 if (tile.kind == QuickTile.Kind.CHOICE) {
-                    tile.options.firstOrNull { it.selected }?.label
+                    tile.options.firstOrNull { it.selected }?.let { optionText(tile.setting, it) }
                 } else {
                     context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
                 }
@@ -264,6 +265,24 @@ class KeyboardSettingsPanelView(
             EngineOptionKind.SIMPLIFIED -> R.string.ime_qs_engine_simplified
             EngineOptionKind.EMOJI -> R.string.ime_qs_engine_emoji
             EngineOptionKind.FULL_SHAPE -> R.string.ime_qs_engine_full_shape
+        }
+
+    /** A known bundled state is worded by its resource; every other choice keeps the schema's own label. */
+    private fun optionText(
+        setting: QuickSetting,
+        option: QuickOption,
+    ): String =
+        option.knownScriptState?.let { context.getString(scriptStateLabel(it)) }
+            ?: option.label
+            ?: context.getString(optionLabel(setting, option.key))
+
+    @StringRes
+    private fun scriptStateLabel(state: BuiltinScriptState): Int =
+        when (state) {
+            BuiltinScriptState.SIMPLIFIED -> R.string.ime_qs_script_simplified
+            BuiltinScriptState.TRADITIONAL -> R.string.ime_qs_script_traditional
+            BuiltinScriptState.TAIWAN -> R.string.ime_qs_script_taiwan
+            BuiltinScriptState.HONG_KONG -> R.string.ime_qs_script_hong_kong
         }
 
     @StringRes

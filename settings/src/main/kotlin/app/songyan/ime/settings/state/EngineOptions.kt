@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 
 /** One schema switch of an input method as the settings screen shows it. */
@@ -10,6 +11,8 @@ data class EngineOptionSetting(
     val on: Boolean,
     val choiceGroup: List<String> = emptyList(),
     val choiceLabel: String? = null,
+    /** The bundled scheme's known script state; its wording comes from resources instead of [choiceLabel]. */
+    val knownScriptState: BuiltinScriptState? = null,
 )
 
 /**

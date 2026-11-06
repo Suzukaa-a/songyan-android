@@ -1,7 +1,9 @@
 package app.songyan.ime.rime
 
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionDescriptor
 import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -115,6 +117,7 @@ object SchemaOptionCapabilities {
             }
             if (options.any { it in conversions && conversions[it] == null }) continue
             val reset = scalarField(item, "reset")?.toIntOrNull() ?: 0
+            val knownStates = knownScriptStates(schemaID, options, labels)
             for ((index, option) in options.withIndex()) {
                 result +=
                     EngineOptionDescriptor(
@@ -126,6 +129,7 @@ object SchemaOptionCapabilities {
                         options,
                         labels[index],
                         scriptConfig = declaredConfigs[option],
+                        knownScriptState = knownStates.getOrNull(index),
                     )
             }
         }
@@ -231,6 +235,23 @@ object SchemaOptionCapabilities {
         }
     }
 
+    /**
+     * The bundled schemes' one exclusive four-state group, recognized by the scheme it belongs to
+     * plus its complete declaration (members, order and canonical labels). A group an author defines
+     * with the same option names keeps null, so its own labels stay as written; the UI words only
+     * the group it can prove is the bundled one.
+     */
+    private fun knownScriptStates(
+        schemaID: String,
+        options: List<String>,
+        labels: List<String>,
+    ): List<BuiltinScriptState> {
+        if (schemaID !in BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS) return emptyList()
+        if (options != BuiltinScriptState.entries.map { it.optionName }) return emptyList()
+        if (labels != CANONICAL_SCRIPT_LABELS) return emptyList()
+        return options.map { name -> BuiltinScriptState.entries.first { it.optionName == name } }
+    }
+
     private fun kindOf(config: String): EngineOptionKind? =
         when (config) {
             "s2t.json", "s2tw.json", "s2hk.json", "t2tw.json", "t2hk.json", "t2hkf.json" -> EngineOptionKind.TRADITIONAL
@@ -287,6 +308,9 @@ object SchemaOptionCapabilities {
     }
 
     private fun scalar(text: String): String = text.trim().trim('"', '\'')
+
+    /** The bundled schemes' declared labels; a custom label means the group is no longer the canonical one. */
+    private val CANONICAL_SCRIPT_LABELS = listOf("简体", "繁體", "臺灣", "香港")
 
     private val TRUE_VALUES = setOf("1", "true")
 

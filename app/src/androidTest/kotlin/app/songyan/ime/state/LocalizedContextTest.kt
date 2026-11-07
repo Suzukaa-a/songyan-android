@@ -25,7 +25,7 @@ class LocalizedContextTest {
 
     @Test
     fun anUnsupportedFirstLanguageUsesTheNextSupportedLanguage() {
-        for (tags in listOf("ja-JP,zh-CN", "fr-FR,zh-Hans-CN", "de-DE,zh-CN,en-US")) {
+        for (tags in listOf("ko-KR,zh-CN", "fr-FR,zh-Hans-CN", "de-DE,zh-CN,en-US")) {
             val configuration = android.content.res.Configuration(context.resources.configuration)
             configuration.setLocales(LocaleList.forLanguageTags(tags))
             val translated = context.createConfigurationContext(configuration)
@@ -36,11 +36,16 @@ class LocalizedContextTest {
 
     @Test
     fun aSupportedFirstLanguageWinsAndEnglishIsTheFallback() {
-        for (tags in listOf("en-US,zh-CN", "ja-JP,fr-FR")) {
+        for ((tags, name) in listOf(
+            "en-US,zh-CN" to "Songyan built-in",
+            "ja-JP,zh-CN" to "松煙内蔵",
+            "fr-FR,de-DE" to "Songyan built-in",
+        )) {
             val configuration = android.content.res.Configuration(context.resources.configuration)
             configuration.setLocales(LocaleList.forLanguageTags(tags))
             assertEquals(
-                "Songyan built-in",
+                tags,
+                name,
                 context.createConfigurationContext(configuration).getString(R.string.source_builtin_name),
             )
         }

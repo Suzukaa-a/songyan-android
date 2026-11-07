@@ -162,7 +162,7 @@ class EngineLifecycleDeviceTest {
     @Test
     fun twoStartsThatNeverFinishedMoveTheLearningDataAsideAndTheKeyboardStillTypes() =
         runBlocking {
-            val record = coordinator().ensureDeployed().getOrThrow()
+            val record = coordinator().deployBuiltin().getOrThrow()
             assertEquals(SourceIds.BUILTIN, record.sourceId)
             val learning = LearningData.directory(storage, record.sourceId)
             File(learning, "suspect.userdb/data").apply {
@@ -207,7 +207,7 @@ class EngineLifecycleDeviceTest {
             assertEquals(stamp, BuildStamps.current(context))
             // The runtime refuses compiled data from another librime release, so that release must be
             // part of the stamp: a generation built by another engine is then rebuilt, not loaded.
-            val record: PublicationRecord = coordinator().ensureDeployed().getOrThrow()
+            val record: PublicationRecord = coordinator().deployBuiltin().getOrThrow()
             val engine =
                 RimeEngine.createPrebuilt(
                     sharedDataDir = File(storage.generationDir(record.generation), "resources"),

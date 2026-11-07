@@ -1,6 +1,9 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.settings.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,6 +26,23 @@ class KeyboardLayoutOptionTest {
     @Test
     fun `enabled layouts carry no unavailability note`() {
         assertEquals(null, KeyboardLayoutOption.PHONE9.noteRes(available = true))
+    }
+
+    @Test
+    fun `a scheme family that cannot use a folded shape disables its row`() {
+        val supported = setOf("qwerty26")
+        assertTrue(KeyboardLayoutOption.QWERTY26.availableIn(supported))
+        for (option in listOf(
+            KeyboardLayoutOption.MERGED14,
+            KeyboardLayoutOption.MERGED18,
+            KeyboardLayoutOption.PHONE9,
+        )) {
+            assertFalse("${option.id} must stay disabled", option.availableIn(supported))
+            assertEquals(R.string.layout_unavailable_note, option.noteRes(option.availableIn(supported)))
+            assertNotNull(option.noteRes(option.availableIn(supported)))
+        }
+        // Without scheme facts the static capability stays, as before.
+        assertTrue(KeyboardLayoutOption.PHONE9.availableIn(null))
     }
 
     @Test

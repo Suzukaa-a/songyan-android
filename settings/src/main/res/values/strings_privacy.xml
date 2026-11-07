@@ -5,4 +5,5 @@
     <string name="about_privacy_local">Songyan runs entirely on your device: what you type is never collected or uploaded.</string>
     <string name="about_privacy_network">The app goes online only when you download an input scheme, a grammar model or a prediction dictionary, or import a dictionary from a link, in settings. The keyboard itself never does.</string>
     <string name="about_privacy_private">Password and other private fields are never learned, never saved to clipboard history, and show no suggestions.</string>
+    <string name="about_privacy_tools">Keyboard tools process the text you choose on this device. Text you send to another app is handled by that app.</string>
 </resources>

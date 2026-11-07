@@ -7,6 +7,8 @@ import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.display.SentenceSpelling
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
@@ -34,6 +36,10 @@ internal fun KeyboardController.render() {
         }
     val marked = compositionText(active, snapshot)
     lastMarked = marked
+    // The cached profile of the running scheme decides the glyph forms of the bar, the keys and
+    // the composing text; it is read once here and never recomputed on the key path.
+    val language = active?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    candidates.language = language
     // A chosen reading narrows what the bar lists to the real candidates that read that way.
     candidatesFiltered = readingFilterShowing(active)
     // Only the engine's own menu is read further page by page; suggestions and a reading filter's
@@ -51,7 +57,7 @@ internal fun KeyboardController.render() {
     if (dispatchGeneration == generation &&
         active != null
     ) {
-        callbacks.preedit(if (snapshot.isComposing) marked else "")
+        callbacks.preedit(if (snapshot.isComposing) marked else "", language)
     }
     val english = englishInput
     val currentPage = if (policy.numeric) KeyboardPageKind.NUMERIC else page
@@ -60,7 +66,7 @@ internal fun KeyboardController.render() {
     val config =
         KeyboardPages.Config(
             catalogRevision = catalog.revision,
-            pairing = catalog.registry.composition(compositionKey()),
+            pairing = catalog.registry.composition(compositionKey(), layoutFamilies()),
             layout = layoutKind,
             englishDirectInput = english,
             symbolMarksAscii = marksAscii,
@@ -70,6 +76,7 @@ internal fun KeyboardController.render() {
             showsGlobe = showsSwitchKey,
             jumpLayouts = jumpableLayouts(),
             everydayMarksPage = everydayMarksPage,
+            inputLanguage = language,
         )
     val faces =
         KeyboardFaces(
@@ -78,6 +85,9 @@ internal fun KeyboardController.render() {
             symbolMarksAscii = marksAscii,
             phone = layoutKind == KeyboardLayoutKind.PHONE9,
             symbolLocked = symbolLock,
+            language = language,
+            composing = visible.isComposing,
+            mainLayoutId = mainDefinition().id,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF
@@ -122,12 +132,16 @@ internal fun KeyboardController.render() {
         PhoneKeypadLayout.cyclesFirstKey(phoneDefinition)
     if (phoneShell) {
         val names = keyNames.chinese()
-        val railWindow =
+        val items =
             if (currentPage == null && snapshot.isComposing) {
-                T9RailPolicy.window(railItems(), railScroll)
+                railItems()
             } else {
                 emptyList()
             }
+        // The window is all the view draws; the full count and the first shown index let assistive
+        // technology scroll the choices the three slots do not show.
+        val railFirst = T9RailPolicy.clampScroll(items.size, railScroll)
+        val railWindow = T9RailPolicy.window(items, railScroll)
         // A password field's pages share its taller key area; the shell stretches into it.
         keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
         keyboard.syllableHints = emptyMap()
@@ -146,16 +160,11 @@ internal fun KeyboardController.render() {
                     showsGlobe = showsSwitchKey,
                     labels =
                         PhoneKeypadLayout.Labels(
-                            page = context.getString(R.string.ime_numbers),
-                            language = "中/英",
-                            space = names.getString(R.string.ime_space),
-                            symbols = names.getString(R.string.ime_symbols),
-                            back =
-                                if (english) {
-                                    context.getString(R.string.ime_back)
-                                } else {
-                                    context.getString(R.string.ime_back_chinese)
-                                },
+                            page = names.getString(R.string.ime_numbers),
+                            language = keyNames.languageKeyDrawn(language) ?: "中/英",
+                            space = keyNames.space(language, visible.isComposing),
+                            symbols = keyNames.symbolPageDrawn(language),
+                            back = keyNames.returnToLettersDrawn(language, english),
                             zero = "0",
                             enter = enterLabel(),
                             clear = names.getString(R.string.ime_clear),
@@ -168,6 +177,8 @@ internal fun KeyboardController.render() {
             faces = faces,
             railChoices = railWindow.map { it.label },
             railSelected = railWindow.count { it.selected },
+            railChoiceCount = items.size,
+            railChoiceFirst = railFirst,
         )
         if (phoneDefinition != null) scheduleReadingRail(active, snapshot) else clearRail()
         return
@@ -271,20 +282,27 @@ internal class MainDefinitionMemo(
     val revision: Long,
     val kind: KeyboardLayoutKind,
     val schemaId: String,
+    val family: InputSchemeFamily,
     val definition: LayoutDefinition,
 )
 
 /** The main layout the keyboard draws: the pairing's choice, or the bundled preset of this shape. */
 internal fun KeyboardController.mainDefinition(): LayoutDefinition {
     val snapshot = KeyboardLayoutCatalog.snapshot.value
+    val families = layoutFamilies()
+    val family = families.familyOf(schemaId)
     mainDefinitionMemo
-        ?.takeIf { it.revision == snapshot.revision && it.kind == layoutKind && it.schemaId == schemaId }
-        ?.let { return it.definition }
+        ?.takeIf {
+            it.revision == snapshot.revision &&
+                it.kind == layoutKind &&
+                it.schemaId == schemaId &&
+                it.family == family
+        }?.let { return it.definition }
     val registry = snapshot.registry
     val resolved =
-        registry.resolvedLayout(registry.composition(compositionKey()).mainLayoutID)
+        registry.resolvedLayout(registry.composition(compositionKey(), families).mainLayoutID)
             ?: builtinDefinition(layoutKind)
-    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, resolved)
+    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, family, resolved)
     return resolved
 }
 
@@ -297,8 +315,15 @@ internal fun KeyboardController.builtinDefinition(kind: KeyboardLayoutKind) =
     }
 
 /** The editor's own action label wins: it is the string the editor will act on. */
-internal fun KeyboardController.enterLabel(): String =
-    policy.customActionLabel ?: keyNames.chinese().getString(enterKeyLabelRes(policy.action))
+internal fun KeyboardController.enterLabel(): String {
+    val language = session?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    policy.customActionLabel?.let { return it }
+    // While a composition is open some languages name the confirmation instead of the action.
+    if (session?.snapshot?.isComposing == true) {
+        keyNames.enterComposing(language)?.let { return it }
+    }
+    return keyNames.enterAction(language, enterKeyLabelRes(policy.action))
+}
 
 /**
  * The localized face of the Enter key for an [EditorInfo.IME_MASK_ACTION] action.
@@ -380,7 +405,7 @@ internal fun KeyboardController.syncToolbar() {
         }
     // One-handed mode only exists on a phone-width portrait window; elsewhere the button would do nothing.
     val oneHandAvailable = shell.isAvailable()
-    toolbar.actions =
+    val actions =
         if (hideIdleToolbar) {
             emptyList()
         } else if (customSwitcherRequested && options.canSwitch) {
@@ -396,6 +421,31 @@ internal fun KeyboardController.syncToolbar() {
         } else {
             ToolbarView.DEFAULT_ACTIONS
         }.filter { it != ToolbarView.Action.ONE_HAND || oneHandAvailable }
+    // A private field (a password, or an editor that asked for no personalized learning) offers no
+    // tools at all, neither the entry nor a pinned tool: the rule is about the field, not the tool.
+    // A hidden idle toolbar keeps its row but shows nothing, pinned tools included.
+    val showsTools = toolsAvailable && !hideIdleToolbar
+    toolbar.actions =
+        if (showsTools) {
+            actions.flatMap { action ->
+                if (action == ToolbarView.Action.EDIT) {
+                    listOf(action, ToolbarView.Action.TOOLS)
+                } else {
+                    listOf(action)
+                }
+            }
+        } else {
+            actions
+        }
+    toolbar.tools =
+        if (showsTools) {
+            keyboardTools
+                .filter { it.pinned }
+                .take(ToolbarView.MAXIMUM_PINNED_TOOLS)
+                .map { ToolbarView.PinnedTool(it.id, it.label) }
+        } else {
+            emptyList()
+        }
     menu.setInputMethodOptions(options)
     menu.setToolbarShortcuts(shown = hideIdleToolbar, oneHandAvailable = oneHandAvailable, oneHand = oneHandMode)
 }

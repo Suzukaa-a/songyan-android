@@ -11,6 +11,7 @@ import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
 import app.songyan.ime.ime.PanelIcon
 import app.songyan.ime.ime.R
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import kotlin.math.floor
@@ -48,6 +49,7 @@ class KeyboardSettingsPanelView(
     var onChooseLayout: () -> Unit = {}
     var onOpenQuickContent: () -> Unit = {}
     var onOpenSettings: () -> Unit = {}
+    var onManageTools: () -> Unit = {}
 
     /** What one cell draws and does; the same shape serves a tile of the grid and an option of a page. */
     private class Cell(
@@ -120,7 +122,11 @@ class KeyboardSettingsPanelView(
         switchesStart = if (open == null) tiles.indexOfFirst { it.setting == QuickSetting.ENGINE_OPTION } else -1
         resetScroll()
         invalidate()
+        // The grid and an option page reuse the same virtual ids for different items.
+        announceItemsChanged()
     }
+
+    override fun itemSelected(index: Int): Boolean = cells.getOrNull(index - cellItemBase())?.checked ?: false
 
     private fun apply(change: QuickSettingChange) {
         state = state.apply(change)
@@ -170,7 +176,11 @@ class KeyboardSettingsPanelView(
                         rebuild()
                     }
                     QuickTile.Kind.ACTION ->
-                        if (tile.setting == QuickSetting.LAYOUT) onChooseLayout() else onOpenQuickContent()
+                        when (tile.setting) {
+                            QuickSetting.LAYOUT -> onChooseLayout()
+                            QuickSetting.PHRASES -> onOpenQuickContent()
+                            else -> onManageTools()
+                        }
                 }
             },
         )
@@ -180,7 +190,7 @@ class KeyboardSettingsPanelView(
         setting: QuickSetting,
         option: QuickOption,
     ): Cell {
-        val label = option.label ?: context.getString(optionLabel(setting, option.key))
+        val label = optionText(setting, option)
         return Cell(
             icon =
                 if (setting ==
@@ -218,7 +228,7 @@ class KeyboardSettingsPanelView(
                 )
             QuickSetting.KEY_HEIGHT, QuickSetting.APPEARANCE ->
                 context.getString(optionLabel(tile.setting, tile.valueKey))
-            QuickSetting.LAYOUT -> context.getString(layoutName(tile.valueKey))
+            QuickSetting.LAYOUT -> state.layoutName ?: context.getString(layoutName(tile.valueKey))
             QuickSetting.KEY_SOUND ->
                 context.getString(
                     when {
@@ -229,13 +239,15 @@ class KeyboardSettingsPanelView(
                 )
             QuickSetting.ENGINE_OPTION ->
                 if (tile.kind == QuickTile.Kind.CHOICE) {
-                    tile.options.firstOrNull { it.selected }?.label
+                    tile.options.firstOrNull { it.selected }?.let { optionText(tile.setting, it) }
                 } else {
                     context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
                 }
-            QuickSetting.KEY_HAPTICS, QuickSetting.KEY_PREVIEW ->
+            QuickSetting.KEY_HAPTICS, QuickSetting.KEY_PREVIEW, QuickSetting.KANA12_FLICK_ONLY ->
                 context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
             QuickSetting.PHRASES -> context.getString(R.string.ime_qs_phrases_more)
+            // An action tile names what it opens, so it has no value of its own.
+            QuickSetting.MANAGE_TOOLS -> null
         }
 
     @StringRes
@@ -248,7 +260,9 @@ class KeyboardSettingsPanelView(
             QuickSetting.KEY_SOUND -> R.string.ime_qs_key_sound
             QuickSetting.KEY_HAPTICS -> R.string.ime_qs_key_haptics
             QuickSetting.KEY_PREVIEW -> R.string.ime_qs_key_preview
+            QuickSetting.KANA12_FLICK_ONLY -> R.string.ime_qs_kana12_flick_only
             QuickSetting.PHRASES -> R.string.ime_qs_phrases
+            QuickSetting.MANAGE_TOOLS -> R.string.ime_tools_manage
             // A switch tile is worded by its own kind; see labelOfTile.
             QuickSetting.ENGINE_OPTION -> R.string.ime_panel_settings_title
         }
@@ -260,6 +274,24 @@ class KeyboardSettingsPanelView(
             EngineOptionKind.SIMPLIFIED -> R.string.ime_qs_engine_simplified
             EngineOptionKind.EMOJI -> R.string.ime_qs_engine_emoji
             EngineOptionKind.FULL_SHAPE -> R.string.ime_qs_engine_full_shape
+        }
+
+    /** A known bundled state is worded by its resource; every other choice keeps the schema's own label. */
+    private fun optionText(
+        setting: QuickSetting,
+        option: QuickOption,
+    ): String =
+        option.knownScriptState?.let { context.getString(scriptStateLabel(it)) }
+            ?: option.label
+            ?: context.getString(optionLabel(setting, option.key))
+
+    @StringRes
+    private fun scriptStateLabel(state: BuiltinScriptState): Int =
+        when (state) {
+            BuiltinScriptState.SIMPLIFIED -> R.string.ime_qs_script_simplified
+            BuiltinScriptState.TRADITIONAL -> R.string.ime_qs_script_traditional
+            BuiltinScriptState.TAIWAN -> R.string.ime_qs_script_taiwan
+            BuiltinScriptState.HONG_KONG -> R.string.ime_qs_script_hong_kong
         }
 
     @StringRes
@@ -307,7 +339,9 @@ class KeyboardSettingsPanelView(
             QuickSetting.KEY_SOUND -> R.drawable.ic_qs_sound
             QuickSetting.KEY_HAPTICS -> R.drawable.ic_qs_vibration
             QuickSetting.KEY_PREVIEW -> R.drawable.ic_qs_preview
+            QuickSetting.KANA12_FLICK_ONLY -> R.drawable.ic_edit_left
             QuickSetting.PHRASES -> R.drawable.ic_toolbar_phrases
+            QuickSetting.MANAGE_TOOLS -> R.drawable.ic_toolbar_tools
             QuickSetting.ENGINE_OPTION -> R.drawable.ic_qs_engine_option
         }
 

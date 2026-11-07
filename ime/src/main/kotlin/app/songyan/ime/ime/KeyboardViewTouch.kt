@@ -36,6 +36,9 @@ internal fun KeyboardView.feedback(
  * Feedback already fired at the accepted DOWN, so nothing here ticks again.
  */
 internal fun KeyboardView.activate(snapshot: KeyPressSnapshot) {
+    // The twelve-key surface reports intents instead of layout actions; every other page keeps the
+    // ordinary dispatch below.
+    if (activateKana12(snapshot.action)) return
     val rail = snapshot.railLabel
     if (rail != null) {
         // An engine-backed rail choice: a lock option or a candidate reading. One already applied
@@ -104,6 +107,11 @@ internal fun KeyboardView.handleDown(
  * not echo what is typed, and for keys whose face is not a character (Shift, Return, rails).
  */
 internal fun KeyboardView.showPreview(press: Press) {
+    // A kana key previews its flick targets as a cross instead of magnifying its own face.
+    if (isKana12FlickPress(press)) {
+        if (keyPreviewEnabled && !previewSuppressed) invalidateKana12Cross(press)
+        return
+    }
     val layer = popupLayer ?: return
     if (!keyPreviewEnabled || previewSuppressed) return
     val index = press.key
@@ -377,6 +385,8 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         val press = pointers.get(event.getPointerId(i)) ?: continue
         val x = event.getX(i)
         val y = event.getY(i)
+        // A kana press follows its own cross preview; no other gesture route sees it.
+        if (trackKana12Flick(press, x, y)) continue
         val tracker = press.tracker
         if (tracker != null) {
             mergedMove(press, tracker, x, y)
@@ -646,33 +656,40 @@ internal fun KeyboardView.handleUp(
         val x = event.getX(pointerIndex)
         val y = event.getY(pointerIndex)
         val now = SystemClock.uptimeMillis()
-        if (popupKey >= 0 && popupOwner == pointerId) {
-            finishPopup(press, x, y)
-        } else {
-            val choice = press.tracker?.choice
-            val codes = press.snapshot.swipeCodes
-            when {
-                choice != null && codes != null -> {
-                    codes.getOrNull(choice)?.let { onAction(LayoutAction(LayoutActionKind.CODE, it)) }
-                }
-                press.flickArmed -> press.flickTarget?.let { onAction(it.action) }
-                press.railDragged -> Unit
-                press.flickVoid -> Unit
-                // Delete already acted at its DOWN (and on every repeat); the release adds nothing.
-                press.snapshot.isBackspace -> Unit
-                !press.held && !press.moved -> activate(press.snapshot)
-                // Holding space only arms caret mode; a hold that never moved the caret is
-                // still a space.
-                press.held && !press.moved && press.snapshot.isSpace -> activate(press.snapshot)
-                !press.held && !press.snapshot.isSpace -> {
-                    val target = KeyGeometry.hit(hitBounds, x, y)
-                    when {
-                        // Lifted on the key it pressed: that key was meant, whatever it does, as a
-                        // View's click survives drift that stays inside it. Without this a function
-                        // key (Shift, Return, a page key) ticked on the press and then did nothing.
-                        target >= 0 && target == press.key -> activate(press.snapshot)
-                        // A drifted finger still activates the key it is over, whatever it types.
-                        target >= 0 && SlideRecovery.accepts(keys[target].action) -> activate(keySnapshot(target))
+        when {
+            popupKey >= 0 && popupOwner == pointerId -> finishPopup(press, x, y)
+            // A kana press types the direction its cross preview resolved to; it types nothing else.
+            // The release point is the last sample, even when no MOVE announced it.
+            isKana12FlickPress(press) -> {
+                trackKana12Flick(press, x, y)
+                releaseKana12Flick(press)
+            }
+            else -> {
+                val choice = press.tracker?.choice
+                val codes = press.snapshot.swipeCodes
+                when {
+                    choice != null && codes != null -> {
+                        codes.getOrNull(choice)?.let { onAction(LayoutAction(LayoutActionKind.CODE, it)) }
+                    }
+                    press.flickArmed -> press.flickTarget?.let { onAction(it.action) }
+                    press.railDragged -> Unit
+                    press.flickVoid -> Unit
+                    // Delete already acted at its DOWN (and on every repeat); the release adds nothing.
+                    press.snapshot.isBackspace -> Unit
+                    !press.held && !press.moved -> activate(press.snapshot)
+                    // Holding space only arms caret mode; a hold that never moved the caret is
+                    // still a space.
+                    press.held && !press.moved && press.snapshot.isSpace -> activate(press.snapshot)
+                    !press.held && !press.snapshot.isSpace -> {
+                        val target = KeyGeometry.hit(hitBounds, x, y)
+                        when {
+                            // Lifted on the key it pressed: that key was meant, whatever it does, as a
+                            // View's click survives drift that stays inside it. Without this a function
+                            // key (Shift, Return, a page key) ticked on the press and then did nothing.
+                            target >= 0 && target == press.key -> activate(press.snapshot)
+                            // A drifted finger still activates the key it is over, whatever it types.
+                            target >= 0 && SlideRecovery.accepts(keys[target].action) -> activate(keySnapshot(target))
+                        }
                     }
                 }
             }
@@ -680,7 +697,9 @@ internal fun KeyboardView.handleUp(
         fadeOut(press, now)
         endFlick(press.key)
         if (press.snapshot.isSpace) setCursorDragging(false)
-        if (press.held || !press.moved || press.tracker?.choice != null) onReleaseFeedback()
+        if (press.held || !press.moved || press.tracker?.choice != null || isKana12FlickPress(press)) {
+            onReleaseFeedback()
+        }
         pointers.remove(pointerId)
         popupLayer?.hidePreview(KeyMotion.PREVIEW_HOLD_MS)
         invalidateKey(press.key)
@@ -774,4 +793,6 @@ internal fun KeyboardView.fadeOut(
     if (press.key in releases.indices && identities.getOrNull(press.key) == press.snapshot.identity) {
         releases[press.key] = at
     }
+    // The cross preview belongs to the press: the area it covered is repainted once it is gone.
+    if (isKana12FlickPress(press)) invalidateKana12Cross(press)
 }

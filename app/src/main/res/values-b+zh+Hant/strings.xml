@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">松煙</string>
+    <string name="ime_name">松煙輸入法</string>
+    <string name="subtype_pinyin">拼音</string>
+
+    <!-- Deploy process foreground notification. -->
+    <string name="deploy_channel_name">輸入方案準備</string>
+    <string name="deploy_channel_description">首次使用、更新或匯入輸入方案時顯示進度。</string>
+    <string name="deploy_notification_title">正在準備輸入方案</string>
+    <string name="deploy_notification_text">準備完成後即可使用鍵盤。</string>
+    <string name="deploy_notification_failed">輸入方案準備失敗，輕觸開啟松煙重試。</string>
+    <string name="deploy_notification_done">輸入方案已就緒。</string>
+    <string name="deploy_notification_dictionary_title">正在匯入詞庫</string>
+    <string name="deploy_notification_dictionary_text">完成後鍵盤會自動使用。</string>
+    <string name="deploy_notification_scheme_title">正在匯入輸入方案</string>
+    <string name="deploy_notification_scheme_text">完成後鍵盤會自動使用。</string>
+
+    <string name="import_cancelled">已取消匯入。</string>
+    <string name="import_path_separator">、</string>
+
+    <!-- Imported dictionary: request results (shown by settings 輸入方案). -->
+    <string name="dictionary_import_error_unsupported_file">這裡只能匯入 .dict.yaml 詞庫檔案。</string>
+    <string name="dictionary_import_error_encoding">讀不出這個詞庫的文字。請用 UTF-8 編碼儲存後再試。</string>
+    <string name="dictionary_import_error_too_large">檔案太大，最大支援 %s。</string>
+    <string name="dictionary_import_error_too_many_files">一次最多匯入 128 個詞庫檔案。</string>
+    <string name="dictionary_import_error_duplicate_file">選中了兩個同名的詞庫檔案。</string>
+    <string name="dictionary_import_error_too_many_entries">詞庫超過 200 萬條。</string>
+    <string name="dictionary_import_error_empty">詞庫裡沒有詞條。</string>
+    <string name="dictionary_import_error_format">不支援這種詞庫格式。</string>
+    <string name="dictionary_import_error_missing_dependencies">還缺少它引用的詞庫：%s。請把這些檔案一起選上。</string>
+    <string name="dictionary_import_error_dependency_cycle">這些詞庫互相引用，無法匯入。</string>
+    <string name="dictionary_import_error_unreferenced_file">這些檔案和要匯入的詞庫無關：%s。</string>
+    <string name="dictionary_import_error_template">這個詞庫和當前版本的松煙不相容，請更新後再試。</string>
+    <string name="dictionary_import_error_staging">匯入沒有完成，請重試。</string>
+    <string name="dictionary_import_error_read">無法讀取這個詞庫檔案。</string>
+    <string name="dictionary_import_error_url">請填以 https:// 開頭的連結。</string>
+    <string name="dictionary_import_error_url_file">連結要直接指向 .dict.yaml 檔案。</string>
+    <string name="dictionary_import_error_download">下載詞庫失敗，請檢查網路後重試。</string>
+    <string name="dictionary_import_error_download_timeout">下載時間太長，已停止。請檢查網路後重試。</string>
+    <string name="dictionary_import_error_redirects">連結跳轉次數過多，請更換連結。</string>
+    <string name="dictionary_import_error_insecure_redirect">連結跳轉到了不安全的 http 地址，請換一個連結。</string>
+    <string name="dictionary_import_error_deploy">詞庫匯入失敗，請重試。</string>
+    <string name="dictionary_import_error_deploy_unavailable">正在處理上一個匯入，完成後再試。</string>
+    <string name="dictionary_import_error_timeout">匯入時間太長，已停止。請重試。</string>
+    <string name="dictionary_import_error_remove">移除詞庫沒有完成，請稍後重試。</string>
+
+    <!-- Imported scheme package: request results (shown by settings 輸入方案). -->
+    <string name="scheme_import_error_not_a_package">這裡只能匯入 .zip 格式的輸入方案。</string>
+    <string name="scheme_import_error_name_encoding">壓縮包裡的檔名不是 UTF-8 編碼。請用系統自帶的壓縮工具重新壓縮後再試。</string>
+    <string name="scheme_import_error_too_large">檔案太大，最大支援 %s。</string>
+    <string name="scheme_import_error_too_many_files">壓縮包裡的檔案太多，最多支援 2000 個。</string>
+    <string name="scheme_import_error_unsafe_files">壓縮包裡有不安全的檔案路徑，請換一個檔案。</string>
+    <string name="scheme_import_error_user_data">壓縮包裡帶有學習資料（.userdb），請去掉後再試。</string>
+    <string name="scheme_import_error_missing_scheme">這個檔案裡沒有可用的輸入方式。</string>
+    <string name="scheme_import_error_invalid_scheme">輸入方案裡的配置檔案有誤，請檢查檔案內容。</string>
+    <string name="scheme_import_error_encoding">輸入方案裡有檔案不是 UTF-8 文字。</string>
+    <string name="scheme_import_error_missing_dependency">輸入方案缺少這些檔案：%s。</string>
+    <string name="scheme_import_error_checksum">下載的檔案與這個輸入方案記錄的校驗值不一致，沒有安裝。</string>
+    <string name="scheme_import_error_conflicting_files">這個輸入方案的兩個壓縮包提供了同名但內容不同的檔案：%s。請只保留一個壓縮包。</string>
+    <string name="scheme_import_error_invalid_model">輸入方案裡的語法模型檔案不可用。</string>
+    <string name="scheme_import_error_builtin_customization">這個輸入方案會改動松煙自帶的輸入方式，暫不支援。</string>
+    <string name="scheme_import_error_read">無法讀取這個檔案。</string>
+    <string name="scheme_import_error_staging">匯入沒有完成，請重試。</string>
+    <string name="scheme_import_error_deploy_unavailable">正在處理上一個匯入，完成後再試。</string>
+    <string name="scheme_import_error_deploy">輸入方案匯入失敗，請重試。</string>
+    <string name="scheme_import_error_timeout">匯入時間太長，已停止。請重試。</string>
+
+    <!-- Stored sources (settings 輸入方案). -->
+    <string name="source_builtin_name">松煙內建</string>
+    <string name="source_error_activate">沒能換用這個輸入方案，請重試。</string>
+    <string name="source_error_delete">沒能刪除這個輸入方案，請重試。</string>
+
+    <!-- Settings: built-in scheme and keyboard names. -->
+    <string name="scheme_builtin_quanpin">全拼</string>
+    <string name="scheme_builtin_flypy">小鶴雙拼</string>
+    <string name="keyboard_input_method_pinyin">拼音</string>
+    <string name="keyboard_layout_14">14 鍵</string>
+    <string name="keyboard_layout_18">18 鍵</string>
+    <string name="keyboard_layout_9">9 鍵</string>
+    <string name="keyboard_layout_26">26 鍵</string>
+    <string name="keyboard_layout_zhuyin41">注音 41 鍵</string>
+    <string name="keyboard_layout_cangjie26">倉頡 26 鍵</string>
+    <string name="keyboard_layout_romaji26">羅馬字 26 鍵</string>
+
+    <!-- IME status overlay before a published generation exists. -->
+    <string name="dictionary_import_error_row">「%1$s」第 %2$d 行的列數不對。</string>
+    <string name="dictionary_import_error_word">「%1$s」第 %2$d 行的詞不是漢字。</string>
+    <string name="dictionary_import_error_syllable_count">「%1$s」第 %2$d 行的拼音個數與字數不一致。</string>
+    <string name="dictionary_import_error_syllable_unknown">「%1$s」第 %2$d 行有無法識別的拼音。</string>
+    <string name="dictionary_import_error_weight">「%1$s」第 %2$d 行的權重不是有效數字。</string>
+    <string name="dictionary_import_error_row_unknown">詞庫裡有無法識別的詞條。</string>
+    <string name="dictionary_import_error_download_host">找不到這個連結的網址，請檢查連結。</string>
+    <string name="dictionary_import_error_download_offline">沒有網路連線，請檢查網路後重試。</string>
+    <string name="dictionary_import_error_download_server">伺服器出錯了（%1$s），請稍後重試。</string>
+    <string name="dictionary_import_error_download_not_found">這個連結下沒有檔案。</string>
+    <string name="dictionary_import_error_target">這個輸入方案不支援加入詞庫，請選擇其他輸入方案。</string>
+    <string name="scheme_import_error_dictionary_stack">新版本的方案包無法加入你匯入的詞庫。先移除這個詞庫，再匯入。</string>
+    <string name="scheme_import_error_keyboard_companion">這個輸入方案無法用於 14 鍵、18 鍵和 9 鍵，沒有匯入。請檢查方案裡的配置檔案。</string>
+    <string name="features_error_prediction_file">所選檔案不是有效的聯想詞庫（predict.db）。</string>
+    <string name="features_error_grammar_file">所選檔案不是可用的語法模型（.gram）。</string>
+    <string name="features_error_too_large">檔案太大，最大支援 512 MB。</string>
+    <string name="features_error_read">無法開啟所選檔案，請重新選擇。</string>
+    <string name="features_error_save">未能儲存，請重試。</string>
+    <string name="deploy_notification_download_title">正在下載</string>
+    <string name="deploy_notification_download_text">下載完成後會自動儲存。</string>
+    <string name="learning_backup_file_name">松煙-學習備份-%1$s.json</string>
+    <string name="learning_safety_file_name">松煙-合併前備份-%1$s.json</string>
+    <string name="learning_error_no_source">還沒有使用中的輸入方案。</string>
+    <string name="learning_error_nothing">使用中的輸入方案還沒有學到詞。</string>
+    <string name="learning_error_backup">沒能讀取學習資料，請重試。</string>
+    <string name="learning_error_no_safety_backup">還沒有合併前的備份。</string>
+    <string name="learning_error_write">沒能儲存檔案，請重新選擇儲存位置。</string>
+    <string name="learning_error_read">無法讀取所選的檔案，請重新選擇。</string>
+    <string name="learning_error_invalid">這個檔案不是松煙學習備份，或者已經損壞。沒有做任何修改。</string>
+    <string name="learning_error_other_source">這份備份來自其他輸入方案，不能併入使用中的輸入方案。沒有做任何修改。</string>
+    <string name="learning_error_safety">沒能先儲存當前的學習資料，合併沒有開始。</string>
+    <string name="learning_error_merge">合併沒有完成，學習資料沒有改變。請重試。</string>
+    <string name="learning_error_quarantine_gone">這份學習資料已經不在了。</string>
+    <string name="learning_error_quarantine_unreadable">這份學習資料無法安全讀取，已原樣保留。沒有做任何修改。</string>
+    <string name="learning_error_quarantine_not_in_use">請先使用這份資料所屬的輸入方案，再來恢復。沒有做任何修改。</string>
+    <string name="learning_error_quarantine_empty">這份學習資料裡沒有可恢復的詞。</string>
+    <string name="learning_error_delete">沒能刪除，請重試。</string>
+    <string name="learning_error_too_large">所選的檔案太多或太大，請分幾次匯入。沒有做任何修改。</string>
+    <string name="learning_files_none_found">所選的位置裡沒有 Rime 詞庫檔案。</string>
+    <string name="learning_files_merge">%1$s，共 %2$s，會併入「%3$s」。</string>
+    <string name="learning_files_merged">已併入%1$s，共 %2$s。</string>
+    <string name="learning_files_nothing">所選檔案裡沒有能併入的詞庫，沒有做任何修改。</string>
+    <string name="learning_files_skipped_header">這些檔案不會併入：</string>
+    <string name="learning_files_skip_invalid">%1$s：不是 Rime 詞庫檔案，或者已經損壞</string>
+    <string name="learning_files_skip_too_large">%1$s：檔案太大</string>
+    <string name="learning_files_skip_empty">%1$s：裡面沒有詞</string>
+    <string name="learning_files_skip_not_installed">%1$s：使用中的輸入方案用不到這份詞庫</string>
+    <string name="learning_files_other_scheme_hint">如果這些詞庫屬於你的其他輸入方案，先在「我的鍵盤」裡使用那個輸入方案，再來匯入。</string>
+    <plurals name="learning_files_dictionaries">
+        <item quantity="other">%d 份詞庫</item>
+    </plurals>
+    <plurals name="learning_files_entries">
+        <item quantity="other">%s 條</item>
+    </plurals>
+    <plurals name="learning_files_not_merged">
+        <item quantity="other">另有 %d 個檔案沒有併入。</item>
+    </plurals>
+    <string name="scheme_import_error_link_not_zip">連結沒有指向 ZIP 檔案。請填寫 ZIP 下載連結，或 GitHub 倉庫地址。</string>
+    <string name="scheme_update_error_missing">要更新的輸入方案已經不在了。</string>
+    <string name="source_error_restore">沒能恢復這個輸入方案。</string>
+    <string name="source_damaged_name">已損壞的輸入方案</string>
+    <!-- 「檔案」應用裡的 Rime 配置資料夾，以及應用更改時的提示。 -->
+    <string name="rime_config_root_title">松煙 Rime 配置</string>
+    <string name="rime_config_folder_edit">我的配置</string>
+    <string name="rime_config_folder_active">使用中：%1$s</string>
+    <string name="rime_config_folder_active_none">使用中</string>
+    <string name="rime_config_folder_sources">全部輸入方案</string>
+    <string name="rime_editor_unsafe_reference">這個檔案裡有指向別處檔案的寫法，沒有儲存。</string>
+    <string name="rime_config_error_many">檔案太多，改動沒有應用。最多放 100 個檔案。</string>
+    <string name="rime_config_error_detail">「%1$s」：%2$s</string>
+    <string name="rime_config_error_deploy">改動沒能生效，鍵盤仍用原來的設定。檢查最近改過的檔案後再試。</string>
+    <string name="rime_config_error_unavailable">現在沒法應用更改，請稍後再試。</string>
+    <string name="rime_config_skipped">你的配置不適用於使用中的輸入方案，這個方案現在按原樣使用。</string>
+    <string name="rime_config_refused_read_only">這個資料夾只能檢視。把檔案放進「我的配置」，再到松煙設定裡點「應用更改」。</string>
+    <string name="rime_config_refused_folder">「我的配置」裡只能放一個 lua 資料夾，用來放擴充套件指令碼。其餘檔案直接放進去。</string>
+    <string name="rime_config_refused_type">「%1$s」放不進來。「我的配置」只收 .yaml 和 .txt 檔案。</string>
+    <string name="rime_config_refused_script_type">「%1$s」放不進來。這個資料夾只收 .lua 檔案。</string>
+    <string name="rime_config_refused_large">「%1$s」太大，沒法在這裡修改。每個檔案不超過 4 MB。</string>
+    <!-- 新建配置檔案開頭的註釋行，是檔案內容，不是介面文案。 -->
+    <string name="rime_config_template_hint">在 patch 下寫要改的項，改完回到松煙點「應用更改」。</string>
+    <string name="rime_config_template_example">例：每頁顯示 7 個候選</string>
+    <string name="rime_config_script_taken">輸入方案裡已經有叫「%1$s」的指令碼，換個名字。</string>
+    <string name="rime_config_script_template_hint">在配置檔案裡寫上 lua_filter@*%1$s 就會用到它（也可以是 lua_translator、lua_processor、lua_segmentor）。</string>
+    <string name="rime_config_grammar_example_new">語法模型引數示例（去掉行首的 # 後生效）：</string>
+    <string name="rime_config_grammar_example_under">語法模型引數示例（去掉行首的 # 後生效，這些行要放在上面的 patch: 下面）：</string>
+    <string name="rime_config_grammar_example_empty">語法模型引數示例（先把上面的 patch: {} 改成 patch:，再去掉行首的 # 後生效）：</string>
+    <string name="package_learning_failed">方案包已匯入，但用詞記錄沒有併入。你已學到的詞沒有改動。</string>
+    <string name="package_learning_not_in_use">沒能切換到這個輸入方案，用詞記錄沒有併入。</string>
+    <string name="package_learning_nothing">方案包裡的用詞記錄與它的詞庫對不上，沒有併入。</string>
+    <string name="package_learning_gone">這些用詞記錄已經不在了。</string>
+
+    <string name="process_text_copied">結果已複製，請貼上到需要的位置。</string>
+</resources>

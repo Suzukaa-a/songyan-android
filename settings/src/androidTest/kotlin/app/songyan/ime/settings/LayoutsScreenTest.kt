@@ -16,6 +16,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
@@ -193,5 +195,46 @@ class LayoutsScreenTest {
         compose.onNodeWithText(str(R.string.layouts_action_delete)).performClick()
         compose.waitForIdle()
         assertNull(library.registry.value!!.page(free.id))
+    }
+
+    @Test
+    fun aPageAPhysicalBoardUsesNamesThatBoard() {
+        val used = KeyboardPagePresets.numericRowsPage(ascii = false).duplicated("zhuyin-digits", "注音数字")
+        val key = KeyboardCompositionKey("bopomofo_tw", LayoutInput.Builtin.QWERTY26)
+        val library =
+            InMemoryLayoutLibrarySource(
+                LayoutRegistry
+                    .create()
+                    .withPage(used)
+                    .withComposition(
+                        KeyboardComposition(mainLayoutID = "zhuyin41", numericPageID = used.id),
+                        key.rawValue,
+                    ),
+            )
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(
+                    modelClass: Class<T>,
+                    extras: CreationExtras,
+                ): T = LayoutLibraryViewModel(library) as T
+            }
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                PagesScreen(
+                    onBack = null,
+                    onEdit = {},
+                    inputMethodNames = mapOf("bopomofo_tw" to "注音"),
+                    families = LayoutFamilyContext.of("bopomofo_tw" to InputSchemeFamily.ZHUYIN),
+                    viewModel = viewModel(factory = factory),
+                )
+            }
+        }
+        val keyboard = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41))
+        val usage = str(R.string.pages_used_by_one, keyboard)
+        compose
+            .onNode(hasText(used.name, substring = true) and hasText(usage, substring = true))
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 }

@@ -1,0 +1,44 @@
+<resources>
+    <string name="rime_config_section">Rime 設定</string>
+    <string name="rime_config_body">パソコンの Rime と同じように、xxx.custom.yaml などのファイルで入力パックを変更できます。ファイルは「ファイル」アプリの「松煙 Rime 設定」にあり、「変更を適用」をタップすると反映されます。</string>
+    <string name="rime_config_open">「ファイル」アプリで開く</string>
+    <string name="rime_config_apply">変更を適用</string>
+    <string name="rime_config_applying">適用しています…</string>
+    <string name="rime_config_pending">未適用の変更があります。</string>
+    <string name="rime_config_empty">設定ファイルはまだありません。</string>
+    <plurals name="rime_config_in_use">
+        <item quantity="other">キーボードは設定ファイル %1$d 個を使っています。</item>
+    </plurals>
+    <string name="rime_config_applied">変更を適用しました。</string>
+    <string name="rime_config_no_files_app">「ファイル」アプリが見つかりません。</string>
+    <string name="rime_config_failed">変更を適用できませんでした。</string>
+    <string name="rime_config_edit">入力方式を変更</string>
+    <string name="rime_config_edit_global">全体設定</string>
+    <string name="rime_config_no_editor">テキストを編集できるアプリがありません。テキストエディタをインストールしてからやり直してください。</string>
+    <string name="rime_config_changed_files">変更したファイル</string>
+    <string name="rime_config_restore">元の状態に戻す</string>
+    <string name="rime_config_file_updated">%1$s には新しいバージョンがあります。変更したバージョンを引き続き使います。</string>
+    <string name="rime_config_override_notice">次のファイルは変更したバージョンに置き換わりました。入力パックを更新してもこれらのファイルは更新されません。ほかのファイルは通常どおり更新されます。</string>
+    <string name="rime_config_override_ok">了解</string>
+    <string name="rime_config_new_script">拡張スクリプトを新規作成</string>
+    <string name="rime_config_script_name">名前</string>
+    <string name="rime_config_script_name_rule">小文字、数字、アンダースコアだけを使えます。</string>
+    <string name="rime_config_script_create">作成</string>
+    <string name="rime_config_scripts_unused">拡張スクリプトはまだ使われていません。「変更を適用」をタップして確認すると使われます。</string>
+    <string name="rime_config_scripts_first_title">自分の拡張スクリプトを使いますか？</string>
+    <string name="rime_config_scripts_first_body">拡張スクリプトは入力内容をすべて読み取れます。松煙はスクリプトによるコマンド実行、外部プログラムの読み込み、通信を禁止していますが、スクリプトエンジン自体の弱点を突かれる可能性は残ります。信頼できる提供元のスクリプトだけを使ってください。</string>
+    <string name="rime_config_scripts_changed">次の拡張スクリプトが変更されています。</string>
+    <string name="rime_config_scripts_use">使う</string>
+    <string name="rime_editor_scripts_banner">このファイルには拡張スクリプトが含まれています。拡張スクリプトは入力内容を読み取れます。提供元を信頼できる場合にだけ使ってください。</string>
+    <string name="rime_editor_save">保存する</string>
+    <string name="rime_editor_more">その他のオプション</string>
+    <string name="rime_editor_open_elsewhere">ほかのアプリで開く</string>
+    <string name="rime_editor_saved">保存しました。変更を適用すると反映されます。</string>
+    <string name="rime_editor_load_failed">このファイルを開けませんでした。</string>
+    <string name="rime_editor_discard_title">編集を破棄しますか？</string>
+    <string name="rime_editor_discard_body">変更した内容はまだ保存されていません。</string>
+    <string name="rime_editor_external_changed">ファイルがほかのアプリで変更されました</string>
+    <string name="rime_editor_external_changed_body">ファイルを読み込むと現在の編集が置き換わります。編集を残して保存すると、ファイルが上書きされます。</string>
+    <string name="rime_editor_load_file">ファイルを読み込む</string>
+    <string name="rime_editor_keep_edits">編集を残す</string>
+</resources>

@@ -52,4 +52,8 @@
     <string name="ime_qs_label_value">%1$s, %2$s</string>
     <string name="ime_qs_option_selected">%1$s, selected</string>
     <string name="ime_qs_engine_character_form">Character form</string>
+    <string name="ime_qs_script_simplified">Simplified</string>
+    <string name="ime_qs_script_traditional">Traditional</string>
+    <string name="ime_qs_script_taiwan">Taiwan</string>
+    <string name="ime_qs_script_hong_kong">Hong Kong</string>
 </resources>

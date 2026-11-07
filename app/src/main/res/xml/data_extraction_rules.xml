@@ -15,12 +15,14 @@
         <include domain="file" path="rime/config/applied" />
         <include domain="file" path="rime/config/overrides.json" />
         <include domain="file" path="content" />
+        <include domain="file" path="tools" />
         <include domain="file" path="layouts" />
         <include domain="file" path="appearance" />
         <include domain="file" path="datastore" />
         <include domain="sharedpref" path="quick_insert.xml" />
         <exclude domain="file" path="content/clipboard.json" />
         <exclude domain="file" path="content/.lock" />
+        <exclude domain="file" path="tools/.lock" />
     </cloud-backup>
     <device-transfer>
         <include domain="file" path="rime/user" />
@@ -33,11 +35,13 @@
         <include domain="file" path="rime/config/overrides.json" />
         <include domain="file" path="rime/learning-snapshots" />
         <include domain="file" path="content" />
+        <include domain="file" path="tools" />
         <include domain="file" path="layouts" />
         <include domain="file" path="appearance" />
         <include domain="file" path="datastore" />
         <include domain="sharedpref" path="quick_insert.xml" />
         <exclude domain="file" path="rime/sources/songyan-builtin" />
+        <exclude domain="file" path="tools/.lock" />
         <exclude domain="file" path="rime/features/features.lock" />
         <exclude domain="file" path="content/clipboard.json" />
         <exclude domain="file" path="content/.lock" />

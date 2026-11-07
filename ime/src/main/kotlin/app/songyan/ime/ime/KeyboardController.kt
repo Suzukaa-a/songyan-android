@@ -20,8 +20,13 @@ import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.ime.panels.QuickSettingsState
+import app.songyan.ime.ime.tools.KeyboardTool
+import app.songyan.ime.ime.tools.KeyboardToolList
+import app.songyan.ime.ime.tools.KeyboardToolsEditor
+import app.songyan.ime.ime.tools.KeyboardToolsGateway
 import app.songyan.ime.keyboard.engine.CandidateReadingFilter
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.SpellingRailChoices
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -67,12 +72,16 @@ class KeyboardController(
     private val quickInsert: QuickInsertHost? = null,
     /** Where the toolbar's copied-text chip comes from; null shows none. */
     internal val copiedChipSource: CopiedChipSource? = null,
+    /** The app's tool store and runner; null leaves the keyboard without tools. */
+    private val toolGateway: KeyboardToolsGateway? = null,
+    /** What a tool may read and write in the editor; null leaves the keyboard without tools. */
+    private val toolEditor: KeyboardToolsEditor? = null,
 ) {
     internal val keyNames = KeyNames(context)
 
     data class Callbacks(
         val commit: (String, Boolean) -> Boolean,
-        val preedit: (String) -> Unit,
+        val preedit: (String, InputLanguage) -> Unit,
         val delete: () -> Unit,
         val moveCursor: (Int) -> Unit,
         val action: () -> Unit,
@@ -83,6 +92,8 @@ class KeyboardController(
         /** Hides the keyboard window (the toolbar's last entry). */
         val hideKeyboard: () -> Unit = {},
         val openSettingsPage: (SettingsTarget) -> Unit = {},
+        /** Leaves the keyboard for the settings page where keyboard tools are managed. */
+        val openToolsSettings: () -> Unit = {},
         /** Bounded text before the selection; null when the editor cannot report it. */
         val contextBeforeCursor: (Int) -> String? = { null },
         /** The keyboard just entered English input: the capital state of the caret is needed now. */
@@ -147,7 +158,7 @@ class KeyboardController(
                 KeyboardPages.openingMarks(
                     it,
                     KeyboardLayoutCatalog.snapshot.value.registry
-                        .composition(compositionKey()),
+                        .composition(compositionKey(), layoutFamilies()),
                 )
             }
         return KeyboardPages.marksAscii(symbolMarksOverride, opening, englishInput, policy.asciiMarks)
@@ -253,6 +264,16 @@ class KeyboardController(
      */
     internal val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
     internal var session: InputSession? = null
+
+    /**
+     * The input language of the active scheme, read from the session's cached profile.
+     *
+     * The profile is resolved when the scheme or one of its script switches changes, never here:
+     * this is a plain field read, safe for callers that need it outside the drawing path.
+     */
+    val inputLanguage: InputLanguage
+        get() = session?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+
     internal var pendingBackend: EngineBackend? = null
     internal var policy = EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE)
 
@@ -409,7 +430,13 @@ class KeyboardController(
      * They are typed, in order, as soon as it is ready: a press is never dropped because the editor
      * restarted its input or the keyboard was still binding.
      */
-    internal val heldKeys = ArrayDeque<Pair<LayoutAction, Boolean>>()
+    internal val heldKeys = ArrayDeque<suspend () -> Unit>()
+
+    /**
+     * The twelve-key kana surface's binding state. The model is driven on the operation worker;
+     * only the stored 只用 flick setting is mirrored into it from the UI side.
+     */
+    internal val kana12 = Kana12BindingState()
 
     /**
      * Bumped when an input finishes: the presses still queued for it were meant for that field and
@@ -440,6 +467,8 @@ class KeyboardController(
      */
     internal fun insertText(text: String) {
         enqueue {
+            // Inserted text ends whatever the kana model claimed on the composition tail.
+            kana12Reset()
             val active = session.takeIf { ready }
             if (active != null) active.insertLiteral(text) else callbacks.commit(text, false)
         }
@@ -498,6 +527,10 @@ class KeyboardController(
                 callbacks.openSettingsPage(target)
             }
 
+            override fun manageTools() {
+                callbacks.openToolsSettings()
+            }
+
             override fun quickSettingsState(): QuickSettingsState = this@KeyboardController.quickSettingsState()
 
             override fun applyQuickSetting(change: QuickSettingChange) =
@@ -538,20 +571,35 @@ class KeyboardController(
         }
 
     /** The quick-content panels; null until the app supplies its data source. */
-    internal val panels: QuickContentPanels? =
-        quickContentDataSource?.let { dataSource ->
-            QuickContentPanels(
-                context = context,
-                host =
-                    KeyboardPanelHost(content, keyboard, barRow).apply {
-                        // Any panel close returns the key area: the back handler must stop owning Back.
-                        onHidden = { callbacks.panelsChanged(false) }
-                    },
-                scope = scope,
-                dataSource = dataSource,
-                callbacks = panelCallbacks,
-            )
-        }
+    internal val panels: QuickContentPanels? = createPanels()
+
+    /**
+     * Builds the panel surface. The host reports a close after the fact, so the panels are built
+     * first: a panel closed by its own close button bypasses the panel's own close path, and a tool
+     * run still in flight must not touch it afterwards.
+     */
+    private fun createPanels(): QuickContentPanels? {
+        val dataSource = quickContentDataSource ?: return null
+        var created: QuickContentPanels? = null
+        val host =
+            KeyboardPanelHost(content, keyboard, barRow).apply {
+                // Any panel close returns the key area: the back handler must stop owning Back.
+                onHidden = {
+                    created?.onHostHidden()
+                    callbacks.panelsChanged(false)
+                }
+            }
+        return QuickContentPanels(
+            context = context,
+            host = host,
+            scope = scope,
+            dataSource = dataSource,
+            callbacks = panelCallbacks,
+            tools = toolGateway,
+            toolEditor = toolEditor,
+            inputLanguage = { inputLanguage },
+        ).also { created = it }
+    }
 
     init {
         wireViews()
@@ -561,10 +609,17 @@ class KeyboardController(
         if (!retired) operations.trySend(generation to action)
     }
 
-    /** Queued presses survive a restart, but not the end of their input connection. */
+    /**
+     * Key presses outlive an input restart, but not the end of their input connection: they belong
+     * to whatever editor is current when they run.
+     *
+     * [pressAt] is the monotonic press time, read here on the UI thread: a key whose effect depends
+     * on how fast the user pressed it (the kana tap cycle) must not measure the queue delay.
+     */
     internal fun enqueueKey(
         action: LayoutAction,
         t9FirstKey: Boolean = false,
+        pressAt: Double = kana12Now(),
     ) {
         // No engine, no typing: a press here would reach the editor as raw text.
         if (engineNotice != null) return
@@ -574,8 +629,21 @@ class KeyboardController(
             }
             return
         }
+        enqueuePress(action.type == LayoutActionKind.BACKSPACE) { dispatch(action, t9FirstKey, pressAt) }
+    }
+
+    /**
+     * Queues one press of any key surface (the kana pad included) with the rules of [enqueueKey]:
+     * it survives a restart of the same field and is held while the session is prepared, but never
+     * reaches the editor that replaces the one it was pressed in.
+     */
+    internal fun enqueuePress(
+        backspace: Boolean = false,
+        press: suspend () -> Unit,
+    ) {
+        if (retired || engineNotice != null) return
         val epoch = keyEpoch
-        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, epoch) })
+        operations.trySend(ANY_GENERATION to { runOrHold(backspace, epoch, press) })
     }
 
     /**
@@ -611,16 +679,16 @@ class KeyboardController(
         drained.await()
     }
 
-    private suspend fun dispatchOrHold(
-        action: LayoutAction,
-        t9FirstKey: Boolean,
+    private suspend fun runOrHold(
+        backspace: Boolean,
         epoch: Int,
+        press: suspend () -> Unit,
     ) {
         if (epoch != keyEpoch) return
         if (!ready && pendingBackend != null) {
             val held = heldKeys.size < MAX_HELD_KEYS
-            if (held) heldKeys.addLast(action to t9FirstKey)
-            if (action.type == LayoutActionKind.BACKSPACE) {
+            if (held) heldKeys.addLast(press)
+            if (backspace) {
                 BackspaceTrace.record(
                     if (held) {
                         BackspaceTrace.Event.HELD_WHILE_PREPARING
@@ -631,7 +699,7 @@ class KeyboardController(
             }
             return
         }
-        dispatch(action, t9FirstKey)
+        press()
     }
 
     /** Engine confirmation must not authorize a follow-up write to a replacement editor. */
@@ -673,6 +741,7 @@ class KeyboardController(
         ready = false
         pendingBackend = null
         heldKeys.clear()
+        enqueue { kana12Reset() }
         session?.engine?.releaseWordCompletions()
         englishQueryJob?.cancel()
         englishQueryJob = null
@@ -685,7 +754,7 @@ class KeyboardController(
         mergedSwipe = null
         privateDirectInput = false
         closeKeyboardMenu()
-        callbacks.preedit("")
+        callbacks.preedit("", InputLanguage.ZH_HANS)
         render()
     }
 
@@ -695,6 +764,8 @@ class KeyboardController(
         policy = value
         // A password field must not echo what is typed, not even as a magnified preview.
         keyboard.previewSuppressed = value.privateInput
+        // A private field loses the tools entry with the rest of the editor's privacy rules.
+        syncToolbar()
         syncPageWithEditor()
         // An editor whose restrictions change without a new input session, or whose session was
         // prepared under an earlier policy, must not keep that policy's mode: re-derive it on the
@@ -731,9 +802,12 @@ class KeyboardController(
         // A new editor always starts on the letters page; a numeric editor then opens its digit pad.
         page = null
         phoneSymbols = false
+        syncToolbar()
         syncPageWithEditor()
         symbolMarksOverride = null
-        closeAll()
+        closeAll(preserveExternalAnswer = true)
+        // A new editor never inherits the previous one's kana claim, queued behind its own session.
+        enqueue { kana12Reset() }
         enqueue { prepareSession(keepEditorComposition) }
     }
 
@@ -808,8 +882,9 @@ class KeyboardController(
 
     fun discardComposition() {
         enqueue {
+            kana12Reset()
             session?.discardComposition()
-            callbacks.preedit("")
+            callbacks.preedit("", InputLanguage.ZH_HANS)
             render()
         }
     }
@@ -819,7 +894,7 @@ class KeyboardController(
      * field and the engine) instead of lingering as marked text nobody can see being edited.
      */
     fun hideInput() {
-        closeAll()
+        closeAll(preserveExternalAnswer = true)
         heldKeys.clear()
         discardComposition()
     }
@@ -833,9 +908,10 @@ class KeyboardController(
         ready = false
         resetEnglishWord()
         session?.engine?.releaseWordCompletions()
-        callbacks.preedit("")
+        callbacks.preedit("", InputLanguage.ZH_HANS)
         closeKeyboardMenu()
         enqueue {
+            kana12Reset()
             session?.discardComposition()
             render()
         }
@@ -850,6 +926,8 @@ class KeyboardController(
     fun onWindowShown() {
         windowShown = true
         copiedChipSource?.onInputStarted(policy.privateInput)
+        // A tool installed or pinned while the keyboard was hidden reaches the toolbar on the next show.
+        refreshTools()
         syncBand()
     }
 
@@ -870,7 +948,8 @@ class KeyboardController(
         if (retired) return false
         val registry = KeyboardLayoutCatalog.snapshot.value.registry
         val choice =
-            KeyboardPages.categorizedSymbols(layoutKind, registry.composition(compositionKey())) ?: return false
+            KeyboardPages.categorizedSymbols(layoutKind, registry.composition(compositionKey(), layoutFamilies()))
+                ?: return false
         closeKeyboardMenu()
         val ascii = asciiMarksOn(KeyboardPageKind.SYMBOLS)
         quick.openSymbolPage(
@@ -880,11 +959,17 @@ class KeyboardController(
                 // Only the built-in tabs take the pairing's missing marks; a user's categories stay as made.
                 leadingMarks =
                     if (choice.categories == null) {
-                        KeyboardPages.missingMarks(layoutKind, registry.composition(compositionKey()), ascii)
+                        KeyboardPages.missingMarks(
+                            layoutKind,
+                            registry.composition(compositionKey(), layoutFamilies()),
+                            ascii,
+                        )
                     } else {
                         emptyList()
                     },
                 enterLabel = enterLabel(),
+                inputLanguage =
+                    session?.inputLanguage?.language ?: app.songyan.ime.keyboard.engine.InputLanguage.ZH_HANS,
             ),
         )
         callbacks.panelsChanged(true)
@@ -927,6 +1012,72 @@ class KeyboardController(
         callbacks.panelsChanged(true)
     }
 
+    /**
+     * The enabled tools the toolbar may pin, as of the last read; empty until the list was read.
+     *
+     * Only the pinned entries need it synchronously while the toolbar draws, so it is kept as the
+     * last read result instead of reading the store on the render path.
+     */
+    internal var keyboardTools: List<KeyboardTool> = emptyList()
+        private set
+
+    /** A tool may run in this editor: the app provides one, and the field is not private. */
+    internal val toolsAvailable: Boolean
+        get() = toolGateway != null && toolEditor != null && !policy.privateInput
+
+    /**
+     * Reads the tool list on the panel's scope: the store is file IO, so it never runs on the render
+     * path, and the toolbar only changes once the answer is in.
+     */
+    internal fun refreshTools() {
+        val gateway = toolGateway ?: return
+        if (retired) return
+        val language = inputLanguage
+        scope.launch {
+            val catalog = runCatching { gateway.catalog(language) }.getOrNull()
+            if (retired) return@launch
+            keyboardTools = (catalog as? KeyboardToolList.Read)?.tools.orEmpty()
+            syncToolbar()
+        }
+    }
+
+    /**
+     * Opens the tools panel; [pinnedToolId] runs that tool immediately.
+     *
+     * A tool works on text that is already in the field, so the composition is confirmed through the
+     * engine first: the spelling the user was typing becomes text exactly as Return would make it,
+     * and the tool never reads half of a word.
+     */
+    fun openToolsPanel(pinnedToolId: String? = null) {
+        val quick = panels ?: return
+        if (retired || !toolsAvailable) return
+        closeKeyboardMenu()
+        enqueue {
+            if (!confirmComposition()) return@enqueue
+            if (quick.openTools(pinnedToolId)) callbacks.panelsChanged(true) else render()
+        }
+    }
+
+    /**
+     * The answer of an app the tools panel handed text to is waiting: shows its preview.
+     *
+     * The keyboard calls this when it comes back to the editor the answer belongs to, so the user
+     * sees the result and decides whether to write it. Nothing is confirmed or written here: the
+     * panel's own action does that, through the same relay.
+     */
+    fun openProcessTextResult(): Boolean {
+        val quick = panels ?: return false
+        if (retired || !toolsAvailable) return false
+        if (!quick.openProcessTextResult()) return false
+        callbacks.panelsChanged(true)
+        return true
+    }
+
+    /** The app the tools panel waited for closed without an answer: back to the keys. */
+    fun closeToolsPanel() {
+        if (!retired) panels?.closeTools()
+    }
+
     /** Opens the edit panel (the toolbar's edit entry). */
     fun openEditPanel() {
         val quick = panels ?: return
@@ -952,11 +1103,11 @@ class KeyboardController(
     }
 
     /** Closes everything the keyboard has open: a new editor or a hidden keyboard starts clean. */
-    fun closeAll() {
+    fun closeAll(preserveExternalAnswer: Boolean = false) {
         keyboard.closePopup()
         popupLayer.clear()
         candidates.dismissPopup()
-        panels?.close()
+        panels?.close(preserveExternalAnswer)
         closeKeyboardMenu()
         candidates.collapse()
         panelSearch = null

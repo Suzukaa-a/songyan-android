@@ -56,6 +56,8 @@
     <string name="scheme_import_error_invalid_scheme">输入方案里的配置文件有误，请检查文件内容。</string>
     <string name="scheme_import_error_encoding">输入方案里有文件不是 UTF-8 文本。</string>
     <string name="scheme_import_error_missing_dependency">输入方案缺少这些文件：%s。</string>
+    <string name="scheme_import_error_checksum">下载的文件与这个输入方案记录的校验值不一致，没有安装。</string>
+    <string name="scheme_import_error_conflicting_files">这个输入方案的两个压缩包提供了同名但内容不同的文件：%s。请只保留一个压缩包。</string>
     <string name="scheme_import_error_invalid_model">输入方案里的语法模型文件不可用。</string>
     <string name="scheme_import_error_builtin_customization">这个输入方案会改动松烟自带的输入方式，暂不支持。</string>
     <string name="scheme_import_error_read">无法读取这个文件。</string>
@@ -77,6 +79,9 @@
     <string name="keyboard_layout_18">18 键</string>
     <string name="keyboard_layout_9">9 键</string>
     <string name="keyboard_layout_26">26 键</string>
+    <string name="keyboard_layout_zhuyin41">注音 41 键</string>
+    <string name="keyboard_layout_cangjie26">仓颉 26 键</string>
+    <string name="keyboard_layout_romaji26">罗马字 26 键</string>
 
     <!-- IME status overlay before a published generation exists. -->
     <string name="dictionary_import_error_row">「%1$s」第 %2$d 行的列数不对。</string>
@@ -169,4 +174,6 @@
     <string name="package_learning_not_in_use">没能切换到这个输入方案，用词记录没有并入。</string>
     <string name="package_learning_nothing">方案包里的用词记录与它的词库对不上，没有并入。</string>
     <string name="package_learning_gone">这些用词记录已经不在了。</string>
+
+    <string name="process_text_copied">结果已复制，请粘贴到需要的位置。</string>
 </resources>

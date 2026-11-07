@@ -57,6 +57,7 @@ class SchemesScreenTest {
     private val opened = mutableListOf<String>()
     private val restored = mutableListOf<String>()
     private val links = mutableListOf<String>()
+    private val recommendedDownloads = mutableListOf<String>()
     private var incomingConfirmed = false
     private var incomingDismissed = false
     private val learningAnswers = mutableListOf<Boolean>()
@@ -98,6 +99,7 @@ class SchemesScreenTest {
                     onOpenSource = { opened += it },
                     onDismissSourceAction = {},
                     onImportSchemeFromLink = { links += it },
+                    onImportRecommendedScheme = { recommendedDownloads += it.id },
                     onRestoreSource = { restored += it },
                     incomingPackage = incoming,
                     onConfirmIncomingPackage = { incomingConfirmed = true },
@@ -193,24 +195,27 @@ class SchemesScreenTest {
     }
 
     @Test
-    fun aRecommendedPackageIsDownloadedFromItsPinnedLinkAfterConfirming() {
+    fun aRecommendedPackageIsDownloadedFromItsPinnedArchivesAfterConfirming() {
         show()
-        val ice = RecommendedSchemes.catalog.first()
-        scrollTo(str(ice.nameRes))
-        compose.onNodeWithText(str(ice.nameRes)).performClick()
-        compose.onNodeWithText(str(R.string.schemes_recommended_confirm_title, str(ice.nameRes))).assertExists()
-        assertTrue("nothing is downloaded before the user confirms", links.isEmpty())
+        val bopomofo = RecommendedSchemes.catalog.first { it.id == "rime-bopomofo" }
+        scrollTo(str(bopomofo.nameRes))
+        compose.onNodeWithText(str(bopomofo.nameRes)).performClick()
+        compose.onNodeWithText(str(R.string.schemes_recommended_confirm_title, str(bopomofo.nameRes))).assertExists()
+        compose.onNodeWithText(str(R.string.schemes_recommended_homepage)).assertExists()
+        assertTrue("nothing is downloaded before the user confirms", recommendedDownloads.isEmpty())
         compose.onNodeWithText(str(R.string.schemes_recommended_confirm)).performClick()
-        assertEquals(listOf(ice.url), links)
+        assertEquals(listOf("rime-bopomofo"), recommendedDownloads)
     }
 
     @Test
-    fun bothRecommendedPackagesAreListedWithTheirLicences() {
+    fun everyRecommendedPackageIsListedWithItsLicenceAndUpstreamPage() {
         show()
         RecommendedSchemes.catalog.forEach {
             scrollTo(str(it.nameRes))
             compose.onNodeWithText(str(it.nameRes)).assertExists()
             compose.onNodeWithText(str(it.detailRes)).assertExists()
+            val licence = str(R.string.schemes_recommended_license, it.licenses.joinToString(" · "))
+            compose.onNode(hasText(licence) and hasText(str(it.nameRes))).assertExists()
         }
     }
 

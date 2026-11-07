@@ -12,12 +12,17 @@
     <string name="ime_previous">Previous</string>
     <string name="ime_numbers">123</string>
     <string name="ime_symbols">Symbols</string>
+    <string name="ime_symbol_key">Symbols</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">Clear</string>
     <string name="ime_language_to_english">Chinese. Tap to switch to English</string>
     <string name="ime_language_to_chinese">English. Tap to switch to Chinese</string>
     <string name="ime_language_to_english_symbols">Chinese punctuation. Tap to switch to English</string>
     <string name="ime_language_to_chinese_symbols">English punctuation. Tap to switch to Chinese</string>
+    <string name="ime_language_japanese_to_english">Japanese. Tap to switch to English</string>
+    <string name="ime_language_to_japanese">English. Tap to switch to Japanese</string>
+    <string name="ime_language_japanese_to_english_symbols">Japanese punctuation. Tap to switch to English</string>
+    <string name="ime_language_to_japanese_symbols">English punctuation. Tap to switch to Japanese</string>
     <string name="ime_open_symbols_page">Open symbols page</string>
     <string name="ime_open_numbers_page">Open numbers page</string>
     <string name="ime_more_symbols" translatable="false">#+=</string>
@@ -25,6 +30,33 @@
     <string name="ime_jump_to_numbers">Switch to %1$s and open its numbers page</string>
     <string name="ime_jump_to_symbols">Switch to %1$s and open its symbols page</string>
     <string name="ime_return_to_letters">Return to letters</string>
+    <!-- Automatic key names that do not follow the mobile UI language but the schemas input
+         language; keeping them neutral avoids a half-translated locale turning the rest English. -->
+    <string name="input_space_hant" translatable="false">空白</string>
+    <string name="input_space_ja" translatable="false">空白</string>
+    <string name="input_space_composing_hant" translatable="false">空白</string>
+    <string name="input_space_composing_ja" translatable="false">変換</string>
+    <string name="input_enter_composing_ja" translatable="false">確定</string>
+    <string name="input_enter_hant" translatable="false">換行</string>
+    <string name="input_enter_ja" translatable="false">改行</string>
+    <string name="input_go_hant" translatable="false">前往</string>
+    <string name="input_go_ja" translatable="false">開く</string>
+    <string name="input_search_hant" translatable="false">搜尋</string>
+    <string name="input_search_ja" translatable="false">検索</string>
+    <string name="input_send_hant" translatable="false">傳送</string>
+    <string name="input_send_ja" translatable="false">送信</string>
+    <string name="input_next_hant" translatable="false">下一個</string>
+    <string name="input_next_ja" translatable="false">次へ</string>
+    <string name="input_done_hant" translatable="false">完成</string>
+    <string name="input_done_ja" translatable="false">完了</string>
+    <string name="input_previous_hant" translatable="false">上一個</string>
+    <string name="input_previous_ja" translatable="false">前へ</string>
+    <string name="input_symbol_key_hant" translatable="false">符</string>
+    <string name="input_symbol_key_ja" translatable="false">記号</string>
+    <string name="input_language_key_ja" translatable="false">あ/A</string>
+    <string name="input_back_ja" translatable="false">戻る</string>
+    <string name="input_more_chinese" translatable="false">更多</string>
+    <string name="input_more_ja" translatable="false">その他</string>
     <string name="ime_menu_input_method">Input method</string>
     <string name="ime_menu_layout">Keyboard layout</string>
     <string name="ime_menu_close">Close</string>
@@ -35,6 +67,9 @@
     <string name="ime_layout_merged14">14-key</string>
     <string name="ime_layout_merged18">18-key</string>
     <string name="ime_layout_phone9">9-key</string>
+    <string name="ime_layout_zhuyin41">Zhuyin 41 keys</string>
+    <string name="ime_layout_cangjie26">Cangjie 26 keys</string>
+    <string name="ime_layout_romaji26">Romaji 26 keys</string>
     <string name="ime_preparing">Preparing input schemes</string>
     <string name="ime_unavailable">Input schemes are not ready</string>
     <string name="ime_expand">Expand candidates</string>

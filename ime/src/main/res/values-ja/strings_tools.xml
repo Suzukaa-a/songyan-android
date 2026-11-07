@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- キーボードツール：ツールバーの入口と、入力済みの文字を処理するパネル -->
+    <string name="ime_tools_title">ツール</string>
+    <string name="ime_tools_source_selection">選択したテキスト</string>
+    <string name="ime_tools_source_paragraph">カーソル前</string>
+    <string name="ime_tools_source_clipboard">クリップボード</string>
+    <string name="ime_tools_source_none">処理できるテキストがありません。テキストを選択するか、カーソルを文字の後ろに置いてください。</string>
+    <string name="ime_tools_source_label">元のテキスト：%1$s</string>
+    <string name="ime_tools_result_label">結果：%1$s</string>
+    <string name="ime_tools_loading">ツールを読み込んでいます…</string>
+    <string name="ime_tools_none">有効になっているツールはありません。</string>
+    <string name="ime_tools_manage">ツールを管理</string>
+    <string name="ime_tools_replace">置き換え</string>
+    <string name="ime_tools_insert">挿入</string>
+    <string name="ime_tools_copy">コピー</string>
+    <string name="ime_tools_running">処理しています…</string>
+    <string name="ime_tools_copied">結果をコピーしました。</string>
+    <string name="ime_tools_result_truncated">テキストが長すぎるため、前半だけを処理しました。挿入かコピーだけができます。</string>
+    <string name="ime_tools_failure_unknown_tool">このツールは見つかりません。</string>
+    <string name="ime_tools_failure_invalid_tool">このツールの内容に問題があります。設定で確認してください。</string>
+    <string name="ime_tools_failure_unavailable">このツールに必要な機能を今は使えません。</string>
+    <string name="ime_tools_failure_timed_out">処理に時間がかかりすぎたため、中止しました。</string>
+    <string name="ime_tools_failure_too_long">テキストが長すぎて、このツールでは処理できません。</string>
+    <string name="ime_tools_failure_failed">ツールは処理を完了できませんでした。</string>
+    <string name="ime_tools_failure_store">ツールの一覧を読み込めません。設定で確認してください。</string>
+</resources>

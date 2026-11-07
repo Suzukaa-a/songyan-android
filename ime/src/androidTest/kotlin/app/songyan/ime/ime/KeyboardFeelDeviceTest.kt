@@ -140,34 +140,29 @@ class KeyboardFeelDeviceTest {
     fun theSwitchKeyAppearsOnlyWhileTheUserHasItOnAndSwitchesOnATap() =
         withHost { host ->
             host.start()
-            val name = host.string(R.string.ime_toolbar_switch_input_method)
-            assertFalse(host.labelsOf(KeyboardView::class.java).contains(name))
+            assertFalse(host.hasControl(ControlKey.GLOBE))
 
             host.switchKeyFlow.value = true
-            assertTrue(host.await { host.labelsOf(KeyboardView::class.java).contains(name) })
-            host.tap(name)
+            assertTrue(host.await { host.hasControl(ControlKey.GLOBE) })
+            host.tapControl(ControlKey.GLOBE)
             assertEquals(listOf("switch"), host.inputMethodCalls)
 
-            host.longPress(name, KeyboardView::class.java)
+            host.longPressControl(ControlKey.GLOBE)
             assertEquals(listOf("switch", "pick"), host.inputMethodCalls)
 
             host.switchKeyFlow.value = false
-            assertTrue(host.await { !host.labelsOf(KeyboardView::class.java).contains(name) })
+            assertTrue(host.await { !host.hasControl(ControlKey.GLOBE) })
         }
 
     @Test
     fun theSwitchKeyAlsoAppearsOnTheNineKeyPad() =
         withHost("phone9") { host ->
             host.start()
-            val name = host.string(R.string.ime_toolbar_switch_input_method)
-            assertFalse(host.labelsOf(KeyboardView::class.java).contains(name))
+            assertFalse(host.hasControl(ControlKey.GLOBE))
 
             host.switchKeyFlow.value = true
-            assertTrue(
-                "${host.labelsOf(KeyboardView::class.java)}",
-                host.await { host.labelsOf(KeyboardView::class.java).contains(name) },
-            )
-            host.tap(name)
+            assertTrue(host.await { host.hasControl(ControlKey.GLOBE) })
+            host.tapControl(ControlKey.GLOBE)
             assertEquals(listOf("switch"), host.inputMethodCalls)
         }
 

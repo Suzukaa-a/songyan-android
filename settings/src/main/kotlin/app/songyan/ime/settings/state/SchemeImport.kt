@@ -84,6 +84,17 @@ interface SchemeImportGateway {
         progress: (TransferProgress) -> Unit = {},
     ): SchemeImportResult = SchemeImportResult.Failure(null)
 
+    /**
+     * Downloads a recommended entry and installs it: its pinned archives, the entry package first,
+     * every one checked against the digest the catalogue names. [advertisedSchemas] narrows the input
+     * methods the entry offers; the schemas it depends on stay loadable without being offered.
+     */
+    suspend fun importRecommendedScheme(
+        archives: List<RecommendedArchive>,
+        advertisedSchemas: List<String>,
+        progress: (TransferProgress) -> Unit = {},
+    ): SchemeImportResult = SchemeImportResult.Failure(null)
+
     /** Downloads the stored package [sourceId] again from the link it came from and installs the new version. */
     suspend fun update(
         sourceId: String,

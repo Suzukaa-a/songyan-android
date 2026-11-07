@@ -12,6 +12,7 @@ import kotlinx.serialization.json.put
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -47,6 +48,10 @@ class GenerationPublisher(
      *
      * [extraResources] join the resources by relative path (`lua/foo.lua`), in place of a source
      * file of the same path; they are hard-linked when possible, since they can be large and never change in place.
+     *
+     * A prebuilt table in [resourcesDir]'s own `build/` that the deployment's [compiledDir] still
+     * holds byte for byte is hard-linked too: the source tree is replaced whole rather than edited,
+     * so the link is as immutable as the copy and saves one full table per generation.
      */
     fun publish(
         resourcesDir: File,
@@ -86,7 +91,18 @@ class GenerationPublisher(
                 files += (RESOURCES + "/" + path) to destination.length()
             }
             if (extraResources.isNotEmpty()) syncDirectory(File(temp, RESOURCES))
-            copyTree(compiledDir, File(temp, BUILD), BUILD, files)
+            val prebuilt = File(resourcesDir, BUILD)
+            val shared: ((File, File, File?) -> Unit)? =
+                if (prebuilt.listFiles().orEmpty().any { it.isFile && PrebuiltResourceStore.isBin(it.name) }) {
+                    PrebuiltResourceStore(storage).let { store ->
+                        { work: File, destination: File, input: File? ->
+                            store.publish(resourcesDir, input, work, destination, generation, sourceId, revision)
+                        }
+                    }
+                } else {
+                    null
+                }
+            copyBuild(compiledDir, prebuilt, File(temp, BUILD), files, shared)
             val record =
                 PublicationRecord(
                     version = PublicationRecord.CURRENT_VERSION,
@@ -220,6 +236,7 @@ class GenerationPublisher(
                 dir.deleteRecursively()
             }
         }
+        PrebuiltResourceStore(storage).prune()
     }
 
     /** A publish that died mid-copy leaves a `.tmp-*` tree; callers hold the deploy lock. */
@@ -300,17 +317,111 @@ class GenerationPublisher(
             if (child.isDirectory) {
                 copyTree(child, destination, path, files, skipPaths = skipPaths)
             } else {
-                child.inputStream().use { input ->
-                    FileOutputStream(destination).use { output ->
-                        input.copyTo(output, BUFFER_BYTES)
-                        output.flush()
-                        output.fd.sync()
-                    }
+                copyFileSynced(child, destination)
+                files += path to destination.length()
+            }
+        }
+        syncDirectory(target)
+    }
+
+    /**
+     * Copies the deployment's build into the generation, sharing the source's prebuilt tables.
+     *
+     * A compiled table that is byte for byte one of the tables the source ships in its own
+     * `build/` is hard-linked instead of copied. The source tree is never written in place (a new
+     * package replaces it whole), so the published generation cannot change through that link, and
+     * every generation of a package that ships prebuilt tables then shares one copy on disk. The
+     * work build is always copied, even when its bytes match: librime rewrites it in place while
+     * deploying, and a link would let those writes reach a published generation.
+     */
+    private fun copyBuild(
+        compiledDir: File,
+        prebuiltDir: File,
+        target: File,
+        files: MutableList<Pair<String, Long>>,
+        shared: ((File, File, File?) -> Unit)?,
+    ) {
+        target.mkdirs()
+        copyBuildEntries(compiledDir, prebuiltDir, target, BUILD, files, shared)
+        syncDirectory(target)
+    }
+
+    private fun copyBuildEntries(
+        source: File,
+        prebuiltDir: File,
+        target: File,
+        prefix: String,
+        files: MutableList<Pair<String, Long>>,
+        shared: ((File, File, File?) -> Unit)?,
+    ) {
+        target.mkdirs()
+        for (child in source.listFiles().orEmpty().sortedBy { it.name }) {
+            val destination = File(target, child.name)
+            val path = prefix + "/" + child.name
+            if (child.isDirectory) {
+                copyBuildEntries(child, prebuiltDir, destination, path, files, shared)
+            } else {
+                val prebuilt = prebuiltTable(prebuiltDir, prefix, child.name)
+                if (shared != null && prefix == BUILD && isPrebuiltTable(child.name)) {
+                    shared(child, destination, prebuilt)
+                } else if (prebuilt != null && sameContent(child, prebuilt)) {
+                    linkOrCopy(prebuilt, destination)
+                } else {
+                    copyFileSynced(child, destination)
                 }
                 files += path to destination.length()
             }
         }
         syncDirectory(target)
+    }
+
+    /** The source's own prebuilt table for one build entry, when that entry may share it. */
+    private fun prebuiltTable(
+        prebuiltDir: File,
+        prefix: String,
+        name: String,
+    ): File? {
+        // Only the source's top-level build holds prebuilt tables; anything the deployment put
+        // below it is its own output and stays private to the generation.
+        if (prefix != BUILD || !isPrebuiltTable(name)) return null
+        val file = File(prebuiltDir, name)
+        return file.takeIf { it.isFile }
+    }
+
+    private fun isPrebuiltTable(name: String): Boolean =
+        PREBUILT_SUFFIXES.any { name.endsWith(it) && name.length > it.length }
+
+    /** Whether two files hold the same bytes, compared as streams so a table never enters the heap. */
+    private fun sameContent(
+        a: File,
+        b: File,
+    ): Boolean {
+        if (a.length() != b.length()) return false
+        return a.inputStream().use { left ->
+            b.inputStream().use { right -> streamsEqual(left, right) }
+        }
+    }
+
+    private fun streamsEqual(
+        left: InputStream,
+        right: InputStream,
+    ): Boolean {
+        val leftChunk = ByteArray(BUFFER_BYTES)
+        val rightChunk = ByteArray(BUFFER_BYTES)
+        var read = left.read(leftChunk)
+        while (read >= 0) {
+            val other = right.read(rightChunk)
+            if (other != read) return false
+            val equal =
+                if (read == leftChunk.size) {
+                    leftChunk.contentEquals(rightChunk)
+                } else {
+                    leftChunk.copyOf(read).contentEquals(rightChunk.copyOf(read))
+                }
+            if (!equal) return false
+            read = left.read(leftChunk)
+        }
+        return right.read(rightChunk) < 0
     }
 
     private fun linkOrCopy(
@@ -327,6 +438,13 @@ class GenerationPublisher(
                 false
             }
         if (linked) return
+        copyFileSynced(source, destination)
+    }
+
+    private fun copyFileSynced(
+        source: File,
+        destination: File,
+    ) {
         source.inputStream().use { input ->
             FileOutputStream(destination).use { output ->
                 input.copyTo(output, BUFFER_BYTES)
@@ -363,5 +481,6 @@ class GenerationPublisher(
         const val MANIFEST = "generation.json"
         private const val MAX_MANIFEST_BYTES = 4L * 1024 * 1024
         private const val BUFFER_BYTES = 64 * 1024
+        private val PREBUILT_SUFFIXES = listOf(".table.bin", ".reverse.bin", ".prism.bin")
     }
 }

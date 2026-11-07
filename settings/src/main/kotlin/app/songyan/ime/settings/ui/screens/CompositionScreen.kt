@@ -23,16 +23,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.KeyboardPageMarkCoverage
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.state.KeyboardLayoutOption
+import app.songyan.ime.settings.state.familiesOfSchemes
+import app.songyan.ime.settings.state.layoutDisplayName
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
+import app.songyan.ime.settings.ui.text
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -44,6 +49,8 @@ import java.io.IOException
 fun CompositionScreen(
     key: KeyboardCompositionKey,
     keyboardName: String?,
+    /** The families the settings app state already resolved; unknown ids keep the id-only rule. */
+    families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
     onBack: (() -> Unit)?,
     viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
 ) {
@@ -56,7 +63,8 @@ fun CompositionScreen(
         LoadingScreen(stringResource(R.string.composition_title), onBack)
         return
     }
-    val composition = current.composition(key)
+    val composition = current.composition(key, families)
+    val shape = KeyboardLayoutOption.fromId(key.layout.wire)
     SettingsScaffold(
         title = stringResource(R.string.composition_title),
         onBack = onBack,
@@ -80,10 +88,10 @@ fun CompositionScreen(
             SectionHeader(stringResource(R.string.composition_main_section))
             Column(modifier = Modifier.selectableGroup()) {
                 current
-                    .mainLayoutCandidates(key)
+                    .mainLayoutCandidates(key, families)
                     .forEach { layout ->
                         RadioRow(
-                            title = layout.name,
+                            title = layoutDisplayName(layout, shape).text(),
                             selected = composition.mainLayoutID == layout.id,
                             onClick = { viewModel.saveComposition(key, composition.withMainLayoutId(layout.id)) },
                         )
@@ -161,6 +169,7 @@ fun UseContentScreen(
         CompositionEmptyScreen(onBack, onOpenSchemes)
         return
     }
+    val families = familiesOfSchemes(schemes)
     val page = if (isPage) current.page(contentId) else null
     val name = page?.name ?: current.resolvedLayout(contentId)?.name
     if (name == null) {
@@ -173,7 +182,7 @@ fun UseContentScreen(
                 LayoutInput.Builtin.entries
                     .filter { it.wire in scheme.supportedLayouts }
                     .map { KeyboardCompositionKey(scheme.id, it) }
-            }.filter { key -> isPage || current.mainLayoutCandidates(key).any { it.id == contentId } }
+            }.filter { key -> isPage || current.mainLayoutCandidates(key, families).any { it.id == contentId } }
     var selected by rememberSaveable(contentId) { mutableStateOf<String?>(null) }
     var applied by rememberSaveable(contentId) { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
@@ -183,10 +192,9 @@ fun UseContentScreen(
     val failureText = stringResource(R.string.features_error_generic)
     val targetName: @Composable (KeyboardCompositionKey) -> String = { key ->
         val method = schemes.first { it.id == key.inputMethodId }.name
-        val layout =
-            app.songyan.ime.settings.state.KeyboardLayoutOption
-                .fromId(key.layout.wire)
-        stringResource(R.string.keyboard_title, method, stringResource(layout.nameRes))
+        val shape = KeyboardLayoutOption.fromId(key.layout.wire)
+        val mainLayout = current.resolvedLayout(current.composition(key, families).mainLayoutID)
+        stringResource(R.string.keyboard_title, method, layoutDisplayName(mainLayout, shape).text())
     }
     SettingsScaffold(
         title = stringResource(R.string.content_use_title, name),
@@ -218,7 +226,7 @@ fun UseContentScreen(
                     enabled = !saving && applied != key.rawValue,
                     onClick = {
                         saving = true
-                        val before = current.composition(key)
+                        val before = current.composition(key, families)
                         val composition =
                             if (page !=
                                 null

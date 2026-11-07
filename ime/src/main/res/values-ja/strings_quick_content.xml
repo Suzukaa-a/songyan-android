@@ -1,0 +1,58 @@
+<resources>
+    <!-- 定型文・クリップボードなどのパネル -->
+    <string name="ime_panel_close">閉じる</string>
+    <string name="ime_panel_symbols_title">記号</string>
+    <string name="ime_panel_phrases_title">定型文とクリップボード</string>
+    <string name="ime_panel_settings_title">キーボード設定</string>
+    <string name="ime_panel_recent">履歴</string>
+    <string name="ime_panel_phrases">定型文</string>
+    <string name="ime_panel_clipboard">クリップボード</string>
+    <string name="ime_panel_phrases_empty">定型文はまだありません。</string>
+    <string name="ime_panel_clipboard_disabled">クリップボードの履歴はオフです。</string>
+    <string name="ime_panel_clipboard_empty">まだ何も記録されていません。</string>
+    <string name="ime_panel_add_phrase">定型文を追加</string>
+    <string name="ime_panel_symbols_empty">記号ライブラリが空です。</string>
+    <string name="ime_panel_clipboard_delete">削除</string>
+    <string name="ime_panel_quick_content">定型文とクリップボード</string>
+    <string name="ime_panel_quick_insert">挿入</string>
+    <string name="ime_panel_repeat">前回の入力を繰り返す</string>
+    <string name="ime_panel_nothing_to_repeat">繰り返せる入力がありません</string>
+    <string name="ime_panel_open_settings">松煙の設定を開く</string>
+
+    <!-- キーボード設定パネル -->
+    <string name="ime_qs_one_hand">片手モード</string>
+    <string name="ime_qs_key_height">キーボードの高さ</string>
+    <string name="ime_qs_layout">キー配列</string>
+    <string name="ime_qs_appearance">ライト／ダーク</string>
+    <string name="ime_qs_key_sound">キー操作音</string>
+    <string name="ime_qs_key_haptics">キー操作の振動</string>
+    <string name="ime_qs_phrases">定型文</string>
+    <string name="ime_qs_phrases_more">とクリップボード</string>
+    <string name="ime_qs_key_preview">キーのプレビュー</string>
+    <string name="ime_qs_on">オン</string>
+    <string name="ime_qs_off">オフ</string>
+    <string name="ime_qs_engine_section">入力方式のオプション</string>
+    <string name="ime_qs_engine_traditional">繁体字で出力</string>
+    <string name="ime_qs_engine_simplified">簡体字で出力</string>
+    <string name="ime_qs_engine_emoji">絵文字候補</string>
+    <string name="ime_qs_engine_full_shape">全角</string>
+    <string name="ime_qs_left">左</string>
+    <string name="ime_qs_right">右</string>
+    <string name="ime_qs_height_compact">低め</string>
+    <string name="ime_qs_height_standard">標準</string>
+    <string name="ime_qs_height_tall">高め</string>
+    <string name="ime_qs_mode_system">システムに従う</string>
+    <string name="ime_qs_mode_light">ライト</string>
+    <string name="ime_qs_mode_dark">ダーク</string>
+    <string name="ime_qs_system_off">システム設定でオフです</string>
+    <string name="ime_qs_unavailable">この画面では使えません</string>
+    <string name="ime_qs_more">その他の設定</string>
+    <string name="ime_qs_back">戻る</string>
+    <string name="ime_qs_label_value">%1$s、%2$s</string>
+    <string name="ime_qs_option_selected">%1$s、選択中</string>
+    <string name="ime_qs_engine_character_form">文字の字形</string>
+    <string name="ime_qs_script_simplified">簡体字</string>
+    <string name="ime_qs_script_traditional">繁体字</string>
+    <string name="ime_qs_script_taiwan">台湾繁体字</string>
+    <string name="ime_qs_script_hong_kong">香港繁体字</string>
+</resources>

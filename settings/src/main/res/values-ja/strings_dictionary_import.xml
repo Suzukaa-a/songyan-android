@@ -1,0 +1,29 @@
+<resources>
+    <!-- 入力パック · 辞書 -->
+    <string name="schemes_dictionary_section">辞書</string>
+    <string name="schemes_dictionary_unavailable">今は辞書をインポートできません。しばらくしてからやり直してください。</string>
+    <string name="schemes_dictionary_entry_count">インポートした辞書 · %1$d 項目</string>
+    <string name="schemes_dictionary_import_file">辞書をインポート</string>
+    <string name="schemes_dictionary_import_url">リンクからインポート</string>
+    <string name="schemes_dictionary_note">.dict.yaml 形式に対応しています。参照している辞書ファイルも一緒に選べます。</string>
+    <string name="schemes_dictionary_importing">辞書をインポートしています…</string>
+    <string name="schemes_dictionary_removing">辞書を削除しています…</string>
+    <string name="schemes_dictionary_remove">削除</string>
+    <string name="schemes_dictionary_remove_title">インポートした辞書を削除しますか？</string>
+    <string name="schemes_dictionary_remove_body">学習した語は残ります。</string>
+    <string name="schemes_dictionary_cancel">キャンセル</string>
+    <string name="schemes_dictionary_import_success">辞書をインポートしました。</string>
+    <string name="schemes_dictionary_remove_success">インポートした辞書を削除しました。</string>
+    <string name="schemes_dictionary_import_failed">辞書をインポートできませんでした。やり直してください。</string>
+    <string name="schemes_dictionary_remove_failed">辞書を削除できませんでした。やり直してください。</string>
+
+    <!-- リンクからインポート -->
+    <string name="schemes_dictionary_url_label">辞書のリンク</string>
+    <string name="schemes_dictionary_url_invalid">https:// で始まるリンクを入力してください。</string>
+    <string name="schemes_dictionary_url_note">リンクは .dict.yaml ファイルを直接指している必要があります。</string>
+    <string name="schemes_dictionary_url_confirm">インポート</string>
+    <string name="schemes_dictionary_target_title">どの入力パックに追加しますか？</string>
+    <string name="schemes_dictionary_target_builtin">松煙内蔵</string>
+    <string name="schemes_dictionary_target_continue">続行</string>
+    <string name="schemes_dictionary_stacked_on">「%1$s」に追加しました</string>
+</resources>

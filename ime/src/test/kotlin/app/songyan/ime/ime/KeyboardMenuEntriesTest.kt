@@ -9,6 +9,8 @@ import org.junit.Test
 class KeyboardMenuEntriesTest {
     private val ice = listOf("rime_ice" to "雾凇拼音", "double_pinyin_flypy" to "小鹤双拼", "double_pinyin" to "自然码双拼")
 
+    private fun schema(id: String) = KeyboardSchemaDescriptor(id = id, name = id)
+
     @Test
     fun theMenuOffersEveryInputMethodTheEngineListsLessTheHiddenOnes() {
         assertEquals(ice, KeyboardMenuEntries.schemas(ice, emptySet(), setOf("rime_ice")))
@@ -46,6 +48,32 @@ class KeyboardMenuEntriesTest {
     }
 
     private val all = KeyboardLayoutKind.entries
+
+    @Test
+    fun theLayoutChipsFollowTheShapesTheInputMethodCanUse() {
+        val set =
+            requireNotNull(
+                KeyboardResourceSets.forEngineSchemas(
+                    listOf(schema(BuiltinTemplateSchemas.QUANPIN), schema("jyut6ping3"), schema("bopomofo_tw")),
+                ),
+            )
+        val cantonese = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "jyut6ping3")
+        assertEquals(
+            listOf(KeyboardLayoutKind.QWERTY26),
+            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, cantonese),
+        )
+        val zhuyin = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "bopomofo_tw")
+        assertEquals(
+            listOf(KeyboardLayoutKind.QWERTY26),
+            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, zhuyin),
+        )
+        // A bundled scheme keeps every chip.
+        val bundled = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, BuiltinTemplateSchemas.QUANPIN)
+        assertEquals(
+            KeyboardLayoutKind.entries.toList(),
+            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, bundled),
+        )
+    }
 
     @Test
     fun nextLayoutSkipsTheDisabledOnes() {

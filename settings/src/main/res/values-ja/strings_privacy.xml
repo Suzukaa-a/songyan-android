@@ -1,0 +1,8 @@
+<resources>
+    <!-- このアプリ · プライバシー -->
+    <string name="about_privacy_title">プライバシー</string>
+    <string name="about_privacy_local">松煙はすべて端末内で動作し、入力した内容を収集したり送信したりしません。</string>
+    <string name="about_privacy_network">設定で入力パック、文法モデル、予測変換辞書をダウンロードするとき、またはリンクから辞書をインポートするときにだけ、これらの取得のために通信します。キーボード自体は通信しません。</string>
+    <string name="about_privacy_private">パスワードなどの入力欄では、学習もクリップボードへの保存も予測変換の表示も行いません。</string>
+    <string name="about_privacy_tools">キーボードツールは指定したテキストを端末内で処理します。ほかのアプリに渡したテキストは、そのアプリが処理します。</string>
+</resources>

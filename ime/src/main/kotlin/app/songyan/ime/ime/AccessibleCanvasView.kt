@@ -89,6 +89,7 @@ abstract class AccessibleCanvasView(
                     isLongClickable = longClickable
                     isFocusable = true
                     isVisibleToUser = isShown
+                    isSelected = itemSelected(id)
                     isAccessibilityFocused = focused == id
                     setBoundsInParent(itemBounds(id))
                     val screen = IntArray(2)
@@ -149,6 +150,30 @@ abstract class AccessibleCanvasView(
     }
 
     override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider = provider
+
+    /**
+     * Tells accessibility clients that the virtual items moved. Their bounds are the ones the
+     * provider returned when the node was created, so without this a surface that scrolls in place
+     * keeps handing out the pre-scroll (possibly empty) bounds.
+     */
+    protected fun announceItemsMoved() {
+        if (!manager.isEnabled) return
+        sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SCROLLED)
+    }
+
+    /**
+     * Tells accessibility clients that the virtual items themselves were replaced (a page swapped
+     * its cells), so cached labels and bounds from the previous items are not reused.
+     */
+    protected fun announceItemsChanged() {
+        if (!manager.isEnabled) return
+        val event = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
+        event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE
+        sendAccessibilityEventUnchecked(event)
+    }
+
+    /** Whether item [index] is the selected one; announced to accessibility clients. */
+    protected open fun itemSelected(index: Int): Boolean = false
 
     private fun emit(
         id: Int,

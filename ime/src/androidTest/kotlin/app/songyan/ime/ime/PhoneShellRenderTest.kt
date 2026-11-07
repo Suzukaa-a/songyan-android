@@ -3,8 +3,10 @@ package app.songyan.ime.ime
 import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -48,6 +50,7 @@ class PhoneShellRenderTest {
         faces: KeyboardFaces = KeyboardFaces(phone = true),
         captureName: String? = null,
         width: Int = 1080,
+        controls: MutableList<LayoutKey>? = null,
     ): List<Pair<String, android.graphics.Rect>> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         lateinit var view: KeyboardView
@@ -65,6 +68,8 @@ class PhoneShellRenderTest {
                 View.MeasureSpec.makeMeasureSpec(2000, View.MeasureSpec.AT_MOST),
             )
             view.layout(0, 0, width, view.measuredHeight)
+            // The provider makes one node per drawn key, so its index is the key's index.
+            controls?.addAll(view.keys)
         }
         instrumentation.waitForIdleSync()
         if (captureName != null) capture(view, captureName)
@@ -112,7 +117,8 @@ class PhoneShellRenderTest {
 
     @Test
     fun letterShellDrawsGridRailsAndBottomRow() {
-        val keys = render(config(), captureName = "9key-letters")
+        val controls = mutableListOf<LayoutKey>()
+        val keys = render(config(), captureName = "9key-letters", controls = controls)
         val descriptions = keys.map { it.first }
         // Locale-free labels first: the symbols, the letter groups and the authored editing keys.
         assertTrue(descriptions.toString(), descriptions.containsAll(listOf("，", "。", "？")))
@@ -121,12 +127,19 @@ class PhoneShellRenderTest {
             descriptions.toString(),
             descriptions.containsAll(listOf("ABC 2", "DEF 3", "GHI 4", "JKL 5", "MNO 6", "PQRS 7", "TUV 8", "WXYZ 9")),
         )
-        assertTrue(
-            descriptions.toString(),
-            descriptions.containsAll(
-                listOf(R.string.ime_delete, R.string.ime_clear, R.string.ime_enter).map(targetContext::getString),
-            ),
-        )
+        // TalkBack names the editing keys in the system language. Each caption sits on the key that
+        // dispatches the matching action.
+        val captions =
+            mapOf(
+                LayoutActionKind.BACKSPACE to targetContext.getString(R.string.ime_delete),
+                LayoutActionKind.CLEAR_INPUT to targetContext.getString(R.string.ime_clear),
+                LayoutActionKind.ENTER to targetContext.getString(R.string.ime_enter),
+            )
+        for ((action, caption) in captions) {
+            val at = controls.indexOfFirst { it.action.type == action }
+            assertTrue("no $action key on $descriptions", at >= 0)
+            assertEquals("$action caption", caption, keys[at].first)
+        }
         // 3 rail symbols + 9 grid keys + 3 editing rail keys + 4 bottom keys (123 中/英 space 0).
         assertEquals(descriptions.toString(), 19, keys.size)
         // Every key has a real hit rectangle inside the shell.
@@ -156,26 +169,31 @@ class PhoneShellRenderTest {
 
     @Test
     fun numericPageIsTheDigitPad() {
-        val keys = render(config(numeric = true), captureName = "9key-123-pad")
+        val controls = mutableListOf<LayoutKey>()
+        val keys = render(config(numeric = true), captureName = "9key-123-pad", controls = controls)
         val descriptions = keys.map { it.first }
         assertTrue(descriptions.toString(), descriptions.containsAll((0..9).map { it.toString() }))
-        assertTrue(
-            descriptions.toString(),
-            descriptions.containsAll(listOf(R.string.ime_delete, R.string.ime_enter).map(targetContext::getString)),
-        )
+        // Delete's automatic face names the input language's word; the digit pad has no 重输 key.
+        val deleteAt = controls.indexOfFirst { it.action.type == LayoutActionKind.BACKSPACE }
+        val enterAt = controls.indexOfFirst { it.action.type == LayoutActionKind.ENTER }
+        val spaceAt = controls.indexOfFirst { it.action.type == LayoutActionKind.SPACE }
+        assertTrue("no Delete key on $descriptions", deleteAt >= 0)
+        assertTrue("no Return key on $descriptions", enterAt >= 0)
+        assertTrue("no space key on $descriptions", spaceAt >= 0)
+        assertEquals(targetContext.getString(R.string.ime_delete), keys[deleteAt].first)
         // 3 marks + 9 digits + Delete, 0 and the comma + 返回, 中/英, space, 符号 and Return.
         assertEquals(descriptions.toString(), 20, keys.size)
-        assertTrue(descriptions.toString(), descriptions.none { it == targetContext.getString(R.string.ime_clear) })
+        assertTrue(descriptions.toString(), controls.none { it.action.type == LayoutActionKind.CLEAR_INPUT })
         // 0 stands right of the 6, below Delete; the space bar under the 8; Return is one row tall.
         val six = keys.first { it.first == "6" }.second
         val zero = keys.first { it.first == "0" }.second
         assertEquals(six.top.toFloat(), zero.top.toFloat(), 2f)
         assertTrue(zero.left >= six.right - 2)
         val eight = keys.first { it.first == "8" }.second
-        val space = keys.first { it.first == targetContext.getString(R.string.ime_space) }.second
+        val space = keys[spaceAt].second
         assertEquals(eight.centerX().toFloat(), space.centerX().toFloat(), 2f)
         assertTrue(space.top >= eight.bottom - 2)
-        val enter = keys.first { it.first == targetContext.getString(R.string.ime_enter) }.second
+        val enter = keys[enterAt].second
         assertEquals(space.top.toFloat(), enter.top.toFloat(), 2f)
         assertEquals(space.height().toFloat(), enter.height().toFloat(), 2f)
         assertEquals(zero.centerX().toFloat(), enter.centerX().toFloat(), 2f)

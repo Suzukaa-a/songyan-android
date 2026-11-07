@@ -31,6 +31,7 @@ internal class EngineOptionsGatewayImpl(
                     kind = descriptor.kind,
                     choiceGroup = descriptor.choiceGroup,
                     choiceLabel = descriptor.choiceLabel,
+                    knownScriptState = descriptor.knownScriptState,
                     on = runCatching { preferences.read(descriptor) }.getOrNull() ?: descriptor.defaultValue,
                 )
             }

@@ -364,11 +364,18 @@ abstract class QuickContentPanelView(
         contentScrollDp = 0.0
         invalidate()
         onRailSelected(index)
+        announceItemsChanged()
     }
 
     /** Back to the top of the content. The rail stays where it is: the user just tapped something in it. */
     protected fun resetScroll() {
         contentScrollDp = 0.0
+        invalidate()
+    }
+
+    /** Scrolls the content to its last row: a panel that just produced a result shows it at once. */
+    protected fun scrollToContentEnd() {
+        contentScrollDp = maxContentScrollDp()
         invalidate()
     }
 
@@ -822,11 +829,14 @@ abstract class QuickContentPanelView(
                         pressedItem = -1
                         invalidate()
                     }
+                    val previousRail = railScrollDp
+                    val previousContent = contentScrollDp
                     if (railLabels.isNotEmpty() && downX < px(railWidthDp())) {
                         railScrollDp = (downRailScrollDp - dy / density).coerceIn(0.0, maxRailScrollDp())
                     } else {
                         contentScrollDp = (downContentScrollDp - dy / density).coerceIn(0.0, maxContentScrollDp())
                     }
+                    if (railScrollDp != previousRail || contentScrollDp != previousContent) announceItemsMoved()
                     invalidate()
                 }
                 return true
@@ -894,11 +904,14 @@ abstract class QuickContentPanelView(
     override fun computeScroll() {
         if (!flingScroller.computeScrollOffset()) return
         val dp = flingScroller.currY / density.toDouble()
+        val previousRail = railScrollDp
+        val previousContent = contentScrollDp
         if (flingingRail) {
             railScrollDp = dp.coerceIn(0.0, maxRailScrollDp())
         } else {
             contentScrollDp = dp.coerceIn(0.0, maxContentScrollDp())
         }
+        if (railScrollDp != previousRail || contentScrollDp != previousContent) announceItemsMoved()
         invalidate()
         postInvalidateOnAnimation()
     }
@@ -987,7 +1000,7 @@ abstract class QuickContentPanelView(
 
     private fun railItemBase(): Int = 1 + (if (emptyActionVisible()) 1 else 0)
 
-    private fun cellItemBase(): Int = railItemBase() + railLabels.size
+    protected fun cellItemBase(): Int = railItemBase() + railLabels.size
 
     private fun bottomItemBase(): Int = cellItemBase() + cellCount()
 

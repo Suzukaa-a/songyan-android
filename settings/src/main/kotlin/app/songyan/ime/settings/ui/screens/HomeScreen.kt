@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -60,6 +61,7 @@ import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.StatusCard
 import app.songyan.ime.settings.ui.components.StatusLine
 import app.songyan.ime.settings.ui.components.importCardOf
+import app.songyan.ime.settings.ui.text
 
 /**
  * Home: the two places to act (what is installed, what is on the keyboard) plus the remaining
@@ -206,6 +208,13 @@ fun HomeScreen(
                         icon = Icons.Outlined.Widgets,
                         onClick = { onOpen(SettingsRoutes.quickContent()) },
                         selected = selectedRoute == SettingsRoutes.QUICK_CONTENT,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.row_tools_title),
+                        subtitle = stringResource(R.string.row_tools_subtitle),
+                        icon = Icons.Outlined.Build,
+                        onClick = { onOpen(SettingsRoutes.TOOLS) },
+                        selected = selectedRoute == SettingsRoutes.TOOLS,
                     )
                     SettingsRow(
                         title = stringResource(R.string.row_learning_title),
@@ -375,7 +384,7 @@ private fun schemesSummary(state: SettingsUiState): String {
  */
 @Composable
 private fun keyboardSummary(state: SettingsUiState): String {
-    val layoutName = stringResource(state.currentLayout.nameRes)
+    val layoutName = state.mainLayout?.displayName?.text() ?: stringResource(state.currentLayout.nameRes)
     val schemeName = state.inUseScheme?.name.orEmpty()
     val combination = listOfNotNull(schemeName.takeIf { it.isNotEmpty() }, layoutName).joinToString(" · ")
     return stringResource(R.string.home_summary_keyboard, combination)

@@ -23,10 +23,10 @@ class DoubleSpacePeriodDeviceTest {
     private fun FeatureHost.english(inputType: Int = InputType.TYPE_CLASS_TEXT) {
         start(inputType = inputType)
         main { controller.doubleSpaceWindowMs = GENEROUS_MS }
-        tap(string(R.string.ime_language_to_english))
+        tapControl(ControlKey.LANGUAGE_TOGGLE)
     }
 
-    private fun FeatureHost.space() = tap(string(R.string.ime_space))
+    private fun FeatureHost.space() = tapControl(ControlKey.SPACE)
 
     @Test
     fun twoSpacesAfterAnEnglishWordTypeAPeriodAndASpace() =
@@ -44,7 +44,7 @@ class DoubleSpacePeriodDeviceTest {
         withHost { host ->
             host.start(initial = "a1")
             host.main { host.controller.doubleSpaceWindowMs = GENEROUS_MS }
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.space()
             host.space()
             host.assertText("a1. ")
@@ -88,7 +88,7 @@ class DoubleSpacePeriodDeviceTest {
         withHost { host ->
             host.start(initial = "hi.")
             host.main { host.controller.doubleSpaceWindowMs = GENEROUS_MS }
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.space()
             host.space()
             host.assertText("hi.  ")
@@ -158,7 +158,7 @@ class DoubleSpacePeriodDeviceTest {
             host.space()
             host.space()
             host.assertText("hi. ")
-            host.tap(host.string(R.string.ime_delete))
+            host.tapControl(ControlKey.DELETE)
             host.assertText("hi.")
         }
 

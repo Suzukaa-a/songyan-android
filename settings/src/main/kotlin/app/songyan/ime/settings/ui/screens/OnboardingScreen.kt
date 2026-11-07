@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -37,13 +38,17 @@ import androidx.compose.ui.unit.sp
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.OnboardingProgress
 import app.songyan.ime.settings.state.OnboardingStep
-import app.songyan.ime.settings.state.RecommendedSchemes
+import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.ui.DictionaryImportUiState
+import app.songyan.ime.settings.ui.RecommendedSchemeDownloadDetails
+import app.songyan.ime.settings.ui.RecommendedSchemeSummary
 import app.songyan.ime.settings.ui.SchemeImportUiState
 import app.songyan.ime.settings.ui.components.ImportStatusCard
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.TryOutField
 import app.songyan.ime.settings.ui.components.importCardOf
+import app.songyan.ime.settings.ui.openWebPage
+import app.songyan.ime.settings.ui.recommendedSchemes
 
 /**
  * Step-by-step enablement. Every step reflects the real system state, so a finished step is never
@@ -61,7 +66,7 @@ fun OnboardingScreen(
     onBack: (() -> Unit)?,
     schemeImport: SchemeImportUiState = SchemeImportUiState.Idle,
     downloadAvailable: Boolean = false,
-    onDownload: (String) -> Unit = {},
+    onDownload: (RecommendedScheme) -> Unit = {},
     onOtherSchemes: () -> Unit = {},
     onCancelDownload: () -> Unit = {},
     onRetryDownload: () -> Unit = {},
@@ -71,6 +76,8 @@ fun OnboardingScreen(
     val nextStep = progress.nextStep
     var showWarning by rememberSaveable { mutableStateOf(false) }
     var recommendedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The guide and the 输入方案 page show the same order: the device's own language decides it.
+    val recommendedCatalog = recommendedSchemes()
     val importCard = importCardOf(DictionaryImportUiState.Idle, schemeImport)
     val downloading = schemeImport is SchemeImportUiState.Running
     SettingsScaffold(
@@ -126,18 +133,15 @@ fun OnboardingScreen(
                 actionLabel = null,
                 onAction = null,
             ) {
-                for (recommended in RecommendedSchemes.catalog) {
+                for (entry in recommendedCatalog) {
                     OutlinedButton(
-                        onClick = { recommendedId = recommended.id },
+                        onClick = { recommendedId = entry.id },
                         enabled = downloadAvailable && !downloading,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(recommended.nameRes))
+                        Text(stringResource(entry.nameRes))
                     }
-                    Text(
-                        text = stringResource(recommended.detailRes),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    RecommendedSchemeSummary(entry)
                 }
                 TextButton(onClick = onOtherSchemes, enabled = !downloading) {
                     Text(stringResource(R.string.onboarding_other_schemes))
@@ -194,8 +198,9 @@ fun OnboardingScreen(
         }
     }
 
-    val recommended = RecommendedSchemes.catalog.firstOrNull { it.id == recommendedId }
+    val recommended = recommendedCatalog.firstOrNull { it.id == recommendedId }
     if (recommended != null) {
+        val context = LocalContext.current
         AlertDialog(
             onDismissRequest = { recommendedId = null },
             title = {
@@ -203,11 +208,20 @@ fun OnboardingScreen(
                     stringResource(R.string.schemes_recommended_confirm_title, stringResource(recommended.nameRes)),
                 )
             },
-            text = { Text(stringResource(R.string.schemes_recommended_confirm_body)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.schemes_recommended_confirm_body))
+                    RecommendedSchemeSummary(recommended)
+                    RecommendedSchemeDownloadDetails(
+                        recommended,
+                        onOpenHomepage = { openWebPage(context, it) },
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     recommendedId = null
-                    onDownload(recommended.url)
+                    onDownload(recommended)
                 }) {
                     Text(stringResource(R.string.schemes_recommended_confirm))
                 }

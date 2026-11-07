@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- A stand-in for a translation app: it answers ACTION_PROCESS_TEXT with the text in capitals
+             and nothing else. It is a separate package from the keyboard, so the relay reaches it the
+             way it reaches any other app. -->
+        <activity
+            android:name="app.songyan.ime.tools.FakeProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- A text app that answers with RESULT_OK and no text. -->
+        <activity
+            android:name="app.songyan.ime.tools.EmptyProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- A text app with an editor of its own, which takes the keyboard for a moment. -->
+        <activity
+            android:name="app.songyan.ime.tools.SelfEditingProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- A text app that answers only after a while. -->
+        <activity
+            android:name="app.songyan.ime.tools.PausedProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- A text app that closes without an answer: a cancelled request writes nothing. -->
+        <activity
+            android:name="app.songyan.ime.tools.CancelledProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- A second text app, so a new answer is told apart from an old one. -->
+        <activity
+            android:name="app.songyan.ime.tools.LowercaseProcessTextActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- The app that is typed into: a plain editor with two fields of its own. -->
+        <activity
+            android:name="app.songyan.ime.tools.ProcessTextHostActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize" />
+    </application>
+</manifest>

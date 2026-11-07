@@ -121,12 +121,20 @@ internal suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget)
 internal suspend fun KeyboardController.dispatch(
     action: LayoutAction,
     t9FirstKey: Boolean = false,
+    pressAt: Double = kana12Now(),
 ) {
     ImePerf.keyDispatchStart()
     val traceCookie = System.identityHashCode(action)
     if (android.os.Build.VERSION.SDK_INT >= 29) Trace.beginAsyncSection("Songyan.keyDispatch", traceCookie)
     try {
         val active = session.takeIf { ready }
+        // Every key but the kana keys themselves ends the twelve-key model's claim on the
+        // composition: what happens next is not the state the model predicted.
+        if (action.type != LayoutActionKind.KANA &&
+            action.type != LayoutActionKind.KANA_MODIFIER
+        ) {
+            kana12Reset()
+        }
         // Any key but a second space ends the double-space window.
         val spaceArmedAt = doubleSpaceArmedAt
         doubleSpaceArmedAt = DoubleSpacePeriod.NOT_ARMED
@@ -235,6 +243,14 @@ internal suspend fun KeyboardController.dispatch(
                 // unless locked.
             }
             LayoutActionKind.SYMBOL_LOCK -> toggleSymbolLock()
+            // The twelve-key kana actions resolve one row's kana into the engine codes it spells;
+            // the cursor key moves the engine's own composition caret without confirming anything.
+            LayoutActionKind.KANA -> {
+                val rowID = action.value
+                if (rowID != null) kana12Row(rowID, pressAt) else kana12Reset()
+            }
+            LayoutActionKind.KANA_MODIFIER -> kana12Modifier(pressAt)
+            LayoutActionKind.CURSOR_LEFT -> kana12CursorLeft()
         }
     } finally {
         if (android.os.Build.VERSION.SDK_INT >=

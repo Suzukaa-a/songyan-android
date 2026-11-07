@@ -1,5 +1,6 @@
 package app.songyan.ime.content
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -19,6 +20,7 @@ class QuickInsertCoreTest {
         confirm: () -> Boolean = { true },
         insert: (String) -> Boolean = { true },
         onChange: () -> Unit = {},
+        inputLanguage: () -> InputLanguage = { InputLanguage.ZH_HANS },
     ): QuickInsertCore =
         QuickInsertCore(
             preferences = preferences,
@@ -27,6 +29,7 @@ class QuickInsertCoreTest {
             confirmComposition = confirm,
             insert = insert,
             onChange = onChange,
+            inputLanguage = inputLanguage,
         )
 
     @Test
@@ -37,6 +40,44 @@ class QuickInsertCoreTest {
         assertEquals("14:30", core.formattedText(QuickInsertDateFormat.TIME))
         assertEquals("2026-09-09 14:30", core.formattedText(QuickInsertDateFormat.DATE_TIME))
         assertEquals("2026年9月9日 14:30", core.formattedText(QuickInsertDateFormat.DATE_TIME_CHINESE))
+    }
+
+    @Test
+    fun japaneseFormatsTheChineseDateWithItsWeekday() {
+        val core = core(now = { Instant.parse("2026-11-05T14:30:00Z") }, inputLanguage = { InputLanguage.JA })
+        assertEquals("2026-11-05", core.formattedText(QuickInsertDateFormat.DATE))
+        assertEquals("2026年11月5日(木)", core.formattedText(QuickInsertDateFormat.DATE_CHINESE))
+        assertEquals("14:30", core.formattedText(QuickInsertDateFormat.TIME))
+        assertEquals("2026-11-05 14:30", core.formattedText(QuickInsertDateFormat.DATE_TIME))
+        assertEquals("2026年11月5日(木) 14:30", core.formattedText(QuickInsertDateFormat.DATE_TIME_CHINESE))
+    }
+
+    @Test
+    fun traditionalChineseKeepsTheSimplifiedDateShapes() {
+        val hant = core(inputLanguage = { InputLanguage.ZH_HANT })
+        assertEquals("2026-09-09", hant.formattedText(QuickInsertDateFormat.DATE))
+        assertEquals("2026年9月9日", hant.formattedText(QuickInsertDateFormat.DATE_CHINESE))
+        assertEquals("14:30", hant.formattedText(QuickInsertDateFormat.TIME))
+        assertEquals("2026-09-09 14:30", hant.formattedText(QuickInsertDateFormat.DATE_TIME))
+        assertEquals("2026年9月9日 14:30", hant.formattedText(QuickInsertDateFormat.DATE_TIME_CHINESE))
+    }
+
+    @Test
+    fun theLanguageIsReadWhenTheDateIsInserted() {
+        var language = InputLanguage.ZH_HANS
+        val inserted = ArrayList<String>()
+        val core =
+            core(
+                inputLanguage = { language },
+                insert = {
+                    inserted.add(it)
+                    true
+                },
+            )
+        assertTrue(core.insertDateFormat(QuickInsertDateFormat.DATE_CHINESE))
+        language = InputLanguage.JA
+        assertTrue(core.insertDateFormat(QuickInsertDateFormat.DATE_CHINESE))
+        assertEquals(listOf("2026年9月9日", "2026年9月9日(水)"), inserted)
     }
 
     @Test

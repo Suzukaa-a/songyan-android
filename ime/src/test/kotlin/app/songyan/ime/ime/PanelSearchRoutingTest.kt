@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -32,7 +33,7 @@ class PanelSearchRoutingTest {
                     editor += "commit:$text"
                     true
                 },
-                preedit = { editor += "preedit:$it" },
+                preedit = { text, _ -> editor += "preedit:$text" },
                 delete = { editor += "delete" },
                 moveCursor = { editor += "move:$it" },
                 action = { editor += "action" },
@@ -44,7 +45,7 @@ class PanelSearchRoutingTest {
     @Test
     fun withoutASearchEveryCallbackReachesTheEditor() {
         assertTrue(callbacks.commit("a", false))
-        callbacks.preedit("ni")
+        callbacks.preedit("ni", InputLanguage.ZH_HANS)
         callbacks.delete()
         callbacks.moveCursor(-1)
         callbacks.action()
@@ -62,7 +63,7 @@ class PanelSearchRoutingTest {
         searching = true
         assertTrue("a commit is reported as delivered", callbacks.commit("笑", false))
         callbacks.commit("脸", true)
-        callbacks.preedit("xiao")
+        callbacks.preedit("xiao", InputLanguage.ZH_HANS)
         callbacks.delete()
         callbacks.moveCursor(1)
         callbacks.deleteBefore(3)

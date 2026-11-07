@@ -118,6 +118,12 @@ data class KeyboardResourceSet(
     /** Read-only compiled resource directory of a published generation; null = normal launch. */
     val prebuiltDirectory: String? = null,
     val schemas: List<KeyboardSchemaDescriptor> = emptyList(),
+    /**
+     * The schema facts the set was built from (id, name and declared speller alphabet), kept apart
+     * from [schemas] because that list is what the UI offers as input methods. They decide a
+     * scheme's family without asking the engine on the key path.
+     */
+    val schemaFacts: List<KeyboardSchemaDescriptor> = emptyList(),
     val selectedSchemaID: String? = null,
     val preferredLayout: KeyboardLayoutKind? = null,
     /** Used for the "same source, same revision" check; null never passes by default. */
@@ -170,6 +176,13 @@ data class KeyboardResourceSet(
         val id: String get() = "$schemaID:${layout.wire}"
     }
 
+    /**
+     * Every source this snapshot knows, with its family resolved once. Layout availability and the
+     * keyboard's jump/menu paths read this table instead of asking the language table per call, and
+     * a source that is not part of the snapshot falls back to the id-only rule.
+     */
+    private val families: Map<String, InputSchemeFamily> = knownSources().associateWith(::resolveFamily)
+
     /** Whether this set selects schemas independently (vs. the plain built-in template pairing). */
     val usesIndependentSelection: Boolean
         get() = selectedSchemaID != null || schemas.isNotEmpty() || encodingAdapters.isNotEmpty()
@@ -189,7 +202,10 @@ data class KeyboardResourceSet(
             for (source in enabled) {
                 // Only a declared human name is used; empty stays empty so the layout name is shown.
                 val sourceName = schemas.firstOrNull { it.id == source }?.humanReadableName ?: ""
+                val family = familyOf(source)
                 for (layout in KeyboardLayoutKind.entries) {
+                    // The family rule comes before any declared entry, adapter or publication.
+                    if (!InputLayoutPolicy.allows(layout, family)) continue
                     if (publishedKeyboards != null) {
                         val published = publishedKeyboards
                         val engine = structurallyRunnableEngineSchema(source, layout)
@@ -211,7 +227,7 @@ data class KeyboardResourceSet(
                     } else if (layout.keyFold == KeyboardLayoutKind.KeyFold.IDENTITY &&
                         (selectedSchemaID != null || layoutEntries.isEmpty())
                     ) {
-                        val alphabet = schemas.firstOrNull { it.id == source }?.alphabet ?: ""
+                        val alphabet = alphabetOf(source)
                         val latin = alphabet.isEmpty() || alphabet.any { it in 'a'..'z' }
                         if (latin) result += Combination(source, source, layout, sourceName)
                     }
@@ -231,6 +247,7 @@ data class KeyboardResourceSet(
         source: String,
         layout: KeyboardLayoutKind,
     ): String? {
+        if (!InputLayoutPolicy.allows(layout, familyOf(source))) return null
         encodingAdapters.firstOrNull { it.sourceSchemaID == source && it.layout == layout }?.let { return it.schemaID }
         if (layoutEntries.any { it.schemaID == source && it.layout == layout }) return source
         if (!layout.requiresSpellingDisplay) return source
@@ -274,6 +291,43 @@ data class KeyboardResourceSet(
         get() = KeyboardLayoutKind.entries.filter { layout -> availableCombinations.any { it.layout == layout } }
 
     fun supports(layout: KeyboardLayoutKind): Boolean = layout in availableLayouts
+
+    /**
+     * The family of [sourceID], from the table resolved when this snapshot was built. A generated
+     * companion answers with the family of the source it belongs to.
+     */
+    fun familyOf(sourceID: String): InputSchemeFamily {
+        val source = sourceSchemaID(sourceID)
+        return families[source] ?: InputLayoutPolicy.familyOf(source)
+    }
+
+    private fun resolveFamily(sourceID: String): InputSchemeFamily =
+        InputLayoutPolicy.familyOf(sourceID, alphabetOf(sourceID))
+
+    private fun knownSources(): Set<String> =
+        buildSet {
+            layoutEntries.forEach { add(it.schemaID) }
+            schemas.forEach { add(it.id) }
+            schemaFacts.forEach { add(it.id) }
+            encodingAdapters.forEach { add(it.sourceSchemaID) }
+            publishedKeyboards?.forEach { add(it.schemaID) }
+            selectedSchemaID?.let { add(it) }
+        }
+
+    /** The shipped shapes this set can still offer [sourceID] on, in display order. */
+    fun layoutsFor(sourceID: String): List<KeyboardLayoutKind> {
+        val source = sourceSchemaID(sourceID)
+        return availableCombinations.filter { it.schemaID == source }.map { it.layout }
+    }
+
+    /**
+     * The speller alphabet a descriptor carries; empty when the caller knew none. An empty declared
+     * value is "unknown" and must not hide a real alphabet a later fact does carry.
+     */
+    private fun alphabetOf(sourceID: String): String =
+        schemas.firstOrNull { it.id == sourceID }?.alphabet?.takeIf { it.isNotEmpty() }
+            ?: schemaFacts.firstOrNull { it.id == sourceID }?.alphabet?.takeIf { it.isNotEmpty() }
+            ?: ""
 
     /** The exact engine schema for a layout; null when the layout is not in this resource set. */
     fun schemaIDFor(layout: KeyboardLayoutKind): String? = combination(layout)?.engineSchemaID

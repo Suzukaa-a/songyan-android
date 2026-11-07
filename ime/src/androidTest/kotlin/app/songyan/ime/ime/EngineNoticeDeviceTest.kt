@@ -68,7 +68,7 @@ class EngineNoticeDeviceTest {
                             commits += text
                             true
                         },
-                        preedit = {},
+                        preedit = { _, _ -> },
                         delete = { deletes++ },
                         moveCursor = {},
                         action = { actions++ },

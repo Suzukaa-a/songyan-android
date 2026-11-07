@@ -33,6 +33,12 @@ enum class KeyboardLayoutOption(
     /** Supporting note for the row; null when the layout needs no explanation. */
     fun noteRes(available: Boolean): Int? = if (available) null else R.string.layout_unavailable_note
 
+    /**
+     * Whether the input method in use can switch to this shape. A null set means no scheme facts
+     * are known yet, and the static capability answers as before.
+     */
+    fun availableIn(supportedLayouts: Set<String>?): Boolean = supportedLayouts?.contains(id) ?: available
+
     companion object {
         /** Resolves a persisted layout id; unknown ids fall back to the default layout. */
         fun fromId(id: String?): KeyboardLayoutOption = entries.firstOrNull { it.id == id } ?: QWERTY26

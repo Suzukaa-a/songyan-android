@@ -16,7 +16,16 @@ class BuiltinLayoutsTest {
             assertEquals(builtin, LayoutJson.decode(builtin.encoded()))
         }
         assertEquals(
-            listOf("qwerty26", "merged14", "merged18", "phone9"),
+            listOf(
+                "qwerty26",
+                "merged14",
+                "merged18",
+                "phone9",
+                "zhuyin41",
+                "cangjie26",
+                "romaji26",
+                "kana12",
+            ),
             BuiltinLayouts.all.map { it.id },
         )
     }
@@ -39,8 +48,11 @@ class BuiltinLayoutsTest {
                 builtin.rows.flatMap { it.keys }.map { it.width },
                 example.rows.flatMap { it.keys }.map { it.width },
             )
-            assertTrue(
+            // The declaration decides whether alternates exist: the scheme-driven pads keep plain
+            // code caps, so their examples carry none and the older layouts keep theirs.
+            assertEquals(
                 builtin.id,
+                builtin.rows.flatMap { it.keys }.any { !it.longPress.isNullOrEmpty() },
                 example.rows.flatMap { it.keys }.any { !it.longPress.isNullOrEmpty() },
             )
         }

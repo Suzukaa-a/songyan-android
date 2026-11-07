@@ -94,6 +94,10 @@
     <string name="layout_name_14">14-key</string>
     <string name="layout_name_18">18-key</string>
     <string name="layout_name_9">9-key</string>
+    <string name="layout_name_zhuyin41">Zhuyin 41 keys</string>
+    <string name="layout_name_cangjie26">Cangjie 26 keys</string>
+    <string name="layout_name_romaji26">Romaji 26 keys</string>
+    <string name="layout_name_kana12">Kana 12 keys</string>
     <string name="layout_unavailable_note">This layout is not supported by the keyboard yet.</string>
 
     <!-- Input options -->
@@ -300,6 +304,10 @@
     <string name="search_keywords_haptics">vibrate vibration haptic feedback</string>
     <string name="search_keywords_switch_key">globe switch input method keyboard</string>
     <string name="options_engine_character_form">Character form</string>
+    <string name="options_engine_script_simplified">Simplified</string>
+    <string name="options_engine_script_traditional">Traditional</string>
+    <string name="options_engine_script_taiwan">Taiwan</string>
+    <string name="options_engine_script_hong_kong">Hong Kong</string>
     <string name="composition_needs_scheme">Download or import an input scheme first.</string>
     <string name="composition_get_scheme">Get an input scheme</string>
     <string name="layouts_action_use">Use</string>

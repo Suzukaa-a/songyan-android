@@ -19,15 +19,15 @@ class PhonePadDeviceTest {
             host.start(inputType = InputType.TYPE_CLASS_PHONE)
             val first = host.labelsOf(KeyboardView::class.java)
             assertFalse("the first page has no bracket: $first", "(" in first)
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.type("(")
             host.type("N")
             host.type(",")
             host.type(";")
             host.type("-")
             host.type(")")
-            host.tap(host.string(R.string.ime_space))
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapControl(ControlKey.SPACE)
+            host.tapNumbersPage()
             host.type("5")
             host.assertText("(N,;-) 5")
             assertTrue("back on the first page", "+" in host.labelsOf(KeyboardView::class.java))
@@ -37,7 +37,7 @@ class PhonePadDeviceTest {
     fun aNewPhoneFieldStartsOnTheFirstPage() =
         withHost { host ->
             host.start(inputType = InputType.TYPE_CLASS_PHONE)
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.main { host.controller.startInput(EditorPolicy.from(host.info), false) }
             assertEquals(false, host.main2 { host.controller.phoneSymbols })
         }

@@ -113,6 +113,12 @@ object SettingsSearch {
                 R.string.row_learning_subtitle,
             ),
             SearchEntry(
+                SettingsRoutes.TOOLS,
+                R.string.row_tools_title,
+                R.string.section_content,
+                R.string.tools_search_keywords,
+            ),
+            SearchEntry(
                 SettingsRoutes.SCHEMES,
                 R.string.rime_config_section,
                 R.string.row_schemes_title,

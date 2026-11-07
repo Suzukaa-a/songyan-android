@@ -1,0 +1,66 @@
+<resources>
+    <!-- 定型文・クリップボード・記号 -->
+    <string name="quick_content_loading">読み込み中…</string>
+    <string name="quick_content_save">保存する</string>
+    <string name="quick_content_cancel">キャンセル</string>
+    <string name="quick_content_delete">削除</string>
+    <string name="quick_content_edit">編集</string>
+
+    <string name="quick_content_clipboard_section">クリップボードの履歴</string>
+    <string name="quick_content_clipboard_switch">クリップボードの履歴を記録</string>
+    <string name="quick_content_clipboard_body">コピーした文字は端末内に最大 %1$d 件保存されます。パスワードは記録しません。</string>
+    <string name="quick_content_clipboard_empty">まだ何も記録されていません。</string>
+    <string name="quick_content_clipboard_clear">履歴を消去</string>
+    <string name="quick_content_clipboard_clear_title">クリップボードの履歴を消去しますか？</string>
+    <string name="quick_content_clipboard_clear_body">消去すると元に戻せません。</string>
+    <string name="quick_content_clipboard_delete">この項目を削除</string>
+    <string name="quick_content_view_full_text">全文を表示</string>
+    <string name="quick_content_clipboard_detail_title">クリップボードの内容</string>
+
+    <string name="quick_content_phrases_section">定型文</string>
+    <string name="quick_content_phrases_counter">%1$d / %2$d</string>
+    <string name="quick_content_phrases_empty">定型文はまだありません。</string>
+    <string name="quick_content_phrases_add">定型文を追加</string>
+    <string name="quick_content_phrase_add_title">定型文を追加</string>
+    <string name="quick_content_phrase_edit_title">定型文を編集</string>
+    <string name="quick_content_phrase_shortcut_label">検索語（任意）</string>
+    <string name="quick_content_phrase_shortcut_hint">例：dz、sh。キーボードでこの語を検索すると、この定型文が見つかります。</string>
+    <string name="quick_content_error_shortcut_too_long">検索語が長すぎます。</string>
+    <string name="quick_content_phrase_text_label">本文</string>
+
+    <string name="quick_content_error_text_required">内容を入力してください。</string>
+    <string name="quick_content_error_text_too_long">内容が長すぎます。</string>
+    <string name="quick_content_error_duplicate">同じ内容の定型文がすでにあります。</string>
+    <string name="quick_content_error_limit_reached">上限は %1$d 件です。1 つ削除してから追加してください。</string>
+    <string name="quick_content_error_invalid">定型文ファイルが壊れているため読み取れません。</string>
+    <string name="quick_content_error_storage">読み書きに失敗しました。しばらくしてからやり直してください。</string>
+    <string name="quick_content_error_locked">しばらくしてからやり直してください。</string>
+
+    <string name="quick_content_symbols_section">記号ライブラリ</string>
+    <string name="quick_content_symbols_builtin">内蔵の記号ライブラリ</string>
+    <string name="quick_content_symbols_custom">カスタム記号ライブラリをインポート済み</string>
+    <string name="quick_content_symbols_summary">記号 %1$d 個 · 分類 %2$d 個</string>
+    <string name="quick_content_symbols_recent">最近使った記号 %1$d 個</string>
+    <string name="quick_content_symbols_clear_recent">最近使った記号を消去</string>
+    <string name="quick_content_phrases_import">定型文をインポート</string>
+    <string name="quick_content_phrases_export">定型文をエクスポート</string>
+    <string name="quick_content_phrases_import_title">すべての定型文を置き換えますか？</string>
+    <string name="quick_content_phrases_import_body">インポートすると現在の定型文が置き換わります。先にバックアップをエクスポートできます。</string>
+    <string name="quick_content_phrases_import_confirm">インポートして置き換える</string>
+    <string name="quick_content_phrases_imported">定型文を %1$d 件インポートしました。</string>
+    <string name="quick_content_phrases_exported">定型文をエクスポートしました。</string>
+    <string name="quick_content_symbols_import">記号ライブラリをインポート</string>
+    <string name="quick_content_symbols_export">現在の記号ライブラリをエクスポート</string>
+    <string name="quick_content_symbols_restore">内蔵の記号ライブラリに戻す</string>
+    <string name="quick_content_symbols_restore_title">内蔵の記号ライブラリに戻しますか？</string>
+    <string name="quick_content_symbols_restore_body">カスタム記号ライブラリは削除され、内蔵の記号に戻ります。</string>
+    <string name="quick_content_symbols_restore_confirm">戻す</string>
+    <string name="quick_content_symbols_imported">記号 %1$d 個の記号ライブラリをインポートしました。</string>
+    <string name="quick_content_symbols_exported">記号ライブラリをエクスポートしました。</string>
+    <string name="quick_content_symbols_restored">内蔵の記号ライブラリに戻しました。</string>
+    <string name="quick_content_file_unreadable">ファイルを開けませんでした。もう一度選んでください。</string>
+    <string name="quick_content_file_rejected">このファイルは使えません。もとの内容は変更していません。</string>
+    <string name="quick_content_write_failed">保存できませんでした。保存先を確認してやり直してください。</string>
+    <string name="quick_content_file_too_large">ファイルは %1$s を超えられません。</string>
+    <string name="quick_content_symbols_read_failed">記号ライブラリを読み取れませんでした。もう一度インポートするか、内蔵の記号ライブラリに戻してください。</string>
+</resources>

@@ -20,6 +20,9 @@ enum class LayoutInvalidCode {
     PAGE_SWITCH_REQUIRES_KNOWN_TARGET,
     LAYOUT_PAGE_SWITCH_REQUIRES_KNOWN_TARGET,
     LANGUAGE_SWITCH_REQUIRES_KNOWN_BEHAVIOR,
+
+    /** A kana key may only name one of the twelve-key grid rows. */
+    KANA_REQUIRES_KNOWN_ROW,
     FUNCTION_KEY_TAKES_NO_VALUE,
     KEY_OF_KIND_TAKES_NO_VALUE,
     LONG_PRESS_DELAY_MUST_BE_POSITIVE_FINITE,
@@ -147,6 +150,29 @@ enum class LayoutActionKind {
      */
     @SerialName("layoutPageSwitch")
     LAYOUT_PAGE_SWITCH,
+
+    /**
+     * One tap key of the Japanese twelve-key kana grid, addressed by its row id ([LayoutAction.KANA_ROW_IDS]).
+     * The kana handler sends the row's romaji spelling to the engine as one batch, so the value
+     * names a row rather than a single engine key: a decoder that predates this kind rejects the
+     * board instead of drawing a kana cap as a letter.
+     */
+    @SerialName("kana")
+    KANA,
+
+    /**
+     * The Japanese twelve-key modifier (小゛゜): the kana renderer applies it to the kana just typed
+     * in the live composition, so the key carries no value and sends no key of its own.
+     */
+    @SerialName("kanaModifier")
+    KANA_MODIFIER,
+
+    /**
+     * Moves the composition caret left through the engine's own Left key; nothing is typed. A kind
+     * of its own rather than a code, so a replacement typed after the caret move cannot overtake it.
+     */
+    @SerialName("cursorLeft")
+    CURSOR_LEFT,
 }
 
 /** The only pages a [LayoutActionKind.PAGE_SWITCH] key may open. */
@@ -253,6 +279,13 @@ data class LayoutAction(
     /** Replaces only the ASCII counterpart, keeping the kind and the Chinese value. */
     fun withAsciiValue(asciiValue: String?): LayoutAction = copy(asciiValue = asciiValue)
 
+    /**
+     * Whether the key reaches the engine as input instead of being dispatched by the host alone: a
+     * Latin code key, or a kana row key the kana handler spells out for the engine.
+     */
+    val isEngineInput: Boolean
+        get() = type == LayoutActionKind.CODE || type == LayoutActionKind.KANA
+
     @Throws(LayoutException::class)
     fun validate() {
         if (type != LayoutActionKind.LITERAL && asciiValue != null) {
@@ -309,6 +342,14 @@ data class LayoutAction(
                     )
                 }
             }
+            LayoutActionKind.KANA -> {
+                if (value == null || value !in KANA_ROW_IDS) {
+                    throw LayoutException.Invalid(
+                        LayoutInvalidCode.KANA_REQUIRES_KNOWN_ROW,
+                        "value=" + value,
+                    )
+                }
+            }
             LayoutActionKind.SHIFT,
             LayoutActionKind.SYMBOL_LOCK,
             LayoutActionKind.CLEAR_INPUT,
@@ -320,6 +361,8 @@ data class LayoutAction(
             LayoutActionKind.BACKSPACE,
             LayoutActionKind.ENTER,
             LayoutActionKind.GLOBE,
+            LayoutActionKind.KANA_MODIFIER,
+            LayoutActionKind.CURSOR_LEFT,
             ->
                 if (value != null) {
                     throw LayoutException.Invalid(LayoutInvalidCode.KEY_OF_KIND_TAKES_NO_VALUE, type.name)
@@ -338,6 +381,23 @@ data class LayoutAction(
 
         fun languageSwitch(behavior: LayoutLanguageSwitchBehavior? = null): LayoutAction =
             LayoutAction(LayoutActionKind.LANGUAGE_SWITCH, value = behavior?.wire)
+
+        /**
+         * Every row id a [LayoutActionKind.KANA] key may carry: one per tap glyph of the Japanese
+         * twelve-key grid, in draw order. The flick and toggle targets of a row belong to the kana
+         * input model, not to layout data, so the ids name rows rather than individual kana.
+         */
+        val KANA_ROW_IDS: List<String> =
+            listOf("a", "ka", "sa", "ta", "na", "ha", "ma", "ya", "ra", "wa", "punctuation")
+
+        /** The tap key of one kana12 grid row. */
+        fun kana(rowID: String): LayoutAction = LayoutAction(LayoutActionKind.KANA, value = rowID)
+
+        /** The kana12 modifier key (小゛゜). */
+        val kanaModifier: LayoutAction = LayoutAction(LayoutActionKind.KANA_MODIFIER)
+
+        /** The kana12 composition caret-left key. */
+        val cursorLeft: LayoutAction = LayoutAction(LayoutActionKind.CURSOR_LEFT)
 
         fun code(value: String): LayoutAction = LayoutAction(LayoutActionKind.CODE, value = value)
 
@@ -520,8 +580,7 @@ data class LayoutDefinition(
                     (split?.halves ?: emptyList()).flatMap { it.keys } +
                     (auxiliaryAreas ?: emptyList()).flatMap { it.keys }
             return keys.any { key ->
-                key.action.type == LayoutActionKind.CODE ||
-                    (key.longPress ?: emptyList()).any { it.action.type == LayoutActionKind.CODE }
+                key.action.isEngineInput || (key.longPress ?: emptyList()).any { it.action.isEngineInput }
             }
         }
 

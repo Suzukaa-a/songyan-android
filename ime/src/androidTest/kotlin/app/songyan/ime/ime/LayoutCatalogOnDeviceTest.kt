@@ -52,7 +52,7 @@ class LayoutCatalogOnDeviceTest {
                     scope,
                     KeyboardController.Callbacks(
                         commit = { _, _ -> true },
-                        preedit = {},
+                        preedit = { _, _ -> },
                         delete = {},
                         moveCursor = {},
                         action = {},

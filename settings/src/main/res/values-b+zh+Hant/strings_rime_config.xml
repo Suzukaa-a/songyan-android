@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rime_config_section">Rime 配置</string>
+    <string name="rime_config_body">用 xxx.custom.yaml 等檔案修改輸入方案，和電腦上的 Rime 一樣。檔案在「檔案」應用的「松煙 Rime 配置」裡，改完點「應用更改」才會生效。</string>
+    <string name="rime_config_open">在「檔案」應用裡開啟</string>
+    <string name="rime_config_apply">應用更改</string>
+    <string name="rime_config_applying">正在應用…</string>
+    <string name="rime_config_pending">有改動還沒應用。</string>
+    <string name="rime_config_empty">還沒有配置檔案。</string>
+    <plurals name="rime_config_in_use">
+        <item quantity="other">鍵盤正在使用你的 %1$d 個配置檔案。</item>
+    </plurals>
+    <string name="rime_config_applied">已應用更改。</string>
+    <string name="rime_config_no_files_app">找不到「檔案」應用。</string>
+    <string name="rime_config_failed">沒能應用更改。</string>
+    <string name="rime_config_edit">修改輸入方式</string>
+    <string name="rime_config_edit_global">全域性設定</string>
+    <string name="rime_config_no_editor">沒有能編輯文字的應用。裝一個文字編輯器後再試。</string>
+    <string name="rime_config_changed_files">你改過的檔案</string>
+    <string name="rime_config_restore">恢復原樣</string>
+    <string name="rime_config_file_updated">%1$s 有新版本，你改過的版本仍在使用</string>
+    <string name="rime_config_override_notice">以下檔案已改成你的版本，輸入方案更新時這些檔案不會跟著更新；其餘檔案照常更新。</string>
+    <string name="rime_config_override_ok">知道了</string>
+    <string name="rime_config_new_script">新增擴充套件指令碼</string>
+    <string name="rime_config_script_name">名字</string>
+    <string name="rime_config_script_name_rule">只能用小寫字母、數字和底線。</string>
+    <string name="rime_config_script_create">新增</string>
+    <string name="rime_config_scripts_unused">你的擴充套件指令碼還沒有使用。點「應用更改」並確認後才會使用。</string>
+    <string name="rime_config_scripts_first_title">使用你自己的擴充套件指令碼？</string>
+    <string name="rime_config_scripts_first_body">擴充套件指令碼能讀取你輸入的所有內容。松煙已禁止指令碼執行命令、載入外部程式和聯網，但指令碼引擎自身的漏洞仍可能被利用。只使用你信任來源的指令碼。</string>
+    <string name="rime_config_scripts_changed">以下擴充套件指令碼有改動。</string>
+    <string name="rime_config_scripts_use">使用</string>
+    <string name="rime_editor_scripts_banner">這個檔案帶有擴充套件指令碼。擴充套件指令碼能讀取你輸入的內容，只在你信任來源時使用。</string>
+    <string name="rime_editor_save">儲存</string>
+    <string name="rime_editor_more">更多選項</string>
+    <string name="rime_editor_open_elsewhere">用其他應用開啟</string>
+    <string name="rime_editor_saved">已儲存。應用更改後生效。</string>
+    <string name="rime_editor_load_failed">沒能開啟這個檔案。</string>
+    <string name="rime_editor_discard_title">放棄修改？</string>
+    <string name="rime_editor_discard_body">你改的內容還沒有儲存。</string>
+    <string name="rime_editor_external_changed">檔案已在其他應用中修改</string>
+    <string name="rime_editor_external_changed_body">載入檔案會取代當前編輯。保留編輯後，再次儲存會覆蓋檔案。</string>
+    <string name="rime_editor_load_file">載入檔案</string>
+    <string name="rime_editor_keep_edits">保留編輯</string>
+</resources>

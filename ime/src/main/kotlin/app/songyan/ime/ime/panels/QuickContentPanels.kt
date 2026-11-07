@@ -4,6 +4,11 @@ import android.content.Context
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.EditAction
+import app.songyan.ime.ime.tools.KeyboardToolsEditor
+import app.songyan.ime.ime.tools.KeyboardToolsGateway
+import app.songyan.ime.ime.tools.KeyboardToolsPanel
+import app.songyan.ime.ime.tools.KeyboardToolsSession
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardPageCategory
 import app.songyan.ime.layout.LayoutAction
@@ -40,11 +45,17 @@ private val <T> Lazy<T>.initializedValue: T?
  * quick insert closes it. The settings panel stays open while settings change.
  */
 class QuickContentPanels(
-    context: Context,
+    private val context: Context,
     private val host: QuickContentHost,
     private val scope: CoroutineScope,
     private val dataSource: QuickContentPanelDataSource,
     private val callbacks: Callbacks,
+    /** The app's tool store and runner; null leaves the tools panel out. */
+    private val tools: KeyboardToolsGateway? = null,
+    /** What a tool may read and write in the editor; null leaves the tools panel out. */
+    private val toolEditor: KeyboardToolsEditor? = null,
+    /** The scheme language that decides a tool's script-conversion direction. */
+    private val inputLanguage: () -> InputLanguage = { InputLanguage.ZH_HANS },
 ) {
     /**
      * What the categorized symbol page shows. [categories] null is the built-in page, derived from the
@@ -56,6 +67,8 @@ class QuickContentPanels(
         val enterLabel: String,
         /** The everyday marks the pairing reaches nowhere else; the built-in 常用 lists them first. */
         val leadingMarks: List<String> = emptyList(),
+        /** The schemas input language: the built-in 常用 adds the marks Japanese needs. */
+        val inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     )
 
     interface Callbacks {
@@ -116,6 +129,9 @@ class QuickContentPanels(
 
         /** The emoji metadata version the editor can render; 0 when it does not say. */
         fun emojiMetadataVersion(): Int
+
+        /** Leaves the keyboard for the settings screen where keyboard tools are managed. */
+        fun manageTools()
     }
 
     /** Every panel view created so far; appearance refresh and memory trimming walk it. */
@@ -213,6 +229,11 @@ class QuickContentPanels(
                     callbacks.openLayoutChooser()
                 }
                 onOpenQuickContent = { openPhrases() }
+                onManageTools = {
+                    // The tools page is a settings screen: the keyboard leaves before it opens.
+                    close()
+                    callbacks.manageTools()
+                }
                 onOpenSettings = {
                     close()
                     callbacks.openSettings()
@@ -245,6 +266,43 @@ class QuickContentPanels(
             EditPanelView(context).apply {
                 onEdit = { action, extend -> callbacks.edit(action, extend) }
                 onEditRepeated = { action, extend, stillHeld -> callbacks.repeatEdit(action, extend, stillHeld) }
+            }
+        }
+
+    /** The tools panel; null when this keyboard has no tools (no gateway or no editor side). */
+    private val toolsPanel: Lazy<KeyboardToolsPanel>? =
+        if (tools != null && toolEditor != null) lazyPanel { KeyboardToolsPanel(context) } else null
+
+    /**
+     * The tools panel's decisions. It captures and writes through [toolEditor], runs tools through
+     * [tools] on this panel's own scope, and never touches the engine. Built with the panel.
+     */
+    private val toolsSession: Lazy<KeyboardToolsSession>? =
+        toolsPanel?.let { panel ->
+            lazy(LazyThreadSafetyMode.NONE) {
+                val view = panel.value
+                KeyboardToolsSession(
+                    scope = scope,
+                    panel = view,
+                    gateway = requireNotNull(tools),
+                    editor = requireNotNull(toolEditor),
+                    inputLanguage = inputLanguage,
+                    insert = { text ->
+                        callbacks.insert(text)
+                        close()
+                    },
+                    manage = { callbacks.manageTools() },
+                    present = { show(view) },
+                    dismiss = { close() },
+                ).apply {
+                    view.onChoice = { kind -> chooseSource(kind) }
+                    view.onTool = { id -> run(id) }
+                    view.onApp = { id, label -> runApp(id, label) }
+                    view.onReplace = { replace() }
+                    view.onInsert = { insertResult() }
+                    view.onCopy = { copyResult() }
+                    view.onManage = { manageTools() }
+                }
             }
         }
 
@@ -366,6 +424,37 @@ class QuickContentPanels(
         show(panel)
     }
 
+    /**
+     * The tools panel. It opens with the source text captured and the tools listed; [pinnedToolId]
+     * runs that tool at once, which is what a pinned toolbar entry does.
+     */
+    fun openTools(pinnedToolId: String? = null): Boolean {
+        val session = toolsSession?.value ?: return false
+        session.open(pinnedToolId)
+        return true
+    }
+
+    /**
+     * The preview of an answer another app returned: the keyboard calls this when it comes back to
+     * the editor that handed the text out. False when nothing waits, so the key area is left alone.
+     */
+    fun openProcessTextResult(): Boolean {
+        val toolsView = toolsPanel?.initializedValue
+        // Another panel the user opened stays; the answer keeps waiting for the next show.
+        if (host.isShowing && shown !== toolsView) return false
+        // Every keyboard show asks; with no answer waiting the tools panel is not built for it.
+        if (toolsView == null && tools?.processText?.pending() == null) return false
+        val session = toolsSession?.value ?: return false
+        return session.openAnswer()
+    }
+
+    /** Closes the tools panel when it is the one showing; false leaves any other panel alone. */
+    fun closeTools(): Boolean {
+        val toolsView = toolsPanel?.initializedValue ?: return false
+        if (!host.isShowing || shown !== toolsView) return false
+        return close()
+    }
+
     /** A day/night or font-scale change reaches the panels built so far too; they outlive one keyboard show. */
     fun refreshAppearance() {
         for (panel in initializedPanels) panel.refreshAppearance()
@@ -411,12 +500,24 @@ class QuickContentPanels(
         return visiblePanel === panel && panel.backToGrid()
     }
 
+    /**
+     * The panel surface went away without [close] (its own close button hides the host directly).
+     * Nothing may update a panel that is no longer on screen, and no tool run may land in it.
+     */
+    fun onHostHidden() {
+        toolsSession?.initializedValue?.closed()
+        shown = null
+    }
+
     /** Ends a closing panel's exit at once; see [QuickContentHost.settle]. */
     fun settle() = host.settle()
 
     /** Closes the panel if one is open; returns whether it closed anything. */
-    fun close(): Boolean {
+    fun close(preserveExternalAnswer: Boolean = false): Boolean {
         if (!host.isShowing) return false
+        // Host hiding also reports onHostHidden synchronously; clear the session first so a
+        // lifecycle close cannot let that callback consume a pending external answer.
+        toolsSession?.initializedValue?.closed(preserveExternalAnswer)
         host.hide()
         shown = null
         edit.initializedValue?.reset()
@@ -464,7 +565,7 @@ class QuickContentPanels(
         val phraseView = phrases.initializedValue
         when {
             symbolView != null && panel === symbolView ->
-                symbolView.update(loaded.catalog, loaded.recentSymbols)
+                symbolView.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
             phraseView != null && panel === phraseView ->
                 phraseView.update(
                     loaded.phrases.map { it.text },
@@ -486,13 +587,36 @@ class QuickContentPanels(
                     loaded.catalog.orderedCategories.map { category ->
                         SymbolPageCategories.LibrarySet(
                             category.id,
-                            category.name,
+                            SymbolCategoryTitles.catalogTitle(
+                                authorName = category.name,
+                                id = category.id,
+                                builtinCatalog = loaded.builtinCatalog,
+                                lookup = context::getString,
+                            ),
                             loaded.catalog.itemsIn(category.id).map { it.text },
                         )
                     },
                     request.leadingMarks,
+                    request.inputLanguage,
                 )
-        panel.update(categories, request.asciiMarks, reopen = symbolPageFresh)
+        // Only a page derived from built-in data has built-in tab titles; a saved page keeps the
+        // names its author gave it, even when it started as a copy of the built-in one.
+        val titled =
+            if (request.categories == null) {
+                categories.map { category ->
+                    category.withName(
+                        SymbolCategoryTitles.pageTitle(
+                            authorName = category.name,
+                            id = category.id,
+                            builtinPage = true,
+                            lookup = context::getString,
+                        ),
+                    )
+                }
+            } else {
+                categories
+            }
+        panel.update(titled, request.asciiMarks, reopen = symbolPageFresh)
         symbolPageFresh = false
     }
 }

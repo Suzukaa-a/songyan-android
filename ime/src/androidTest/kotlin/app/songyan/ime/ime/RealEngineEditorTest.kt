@@ -39,6 +39,7 @@ import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutSplitConfiguration
 import app.songyan.ime.layout.ShuangpinHintPresets
@@ -82,7 +83,7 @@ class RealEngineEditorTest {
             host.start()
             host.tap("n")
             host.awaitField("n")
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitIdle()
             assertEquals("", host.text())
             assertFalse(host.editor.composing)
@@ -94,7 +95,7 @@ class RealEngineEditorTest {
             host.start()
             for (key in "64426") host.tapKeyFor(key)
             host.awaitComposing()
-            host.tap(host.string(R.string.ime_clear))
+            host.tapClearControl()
             host.awaitIdle()
             assertEquals("", host.text())
         }
@@ -118,7 +119,7 @@ class RealEngineEditorTest {
             // 546 on its own offers 林 (lin) as a candidate: the engine proves that reading.
             for (key in "546") host.tapKeyFor(key)
             host.awaitField("lin")
-            host.tap(host.string(R.string.ime_clear))
+            host.tapClearControl()
             host.awaitIdle()
             // The sentence 一林 has no reading of its own; 林 must not fall back to the commoner jin.
             for (key in "94546") host.tapKeyFor(key)
@@ -146,7 +147,7 @@ class RealEngineEditorTest {
             host.awaitComposing()
             assertTrue("the toolbar gives way to the candidates", host.toolbarLabelsNow().isEmpty())
             assertEquals("the band keeps its height", idleHeight, host.bandHeight())
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitIdle()
             assertTrue("the toolbar comes back", host.toolbarLabelsNow().isNotEmpty())
             assertEquals(idleHeight, host.bandHeight())
@@ -418,7 +419,7 @@ class RealEngineEditorTest {
     fun anIdleSpaceTypesASpace() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_space))
+            host.tapSpace()
             host.awaitField(" ")
         }
 
@@ -1236,7 +1237,7 @@ class RealEngineEditorTest {
     fun aSpaceHeldWithoutMovingStillTypesASpace() =
         withHost { host ->
             host.start()
-            val space = host.keyCenter(host.string(R.string.ime_space))
+            val space = host.keyCenterSpace()
             val start = SystemClock.uptimeMillis()
             host.main { host.touch(start, MotionEvent.ACTION_DOWN, space) }
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
@@ -1253,14 +1254,14 @@ class RealEngineEditorTest {
         withHost(schema = "songyan_flypy") { host ->
             host.start()
             val density = host.context.resources.displayMetrics.density
-            val bar = host.keyRect(host.string(R.string.ime_space))
+            val bar = host.keyRectSpace()
             val drift = bar.height() * 0.35f
             assertTrue("the drift must pass the touch slop", drift > 8f * density)
             for (direction in listOf(-1f, 1f)) {
                 val before = host.text()
                 host.typeKeys("nihc")
                 host.awaitComposing()
-                val space = host.keyCenter(host.string(R.string.ime_space))
+                val space = host.keyCenterSpace()
                 val start = SystemClock.uptimeMillis()
                 host.main {
                     host.touch(start, MotionEvent.ACTION_DOWN, space)
@@ -1289,7 +1290,7 @@ class RealEngineEditorTest {
             host.tap("n")
             host.tap("i")
             host.awaitField("abcni")
-            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val delete = host.keyCenterDelete()
             val start = SystemClock.uptimeMillis()
             host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
             // Long enough for many repeats: two letters are erased by the first two, the rest would eat "abc".
@@ -1309,8 +1310,8 @@ class RealEngineEditorTest {
         host: Host,
         holdMs: Long = 0L,
     ) {
-        val delete = host.keyCenter(host.string(R.string.ime_delete))
-        val box = host.keyRect(host.string(R.string.ime_delete))
+        val delete = host.keyCenterDelete()
+        val box = host.keyRectDelete()
         val drift = DRIFT_DP * host.density
         // Still well inside the key, yet past the 8 dp touch slop.
         assertTrue("delete key too narrow for the drift: $box", box.width() / 2f > drift + 2f)
@@ -1330,7 +1331,7 @@ class RealEngineEditorTest {
         withHost { host ->
             host.start(initial = "abc")
             BackspaceTrace.clear()
-            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val delete = host.keyCenterDelete()
             val start = SystemClock.uptimeMillis()
             host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
             host.awaitIdle()
@@ -1359,7 +1360,7 @@ class RealEngineEditorTest {
     fun aSecondFingerEndsAHeldDeleteWithoutDeletingAgain() =
         withHost { host ->
             host.start(initial = "abc")
-            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val delete = host.keyCenterDelete()
             val n = host.keyCenter("n")
             host.main {
                 val start = SystemClock.uptimeMillis()
@@ -1387,7 +1388,7 @@ class RealEngineEditorTest {
             host.start(initial = "abc")
             host.tap("n")
             host.awaitField("abcn")
-            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val delete = host.keyCenterDelete()
             val start = SystemClock.uptimeMillis()
             host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + 600L)
@@ -1439,7 +1440,7 @@ class RealEngineEditorTest {
                         afterLength: Int,
                     ): Boolean = true
                 }
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitField("ab")
         }
 
@@ -1452,10 +1453,10 @@ class RealEngineEditorTest {
                 // The report the framework sends for the user's selection.
                 host.editor.onUpdateSelection(6, 6, 1, 4, -1, -1)
             }
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitField("aef")
             // The caret the delete left behind is known again, and the next delete is plain.
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitField("ef")
         }
 
@@ -1463,7 +1464,7 @@ class RealEngineEditorTest {
     fun draggingTheSpaceBarMovesTheCaretOneCharacterPerStepOf24Dp() =
         withHost { host ->
             host.start(initial = "abcdefghij")
-            val space = host.keyCenter(host.string(R.string.ime_space))
+            val space = host.keyCenterSpace()
             val density = host.context.resources.displayMetrics.density
             val start = SystemClock.uptimeMillis()
             host.main {
@@ -1493,7 +1494,7 @@ class RealEngineEditorTest {
     fun aFastSpaceDragNeedsLessTravelPerCharacterAndNeverSkipsOne() =
         withHost { host ->
             host.start(initial = "abcdefghijklmnop")
-            val space = host.keyCenter(host.string(R.string.ime_space))
+            val space = host.keyCenterSpace()
             val density = host.context.resources.displayMetrics.density
             val start = SystemClock.uptimeMillis()
             val moved = mutableListOf<Int>()
@@ -1527,19 +1528,19 @@ class RealEngineEditorTest {
     fun theSymbolPageKeepsItsPlaceAfterASymbol() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapPage(LayoutPageTarget.NUMERIC)
+            host.tapPage(LayoutPageTarget.SYMBOLS)
             host.tap("【")
             host.tap("】")
             host.awaitField("【】")
-            assertTrue(host.keyLabels().none { it == host.string(R.string.ime_symbol_lock) })
+            assertEquals(0, host.keyCount { it.action.type == LayoutActionKind.SYMBOL_LOCK })
         }
 
     @Test
     fun theNumbersPageKeepsItsPlaceAfterDigits() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapPage(LayoutPageTarget.NUMERIC)
             host.tap("1")
             host.tap("2")
             host.awaitField("12")
@@ -1581,8 +1582,7 @@ class RealEngineEditorTest {
             host.tap("@")
             host.tap(".")
             host.awaitField("@.")
-            val labels = host.keyLabels()
-            assertTrue(labels.toString(), labels.none { it == host.string(R.string.ime_language_to_chinese) })
+            assertEquals(0, host.keyCount { it.action.type == LayoutActionKind.LANGUAGE_SWITCH })
         }
 
     @Test
@@ -1596,7 +1596,7 @@ class RealEngineEditorTest {
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
             host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, dot, downTime = start) }
             host.awaitField("/")
-            host.tap(host.string(R.string.ime_language_to_chinese))
+            host.tapLanguageKey()
             host.tap("n")
             host.tap("i")
             host.awaitComposing()
@@ -1697,7 +1697,7 @@ class RealEngineEditorTest {
             host.awaitIdle()
             val chosen = host.backend.currentSnapshot()
             assertTrue("after choice: raw=${chosen.rawInput} field=${host.text()}", chosen.isComposing)
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitIdle()
             val after = host.backend.currentSnapshot()
             assertTrue("composition is back: raw=${after.rawInput} field=${host.text()}", after.isComposing)
@@ -1723,7 +1723,7 @@ class RealEngineEditorTest {
             )
             host.awaitField("ni'hc")
             for (expected in listOf("ni'h", "ni'", "ni")) {
-                host.tap(host.string(R.string.ime_delete))
+                host.tapDelete()
                 host.awaitField(expected)
                 assertEquals(expected, host.backend.currentSnapshot().rawInput)
             }
@@ -1736,7 +1736,7 @@ class RealEngineEditorTest {
             host.typeKeys("ni'hc")
             host.awaitField("ni'hc")
             for (expected in listOf("ni'h", "ni'", "ni", "n")) {
-                host.tap(host.string(R.string.ime_delete))
+                host.tapDelete()
                 host.awaitField(expected)
                 assertEquals(expected, host.backend.currentSnapshot().rawInput)
             }
@@ -1761,13 +1761,30 @@ class RealEngineEditorTest {
                         .first()
                         .text,
                 )
-                host.tap(host.string(R.string.ime_space))
+                host.tapSpace()
                 host.awaitField("你h")
                 assertEquals("ni'h", host.backend.currentSnapshot().rawInput)
-                host.tap(host.string(R.string.ime_space))
+                host.tapSpace()
                 host.awaitField("你h")
                 assertFalse("$schema: the second Space ends the composition", host.editor.composing)
             }
+        }
+    }
+
+    /**
+     * A saved layout the keyboard cannot run right now (here: no 9-key form of this scheme, which no
+     * deployment generated companions for) falls back for this editor only; the saved choice stays,
+     * so the layout comes back once it can run again.
+     */
+    @Test
+    fun aLayoutThatCannotRunNowKeepsTheSavedChoice() {
+        withHost(layout = "phone9", schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            host.awaitIdle()
+            var running: KeyboardLayoutKind? = null
+            host.main { running = host.controller.layoutKind }
+            assertNotEquals("precondition: the scheme has no 9-key form", KeyboardLayoutKind.PHONE9, running)
+            assertEquals("phone9", host.preferences.layoutId.value)
         }
     }
 
@@ -1784,9 +1801,9 @@ class RealEngineEditorTest {
                 host.awaitIdle()
                 // One more key, spelled as whichever letter of that key the engine reads.
                 assertTrue("$layout: '${host.text()}'", host.text().length == 4 && host.text().startsWith("ni'"))
-                host.tap(host.string(R.string.ime_delete))
+                host.tapDelete()
                 host.awaitField("ni'")
-                host.tap(host.string(R.string.ime_delete))
+                host.tapDelete()
                 host.awaitField("ni")
             }
         }
@@ -1962,17 +1979,17 @@ class RealEngineEditorTest {
     fun theSymbolPageOpensTheSymbolLibraryWithRecentFirstAndABottomBar() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
-            host.tap("更多")
+            host.tapPage(LayoutPageTarget.NUMERIC)
+            host.tapPage(LayoutPageTarget.SYMBOLS)
+            host.tapSymbolPanelKey()
             host.awaitIdle()
             var labels = emptyList<String>()
             host.main {
                 val panel = host.find(app.songyan.ime.ime.panels.SymbolPanelView::class.java)
                 labels = host.labelsOf(panel)
             }
-            // The rail has "recent" even though nothing was used yet; it sits beside the Chinese categories, so it is Chinese too.
-            assertTrue(labels.toString(), labels.contains("最近"))
+            // The rail has its recent slot even though nothing was used yet; the panel words it from chrome resources.
+            assertTrue(labels.toString(), labels.contains(host.string(R.string.ime_panel_recent)))
             assertTrue(labels.toString(), labels.contains(host.string(R.string.ime_delete)))
             assertTrue(labels.toString(), labels.contains(host.string(R.string.ime_space)))
             assertTrue(labels.toString(), labels.contains(host.string(R.string.ime_return_to_letters)))
@@ -2031,7 +2048,7 @@ class RealEngineEditorTest {
             host.start()
             for (letter in "zhong") host.tap(letter.toString())
             host.awaitField("zhong")
-            host.tap(host.string(R.string.ime_done))
+            host.tapEnter()
             host.awaitIdle()
             assertEquals("zhong", host.text())
             assertFalse(host.editor.composing)
@@ -2045,7 +2062,7 @@ class RealEngineEditorTest {
             host.awaitComposing()
             val snapshot = host.backend.currentSnapshot()
             val expected = snapshot.candidates[snapshot.highlightedIndex].text
-            host.tap(host.string(R.string.ime_done))
+            host.tapEnter()
             host.awaitIdle()
             assertEquals(expected, host.text())
             assertFalse(host.editor.composing)
@@ -2064,7 +2081,7 @@ class RealEngineEditorTest {
     fun deleteIsAKeyEventWhereTheKeyboardCannotSeeText() =
         withHost { host ->
             host.start(inputType = InputType.TYPE_NULL)
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             assertEquals(KeyEvent.KEYCODE_DEL, host.keyEvents.firstOrNull()?.keyCode)
         }
 
@@ -2197,7 +2214,7 @@ class RealEngineEditorTest {
             assertTrue("only xi words remain: ${host.barLabels()}", host.barLabels().none { it.startsWith("一") })
             assertTrue("a chosen spelling is not offered again", host.keyLabels().none { it == "yi" })
             // Delete undoes the lock before it deletes anything.
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitKey("yi")
             assertEquals("94", host.backend.currentSnapshot().rawInput)
             assertTrue("the first word is back: ${host.barLabels()}", host.barLabels().any { it.startsWith("一") })
@@ -2224,6 +2241,8 @@ class RealEngineEditorTest {
             host.start()
             for (key in "9426") host.tapKeyFor(key)
             host.awaitComposing()
+            // The full spelling set has a second lockable spelling now, so xi starts just below the window.
+            host.scrollReadingRailUp()
             host.awaitKey("xi")
             val engineFirst =
                 host.backend
@@ -2239,7 +2258,7 @@ class RealEngineEditorTest {
             assertTrue("西安 reads xi an: $bar", bar.first().startsWith("西安"))
             // The field follows what space will commit.
             host.awaitField("xi'an")
-            host.tap(host.string(R.string.ime_space))
+            host.tapSpace()
             host.awaitField("西安")
         }
 
@@ -2249,10 +2268,14 @@ class RealEngineEditorTest {
             host.start()
             for (key in "9426") host.tapKeyFor(key)
             host.awaitComposing()
+            // The full spelling set has a second lockable spelling now, so xi starts just below the window.
+            host.scrollReadingRailUp()
             host.awaitKey("xi")
             host.tap("xi")
             host.awaitKey(host.context.getString(R.string.ime_rail_chosen, "xi"))
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
+            // Deleting restores the typed input, so the reading window resets to the same three slots.
+            host.scrollReadingRailUp()
             host.awaitKey("xi")
             assertEquals("9426", host.backend.currentSnapshot().rawInput)
             assertTrue("the engine's own first word is back", host.barLabels().first().startsWith("小"))
@@ -2335,7 +2358,7 @@ class RealEngineEditorTest {
             host.awaitReadingRow(host.context.getString(R.string.ime_rail_chosen, "xi"))
             assertTrue("西安 reads xi an: ${host.barLabels()}", host.barLabels().first().startsWith("西安"))
             // Delete undoes the choice before it deletes a code.
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitReadingRow(reading)
         }
 
@@ -2471,9 +2494,9 @@ class RealEngineEditorTest {
             // Typing still sends the letter, not the hint.
             host.tap("q")
             host.awaitComposing()
-            host.tap(host.string(R.string.ime_delete))
+            host.tapDelete()
             host.awaitIdle()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapLanguageKey()
             host.awaitIdle()
             assertNull(hintUnder("q"))
         }
@@ -2531,7 +2554,7 @@ class RealEngineEditorTest {
                     for (nth in 0..1) {
                         host.tapNth(letter, nth)
                         host.awaitField(letter)
-                        host.tap(host.string(R.string.ime_delete))
+                        host.tapDelete()
                         host.awaitField("")
                     }
                 }
@@ -2841,6 +2864,89 @@ class RealEngineEditorTest {
             return bounds
         }
 
+        /**
+         * The drawn key whose action matches: the face of an automatic control follows the input
+         * language, what the key does does not. Its index and the provider's node share one key list.
+         */
+        private fun requireKey(
+            view: KeyboardView,
+            match: (LayoutKey) -> Boolean,
+        ): Int {
+            val index = view.keys.indexOfFirst(match)
+            assertTrue("no key matching the action in ${view.labels}", index >= 0)
+            return index
+        }
+
+        fun keyCount(match: (LayoutKey) -> Boolean): Int {
+            var count = 0
+            main { count = find(KeyboardView::class.java).keys.count(match) }
+            return count
+        }
+
+        /** Taps a key by what it does, so a face the input language renames cannot move the target. */
+        fun tapKeyWhere(match: (LayoutKey) -> Boolean) {
+            main {
+                val view = find(KeyboardView::class.java)
+                val index = requireKey(view, match)
+                assertTrue(
+                    view.accessibilityNodeProvider.performAction(index, AccessibilityNodeInfo.ACTION_CLICK, null),
+                )
+            }
+            awaitIdle()
+        }
+
+        fun keyCenterWhere(match: (LayoutKey) -> Boolean): Pair<Float, Float> {
+            var center = 0f to 0f
+            main {
+                val view = find(KeyboardView::class.java)
+                val bounds = Rect()
+                view.accessibilityNodeProvider
+                    .createAccessibilityNodeInfo(requireKey(view, match))!!
+                    .getBoundsInParent(bounds)
+                center = bounds.exactCenterX() to bounds.exactCenterY()
+            }
+            return center
+        }
+
+        fun keyRectWhere(match: (LayoutKey) -> Boolean): Rect {
+            val bounds = Rect()
+            main {
+                val view = find(KeyboardView::class.java)
+                view.accessibilityNodeProvider
+                    .createAccessibilityNodeInfo(requireKey(view, match))!!
+                    .getBoundsInParent(bounds)
+            }
+            return bounds
+        }
+
+        /** The keyboard's own controls, located by action rather than by a renamed face. */
+        fun tapSpace() = tapKeyWhere { it.action.type == LayoutActionKind.SPACE }
+
+        fun tapDelete() = tapKeyWhere { it.action.type == LayoutActionKind.BACKSPACE }
+
+        fun tapEnter() = tapKeyWhere { it.action.type == LayoutActionKind.ENTER }
+
+        fun tapLanguageKey() = tapKeyWhere { it.action.type == LayoutActionKind.LANGUAGE_SWITCH }
+
+        fun tapClearControl() = tapKeyWhere { it.action.type == LayoutActionKind.CLEAR_INPUT }
+
+        fun tapPage(target: LayoutPageTarget) =
+            tapKeyWhere { it.action.type == LayoutActionKind.PAGE_SWITCH && it.action.pageSwitchTarget == target }
+
+        /** The symbol page's 更多 key opens the symbol panel: a mode switch, not page data. */
+        fun tapSymbolPanelKey() =
+            tapKeyWhere {
+                it.action.type == LayoutActionKind.MODE_SWITCH && it.action.value == KeyboardPages.SYMBOL_PANEL_MODE
+            }
+
+        fun keyCenterDelete() = keyCenterWhere { it.action.type == LayoutActionKind.BACKSPACE }
+
+        fun keyRectDelete() = keyRectWhere { it.action.type == LayoutActionKind.BACKSPACE }
+
+        fun keyCenterSpace() = keyCenterWhere { it.action.type == LayoutActionKind.SPACE }
+
+        fun keyRectSpace() = keyRectWhere { it.action.type == LayoutActionKind.SPACE }
+
         /** One touch event on the key area; pointers are listed by id. */
         fun touch(
             time: Long,
@@ -2880,6 +2986,36 @@ class RealEngineEditorTest {
                 )
             find(KeyboardView::class.java).dispatchTouchEvent(event)
             event.recycle()
+        }
+
+        /**
+         * Scrolls the reading rail by one slot with a real upward drag on its last visible reading:
+         * the rail shows only a window, and a longer spelling can sit just below it.
+         */
+        fun scrollReadingRailUp() {
+            var start = 0f to 0f
+            var slot = 0f
+            main {
+                val view = find(KeyboardView::class.java)
+                val reading = view.railIndices.filter { view.keys[it].label.isNotBlank() }.maxOrNull() ?: -1
+                assertTrue("no visible reading on ${view.labels}", reading >= 0)
+                val hit = Rect()
+                view.accessibilityNodeProvider.createAccessibilityNodeInfo(reading)!!.getBoundsInParent(hit)
+                // dragRail divides the travel by the drawn key's height, so one height scrolls one slot.
+                val drawn = view.bounds[reading]
+                start = hit.exactCenterX() to hit.exactCenterY()
+                slot = drawn.bottom - drawn.top
+            }
+            val down = SystemClock.uptimeMillis()
+            main {
+                touch(down, MotionEvent.ACTION_DOWN, start)
+                // The first move arms the drag; the second travels a little over one slot so the
+                // integer step count cannot truncate to zero, and the release selects nothing.
+                touch(down + 16, MotionEvent.ACTION_MOVE, start.first to start.second - slot * 0.5f, downTime = down)
+                touch(down + 32, MotionEvent.ACTION_MOVE, start.first to start.second - slot * 1.2f, downTime = down)
+                touch(down + 48, MotionEvent.ACTION_UP, start.first to start.second - slot * 1.2f, downTime = down)
+            }
+            awaitIdle()
         }
 
         /** Height of the band above the key area: the toolbar or the candidates, whichever shows. */

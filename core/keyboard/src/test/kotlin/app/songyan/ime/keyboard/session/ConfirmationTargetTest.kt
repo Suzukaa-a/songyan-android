@@ -19,7 +19,11 @@ import org.junit.Test
  */
 class ConfirmationTargetTest {
     /** Two candidates for one key: 小 highlighted first, 西安 second. */
-    private class TwoWordEngine : EngineBackend {
+    private class TwoWordEngine(
+        private val schemaID: String = "",
+        private val nativeSpace: EngineSnapshot? = null,
+        private val nativeReturn: EngineSnapshot? = null,
+    ) : EngineBackend {
         override val kind: EngineBackendKind = EngineBackendKind.DEMO_SIMULATOR
         override val inputUnavailableReason: String? = null
         override val availableSchemas = emptyList<KeyboardSchemaDescriptor>()
@@ -38,7 +42,11 @@ class ConfirmationTargetTest {
         override suspend fun processKey(keyValue: String): EngineSnapshot {
             keys += keyValue
             if (keyValue.length == 1 && keyValue[0].isLetterOrDigit()) input += keyValue
-            if (keyValue == EngineBackend.SPACE_KEY) return finish(0)
+            if (keyValue == EngineBackend.SPACE_KEY) return nativeSpace ?: finish(0)
+            if (keyValue == EngineBackend.RETURN_KEY && nativeReturn != null) {
+                input = ""
+                return nativeReturn
+            }
             return currentSnapshot()
         }
 
@@ -59,6 +67,7 @@ class ConfirmationTargetTest {
 
         override fun currentSnapshot(): EngineSnapshot =
             EngineSnapshot(
+                schemaID = schemaID,
                 candidates = if (input.isEmpty()) emptyList() else listOf(Candidate(0, "小"), Candidate(1, "西安")),
                 preedit = input,
                 rawInput = input,
@@ -80,6 +89,53 @@ class ConfirmationTargetTest {
         assertTrue(session.snapshot.isComposing)
         return Triple(session, engine, commits)
     }
+
+    @Test
+    fun zhuyinSpaceKeepsTheNativeFirstToneBinding() =
+        runTest {
+            val engine =
+                TwoWordEngine(
+                    schemaID = "bopomofo_tw",
+                    nativeSpace =
+                        EngineSnapshot(
+                            schemaID = "bopomofo_tw",
+                            preedit = "ㄓㄜˉ",
+                            rawInput = "5k ",
+                            isComposing = true,
+                        ),
+                )
+            val session = InputSession(engine, KeyboardLayoutKind.QWERTY26)
+            session.reloadOptions()
+            assertEquals(app.songyan.ime.keyboard.engine.InputSchemeFamily.ZHUYIN, session.inputLanguage.family)
+            val commits = mutableListOf<String>()
+            session.onCommitted = { commits += it }
+            session.tap(KeyAction.Code("5"))
+            session.tap(KeyAction.Code("k"))
+            session.confirmationTarget = { 1 }
+            session.tap(KeyAction.Space)
+            assertTrue(commits.isEmpty())
+            assertEquals("ㄓㄜˉ", session.snapshot.preedit)
+            assertEquals("5k ", session.snapshot.rawInput)
+        }
+
+    @Test
+    fun japaneseReturnKeepsTheNativeKanaCommitBinding() =
+        runTest {
+            val engine =
+                TwoWordEngine(
+                    schemaID = "kagiroi",
+                    nativeReturn = EngineSnapshot(committed = "にほんご"),
+                )
+            val session = InputSession(engine, KeyboardLayoutKind.QWERTY26)
+            session.reloadOptions()
+            val commits = mutableListOf<String>()
+            session.onCommitted = { commits += it }
+            "nihongo".forEach { session.tap(KeyAction.Code(it.toString())) }
+            session.confirmationTarget = { 1 }
+            session.tap(KeyAction.Enter)
+            assertEquals(listOf("にほんご"), commits)
+            assertFalse(session.snapshot.isComposing)
+        }
 
     @Test
     fun spaceCommitsTheFilteredFirstMatchNotTheEngineHighlight() =

@@ -12,12 +12,17 @@
     <string name="ime_previous">上一项</string>
     <string name="ime_numbers">123</string>
     <string name="ime_symbols">符号</string>
+    <string name="ime_symbol_key">符</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">重输</string>
     <string name="ime_language_to_english">中文，点按切换为英文</string>
     <string name="ime_language_to_chinese">英文，点按切换为中文</string>
     <string name="ime_language_to_english_symbols">中文标点，点按切换为英文标点</string>
     <string name="ime_language_to_chinese_symbols">英文标点，点按切换为中文标点</string>
+    <string name="ime_language_japanese_to_english">日文，点按切换为英文</string>
+    <string name="ime_language_to_japanese">英文，点按切换为日文</string>
+    <string name="ime_language_japanese_to_english_symbols">日文标点，点按切换为英文标点</string>
+    <string name="ime_language_to_japanese_symbols">英文标点，点按切换为日文标点</string>
     <string name="ime_open_symbols_page">打开符号页</string>
     <string name="ime_open_numbers_page">打开数字符号页</string>
     <string name="ime_open_more_symbols">打开更多符号</string>
@@ -35,6 +40,9 @@
     <string name="ime_layout_merged14">14 键</string>
     <string name="ime_layout_merged18">18 键</string>
     <string name="ime_layout_phone9">9 键</string>
+    <string name="ime_layout_zhuyin41">注音 41 键</string>
+    <string name="ime_layout_cangjie26">仓颉 26 键</string>
+    <string name="ime_layout_romaji26">罗马字 26 键</string>
     <string name="ime_preparing">正在准备输入方案</string>
     <string name="ime_unavailable">输入方案尚未就绪</string>
     <string name="ime_expand">展开候选</string>

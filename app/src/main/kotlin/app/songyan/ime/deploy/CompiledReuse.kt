@@ -1,5 +1,6 @@
 package app.songyan.ime.deploy
 
+import app.songyan.ime.storage.PrebuiltResourceStore
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -17,6 +18,10 @@ import java.util.zip.CRC32
  * Files of another librime build are never offered: the checksums do not cover the engine's own
  * table builder, which a patch or a new release may change.
  *
+ * A package compiled on another machine ships its build and no dictionary sources, so librime has
+ * nothing to checksum a table against and cannot notice that an older one is stale. Such a package
+ * is seeded from its own `build` directory instead of from an earlier generation.
+ *
  * The seeds are copies, not links: librime overwrites a compiled file in place when it rebuilds
  * it, and a link would let that write reach the published generation the keyboard has mapped.
  */
@@ -28,19 +33,25 @@ internal object CompiledReuse {
     private const val DICTIONARY_SOURCE = ".dict.yaml"
     private const val CONFIG_SUFFIX = ".yaml"
 
+    /** Where a package compiled elsewhere ships its build. */
+    private const val PREBUILT_DIRECTORY = "build"
+
     /**
-     * Copies into [targetBuild] the compiled files of [previousBuild] that the deployment may reuse:
-     * the table, reverse lookup and prism of every dictionary whose source sits at the top of
-     * [sourceDirs] (where librime looks for it), and every prism, since an input method's prism is
-     * named after the input method. Returns the names of the copied files. A file that cannot be
-     * copied is simply compiled again.
+     * Copies into [targetBuild] the compiled files the deployment may reuse: the table, reverse
+     * lookup and prism of every dictionary whose source sits at the top of [sourceDirs] (where
+     * librime looks for it), every prism of [previousBuild] (an input method's prism is named after
+     * the input method), and everything the sources ship prepacked under their own `build`
+     * directory. A prebuilt file wins over [previousBuild]'s file of the same name, since only it
+     * was compiled for the package's current revision. Returns the names of the copied files. A
+     * file that cannot be copied is simply compiled again.
      */
     fun seed(
         previousBuild: File,
         sourceDirs: List<File>,
         targetBuild: File,
     ): List<String> {
-        if (!previousBuild.isDirectory) return emptyList()
+        val prebuilt = prebuiltFiles(sourceDirs)
+        if (!previousBuild.isDirectory && prebuilt.isEmpty()) return emptyList()
         val names = LinkedHashSet<String>()
         for (dictionary in dictionaryNames(sourceDirs)) {
             DICTIONARY_SUFFIXES.forEach { names += dictionary + it }
@@ -51,9 +62,10 @@ internal object CompiledReuse {
             .filter { it.name.endsWith(PRISM_SUFFIX) }
             .sortedBy { it.name }
             .forEach { names += it.name }
+        names.addAll(prebuilt.keys)
         val copied = ArrayList<String>()
         for (name in names) {
-            val source = File(previousBuild, name)
+            val source = prebuilt[name] ?: File(previousBuild, name)
             if (!source.isFile) continue
             val target = File(targetBuild, name)
             try {
@@ -66,6 +78,37 @@ internal object CompiledReuse {
         }
         return copied
     }
+
+    /**
+     * The source's own `build` directory when the package ships compiled dictionaries. A package
+     * without dictionary sources leaves librime nothing to compile from, so those files are all a
+     * deployment of it can start with.
+     */
+    fun prebuiltBuild(sourceDir: File): File? {
+        PrebuiltResourceStore.restore(sourceDir)
+        return File(sourceDir, PREBUILT_DIRECTORY).takeIf { build ->
+            build.isDirectory && build.listFiles().orEmpty().any { it.isFile && isCompiledName(it.name) }
+        }
+    }
+
+    /** The compiled files each source ships under its own `build`, with the directory each lies in. */
+    private fun prebuiltFiles(sourceDirs: List<File>): Map<String, File> {
+        val files = LinkedHashMap<String, File>()
+        for (sourceDir in sourceDirs) {
+            val build = File(sourceDir, PREBUILT_DIRECTORY).takeIf { it.isDirectory } ?: continue
+            build
+                .listFiles()
+                .orEmpty()
+                .filter { it.isFile && isCompiledName(it.name) }
+                .sortedBy { it.name }
+                .forEach { file -> if (file.name !in files) files[file.name] = file }
+        }
+        return files
+    }
+
+    /** Whether [name] is one of the files librime itself names and validates as compiled data. */
+    private fun isCompiledName(name: String): Boolean =
+        DICTIONARY_SUFFIXES.any { name.endsWith(it) && name.length > it.length }
 
     /**
      * Deletes the seeded prisms no compiled schema in [build] mentions, so the prisms of input

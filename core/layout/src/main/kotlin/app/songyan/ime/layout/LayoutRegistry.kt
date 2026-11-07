@@ -1,5 +1,10 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+
 /**
  * Value-type snapshot of the user's layouts, pages and keyboard pairings. Which layout a keyboard
  * uses is its pairing, not a list of enabled layouts.
@@ -29,8 +34,20 @@ class LayoutRegistry private constructor(
     }
 
     /** The layouts the page pairing offers as this keyboard's main layout. */
-    fun mainLayoutCandidates(key: KeyboardCompositionKey): List<LayoutDefinition> =
-        usableLayouts { it.supportsComposition(key.inputMethodId, key.layout) }
+    fun mainLayoutCandidates(
+        key: KeyboardCompositionKey,
+        families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
+    ): List<LayoutDefinition> {
+        val family = families.familyOf(key.inputMethodId)
+        // A family without a known exception keeps the shipped shapes; the identity shape stays the
+        // transport for the scheme-driven physical layouts.
+        val kind = kindOf(key.layout) ?: return usableLayouts { it.supportsComposition(key.inputMethodId, key.layout) }
+        if (!InputLayoutPolicy.allows(kind, family)) return emptyList()
+        return usableLayouts {
+            it.supportsComposition(key.inputMethodId, key.layout) &&
+                InputLayoutPolicy.allows(it.id, family)
+        }
+    }
 
     /**
      * Keyboards that use this layout as the main layout, in a stable order: every saved pairing, plus
@@ -39,9 +56,10 @@ class LayoutRegistry private constructor(
     fun keyboardsUsingLayout(
         id: String,
         among: List<KeyboardCompositionKey> = emptyList(),
+        families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
     ): List<KeyboardCompositionKey> {
         val raw = compositions.filterValues { it.mainLayoutID == id }.keys.toMutableSet()
-        for (key in among) if (composition(key).mainLayoutID == id) raw.add(key.rawValue)
+        for (key in among) if (composition(key, families).mainLayoutID == id) raw.add(key.rawValue)
         return raw.sorted().mapNotNull { KeyboardCompositionKey.parse(it) }
     }
 
@@ -53,20 +71,53 @@ class LayoutRegistry private constructor(
             .sorted()
             .mapNotNull { KeyboardCompositionKey.parse(it) }
 
-    /** The saved pairing, or the default one built on [defaultMainLayoutId]. */
-    fun composition(key: KeyboardCompositionKey): KeyboardComposition =
-        compositions[key.rawValue] ?: KeyboardComposition(mainLayoutID = defaultMainLayoutId(key))
+    /**
+     * The saved pairing, or the default one built on [defaultMainLayoutId]. A saved pairing whose
+     * main layout the scheme's family (or the shape binding) no longer allows reads as the default
+     * one instead; the stored entry itself is left alone so the user's data survives.
+     */
+    fun composition(
+        key: KeyboardCompositionKey,
+        families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
+    ): KeyboardComposition {
+        val family = families.familyOf(key.inputMethodId)
+        val saved = compositions[key.rawValue]
+        if (kindOf(key.layout)?.let { !InputLayoutPolicy.allows(it, family) } == true) {
+            // A pairing saved before the family rule reads through the identity shape that family uses.
+            val identity = KeyboardCompositionKey(key.inputMethodId, LayoutInput.Builtin.QWERTY26)
+            val base = saved ?: KeyboardComposition(mainLayoutID = defaultMainLayoutId(identity, families))
+            return base.copy(mainLayoutID = defaultMainLayoutId(identity, families))
+        }
+        if (saved == null) return KeyboardComposition(mainLayoutID = defaultMainLayoutId(key, families))
+        val legal = legalMainLayoutId(key, saved.mainLayoutID, family, families)
+        return if (legal == saved.mainLayoutID) saved else saved.copy(mainLayoutID = legal)
+    }
 
     /**
      * The main layout of a keyboard without a saved pairing; the settings and the keyboard both
      * resolve it here. A layout of this shape bound to this input method wins (the smallest id when
-     * there are several, so catalog order never decides); otherwise the bundled preset of the shape.
+     * there are several, so catalog order never decides); then the physical layout the scheme's
+     * family types on, when it shipped; otherwise the bundled preset of the shape.
      */
-    fun defaultMainLayoutId(key: KeyboardCompositionKey): String =
-        layouts
-            .filter { it.input.schemaID == key.inputMethodId && it.input.builtinLayout == key.layout }
-            .minOfOrNull { it.id }
+    fun defaultMainLayoutId(
+        key: KeyboardCompositionKey,
+        families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
+    ): String {
+        val family = families.familyOf(key.inputMethodId)
+        if (kindOf(key.layout)?.let { !InputLayoutPolicy.allows(it, family) } == true) {
+            // A shape the family forbids still answers with a layout it can draw: the identity one.
+            val identity = KeyboardCompositionKey(key.inputMethodId, LayoutInput.Builtin.QWERTY26)
+            return defaultMainLayoutId(identity, families)
+        }
+        return layouts
+            .filter {
+                it.input.schemaID == key.inputMethodId &&
+                    it.input.builtinLayout == key.layout &&
+                    InputLayoutPolicy.allows(it.id, family)
+            }.minOfOrNull { it.id }
+            ?: familyLayoutId(key, family)
             ?: BuiltinLayouts.preset(key.layout).id
+    }
 
     /** Replace in place, preserving all ordering/state; a failed edit leaves this registry intact. */
     @Throws(LayoutException::class)
@@ -159,7 +210,59 @@ class LayoutRegistry private constructor(
     fun withComposition(
         composition: KeyboardComposition,
         keyboardId: String,
-    ): LayoutRegistry = create(layouts, pages, compositions + (keyboardId to composition))
+    ): LayoutRegistry {
+        refuseFamilyIncompatiblePairing(composition, keyboardId)
+        return create(layouts, pages, compositions + (keyboardId to composition))
+    }
+
+    /** The shipped shape a stored builtin layout names, or null for an unknown wire. */
+    private fun kindOf(layout: LayoutInput.Builtin): KeyboardLayoutKind? = KeyboardLayoutKind.fromWire(layout.wire)
+
+    private fun familyOf(inputMethodID: String): InputSchemeFamily {
+        // The catalog holds schema ids only: an alphabet is never read here, so an unknown scheme
+        // stays in the unrestricted family exactly as it did before the rule.
+        return InputLayoutPolicy.familyOf(inputMethodID)
+    }
+
+    /** The physical layout the family types on, when it shipped and this keyboard can draw it. */
+    private fun familyLayoutId(
+        key: KeyboardCompositionKey,
+        family: InputSchemeFamily,
+    ): String? {
+        val id = InputLayoutPolicy.preferredLayoutID(family) ?: return null
+        val definition = resolvedLayout(id) ?: return null
+        return id.takeIf { definition.supportsComposition(key.inputMethodId, key.layout) }
+    }
+
+    /** The saved main layout when the family and the shape binding still allow it. */
+    private fun legalMainLayoutId(
+        key: KeyboardCompositionKey,
+        mainLayoutID: String,
+        family: InputSchemeFamily,
+        families: LayoutFamilyContext,
+    ): String {
+        if (!InputLayoutPolicy.allows(mainLayoutID, family)) return defaultMainLayoutId(key, families)
+        val definition = resolvedLayout(mainLayoutID) ?: return defaultMainLayoutId(key, families)
+        val supports = definition.supportsComposition(key.inputMethodId, key.layout)
+        return if (supports) mainLayoutID else defaultMainLayoutId(key, families)
+    }
+
+    /** Rejects a new pairing the scheme's family forbids; already-stored pairings are left alone. */
+    private fun refuseFamilyIncompatiblePairing(
+        composition: KeyboardComposition,
+        keyboardId: String,
+    ) {
+        val separator = keyboardId.lastIndexOf(':')
+        val inputMethodId = if (separator > 0) keyboardId.substring(0, separator) else keyboardId
+        val family = familyOf(inputMethodId)
+        val kind = if (separator > 0) LayoutInput.Builtin.fromWire(keyboardId.substring(separator + 1)) else null
+        val forbidden =
+            (kind != null && kindOf(kind)?.let { !InputLayoutPolicy.allows(it, family) } == true) ||
+                !InputLayoutPolicy.allows(composition.mainLayoutID, family)
+        if (forbidden) {
+            throw LayoutException.Invalid(LayoutInvalidCode.COMPOSITION_INPUT_METHOD_INCOMPATIBLE, keyboardId)
+        }
+    }
 
     /**
      * Drops the pairings whose input method has no provider left, and returns how many were removed.

@@ -3,6 +3,7 @@ package app.songyan.ime.rime
 import app.songyan.ime.keyboard.engine.EngineOptionDescriptor
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -56,6 +57,22 @@ class EngineOptionPreferencesTest {
         preferences.write(option(), true)
         directory.walkTopDown().filter { it.isFile }.forEach { it.writeText("{broken") }
         assertNull(preferences.read(option()))
+    }
+
+    @Test
+    fun aStoredRecordIsKnownEvenWhenItsValueIsNoChoiceThisBuildReads() {
+        val names = listOf("original", "traditional")
+        val choice = option(name = names[1]).copy(choiceGroup = names)
+        assertFalse(preferences.hasStoredValue(choice))
+        preferences.write(choice, true)
+        assertTrue(preferences.hasStoredValue(choice))
+        // The whole group shares one record, so every member answers for it.
+        assertTrue(preferences.hasStoredValue(choice.copy(name = names[0])))
+        assertFalse(preferences.hasStoredValue(option(schema = "bopomofo", name = names[1]).copy(choiceGroup = names)))
+        // An older or later build's literal is no choice to the engine, but it is the user's record.
+        directory.walkTopDown().filter { it.isFile }.forEach { it.writeText("false") }
+        assertNull(preferences.read(choice))
+        assertTrue(preferences.hasStoredValue(choice))
     }
 
     @Test

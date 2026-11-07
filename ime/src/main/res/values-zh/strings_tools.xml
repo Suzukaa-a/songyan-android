@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 键盘工具：工具栏入口与处理已有文字的工具面板 -->
+    <string name="ime_tools_title">工具</string>
+    <string name="ime_tools_source_selection">选中文字</string>
+    <string name="ime_tools_source_paragraph">光标前</string>
+    <string name="ime_tools_source_clipboard">剪贴板</string>
+    <string name="ime_tools_source_none">没有可以处理的文字。先选中一段文字，或把光标放在文字后面。</string>
+    <string name="ime_tools_source_label">原文：%1$s</string>
+    <string name="ime_tools_result_label">结果：%1$s</string>
+    <string name="ime_tools_loading">正在读取工具…</string>
+    <string name="ime_tools_none">还没有启用的工具。</string>
+    <string name="ime_tools_manage">管理工具</string>
+    <string name="ime_tools_replace">替换</string>
+    <string name="ime_tools_insert">插入</string>
+    <string name="ime_tools_copy">复制</string>
+    <string name="ime_tools_running">正在处理…</string>
+    <string name="ime_tools_copied">结果已复制。</string>
+    <string name="ime_tools_result_truncated">原文太长，只处理了前面一部分，因此只能插入或复制。</string>
+    <string name="ime_tools_failure_unknown_tool">找不到这个工具。</string>
+    <string name="ime_tools_failure_invalid_tool">这个工具的内容有问题，请在设置里检查它。</string>
+    <string name="ime_tools_failure_unavailable">这个工具需要的功能现在用不了。</string>
+    <string name="ime_tools_failure_timed_out">工具处理太慢，已经停下。</string>
+    <string name="ime_tools_failure_too_long">文字太长，这个工具处理不了。</string>
+    <string name="ime_tools_failure_failed">工具没有完成处理。</string>
+    <string name="ime_tools_failure_store">读不到工具列表，请在设置里检查。</string>
+</resources>

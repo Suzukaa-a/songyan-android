@@ -3,6 +3,7 @@ package app.songyan.ime.ime.panels
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
@@ -38,6 +39,50 @@ class QuickSettingsModelTest {
         )
     }
 
+    @Test
+    fun characterFormChoicesCarryTheKnownBundledScriptState() {
+        val names = listOf("simplification", "zht", "zh_tw", "zh_hk")
+        val states =
+            listOf(
+                BuiltinScriptState.SIMPLIFIED,
+                BuiltinScriptState.TRADITIONAL,
+                BuiltinScriptState.TAIWAN,
+                BuiltinScriptState.HONG_KONG,
+            )
+        val group =
+            QuickSettingsModel
+                .tiles(
+                    QuickSettingsState(
+                        engineOptions =
+                            names.mapIndexed { index, name ->
+                                EngineOptionTile(
+                                    name,
+                                    EngineOptionKind.TRADITIONAL,
+                                    index == 0,
+                                    names,
+                                    null,
+                                    states[index],
+                                )
+                            },
+                    ),
+                ).single { it.setting == QuickSetting.ENGINE_OPTION }
+        assertEquals(states, group.options.map { it.knownScriptState })
+
+        // An author's group with the same option names keeps its own labels and carries no known state.
+        val custom =
+            QuickSettingsModel
+                .tiles(
+                    QuickSettingsState(
+                        engineOptions =
+                            names.mapIndexed { index, name ->
+                                EngineOptionTile(name, EngineOptionKind.TRADITIONAL, index == 0, names, "原字")
+                            },
+                    ),
+                ).single { it.setting == QuickSetting.ENGINE_OPTION }
+        assertTrue(custom.options.all { it.knownScriptState == null })
+        assertEquals(listOf("原字", "原字", "原字", "原字"), custom.options.map { it.label })
+    }
+
     private fun tile(
         state: QuickSettingsState,
         setting: QuickSetting,
@@ -55,6 +100,7 @@ class QuickSettingsModelTest {
                 QuickSetting.KEY_HAPTICS,
                 QuickSetting.KEY_PREVIEW,
                 QuickSetting.PHRASES,
+                QuickSetting.MANAGE_TOOLS,
             ),
             QuickSettingsModel.tiles(QuickSettingsState()).map { it.setting },
         )
@@ -122,6 +168,25 @@ class QuickSettingsModelTest {
     }
 
     @Test
+    fun theFlickOnlyChoiceAppearsOnlyForJapaneseKana() {
+        assertTrue(
+            "an ordinary keyboard offers no kana-only choice",
+            QuickSettingsModel.tiles(QuickSettingsState()).none { it.setting == QuickSetting.KANA12_FLICK_ONLY },
+        )
+        val flick = tile(QuickSettingsState(kana12 = true), QuickSetting.KANA12_FLICK_ONLY)
+        assertEquals(QuickTile.Kind.TOGGLE, flick.kind)
+        assertFalse(flick.on)
+        assertEquals(QuickSettingChange.Kana12FlickOnly(true), QuickSettingsModel.toggled(flick))
+        val on =
+            QuickSettingsModel.toggled(
+                tile(QuickSettingsState(kana12 = true, kana12FlickOnly = true), QuickSetting.KANA12_FLICK_ONLY),
+            )
+        assertEquals(QuickSettingChange.Kana12FlickOnly(false), on)
+        val changed = QuickSettingsState(kana12 = true).apply(QuickSettingChange.Kana12FlickOnly(true))
+        assertTrue(tile(changed, QuickSetting.KANA12_FLICK_ONLY).on)
+    }
+
+    @Test
     fun onlyTogglesToggle() {
         val state = QuickSettingsState()
         assertNull(QuickSettingsModel.toggled(tile(state, QuickSetting.ONE_HAND)))
@@ -164,7 +229,7 @@ class QuickSettingsModelTest {
                     ),
             )
         val tiles = QuickSettingsModel.tiles(state)
-        assertEquals(QuickSetting.PHRASES, tiles[tiles.size - 3].setting)
+        assertEquals(QuickSetting.MANAGE_TOOLS, tiles[tiles.size - 3].setting)
         val (first, second) = tiles.takeLast(2)
         assertTrue(first.kind == QuickTile.Kind.TOGGLE && first.on)
         assertFalse(second.on)
@@ -188,6 +253,6 @@ class QuickSettingsModelTest {
 
     @Test
     fun anInputMethodWithoutSwitchesAddsNoTiles() {
-        assertEquals(8, QuickSettingsModel.tiles(QuickSettingsState()).size)
+        assertEquals(9, QuickSettingsModel.tiles(QuickSettingsState()).size)
     }
 }

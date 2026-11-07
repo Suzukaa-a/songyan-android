@@ -56,7 +56,7 @@ class DeployChainDeviceTest {
                 )
             assertEquals("nothing published before the first deployment", null, coordinator.activeGeneration())
 
-            val record = coordinator.ensureDeployed().getOrThrow()
+            val record = coordinator.deployBuiltin().getOrThrow()
 
             assertEquals(SourceIds.BUILTIN, record.sourceId)
             assertEquals(stamp, record.stamp)
@@ -113,7 +113,7 @@ class DeployChainDeviceTest {
                     runner = RimeBindings.deployRunner(),
                     appName = RimeBindings.APP_NAME,
                     stamp = BuildStamps.current(context),
-                ).ensureDeployed().getOrThrow()
+                ).deployBuiltin().getOrThrow()
             val generation = storage.generationDir(record.generation)
             val engine =
                 RimeEngine.createPrebuilt(

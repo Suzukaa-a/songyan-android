@@ -21,7 +21,7 @@ class FeatureInputDeviceTest {
     fun theAbcPageCompletesTheWordFromTheSchemesEnglishDictionary() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("th")
             assertTrue("completions for 'th': ${host.barLabels()}", host.await { "then" in host.barLabels() })
             assertTrue("the toolbar gives its band to the suggestions", host.toolbarLabels().isEmpty())
@@ -33,8 +33,8 @@ class FeatureInputDeviceTest {
     fun aCapitalLetterCompletesInTheCapitalsTheUserTyped() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
+            host.tapControl(ControlKey.SHIFT)
             host.tap("t")
             host.tap("h")
             assertTrue("capitalized: ${host.barLabels()}", host.await { "Then" in host.barLabels() })
@@ -44,9 +44,9 @@ class FeatureInputDeviceTest {
     fun nextWordGuessesFollowAFinishedWordAndTheToolbarComesBackWhenThereAreNone() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("i")
-            host.tap(host.string(R.string.ime_space))
+            host.tapControl(ControlKey.SPACE)
             assertTrue("guesses after 'i': ${host.barLabels()}", host.await { "am" in host.barLabels() })
             host.tapBar("am")
             host.assertText("i am ")
@@ -59,7 +59,7 @@ class FeatureInputDeviceTest {
     fun movingTheCaretForgetsTheWordSoNoStaleCompletionReplacesText() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("th")
             assertTrue(host.await { "then" in host.barLabels() })
             host.main { host.controller.onSelectionMovedExternally() }
@@ -72,11 +72,11 @@ class FeatureInputDeviceTest {
     fun backspaceTrimsTheWordTheSuggestionsAreForAndLeavesNoneWhenItIsGone() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("th")
             assertTrue(host.await { "then" in host.barLabels() })
-            host.tap(host.string(R.string.ime_delete))
-            host.tap(host.string(R.string.ime_delete))
+            host.tapControl(ControlKey.DELETE)
+            host.tapControl(ControlKey.DELETE)
             assertTrue(host.await { host.barLabels().isEmpty() })
             assertEquals("", host.text())
         }
@@ -95,7 +95,7 @@ class FeatureInputDeviceTest {
     fun chineseShiftTypesOneCapitalLetterAndThenLowercaseSpellingResumes() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.SHIFT)
             host.tap("n")
             host.assertText("N")
             assertFalse(
@@ -115,14 +115,14 @@ class FeatureInputDeviceTest {
     fun chineseDoubleShiftLocksCapitalsUntilShiftIsTappedAgain() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.SHIFT)
             // The second tap of a double tap, as the key view reports it.
             host.main { host.controller.keyboard.onDoubleShift() }
             assertTrue(host.await { host.main2 { host.controller.session?.shiftState } == ShiftState.LOCKED })
             host.tap("a")
             host.tap("b")
             host.assertText("AB")
-            host.tap(host.string(R.string.ime_shift_locked))
+            host.tapControl(ControlKey.SHIFT)
             host.tap("n")
             host.awaitIdle()
             assertTrue("released: lowercase letters compose again", host.editor.composing)
@@ -134,7 +134,7 @@ class FeatureInputDeviceTest {
             host.start()
             host.type("ni")
             assertTrue(host.await { host.editor.composing })
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.SHIFT)
             host.tap("b")
             host.awaitIdle()
             val shown = host.text()
@@ -151,7 +151,7 @@ class FeatureInputDeviceTest {
         val host = FeatureHost(capitals.backend())
         try {
             host.start()
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.SHIFT)
             host.tap("v")
             host.type("help")
             host.awaitIdle()
@@ -168,8 +168,8 @@ class FeatureInputDeviceTest {
     fun shiftOnTheEnglishPageStillUppercasesTheNextLetter() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_language_to_english))
-            host.tap(host.string(R.string.ime_shift))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
+            host.tapControl(ControlKey.SHIFT)
             host.tap("a")
             host.assertText("A")
         }

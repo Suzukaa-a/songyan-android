@@ -2,6 +2,8 @@ package app.songyan.ime
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -18,6 +20,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.LinearLayout
+import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
@@ -47,6 +50,7 @@ import app.songyan.ime.ime.CopiedChipSource
 import app.songyan.ime.ime.EditorConnection
 import app.songyan.ime.ime.EditorPolicy
 import app.songyan.ime.ime.EngineNoticeAction
+import app.songyan.ime.ime.ImeKeyboardTools
 import app.songyan.ime.ime.ImePerf
 import app.songyan.ime.ime.ImeViewOwners
 import app.songyan.ime.ime.InlineAutofill
@@ -58,13 +62,21 @@ import app.songyan.ime.ime.keyboardCallbacks
 import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
+import app.songyan.ime.settings.ui.SettingsRoutes
 import app.songyan.ime.settings.ui.theme.ThemeMode
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.tools.ProcessTextKind
+import app.songyan.ime.tools.ProcessTextOutcome
+import app.songyan.ime.tools.ProcessTextRelay
+import app.songyan.ime.tools.ProcessTextRequest
+import app.songyan.ime.tools.ProcessTextSource
+import app.songyan.ime.tools.sameEditorAs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +95,9 @@ private const val SETTINGS_ACTION_DELAY_MS = 2_000L
 private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
 private const val TAG = "SongyanIme"
+
+/** How much of the field a tool may be handed: a paragraph, not the whole document. */
+private const val MAX_PROCESS_TEXT = 1000
 
 class SongyanInputMethodService : InputMethodService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + LogAndContinue)
@@ -148,6 +163,10 @@ class SongyanInputMethodService : InputMethodService() {
 
             override suspend fun setSymbolLock(value: Boolean) = store.setSymbolLock(value)
 
+            override val kana12FlickOnly = store.kana12FlickOnly
+
+            override suspend fun setKana12FlickOnly(value: Boolean) = store.setKana12FlickOnly(value)
+
             override val candidateTextSize = store.candidateTextSize
             override val keyFeedback = store.keyFeedback
 
@@ -156,6 +175,17 @@ class SongyanInputMethodService : InputMethodService() {
             override suspend fun setActiveSchemaId(id: String) = store.setActiveSchemaId(id)
         }
     }
+
+    /**
+     * The keyboard tools: the user's tool files, the app's own OpenCC instance and the bounded
+     * regular-expression worker. Built on the first keyboard view, and only released when it exists,
+     * because opening its state would touch the disk from the thread that is tearing the service down.
+     */
+    private var keyboardTools: ImeKeyboardTools? = null
+
+    private fun keyboardToolsForView(): ImeKeyboardTools =
+        keyboardTools
+            ?: ImeKeyboardTools(this, (application as SongyanApplication).storage).also { keyboardTools = it }
 
     /** Quick-content data of this process; every read and write happens on its own IO lane. */
     private val contentRepository by lazy {
@@ -202,6 +232,12 @@ class SongyanInputMethodService : InputMethodService() {
     private var root: LinearLayout? = null
     private var policy = EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE)
 
+    /**
+     * The editor that has this keyboard right now, as the platform last said in onStartInput and
+     * cleared in onFinishInput. Never the stale [currentInputEditorInfo] of a finished binding.
+     */
+    private var inputBinding: EditorInfo? = null
+
     /** The repeat-buffer rules that follow from [policy]; kept in step by [applyPolicy]. */
     private var quickInsertPolicy = QuickInsertPolicy()
 
@@ -209,6 +245,119 @@ class SongyanInputMethodService : InputMethodService() {
         policy = value
         quickInsertPolicy = QuickInsertPolicy.of(value)
     }
+
+    /**
+     * What the tool relay needs from this editor and the clipboard. A tool only handles text that is
+     * already in the field, so a composition (and a private editor) never runs one: the composition
+     * stays exactly as the user left it.
+     */
+    private val processTextHost =
+        object : ProcessTextRelay.Host {
+            override fun snapshotForProcessText(source: ProcessTextSource?): ProcessTextRequest? {
+                val info = inputBinding ?: return null
+                if (policy.privateInput || editor.composing) return null
+                val connection = currentInputConnection ?: return null
+                val selected = runCatching { connection.getSelectedText(0)?.toString() }.getOrNull().orEmpty()
+                val chosen =
+                    source
+                        ?: if (selected.isNotEmpty()) {
+                            ProcessTextSource(selected, ProcessTextKind.SELECTION)
+                        } else {
+                            // Only the paragraph the caret is in; one unit past the limit tells a
+                            // paragraph that fits from one the read window cut.
+                            val paragraph =
+                                (
+                                    editor.contextBeforeCursor(
+                                        MAX_PROCESS_TEXT + 1,
+                                    ) ?: return null
+                                ).substringAfterLast('\n')
+                            ProcessTextSource(paragraph, ProcessTextKind.CURSOR)
+                        }
+                // Text that cannot be handed over whole is refused, not cut silently.
+                if (chosen.text.isBlank() || chosen.text.length > MAX_PROCESS_TEXT) return null
+                val stillShown =
+                    when (chosen.kind) {
+                        ProcessTextKind.SELECTION -> selected == chosen.text
+                        // A paragraph is only replaced up to a bare caret, so a selection retires it.
+                        ProcessTextKind.CURSOR ->
+                            selected.isEmpty() &&
+                                runCatching { connection.getTextBeforeCursor(chosen.text.length, 0)?.toString() }
+                                    .getOrNull() == chosen.text
+                        ProcessTextKind.CLIPBOARD -> true
+                    }
+                if (!stillShown) return null
+                return ProcessTextRequest(chosen.text, info.packageName, info.fieldId, chosen.kind)
+            }
+
+            /** The bound editor is the one the request came from, and it may run a tool at all. */
+            private fun boundTo(request: ProcessTextRequest): Boolean =
+                !policy.privateInput &&
+                    !editor.composing &&
+                    currentInputConnection != null &&
+                    request.sameEditorAs(inputBinding)
+
+            /** The text the app was handed is still exactly where it was; false offers insert only. */
+            private fun unchanged(request: ProcessTextRequest): Boolean {
+                val connection = currentInputConnection ?: return false
+                return when (request.kind) {
+                    ProcessTextKind.SELECTION ->
+                        runCatching { connection.getSelectedText(0)?.toString() }.getOrNull() == request.text
+
+                    ProcessTextKind.CURSOR ->
+                        runCatching { connection.getSelectedText(0) }.getOrNull().isNullOrEmpty() &&
+                            runCatching { connection.getTextBeforeCursor(request.text.length, 0)?.toString() }
+                                .getOrNull() == request.text
+                    // Never in the field, so there is nothing to replace.
+                    ProcessTextKind.CLIPBOARD -> false
+                }
+            }
+
+            override fun canWriteProcessText(request: ProcessTextRequest): Boolean =
+                // The field may have changed while the other app was open: never write into a binding
+                // this keyboard does not have, and never over text the user has edited since.
+                boundTo(request) && unchanged(request)
+
+            override fun writeProcessText(
+                request: ProcessTextRequest,
+                text: String,
+            ): ProcessTextOutcome {
+                if (!canWriteProcessText(request)) {
+                    copyProcessText(text)
+                    return ProcessTextOutcome.COPIED
+                }
+                val written =
+                    when (request.kind) {
+                        ProcessTextKind.SELECTION -> editor.replaceSelection(request.text, text)
+                        ProcessTextKind.CURSOR -> editor.replaceBeforeCursor(request.text, text)
+                        ProcessTextKind.CLIPBOARD -> false
+                    }
+                if (!written) {
+                    copyProcessText(text)
+                    return ProcessTextOutcome.COPIED
+                }
+                return ProcessTextOutcome.REPLACED
+            }
+
+            override fun onProcessTextAnswer() {
+                if (!isInputViewShown || policy.privateInput) return
+                val pending = ProcessTextRelay.pendingResult()
+                if (pending == null) {
+                    // An app that returned nothing leaves no reason to keep the waiting panel up.
+                    controller?.closeToolsPanel()
+                } else if (pending.request.sameEditorAs(inputBinding)) {
+                    // The keyboard is already back on the editor that asked: the preview opens now.
+                    // Any other binding (the relay's own window) waits for that editor's next show.
+                    controller?.openProcessTextResult()
+                }
+            }
+
+            override fun copyProcessText(text: String) {
+                getSystemService(ClipboardManager::class.java)?.setPrimaryClip(
+                    ClipData.newPlainText(getString(R.string.app_name), text),
+                )
+                Toast.makeText(this@SongyanInputMethodService, R.string.process_text_copied, Toast.LENGTH_SHORT).show()
+            }
+        }
 
     private var backend: EngineBackend? = null
     private var backDispatcher: OnBackInvokedDispatcher? = null
@@ -374,9 +523,12 @@ class SongyanInputMethodService : InputMethodService() {
                     confirmComposition = { confirmCompositionForInsert() },
                     insert = { text -> commitQuickText(text) },
                     onChange = { controller?.onTextInserted() },
+                    // Dates follow the input language, so the text matches what the user types.
+                    inputLanguage = { controller?.inputLanguage ?: InputLanguage.ZH_HANS },
                 )
         }
         clipboardRecorder.start()
+        ProcessTextRelay.attach(processTextHost)
     }
 
     /**
@@ -432,6 +584,18 @@ class SongyanInputMethodService : InputMethodService() {
         )
     }
 
+    /**
+     * Opens the settings page where keyboard tools are managed. The page is addressed by route
+     * because the settings target enum names only the pages the keyboard already links to.
+     */
+    private fun openToolSettings() {
+        startActivity(
+            Intent(this, SongyanSettingsActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(SettingsRoutes.EXTRA_ROUTE, SettingsRoutes.TOOLS),
+        )
+    }
+
     private fun updatePanelBack(visible: Boolean) {
         if (Build.VERSION.SDK_INT < 33) return
         val callback = panelBack ?: OnBackInvokedCallback { controller?.closePanels() }.also { panelBack = it }
@@ -444,6 +608,7 @@ class SongyanInputMethodService : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
+        val tools = keyboardToolsForView()
         val pad =
             KeyboardController(
                 this,
@@ -461,6 +626,7 @@ class SongyanInputMethodService : InputMethodService() {
                     hideKeyboard = { requestHideSelf(0) },
                     automaticCapsWanted = { updateAutomaticCaps() },
                     openSettingsPage = { openSongyanSettings(it) },
+                    openToolsSettings = { openToolSettings() },
                     clipboard = getSystemService(android.content.ClipboardManager::class.java),
                     inputMethods = inputMethods,
                     engineNoticeAction = { action ->
@@ -474,6 +640,13 @@ class SongyanInputMethodService : InputMethodService() {
                 quickContentDataSource = panelDataSource,
                 quickInsert = quickInsertHost,
                 copiedChipSource = CopiedChipSource(getSystemService(android.content.ClipboardManager::class.java)),
+                toolGateway = tools.gateway,
+                toolEditor =
+                    tools.editor(
+                        editor = editor,
+                        info = { inputBinding },
+                        policy = { policy },
+                    ),
             )
         controller?.retire()
         controller = pad
@@ -588,6 +761,7 @@ class SongyanInputMethodService : InputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInput(info, restarting)
+        inputBinding = info
         keepComposition = editor.startInput(info, restarting)
         inputToken++
         applyPolicy(EditorPolicy.from(info))
@@ -596,6 +770,8 @@ class SongyanInputMethodService : InputMethodService() {
         if (quickInsertPolicy.mustResetOnNewSession(restarting)) quickInsert?.resetContext()
         clipboardRecorder.setCaptureAllowed(false)
         startControllerInput()
+        // The editor that a tool's answer belongs to may have come back, or another one may have.
+        ProcessTextRelay.onEditorStarted(info)
     }
 
     /** Starts the keyboard on the current input exactly once, however many shows follow. */
@@ -611,6 +787,7 @@ class SongyanInputMethodService : InputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInputView(info, restarting)
+        inputBinding = info
         snapshotJob?.cancel()
         ImePerf.refresh()
         ImePerf.showStart()
@@ -632,6 +809,11 @@ class SongyanInputMethodService : InputMethodService() {
         controller?.onWindowShown()
         updateAutomaticCaps()
         root?.requestApplyInsets()
+        // A show after the relay is another chance for the editor to come back before the answer.
+        ProcessTextRelay.onEditorStarted(info)
+        // The answer waits for the user to look at it; coming back to the editor that handed the
+        // text out is when the panel shows the preview. Nothing is written until they say so.
+        if (!policy.privateInput) controller?.openProcessTextResult()
     }
 
     /** Ends the show metric on the first pre-draw of the IME window, then detaches. */
@@ -680,6 +862,9 @@ class SongyanInputMethodService : InputMethodService() {
         editor.finishInput(currentInputEditorInfo)
         controller?.finishInput()
         quickInsert?.resetContext()
+        // No editor has this keyboard any more: a tool's answer must not use the old connection.
+        inputBinding = null
+        ProcessTextRelay.onEditorStarted(null)
         super.onFinishInput()
     }
 
@@ -687,7 +872,7 @@ class SongyanInputMethodService : InputMethodService() {
         clipboardRecorder.setCaptureAllowed(false)
         controller?.onWindowHidden()
         // Hidden while the editor stays (Back, a hardware keyboard): nothing may keep composing unseen.
-        if (finishingInput) controller?.closeAll() else controller?.hideInput()
+        if (finishingInput) controller?.closeAll(preserveExternalAnswer = true) else controller?.hideInput()
         // A generation published while the keys were on screen is loaded now.
         runtime?.setInputViewShown(false)
         viewOwners.hide()
@@ -789,6 +974,7 @@ class SongyanInputMethodService : InputMethodService() {
         runtime?.shutdown()
         updatePanelBack(false)
         controller?.retire()
+        ProcessTextRelay.detach(processTextHost)
         scope.cancel()
         super.onDestroy()
         viewOwners.destroy()

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 快捷內容 -->
+    <string name="quick_content_loading">正在讀取…</string>
+    <string name="quick_content_save">儲存</string>
+    <string name="quick_content_cancel">取消</string>
+    <string name="quick_content_delete">刪除</string>
+    <string name="quick_content_edit">編輯</string>
+
+    <string name="quick_content_clipboard_section">剪貼簿歷史</string>
+    <string name="quick_content_clipboard_switch">記錄剪貼簿歷史</string>
+    <string name="quick_content_clipboard_body">複製的文字會儲存在本機，最多 %1$d 條。密碼不會被記錄。</string>
+    <string name="quick_content_clipboard_empty">還沒有記錄。</string>
+    <string name="quick_content_clipboard_clear">清空歷史</string>
+    <string name="quick_content_clipboard_clear_title">清空剪貼簿歷史？</string>
+    <string name="quick_content_clipboard_clear_body">清空後不能恢復。</string>
+    <string name="quick_content_clipboard_delete">刪除這一條</string>
+    <string name="quick_content_view_full_text">檢視全文</string>
+    <string name="quick_content_clipboard_detail_title">剪貼簿內容</string>
+
+    <string name="quick_content_phrases_section">常用語</string>
+    <string name="quick_content_phrases_counter">%1$d / %2$d</string>
+    <string name="quick_content_phrases_empty">還沒有常用語。</string>
+    <string name="quick_content_phrases_add">新增常用語</string>
+    <string name="quick_content_phrase_add_title">新增常用語</string>
+    <string name="quick_content_phrase_edit_title">編輯常用語</string>
+    <string name="quick_content_phrase_shortcut_label">搜尋詞（可選）</string>
+    <string name="quick_content_phrase_shortcut_hint">例如：dz、sh。在鍵盤裡搜尋這個詞，即可找到這條常用語。</string>
+    <string name="quick_content_error_shortcut_too_long">搜尋詞太長了。</string>
+    <string name="quick_content_phrase_text_label">內容</string>
+
+    <string name="quick_content_error_text_required">請輸入內容。</string>
+    <string name="quick_content_error_text_too_long">內容太長了。</string>
+    <string name="quick_content_error_duplicate">已經有同樣內容的常用語。</string>
+    <string name="quick_content_error_limit_reached">最多 %1$d 條，先刪掉一條再新增。</string>
+    <string name="quick_content_error_invalid">常用語檔案已損壞，無法讀取。</string>
+    <string name="quick_content_error_storage">讀寫失敗，請稍後再試。</string>
+    <string name="quick_content_error_locked">請稍後再試。</string>
+
+    <string name="quick_content_symbols_section">符號庫</string>
+    <string name="quick_content_symbols_builtin">內建符號庫</string>
+    <string name="quick_content_symbols_custom">已匯入自訂符號庫</string>
+    <string name="quick_content_symbols_summary">符號 %1$d 個 · 分類 %2$d 個</string>
+    <string name="quick_content_symbols_recent">最近使用 %1$d 個</string>
+    <string name="quick_content_symbols_clear_recent">清除最近使用</string>
+    <string name="quick_content_phrases_import">匯入常用語</string>
+    <string name="quick_content_phrases_export">匯出常用語</string>
+    <string name="quick_content_phrases_import_title">取代所有常用語？</string>
+    <string name="quick_content_phrases_import_body">匯入會取代現有常用語。你可以先匯出一份備份。</string>
+    <string name="quick_content_phrases_import_confirm">匯入並取代</string>
+    <string name="quick_content_phrases_imported">已匯入 %1$d 條常用語。</string>
+    <string name="quick_content_phrases_exported">已匯出常用語。</string>
+    <string name="quick_content_symbols_import">匯入符號庫</string>
+    <string name="quick_content_symbols_export">匯出當前符號庫</string>
+    <string name="quick_content_symbols_restore">恢復內建符號庫</string>
+    <string name="quick_content_symbols_restore_title">恢復內建符號庫？</string>
+    <string name="quick_content_symbols_restore_body">將移除自訂符號庫，恢復為內建符號。</string>
+    <string name="quick_content_symbols_restore_confirm">恢復</string>
+    <string name="quick_content_symbols_imported">已匯入符號庫，共 %1$d 個符號。</string>
+    <string name="quick_content_symbols_exported">已匯出符號庫。</string>
+    <string name="quick_content_symbols_restored">已恢復內建符號庫。</string>
+    <string name="quick_content_file_unreadable">無法開啟檔案，請重新選擇。</string>
+    <string name="quick_content_file_rejected">這個檔案不能用，原有內容沒有改動。</string>
+    <string name="quick_content_write_failed">無法儲存，請檢查儲存位置後重試。</string>
+    <string name="quick_content_file_too_large">檔案不能超過 %1$s。</string>
+    <string name="quick_content_symbols_read_failed">符號庫沒有讀取成功，請重新匯入或恢復內建符號庫。</string>
+</resources>

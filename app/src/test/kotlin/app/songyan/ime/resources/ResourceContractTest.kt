@@ -69,8 +69,21 @@ class ResourceContractTest {
         val manifest = File(repoRoot, "app/src/main/AndroidManifest.xml").readText()
         assertTrue(manifest.contains("android:localeConfig=\"@xml/locales_config\""))
         assertTrue(manifest.contains("android:enableOnBackInvokedCallback=\"true\""))
-        val locales = File(repoRoot, "app/src/main/res/xml/locales_config.xml").readText()
-        assertTrue(locales.contains("android:name=\"en\""))
-        assertTrue(locales.contains("android:name=\"zh-Hans\""))
+        val localeNames =
+            DocumentBuilderFactory
+                .newInstance()
+                .newDocumentBuilder()
+                .parse(File(repoRoot, "app/src/main/res/xml/locales_config.xml"))
+                .getElementsByTagName("locale")
+                .let { nodes ->
+                    (0 until nodes.length).map {
+                        nodes
+                            .item(it)
+                            .attributes
+                            .getNamedItem("android:name")
+                            .nodeValue
+                    }
+                }
+        assertEquals(listOf("en", "zh-Hans", "zh-Hant", "ja"), localeNames)
     }
 }

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 快捷內容面板 -->
+    <string name="ime_panel_close">關閉</string>
+    <string name="ime_panel_symbols_title">符號</string>
+    <string name="ime_panel_phrases_title">常用語與剪貼簿</string>
+    <string name="ime_panel_settings_title">鍵盤設定</string>
+    <string name="ime_panel_recent">最近</string>
+    <string name="ime_panel_phrases">常用語</string>
+    <string name="ime_panel_clipboard">剪貼簿</string>
+    <string name="ime_panel_phrases_empty">還沒有常用語。</string>
+    <string name="ime_panel_clipboard_disabled">剪貼簿歷史已關閉。</string>
+    <string name="ime_panel_clipboard_empty">還沒有記錄。</string>
+    <string name="ime_panel_add_phrase">新增常用語</string>
+    <string name="ime_panel_symbols_empty">符號庫是空的。</string>
+    <string name="ime_panel_clipboard_delete">刪除</string>
+    <string name="ime_panel_quick_content">常用語與剪貼簿</string>
+    <string name="ime_panel_quick_insert">快捷輸入</string>
+    <string name="ime_panel_repeat">重複上次輸入</string>
+    <string name="ime_panel_nothing_to_repeat">沒有可重複的內容</string>
+    <string name="ime_panel_open_settings">開啟松煙設定</string>
+
+    <!-- 鍵盤設定面板 -->
+    <string name="ime_qs_one_hand">單手模式</string>
+    <string name="ime_qs_key_height">鍵盤高度</string>
+    <string name="ime_qs_layout">鍵盤配置</string>
+    <string name="ime_qs_appearance">深淺色</string>
+    <string name="ime_qs_key_sound">按鍵音</string>
+    <string name="ime_qs_key_haptics">按鍵振動</string>
+    <string name="ime_qs_phrases">常用語</string>
+    <string name="ime_qs_phrases_more">與剪貼簿</string>
+    <string name="ime_qs_key_preview">按鍵預覽</string>
+    <string name="ime_qs_on">開啟</string>
+    <string name="ime_qs_off">關閉</string>
+    <string name="ime_qs_engine_section">輸入方式選項</string>
+    <string name="ime_qs_engine_traditional">繁體輸出</string>
+    <string name="ime_qs_engine_simplified">簡體輸出</string>
+    <string name="ime_qs_engine_emoji">Emoji 候選</string>
+    <string name="ime_qs_engine_full_shape">全形</string>
+    <string name="ime_qs_left">靠左</string>
+    <string name="ime_qs_right">靠右</string>
+    <string name="ime_qs_height_compact">較矮</string>
+    <string name="ime_qs_height_standard">標準</string>
+    <string name="ime_qs_height_tall">較高</string>
+    <string name="ime_qs_mode_system">跟隨系統</string>
+    <string name="ime_qs_mode_light">淺色</string>
+    <string name="ime_qs_mode_dark">深色</string>
+    <string name="ime_qs_system_off">系統已關閉</string>
+    <string name="ime_qs_unavailable">此視窗不可用</string>
+    <string name="ime_qs_more">更多設定</string>
+    <string name="ime_qs_back">返回</string>
+    <string name="ime_qs_label_value">%1$s，%2$s</string>
+    <string name="ime_qs_option_selected">%1$s，已選</string>
+    <string name="ime_qs_engine_character_form">字形</string>
+    <string name="ime_qs_script_simplified">簡體</string>
+    <string name="ime_qs_script_traditional">繁體</string>
+    <string name="ime_qs_script_taiwan">臺灣</string>
+    <string name="ime_qs_script_hong_kong">香港</string>
+</resources>

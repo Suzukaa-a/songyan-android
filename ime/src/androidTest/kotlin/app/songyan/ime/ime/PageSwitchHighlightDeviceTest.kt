@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.layout.KeyboardPageKind
+import app.songyan.ime.layout.LayoutPageTarget
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,11 +26,11 @@ class PageSwitchHighlightDeviceTest {
     fun noKeyOfTheOpenedPageInheritsThePageKeysFade() =
         withHost("qwerty26") { host ->
             host.start()
-            host.hold(host.string(R.string.ime_open_numbers_page), HOLD_MS) {}
+            host.holdAction({ it.pageSwitchTarget == LayoutPageTarget.NUMERIC }, HOLD_MS) {}
             assertTrue(host.await { host.main2 { host.controller.page } == KeyboardPageKind.NUMERIC })
             host.awaitIdle()
             assertEquals("fading on the 123 page", emptyList<Int>(), host.fadingKeys())
-            host.hold(host.string(R.string.ime_return_to_letters), HOLD_MS) {}
+            host.holdControl(ControlKey.RETURN_TO_LETTERS, HOLD_MS) {}
             assertTrue(host.await { host.main2 { host.controller.page } == null })
             host.awaitIdle()
             assertEquals("fading on the letters", emptyList<Int>(), host.fadingKeys())
@@ -39,11 +40,11 @@ class PageSwitchHighlightDeviceTest {
     fun theNineKeyPadsPageKeysLeaveNoFadeOnThePageTheyOpen() =
         withHost("phone9") { host ->
             host.start()
-            host.hold(host.string(R.string.ime_open_numbers_page), HOLD_MS) {}
+            host.holdAction({ it.pageSwitchTarget == LayoutPageTarget.NUMERIC }, HOLD_MS) {}
             assertTrue(host.await { host.main2 { host.controller.page } == KeyboardPageKind.NUMERIC })
             host.awaitIdle()
             assertEquals("fading on the digit pad", emptyList<Int>(), host.fadingKeys())
-            host.hold(host.string(R.string.ime_return_to_letters), HOLD_MS) {}
+            host.holdControl(ControlKey.RETURN_TO_LETTERS, HOLD_MS) {}
             assertTrue(host.await { host.main2 { host.controller.page } == null })
             host.awaitIdle()
             assertEquals("fading on the 9-key letters", emptyList<Int>(), host.fadingKeys())

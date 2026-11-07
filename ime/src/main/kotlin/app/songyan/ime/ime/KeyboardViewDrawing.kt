@@ -102,6 +102,9 @@ internal fun KeyboardView.labelTextSizeSp(
             // One size per key class: a merged two-letter key reads at the same size as a
             // single letter, so a row never mixes sizes.
             if (isPhoneDigitGroup(key, label)) metrics.phoneDigitTextSizeSp else metrics.keyLabelTextSizeSp
+        // The twelve-key surface's kana faces and its arrow-only caret key read as keycap text.
+        LayoutActionKind.KANA, LayoutActionKind.KANA_MODIFIER, LayoutActionKind.CURSOR_LEFT ->
+            metrics.keyLabelTextSizeSp
         else -> metrics.keyLabelSmallTextSizeSp
     }
 

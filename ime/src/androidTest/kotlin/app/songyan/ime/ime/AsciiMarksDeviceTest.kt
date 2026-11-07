@@ -61,12 +61,12 @@ class AsciiMarksDeviceTest {
     private fun labels(host: FeatureHost) = host.labelsOf(KeyboardView::class.java)
 
     private fun english(host: FeatureHost) {
-        host.tap(host.string(R.string.ime_language_to_english))
+        host.tapControl(ControlKey.LANGUAGE_TOGGLE)
         host.awaitIdle()
     }
 
     private fun openNumbers(host: FeatureHost) {
-        host.tap(host.string(R.string.ime_open_numbers_page))
+        host.tapNumbersPage()
         host.awaitIdle()
     }
 
@@ -114,7 +114,7 @@ class AsciiMarksDeviceTest {
             openNumbers(host)
             assertTrue(labels(host).toString(), "," in labels(host) && "，" !in labels(host))
             // The page's own 中/英 key still flips it.
-            host.tap(host.string(R.string.ime_language_to_chinese_symbols))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.awaitIdle()
             assertTrue(labels(host).toString(), "，" in labels(host) && "," !in labels(host))
         }
@@ -131,7 +131,7 @@ class AsciiMarksDeviceTest {
         val ascii = requireNotNull(mark.action.asciiValue)
         withHost { host ->
             openNumbers(host)
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             assertTrue(labels(host).toString(), chinese in labels(host))
             host.tap(chinese)
@@ -140,7 +140,7 @@ class AsciiMarksDeviceTest {
         withHost { host ->
             english(host)
             openNumbers(host)
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             assertTrue(labels(host).toString(), ascii in labels(host) && chinese !in labels(host))
             host.tap(ascii)
@@ -154,7 +154,7 @@ class AsciiMarksDeviceTest {
             openNumbers(host)
             val chinese = labels(host)
             assertTrue(chinese.toString(), "？" in chinese && "?" !in chinese)
-            host.tap(host.string(R.string.ime_language_to_english_symbols))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.awaitIdle()
             val ascii = labels(host)
             assertTrue(ascii.toString(), "?" in ascii && "？" !in ascii)

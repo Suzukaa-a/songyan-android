@@ -6,9 +6,12 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.settings.state.CurrentMainLayout
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.ImeStatus
 import app.songyan.ime.settings.state.InstalledScheme
+import app.songyan.ime.settings.state.LayoutDisplayName
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.DictionaryImportAction
 import app.songyan.ime.settings.ui.DictionaryImportFailure
@@ -181,6 +184,22 @@ class HomeScreenTest {
             assertEquals(route, opened.last())
             compose.onNodeWithContentDescription(str(R.string.search_clear)).performClick()
         }
+    }
+
+    @Test
+    fun theKeyboardSummaryNamesAPhysicalBoardInsteadOfTheShapeItShares() {
+        show(
+            SettingsUiState(
+                engine = EngineStatus.Ready,
+                ime = ImeStatus(enabled = true, selected = true),
+                schemes = listOf(InstalledScheme("bopomofo_tw", "注音", family = InputSchemeFamily.ZHUYIN)),
+                inUseSchemeId = "bopomofo_tw",
+                mainLayout = CurrentMainLayout("zhuyin41", LayoutDisplayName.Worded(R.string.layout_name_zhuyin41)),
+            ),
+        )
+        val combination = "注音 · " + str(R.string.layout_name_zhuyin41)
+        compose.onNodeWithText(str(R.string.home_summary_keyboard, combination)).assertExists()
+        assertEquals(0, count(str(R.string.layout_name_26)))
     }
 
     @Test

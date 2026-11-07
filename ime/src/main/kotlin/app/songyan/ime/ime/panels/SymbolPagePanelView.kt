@@ -47,7 +47,8 @@ class SymbolPagePanelView(
     /** The open category, remembered by id: a refreshed list can drop or add tabs around it. */
     private var openId: String? = null
 
-    override val titleText: String get() = keyNames.chinese().getString(R.string.ime_panel_symbols_title)
+    // Panel chrome follows the app language; the key faces below follow the input language.
+    override val titleText: String get() = context.getString(R.string.ime_panel_symbols_title)
 
     /**
      * Pushes the categories to show. The page opens on the first one; a refresh while it is open
@@ -160,9 +161,9 @@ class SymbolPagePanelView(
 
     override fun emptyMessage(): String? =
         if (open()?.source == KeyboardPageCategory.Source.RECENT) {
-            keyNames.chinese().getString(R.string.ime_panel_recent_empty)
+            context.getString(R.string.ime_panel_recent_empty)
         } else {
-            keyNames.chinese().getString(R.string.ime_panel_symbols_empty)
+            context.getString(R.string.ime_panel_symbols_empty)
         }
 
     private companion object {

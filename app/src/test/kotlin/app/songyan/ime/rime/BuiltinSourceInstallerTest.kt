@@ -224,9 +224,247 @@ class BuiltinSourceInstallerTest {
         assertFalse(marker.isFile)
     }
 
+    @Test
+    fun supplementFrontendFiles_preservesUnreadableCustomBytes() {
+        val target = kagiroiTarget(KAGIROI_RAW_SCHEMA)
+        val custom = java.io.File(target, "kagiroi.custom.yaml")
+        val bytes = "patch:\n  style/color_scheme: ".toByteArray() + byteArrayOf(0xFF.toByte()) + "\n".toByteArray()
+        custom.writeBytes(bytes)
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        assertEquals(bytes.toList(), custom.readBytes().toList())
+    }
+
+    @Test
+    fun supplementFrontendFiles_writesTheKagiroiSourcePatch() {
+        val target = kagiroiTarget(KAGIROI_RAW_SCHEMA)
+        val schemaBytes = java.io.File(target, "kagiroi.schema.yaml").readBytes()
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        assertEquals(
+            schemaBytes.toList(),
+            java.io
+                .File(target, "kagiroi.schema.yaml")
+                .readBytes()
+                .toList(),
+        )
+        val text = kagiroiPatchText(target)
+        assertTrue(
+            "the paging preset must be emptied, not rewritten: " + text,
+            Regex("key_bindings/paging_with_minus_equal/__append\\s*:\\s*\\[\\s*\\]").containsMatchIn(text),
+        )
+        assertTrue("half-width comma must be patched: " + text, text.contains("punctuator/half_shape/,"))
+        assertTrue("half-width period must be patched: " + text, text.contains("punctuator/half_shape/."))
+        assertEquals(2, commitCount(text))
+        assertTrue("the half-width comma and period must commit: " + text, commitsJapanesePunctuation(text))
+        assertFalse("full-width punctuation must stay as shipped: " + text, text.contains("punctuator/full_shape"))
+        val accepts = bindingAccepts(text)
+        assertFalse("paging bindings must not be added: " + text, accepts.contains("minus"))
+        assertFalse("paging bindings must not be added: " + text, accepts.contains("equal"))
+    }
+
+    @Test
+    fun supplementFrontendFiles_writesTheCompiledKagiroiPatch() {
+        val target = kagiroiTarget(KAGIROI_COMPILED_SCHEMA)
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        val text = kagiroiPatchText(target)
+        assertTrue("the key binder must be replaced as a whole: " + text, text.contains("key_binder:"))
+        assertFalse(
+            "keeping import_preset would re-add the paging bindings at the preset link: " + text,
+            text.contains("import_preset"),
+        )
+        val accepts = bindingAccepts(text)
+        assertEquals(31, accepts.size)
+        assertFalse(accepts.contains("minus"))
+        assertFalse(accepts.contains("equal"))
+        assertTrue(accepts.containsAll(listOf("Control+u", "Control+i", "Control+o", "Control+q")))
+        assertTrue(accepts.contains("Control+y"))
+        assertTrue(accepts.contains("Control+v"))
+        assertEquals(2, commitCount(text))
+        assertTrue("the half-width comma and period must commit: " + text, commitsJapanesePunctuation(text))
+        assertFalse("full-width punctuation must stay as shipped: " + text, text.contains("punctuator/full_shape"))
+    }
+
+    @Test
+    fun supplementFrontendFiles_isIdempotentForBothKagiroiShapes() {
+        for (schema in listOf(KAGIROI_RAW_SCHEMA, KAGIROI_COMPILED_SCHEMA)) {
+            val target = kagiroiTarget(schema)
+            val installer = BuiltinSourceInstaller(assets())
+            installer.supplementFrontendFiles(target)
+            val once = java.io.File(target, "kagiroi.custom.yaml").readBytes()
+            installer.supplementFrontendFiles(target)
+            val twice = java.io.File(target, "kagiroi.custom.yaml").readBytes()
+            assertEquals(once.toList(), twice.toList())
+        }
+    }
+
+    @Test
+    fun supplementFrontendFiles_leavesASourceWithoutKagiroiUnpatched() {
+        val target = Files.createTempDirectory("sample").toFile()
+        target.mkdirs()
+        java.io.File(target, "sample.schema.yaml").writeText("schema:\n  schema_id: sample\n")
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        assertFalse(target.listFiles().orEmpty().any { it.name.endsWith(".custom.yaml") })
+    }
+
+    @Test
+    fun supplementFrontendFiles_keepsTheAuthorsOwnKagiroiPatchEntries() {
+        val target = kagiroiTarget(KAGIROI_RAW_SCHEMA)
+        java.io.File(target, "kagiroi.custom.yaml").writeText("patch:\n  \"menu/page_size\": 7\n")
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        val text = kagiroiPatchText(target)
+        assertTrue(
+            "the author's own entries must stay: " + text,
+            Regex("\"?menu/page_size\"?\\s*:\\s*7").containsMatchIn(text),
+        )
+        assertTrue(
+            "the paging preset must be emptied: " + text,
+            Regex("key_bindings/paging_with_minus_equal/__append\\s*:\\s*\\[\\s*\\]").containsMatchIn(text),
+        )
+        assertEquals(2, commitCount(text))
+        assertTrue("the half-width comma and period must commit: " + text, commitsJapanesePunctuation(text))
+    }
+
+    private fun kagiroiTarget(schema: String): java.io.File {
+        val target = Files.createTempDirectory("kagiroi").toFile()
+        java.io.File(target, "kagiroi.schema.yaml").writeText(schema)
+        java.io.File(target, "kagiroi.yaml").writeText(KAGIROI_PRESET)
+        return target
+    }
+
+    private fun kagiroiPatchText(target: java.io.File): String = java.io.File(target, "kagiroi.custom.yaml").readText()
+
+    /** The accept keys of the scheme patch, in file order; one per binding. */
+    private fun bindingAccepts(text: String): List<String> =
+        Regex("accept:\\s*\"?([A-Za-z0-9+_]+)\"?").findAll(text).map { it.groupValues[1] }.toList()
+
+    private fun commitCount(text: String): Int = Regex("commit:").findAll(text).count()
+
+    /** The half-width comma and period commits, whether written raw or Yams-escaped. */
+    private fun commitsJapanesePunctuation(text: String): Boolean = text.contains("、") || text.contains("u3001")
+
     private companion object {
         // Unit tests run in the module directory.
         const val SHIPPED_BASIC = "../core/rime/src/main/assets/rime/builtin/songyan_basic.dict.yaml"
         const val SHIPPED_STARTER = "src/main/assets/rime/starter/songyan_starter.dict.yaml"
+
+        /** The pinned source package: key_binder/bindings is an in-place __patch of presets. */
+        val KAGIROI_RAW_SCHEMA =
+            """
+            schema:
+              schema_id: kagiroi
+              name: カギロイ
+
+            switches:
+              - name: ascii_mode
+                reset: 0
+                states: [ あ, 英字 ]
+
+            punctuator:
+              __patch:
+                - kagiroi:/punct/3_dan
+
+            editor:
+              bindings:
+                Return: commit_script_text
+
+            key_binder:
+              import_preset: default
+              bindings:
+                __patch:
+                  - kagiroi:/key_bindings/paging_with_minus_equal
+                  - kagiroi:/key_bindings/kagiroi_switches
+            """.trimIndent()
+
+        /** The preset file the source schema patches. */
+        val KAGIROI_PRESET =
+            """
+            key_bindings:
+              paging_with_minus_equal:
+                __append:
+                  - { when: paging, accept: minus, send: Page_Up }
+                  - { when: has_menu, accept: equal, send: Page_Down }
+              kagiroi_switches:
+                __append:
+                  - { when: composing, accept: "Control+u", set_option: hiragana }
+                  - { when: composing, accept: "Control+i", set_option: katakana }
+                  - { when: composing, accept: "Control+o", set_option: hw_katakana }
+                  - { when: has_menu, accept: "Control+q", toggle: emoji }
+
+            punct:
+              3_dan:
+                full_shape:
+                  ' ' : { commit: '　' }
+                  ',' : { commit: 、 }
+                  '.' : { commit: 。 }
+                half_shape:
+                  ',' : [ 、, ・, ， ]
+                  '.' : [ 。, …, ．, . ]
+                  '?' : { commit: ？ }
+            """.trimIndent()
+
+        /** The prebuilt package: one flat bindings list plus import_preset: default. */
+        val KAGIROI_COMPILED_SCHEMA =
+            """
+            schema:
+              schema_id: kagiroi
+              name: "カギロイ"
+
+            key_binder:
+              bindings:
+                - {accept: "Control+p", send: Up, when: composing}
+                - {accept: "Control+n", send: Down, when: composing}
+                - {accept: "Control+b", send: Left, when: composing}
+                - {accept: "Control+f", send: Right, when: composing}
+                - {accept: "Control+a", send: Home, when: composing}
+                - {accept: "Control+e", send: End, when: composing}
+                - {accept: "Control+d", send: Delete, when: composing}
+                - {accept: "Control+k", send: "Shift+Delete", when: composing}
+                - {accept: "Control+h", send: BackSpace, when: composing}
+                - {accept: "Control+g", send: Escape, when: composing}
+                - {accept: "Control+bracketleft", send: Escape, when: composing}
+                - {accept: "Control+y", send: Page_Up, when: composing}
+                - {accept: "Alt+v", send: Page_Up, when: composing}
+                - {accept: "Control+v", send: Page_Down, when: composing}
+                - {accept: ISO_Left_Tab, send: "Shift+Left", when: composing}
+                - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
+                - {accept: Tab, send: "Shift+Right", when: composing}
+                - {accept: "Control+Shift+1", select: .next, when: always}
+                - {accept: "Control+Shift+2", toggle: ascii_mode, when: always}
+                - {accept: "Control+Shift+3", toggle: full_shape, when: always}
+                - {accept: "Control+Shift+4", toggle: simplification, when: always}
+                - {accept: "Control+Shift+5", toggle: extended_charset, when: always}
+                - {accept: "Control+Shift+exclam", select: .next, when: always}
+                - {accept: "Control+Shift+at", toggle: ascii_mode, when: always}
+                - {accept: "Control+Shift+numbersign", toggle: full_shape, when: always}
+                - {accept: "Control+Shift+dollar", toggle: simplification, when: always}
+                - {accept: "Control+Shift+percent", toggle: extended_charset, when: always}
+                - {accept: minus, send: Page_Up, when: paging}
+                - {accept: equal, send: Page_Down, when: has_menu}
+                - {accept: "Control+u", set_option: hiragana, when: composing}
+                - {accept: "Control+i", set_option: katakana, when: composing}
+                - {accept: "Control+o", set_option: hw_katakana, when: composing}
+                - {accept: "Control+q", toggle: emoji, when: has_menu}
+              import_preset: default
+
+            punctuator:
+              full_shape:
+                " ": {commit: "　"}
+                ",": {commit: "、"}
+                .: {commit: "。"}
+                "?": {commit: "？"}
+              half_shape:
+                ",": ["、", "・", "，"]
+                .: ["。", "…", "．", .]
+                "?": {commit: "？"}
+            """.trimIndent()
     }
 }

@@ -12,16 +12,24 @@ import app.songyan.ime.deploy.DeployState
 import app.songyan.ime.deploy.DeployStatusStore
 import app.songyan.ime.ime.KeyboardResourceSets
 import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.packages.SchemeGrammarRequirements
 import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
+import app.songyan.ime.rime.SchemaOptionCapabilities
 import app.songyan.ime.settings.state.AppKeyboardInfo
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.InstalledScheme
+import app.songyan.ime.settings.state.LayoutLibraryHolder
 import app.songyan.ime.settings.state.SettingsAppState
 import app.songyan.ime.settings.state.SettingsAppStateSource
 import app.songyan.ime.settings.state.StoredSourceInfo
@@ -125,23 +133,25 @@ class AppSettingsStateSource(
                 active != null -> EngineStatus.Failed
                 else -> EngineStatus.Unknown
             }
+        val inUseSchemeId = schemes.firstOrNull { it.id == activeSchemaId }?.id ?: schemes.firstOrNull()?.id
+        val inUseScheme = schemes.firstOrNull { it.id == inUseSchemeId }
         val layoutName =
-            when (preferences.layoutId.first()) {
-                "merged14" -> displayContext.getString(R.string.keyboard_layout_14)
-                "merged18" -> displayContext.getString(R.string.keyboard_layout_18)
-                "phone9" -> displayContext.getString(R.string.keyboard_layout_9)
-                else -> displayContext.getString(R.string.keyboard_layout_26)
-            }
+            currentLayoutName(
+                inputMethodId = inUseSchemeId,
+                shapeId = preferences.layoutId.first(),
+                family = inUseScheme?.family,
+            )
         return SettingsAppState(
             engine = engine,
             sourcesLoaded = true,
             schemes = schemes,
-            inUseSchemeId = schemes.firstOrNull { it.id == activeSchemaId }?.id ?: schemes.firstOrNull()?.id,
+            inUseSchemeId = inUseSchemeId,
             keyboards =
                 listOf(
                     AppKeyboardInfo(
                         id = DEFAULT_KEYBOARD_ID,
-                        inputMethod = displayContext.getString(R.string.keyboard_input_method_pinyin),
+                        inputMethod =
+                            inUseScheme?.name ?: displayContext.getString(R.string.keyboard_input_method_pinyin),
                         layout = layoutName,
                     ),
                 ),
@@ -169,7 +179,14 @@ class AppSettingsStateSource(
         val ids = active.schemaIds.ifEmpty { listOf(active.schemaId) }
         val build = File(storage.generationDir(active.generation), "build")
         val adapters = EncodingAdapterRegistry.read(build, ids.toSet())
-        val resources = KeyboardResourceSets.forEngineSchemas(ids.map { KeyboardSchemaDescriptor(it, it) }, adapters)
+        // The deployed schema yaml carries the declared speller alphabet: the fact that places an
+        // input method the language table cannot name by its id. Read here on the IO dispatcher,
+        // once per refresh, so neither the keyboard nor layout selection ever asks again.
+        val schemas =
+            ids.map {
+                KeyboardSchemaDescriptor(it, it, SchemaOptionCapabilities.spellerAlphabet(build, it))
+            }
+        val resources = KeyboardResourceSets.forEngineSchemas(schemas, adapters)
         return schemesNamed(manifest, ids).map { scheme ->
             scheme.copy(
                 supportedLayouts =
@@ -177,9 +194,58 @@ class AppSettingsStateSource(
                         .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }
                         .map { it.wire }
                         .toSet(),
+                family = resources?.familyOf(scheme.id) ?: InputSchemeFamily.GENERIC,
             )
         }
     }
+
+    /**
+     * The name of the layout the keyboard in use draws: a physical board this build words by id, the
+     * user's own layout under the name it was saved with, else the shape's existing name. The saved
+     * pairing is read from the catalog the keyboard itself reads, never guessed from the UI language.
+     */
+    private fun currentLayoutName(
+        inputMethodId: String?,
+        shapeId: String,
+        family: InputSchemeFamily?,
+    ): String {
+        val shape = LayoutInput.Builtin.fromWire(shapeId)
+        val registry = LayoutLibraryHolder.current.registry.value
+        val definition =
+            if (inputMethodId != null && shape != null && registry != null) {
+                val families =
+                    family?.let { LayoutFamilyContext.of(inputMethodId to it) } ?: LayoutFamilyContext.UNKNOWN
+                registry.resolvedLayout(
+                    registry.composition(KeyboardCompositionKey(inputMethodId, shape), families).mainLayoutID,
+                )
+            } else {
+                null
+            }
+        if (definition != null) {
+            // An edited bundled board is the user's own; its saved name wins over the shipped one.
+            if (definition != BuiltinLayouts.byId(definition.id)) return definition.name
+            knownLayoutNameRes(definition.id)?.let { return displayContext.getString(it) }
+        }
+        return displayContext.getString(shapeNameRes(shapeId))
+    }
+
+    /** The resource that words a bundled physical board by id; null keeps the name the caller has. */
+    private fun knownLayoutNameRes(layoutId: String?): Int? =
+        when (layoutId) {
+            InputLayoutPolicy.ZHUYIN_LAYOUT -> R.string.keyboard_layout_zhuyin41
+            InputLayoutPolicy.CANGJIE_LAYOUT -> R.string.keyboard_layout_cangjie26
+            InputLayoutPolicy.ROMAJI_LAYOUT -> R.string.keyboard_layout_romaji26
+            InputLayoutPolicy.KANA_LAYOUT -> R.string.keyboard_layout_kana12
+            else -> null
+        }
+
+    private fun shapeNameRes(shapeId: String): Int =
+        when (shapeId) {
+            KeyboardLayoutKind.MERGED14.wire -> R.string.keyboard_layout_14
+            KeyboardLayoutKind.MERGED18.wire -> R.string.keyboard_layout_18
+            KeyboardLayoutKind.PHONE9.wire -> R.string.keyboard_layout_9
+            else -> R.string.keyboard_layout_26
+        }
 
     private fun schemesNamed(
         manifest: SourceManifest?,

@@ -112,6 +112,7 @@ class PhraseClipboardPanelView(
         }
         quickRows = rows
         invalidate()
+        announceItemsChanged()
     }
 
     /**

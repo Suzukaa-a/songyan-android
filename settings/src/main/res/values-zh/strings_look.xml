@@ -172,6 +172,7 @@
     <string name="layout_error_unknown">找不到这个布局，它可能已经被删除。</string>
     <string name="layout_error_ascii_only_literal">只有输入文字的按键可以设置半角文字。</string>
     <string name="layout_error_code_char">输入字母的按键要正好填一个字母或符号。</string>
+    <string name="layout_error_kana_row">假名键只能填一个假名行，请重新选择。</string>
     <string name="layout_error_literal_empty">输入文字的按键需要填写要输入的文字。</string>
     <string name="layout_error_ascii_empty">半角文字不能留空，不需要时请清除。</string>
     <string name="layout_error_mode_switch">切换布局的按键只能切到下一个布局。</string>

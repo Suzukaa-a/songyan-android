@@ -1,14 +1,87 @@
-// Usage: interop export <out-dir>   writes iOS-encoded files (appearance, skin, candidate area, layouts, catalog)
+// Usage: interop export <out-dir>   writes iOS-encoded files (appearance, skin, candidate area, layouts,
+//                                 catalog, tools)
 //        interop verify <in-dir>    decodes every interop file in <in-dir> with the iOS decoders; exit 1 on any failure
 import AppearanceKit
 import CandidateKit
 import Foundation
 import LayoutKit
+import QuickContentKit
 import SkinKit
 
 func write(_ data: Data, _ dir: URL, _ name: String) throws {
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     try data.write(to: dir.appendingPathComponent(name), options: .atomic)
+}
+
+/// The tool files shared with Android, as models. The same models write the fixtures through
+/// `ToolDefinition.encoded()` and are what `verify` compares Android's bytes against, so the two
+/// sides cannot drift apart and no golden file is written by hand.
+func toolFixtures() -> [(name: String, tool: ToolDefinition)] {
+    // One canonical tool with all six step types, in the order a user would chain them.
+    let canonical = ToolDefinition(
+        id: "canonical",
+        name: [
+            "zh-Hans": "排版整理",
+            "zh-Hant": "排版整理",
+            "ja": "組版を整える",
+            "en": "Typeset tidy",
+        ],
+        steps: [
+            .opencc(config: .s2twp),
+            .replace(pattern: "\\s+", replacement: " "),
+            .map(table: ["，": ", ", "。": ". ", "；": "; "]),
+            .caseTransform(mode: .capitalize),
+            .width(mode: .toHalf),
+            .template(pattern: "「{text}」"),
+        ])
+    // Non-ASCII names, Unicode text in map/replacement/template and the Unicode letter class.
+    let unicode = ToolDefinition(
+        id: "unicode-text",
+        name: [
+            "zh-Hans": "文字整理（一）",
+            "zh-Hant": "文字整理（一）",
+            "ja": "文字の整理（一）",
+            "en": "Text tidy (1)",
+        ],
+        steps: [
+            .replace(pattern: "(\\p{L}+)\\s+(\\p{L}+)", replacement: "$2 $1"),
+            .map(table: ["🥰": "😍", "…": "…", "①": "1", "　": " ", "℡": "Tel"]),
+            .width(mode: .toFull),
+            .template(pattern: "「{text}」※"),
+            .opencc(config: .t2s),
+        ])
+    // Every defined name language, all of them non-ASCII except one.
+    let names = ToolDefinition(
+        id: "localized-names",
+        name: [
+            "zh-Hans": "本地化名称",
+            "zh-Hant": "在地化名稱",
+            "ja": "ローカライズ名",
+            "en": "Localised name",
+        ],
+        steps: [.width(mode: .toHalf), .caseTransform(mode: .lower)])
+    // Representative regular expressions that both NSRegularExpression and java.util.regex accept.
+    let regex = ToolDefinition(
+        id: "regex-representative",
+        name: [
+            "zh-Hans": "正则代表",
+            "zh-Hant": "正規表示式",
+            "ja": "正規表現",
+            "en": "Regex samples",
+        ],
+        steps: [
+            .replace(pattern: "^\\s+|\\s+$", replacement: ""),
+            .replace(pattern: "(\\p{L})\\1", replacement: "$1"),
+            .replace(pattern: "(?<=[（(])\\p{L}+(?=[）)])", replacement: "词"),
+            .replace(pattern: "\\d{2,4}", replacement: "#"),
+            .replace(pattern: "(?:ab|cd)+", replacement: "XY"),
+        ])
+    return [
+        ("tool-canonical.songyantool.json", canonical),
+        ("tool-localized-names.songyantool.json", names),
+        ("tool-regex-representative.songyantool.json", regex),
+        ("tool-unicode-text.songyantool.json", unicode),
+    ]
 }
 
 func export(to out: URL) throws {
@@ -123,6 +196,11 @@ func export(to out: URL) throws {
         for: "songyan_quanpin:qwerty26")
     let store = LayoutStore(directoryURL: out.appendingPathComponent("catalog"))
     try store.save(registry)
+
+    // Tools: every step type once, plus Unicode, localized-name and regular-expression samples.
+    for (name, tool) in toolFixtures() {
+        try write(try tool.encoded(), out, name)
+    }
 }
 
 func verify(in dir: URL) throws -> Bool {
@@ -138,6 +216,20 @@ func verify(in dir: URL) throws -> Bool {
                 _ = try AppearanceDocument.decodeImported(data)
             } else if name.hasPrefix("layout-") {
                 _ = try LayoutDefinition.decode(data)
+            } else if name.hasPrefix("tool-") {
+                let decoded = try ToolDefinition.decode(data)
+                guard let expected = toolFixtures().first(where: { $0.name == name })?.tool else {
+                    throw NSError(
+                        domain: "Interop", code: 2,
+                        userInfo: [NSLocalizedDescriptionKey: "no iOS model for \(name)"])
+                }
+                guard decoded == expected else {
+                    let actual = String(decoding: try decoded.encoded(), as: UTF8.self)
+                    let model = String(decoding: try expected.encoded(), as: UTF8.self)
+                    throw NSError(
+                        domain: "Interop", code: 3,
+                        userInfo: [NSLocalizedDescriptionKey: "tool model changed\nAndroid: \(actual)\niOS: \(model)"])
+                }
             } else if name == "layouts.json" {
                 _ = try LayoutStore(directoryURL: dir).load()
             } else if name.hasPrefix("catalog-") {

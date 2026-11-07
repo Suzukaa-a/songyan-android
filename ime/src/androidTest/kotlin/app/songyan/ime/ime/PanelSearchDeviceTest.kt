@@ -46,13 +46,13 @@ class PanelSearchDeviceTest {
             assertTrue(host.await { "标记" in host.symbolLabels() })
             host.tap(host.string(R.string.ime_symbol_search_empty), SymbolPanelView::class.java)
             assertTrue("the panel gave way", host.await { host.symbolLabels().isEmpty() })
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("star")
             assertEquals("what is typed goes into the query, not the editor", "", host.text())
             assertTrue("results: ${host.barLabels()}", host.await { "★" in host.barLabels() })
             assertFalse("♥" in host.barLabels())
-            // The chip sits among the Chinese key names, so it is Chinese on any phone language too.
-            assertEquals("搜索：star", host.barLabels().first())
+            // The chip is UI chrome from the res table; the keys beside it stay the scheme's own labels.
+            assertEquals(host.context.getString(R.string.ime_emoji_search_chip, "star"), host.barLabels().first())
             host.tapBar("★")
             host.assertText("★")
             // The search stays open, so a second pick inserts again.
@@ -77,7 +77,7 @@ class PanelSearchDeviceTest {
             host.assertText("★")
             host.tap("红心", SymbolPanelView::class.java)
             host.assertText("★♥")
-            host.tap("最近", SymbolPanelView::class.java)
+            host.tap(host.string(R.string.ime_panel_recent), SymbolPanelView::class.java)
             val labels = host.symbolLabels()
             val newest = labels.indexOf("♥")
             val older = labels.indexOf("★")
@@ -94,7 +94,7 @@ class PanelSearchDeviceTest {
             assertTrue(host.await { "辛苦了，谢谢" in host.phraseLabels() })
             host.tap(host.string(R.string.ime_phrase_search_empty), PhraseClipboardPanelView::class.java)
             assertTrue("the panel gave way", host.await { host.phraseLabels().isEmpty() })
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("xk")
             assertEquals("", host.text())
             assertTrue("results: ${host.barLabels()}", host.await { "辛苦了，谢谢" in host.barLabels() })
@@ -119,7 +119,7 @@ class PanelSearchDeviceTest {
             host.main { assertTrue(host.controller.closePanels()) }
             assertTrue(host.await { host.toolbarLabels().isNotEmpty() })
             assertFalse(host.backOwned)
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("a")
             host.assertText("a")
         }

@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.settings.state.AppKeyboardInfo
+import app.songyan.ime.settings.state.CurrentMainLayout
 import app.songyan.ime.settings.state.DictionaryImportGateway
 import app.songyan.ime.settings.state.DictionaryImportHolder
 import app.songyan.ime.settings.state.DictionaryImportResult
@@ -20,8 +21,11 @@ import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.IncomingPackageHolder
 import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.state.KeyboardLayoutOption
+import app.songyan.ime.settings.state.LayoutLibraryHolder
+import app.songyan.ime.settings.state.LayoutLibrarySource
 import app.songyan.ime.settings.state.OnboardingProgress
 import app.songyan.ime.settings.state.PackageLearningResult
+import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.state.SchemeImportGateway
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
@@ -34,6 +38,7 @@ import app.songyan.ime.settings.state.StoredSourceResult
 import app.songyan.ime.settings.state.StoredSourcesGateway
 import app.songyan.ime.settings.state.StoredSourcesHolder
 import app.songyan.ime.settings.state.TransferProgress
+import app.songyan.ime.settings.state.currentMainLayout
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.screens.KeyboardFeelState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -58,6 +63,8 @@ data class SettingsUiState(
     val inUseSchemeId: String? = null,
     val currentKeyboard: AppKeyboardInfo? = null,
     val layoutId: String = SettingsPreferences.DEFAULT_LAYOUT_ID,
+    /** The main layout the keyboard in use draws, once the layout catalog is read; null until then. */
+    val mainLayout: CurrentMainLayout? = null,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
     val keyFeedback: KeyFeedbackSettings = KeyFeedbackSettings(),
     /** Key height, one-handed mode, key preview and release vibration, shown on the options screen. */
@@ -124,6 +131,7 @@ class SettingsViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val importTasks: SettingsImportTasks =
         SettingsImportTasks(appStateSource, dictionaryGateway, schemeGateway, sourcesGateway, ioDispatcher),
+    private val layoutLibrary: LayoutLibrarySource = LayoutLibraryHolder.current,
 ) : AndroidViewModel(application) {
     private val imeStatus = MutableStateFlow(imeStatusSource.read())
     private val hasTyped = MutableStateFlow(false)
@@ -249,9 +257,26 @@ class SettingsViewModel(
             )
         }
 
+    /**
+     * The catalog the keyboard reads decides the keyboard's main layout; it is already in memory, so
+     * nothing here touches a file or the engine.
+     */
+    private val stateWithMainLayout: Flow<SettingsUiState> =
+        combine(baseState, layoutLibrary.registry) { state, registry ->
+            state.copy(
+                mainLayout =
+                    currentMainLayout(
+                        inputMethodId = state.inUseSchemeId,
+                        shapeId = state.layoutId,
+                        family = state.inUseScheme?.family,
+                        registry = registry,
+                    ),
+            )
+        }
+
     val uiState: StateFlow<SettingsUiState> =
         combine(
-            baseState,
+            stateWithMainLayout,
             dictionaryImport,
             schemeImport,
             sourceAction,
@@ -434,6 +459,8 @@ class SettingsViewModel(
     fun importSchemeFolder(uri: Uri) = importTasks.importSchemeFolder(uri)
 
     fun importSchemeFromLink(url: String) = importTasks.importSchemeFromLink(url)
+
+    fun importRecommendedScheme(scheme: RecommendedScheme) = importTasks.importRecommendedScheme(scheme)
 
     fun updateScheme(sourceId: String) = importTasks.updateScheme(sourceId)
 
@@ -618,7 +645,18 @@ class SettingsImportTasks(
         runSchemeImport { schemeGateway.importFromTree(uri) }
     }
 
-    /** Downloads and imports a scheme package from an https link. */
+    /** Downloads and installs a recommended entry: its pinned archives, every one checked. */
+    fun importRecommendedScheme(scheme: RecommendedScheme) {
+        if (schemeImport.value is SchemeImportUiState.Running ||
+            schemeImport.value is SchemeImportUiState.MergingLearning
+        ) {
+            return
+        }
+        runSchemeImport { progress ->
+            schemeGateway.importRecommendedScheme(scheme.archives, scheme.advertisedSchemas, progress)
+        }
+    }
+
     fun importSchemeFromLink(url: String) {
         if (schemeImport.value is SchemeImportUiState.Running ||
             schemeImport.value is SchemeImportUiState.MergingLearning

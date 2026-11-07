@@ -72,8 +72,8 @@
     <string name="source_error_delete">この入力パックを削除できませんでした。やり直してください。</string>
 
     <!-- 設定：内蔵の入力パックとキーボードの名前 -->
-    <string name="scheme_builtin_quanpin">全拼（ピンイン）</string>
-    <string name="scheme_builtin_flypy">小鶴双拼（シャンピン）</string>
+    <string name="scheme_builtin_quanpin">内蔵全拼</string>
+    <string name="scheme_builtin_flypy">内蔵小鶴双拼</string>
     <string name="keyboard_input_method_pinyin">ピンイン</string>
     <string name="keyboard_layout_14">14 キー</string>
     <string name="keyboard_layout_18">18 キー</string>

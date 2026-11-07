@@ -61,8 +61,8 @@
     <string name="ime_menu_layout">Keyboard layout</string>
     <string name="ime_menu_close">Close</string>
     <string name="ime_item_selected">In use: %1$s</string>
-    <string name="ime_schema_quanpin">Full Pinyin</string>
-    <string name="ime_schema_flypy">Xiaohe Shuangpin</string>
+    <string name="ime_schema_quanpin">Built-in Full Pinyin</string>
+    <string name="ime_schema_flypy">Built-in Xiaohe Shuangpin</string>
     <string name="ime_layout_qwerty26">26-key</string>
     <string name="ime_layout_merged14">14-key</string>
     <string name="ime_layout_merged18">18-key</string>

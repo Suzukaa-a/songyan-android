@@ -72,8 +72,8 @@
     <string name="source_error_delete">沒能刪除這個輸入方案，請重試。</string>
 
     <!-- Settings: built-in scheme and keyboard names. -->
-    <string name="scheme_builtin_quanpin">全拼</string>
-    <string name="scheme_builtin_flypy">小鶴雙拼</string>
+    <string name="scheme_builtin_quanpin">內建全拼</string>
+    <string name="scheme_builtin_flypy">內建小鶴雙拼</string>
     <string name="keyboard_input_method_pinyin">拼音</string>
     <string name="keyboard_layout_14">14 鍵</string>
     <string name="keyboard_layout_18">18 鍵</string>

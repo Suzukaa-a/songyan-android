@@ -68,8 +68,8 @@
     <string name="source_error_activate">Could not switch to this input scheme. Try again.</string>
     <string name="source_error_delete">Could not delete this input scheme. Try again.</string>
 
-    <string name="scheme_builtin_quanpin">Full Pinyin</string>
-    <string name="scheme_builtin_flypy">Xiaohe Shuangpin</string>
+    <string name="scheme_builtin_quanpin">Built-in Full Pinyin</string>
+    <string name="scheme_builtin_flypy">Built-in Xiaohe Shuangpin</string>
     <string name="keyboard_input_method_pinyin">Pinyin</string>
     <string name="keyboard_layout_14">14-key</string>
     <string name="keyboard_layout_18">18-key</string>

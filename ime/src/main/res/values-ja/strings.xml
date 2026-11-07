@@ -33,8 +33,8 @@
     <string name="ime_menu_layout">キー配列</string>
     <string name="ime_menu_close">閉じる</string>
     <string name="ime_item_selected">使用中：%1$s</string>
-    <string name="ime_schema_quanpin">全拼（ピンイン）</string>
-    <string name="ime_schema_flypy">小鶴双拼（シャンピン）</string>
+    <string name="ime_schema_quanpin">内蔵全拼</string>
+    <string name="ime_schema_flypy">内蔵小鶴双拼</string>
     <string name="ime_layout_qwerty26">26 キー</string>
     <string name="ime_layout_merged14">14 キー</string>
     <string name="ime_layout_merged18">18 キー</string>

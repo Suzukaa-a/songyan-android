@@ -34,8 +34,8 @@
     <string name="ime_menu_close">关闭</string>
     <string name="ime_menu_title">键盘</string>
     <string name="ime_item_selected">正在使用：%1$s</string>
-    <string name="ime_schema_quanpin">全拼</string>
-    <string name="ime_schema_flypy">小鹤双拼</string>
+    <string name="ime_schema_quanpin">内置全拼</string>
+    <string name="ime_schema_flypy">内置小鹤双拼</string>
     <string name="ime_layout_qwerty26">26 键</string>
     <string name="ime_layout_merged14">14 键</string>
     <string name="ime_layout_merged18">18 键</string>

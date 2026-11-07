@@ -922,15 +922,13 @@ internal object KeyboardPages {
         if (config.englishDirectInput || config.symbolMarksAscii || config.field != FieldKind.TEXT) return null
         val japanese = config.inputLanguage == InputLanguage.JA
         val comma = if (japanese) "、" else "，"
-        val alternates =
-            if (japanese) {
-                listOf("。", "？", "！", "・", "：", "；")
-            } else {
-                listOf("。", "？", "！", "、", "：", "；")
-            }
+        // The full stop has its own key, so each long press holds the marks of its kind: the pauses
+        // under the comma, the sentence ends under the full stop.
+        val pauses = if (japanese) listOf("・", "：", "；") else listOf("、", "：", "；")
+        val ends = listOf("？", "！", "…")
         // A constant share on both sides keeps the space bar centred and the row's total width.
         val periodWidth = if (symbolPage) FooterWeight.MARK else FooterWeight.PERIOD
-        return markKey(comma, alternates).copy(width = FooterWeight.MARK) to markKey("。").copy(width = periodWidth)
+        return markKey(comma, pauses).copy(width = FooterWeight.MARK) to markKey("。", ends).copy(width = periodWidth)
     }
 
     /** The 123 page footer: `返回 | 中/英 | 空格 | ，| 回车`; the symbol switch opens the third row. */

@@ -218,6 +218,8 @@ class InputSession(
                 throw error
             } catch (error: Exception) {
                 options = emptyList()
+                // The scheme may have changed under the failed read: its family must not outlive it.
+                refreshInputLanguage()
                 onError?.invoke(error)
                 onUpdate?.invoke()
                 return

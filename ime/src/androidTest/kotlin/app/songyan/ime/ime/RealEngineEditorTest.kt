@@ -1248,6 +1248,22 @@ class RealEngineEditorTest {
         }
     }
 
+    /**
+     * A saved layout the keyboard cannot run right now (here: no 9-key form of this scheme) falls back
+     * for this editor only; the saved choice stays, so the layout comes back once it can run again.
+     */
+    @Test
+    fun aLayoutThatCannotRunNowKeepsTheSavedChoice() {
+        withHost(layout = "phone9", schema = "songyan_flypy") { host ->
+            host.start()
+            host.awaitIdle()
+            var running: KeyboardLayoutKind? = null
+            host.main { running = host.controller.layoutKind }
+            assertNotEquals("precondition: the scheme has no 9-key form", KeyboardLayoutKind.PHONE9, running)
+            assertEquals("phone9", host.preferences.layoutId.value)
+        }
+    }
+
     /** A compact layout spells its keys out, but an apostrophe the user typed stays in the spelling. */
     @Test
     fun aCompactSpellingKeepsTheTypedApostropheAndEachDeleteShows() {

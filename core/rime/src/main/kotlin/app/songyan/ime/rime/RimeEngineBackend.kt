@@ -101,11 +101,15 @@ class RimeEngineBackend(
      */
     override suspend fun spellerAlphabet(schemaID: String): String? {
         if (schemaID.isEmpty()) return null
-        alphabetCache[schemaID]?.let { return it }
-        val value = catchingNonCancellation { engine.schemaValue(schemaID, "speller/alphabet") }.getOrNull()
-        if (value.isNullOrEmpty()) return null
+        // A schema without an alphabet is remembered too (as ""), so the list refresh does not reopen
+        // its config every time; a failed read is not, so the next refresh tries again.
+        alphabetCache[schemaID]?.let { return it.ifEmpty { null } }
+        val value =
+            catchingNonCancellation { engine.schemaValue(schemaID, "speller/alphabet") }
+                .getOrElse { return null }
+                .orEmpty()
         alphabetCache[schemaID] = value
-        return value
+        return value.ifEmpty { null }
     }
 
     override suspend fun processKey(keyValue: String): EngineSnapshot {

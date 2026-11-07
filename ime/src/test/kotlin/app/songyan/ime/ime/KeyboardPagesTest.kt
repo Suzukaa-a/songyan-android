@@ -60,8 +60,9 @@ class KeyboardPagesTest {
             footer.map { it.action.type },
         )
         assertEquals(listOf("123", "中/英", "，", "空格", "。", "⏎"), footer.map { it.label })
-        // The comma's full stop stays first in its long press, so it is the corner hint.
-        assertEquals(listOf("。", "？", "！", "、", "：", "；"), footer[2].longPress?.map { it.label })
+        // The comma holds the pauses and the full stop the sentence ends.
+        assertEquals(listOf("、", "：", "；"), footer[2].longPress?.map { it.label })
+        assertEquals(listOf("？", "！", "…"), footer[4].longPress?.map { it.label })
         // The space bar keeps one share on every page, so every bottom row lines up.
         assertEquals(KeyboardPages.FooterWeight.SPACE, footer[3].widthWeight, 0.001)
         val forcedAscii =

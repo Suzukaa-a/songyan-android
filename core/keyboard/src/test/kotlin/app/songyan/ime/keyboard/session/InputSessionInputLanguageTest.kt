@@ -29,6 +29,7 @@ class InputSessionInputLanguageTest {
         override val inputUnavailableReason: String? = null
         override var spellingDemand: (() -> Boolean)? = null
         var alphabetQueries = 0
+        var failOptions = false
 
         override val availableSchemas: List<KeyboardSchemaDescriptor>
             get() = listOf(KeyboardSchemaDescriptor(schema, schema, alphabet))
@@ -61,7 +62,10 @@ class InputSessionInputLanguageTest {
             return alphabet.takeIf { schemaID == schema }
         }
 
-        override suspend fun optionStates(): List<EngineOptionState> = states
+        override suspend fun optionStates(): List<EngineOptionState> {
+            check(!failOptions) { "options unavailable" }
+            return states
+        }
     }
 
     private fun switch(
@@ -97,6 +101,19 @@ class InputSessionInputLanguageTest {
             session.reloadOptions()
             assertEquals(HANT, session.inputLanguage)
             assertEquals(1, engine.alphabetQueries)
+        }
+
+    @Test
+    fun aFailedOptionsReadDropsTheConversionTheOldOptionsDeclared() =
+        runTest {
+            val engine = ScriptEngine()
+            val session = InputSession(engine, KeyboardLayoutKind.QWERTY26)
+            engine.states = listOf(switch("s2t", "s2t", true))
+            session.reloadOptions()
+            assertEquals(HANT, session.inputLanguage)
+            engine.failOptions = true
+            session.reloadOptions()
+            assertEquals(LEGACY, session.inputLanguage)
         }
 
     @Test

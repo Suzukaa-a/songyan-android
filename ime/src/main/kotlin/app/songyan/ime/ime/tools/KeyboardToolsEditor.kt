@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.view.inputmethod.EditorInfo
 import app.songyan.ime.ime.EditorConnection
 import app.songyan.ime.ime.EditorPolicy
+import app.songyan.ime.ime.isSensitiveClip
 
 /**
  * The editor side of a keyboard tool: what a tool may read, and how its result is written back.
@@ -82,14 +83,20 @@ class EditorConnectionKeyboardTools(
 
     override fun clipboard(): String? {
         if (!mayRead()) return null
-        val clip = clipboard?.primaryClip ?: return null
-        if (clip.itemCount == 0) return null
+        // A clip the host marked sensitive (a copied password) is never read, as for the copied chip;
+        // a locked or denied clipboard throws and must not close the panel.
         val text =
-            clip
-                .getItemAt(0)
-                ?.coerceToText(null)
-                ?.toString()
-                .orEmpty()
+            runCatching {
+                val manager = clipboard ?: return null
+                if (manager.primaryClipDescription?.isSensitiveClip() == true) return null
+                val clip = manager.primaryClip ?: return null
+                if (clip.itemCount == 0) return null
+                clip
+                    .getItemAt(0)
+                    ?.coerceToText(null)
+                    ?.toString()
+                    .orEmpty()
+            }.getOrNull() ?: return null
         if (text.isEmpty() || text.length > TOOL_TEXT_LIMIT) return null
         return text
     }

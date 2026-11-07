@@ -116,35 +116,35 @@ class SessionLayoutFamilyTest {
         }
 
     @Test
-    fun aFoldedShapeSavedForACantoneseSchemeFallsBackToTheIdentityOne() =
+    fun aFoldedShapeSavedForACangjieSchemeFallsBackToTheIdentityOne() =
         runTest {
-            val engine = QuietEngine("jyut6ping3")
+            val engine = QuietEngine("cangjie5")
             val session =
                 InputSession(
                     engine,
                     KeyboardLayoutKind.PHONE9,
-                    set(KeyboardSchemaDescriptor("jyut6ping3", "粵語", "abcdefghijklmnopqrstuvwxyz")),
+                    set(KeyboardSchemaDescriptor("cangjie5", "倉頡", "abcdefghijklmnopqrstuvwxyz")),
                 )
-            session.selectLayout(KeyboardLayoutKind.PHONE9, "jyut6ping3")
+            session.selectLayout(KeyboardLayoutKind.PHONE9, "cangjie5")
             assertEquals(KeyboardLayoutKind.QWERTY26, session.layout)
-            assertEquals("jyut6ping3", session.selectedSchemaID)
-            assertEquals("jyut6ping3", engine.schema)
+            assertEquals("cangjie5", session.selectedSchemaID)
+            assertEquals("cangjie5", engine.schema)
         }
 
     @Test
     fun aRunningLayoutTheFamilyForbidsIsRepairedWithoutASwitch() =
         runTest {
-            val engine = QuietEngine("jyut6ping3")
+            val engine = QuietEngine("cangjie5")
             val session =
                 InputSession(
                     engine,
                     KeyboardLayoutKind.PHONE9,
-                    set(KeyboardSchemaDescriptor("jyut6ping3", "粵語", "abcdefghijklmnopqrstuvwxyz")),
+                    set(KeyboardSchemaDescriptor("cangjie5", "倉頡", "abcdefghijklmnopqrstuvwxyz")),
                 )
             // The editor start path sees the stored pair unchanged and only repairs the shape.
             session.repairFamilyLayout()
             assertEquals(KeyboardLayoutKind.QWERTY26, session.layout)
-            assertEquals("jyut6ping3", session.selectedSchemaID)
+            assertEquals("cangjie5", session.selectedSchemaID)
         }
 
     @Test

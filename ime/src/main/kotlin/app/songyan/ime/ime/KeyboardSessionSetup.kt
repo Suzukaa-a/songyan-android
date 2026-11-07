@@ -116,7 +116,7 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
     if (active != null && ready) {
         active.selectLayout(kind, preferredSchema)
         syncSelection(active)
-        persistSelection()
+        persistSelection(active)
         updateSwipe(active)
     } else {
         layoutKind = kind
@@ -149,7 +149,7 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (active != null && ready) {
         active.selectLayout(layoutKind, target)
         syncSelection(active)
-        persistSelection()
+        persistSelection(active)
         updateSwipe(active)
     } else {
         schemaId = target

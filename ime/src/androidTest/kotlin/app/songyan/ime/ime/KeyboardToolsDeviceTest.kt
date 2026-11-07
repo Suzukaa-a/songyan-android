@@ -1,7 +1,9 @@
 package app.songyan.ime.ime
 
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.res.AssetManager
+import android.os.PersistableBundle
 import android.text.InputType
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -92,6 +94,33 @@ class KeyboardToolsDeviceTest {
                 host.string(R.string.ime_tools_title) in labels,
             )
             assertFalse("a password field must not offer a tool", host.main2 { host.controller.toolsAvailable })
+        }
+
+    @Test
+    fun aClipMarkedSensitiveIsNeverShownAsTheSource() =
+        withToolsHost { host, _, _ ->
+            val clipboard = host.context.getSystemService(ClipboardManager::class.java)
+            host.start()
+            // An empty field leaves the clipboard as the source; an ordinary clip is offered...
+            host.main2 { clipboard.setPrimaryClip(ClipData.newPlainText("", "普通剪贴")) }
+            host.openTools()
+            assertTrue("an ordinary clip was not offered", host.await { host.toolLabels().any { it.contains("普通剪贴") } })
+            assertTrue(host.main2 { host.controller.closePanels() })
+            host.await { host.toolLabels().isEmpty() }
+            // ...but one the host flagged sensitive (a copied password) is never read.
+            val sensitive =
+                ClipData.newPlainText("", "秘密口令").apply {
+                    // EXTRA_IS_SENSITIVE's value, also the spelling hosts used before API 33.
+                    description.extras =
+                        PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+                }
+            host.main2 { clipboard.setPrimaryClip(sensitive) }
+            host.openTools()
+            host.awaitIdle()
+            assertFalse(
+                "a sensitive clip reached the tool panel: ${host.toolLabels()}",
+                host.toolLabels().any { it.contains("秘密口令") },
+            )
         }
 
     @Test

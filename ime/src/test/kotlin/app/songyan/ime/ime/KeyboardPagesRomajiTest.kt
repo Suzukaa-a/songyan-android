@@ -199,11 +199,8 @@ class KeyboardPagesRomajiTest {
         }
         assertNull(footer.first { it.label == "、" }.titleMode)
         assertNull(footer.first { it.label == "。" }.titleMode)
-        assertEquals(
-            listOf("。", "？", "！", "・", "：", "；"),
-            footer.first { it.label == "、" }.longPress?.map { it.label },
-        )
-        assertNull(footer.first { it.label == "。" }.longPress)
+        assertEquals(listOf("・", "：", "；"), footer.first { it.label == "、" }.longPress?.map { it.label })
+        assertEquals(listOf("？", "！", "…"), footer.first { it.label == "。" }.longPress?.map { it.label })
         // The authored stand-in row is not drawn: no layout switch, globe or second Delete.
         assertTrue(footer.none { it.action.type == LayoutActionKind.GLOBE })
         assertTrue(footer.none { it.action.type == LayoutActionKind.MODE_SWITCH })

@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.panels.QuickSettingChange
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -204,15 +205,18 @@ internal suspend fun KeyboardController.applyPreferences(active: InputSession) {
         active.selectLayout(layout, schema)
     }
     syncSelection(active)
-    persistSelection()
+    persistSelection(active)
 }
 
 /**
- * Writes back a selection the keyboard itself had to change (a saved layout the scheme's family
- * cannot use falls back to one it can), so the next editor does not retry the refused pairing.
+ * Writes back a selection the keyboard itself had to change because the scheme's family cannot use
+ * the saved layout, so the next editor does not retry the refused pairing. Any other difference
+ * (a switch that failed, companions still being generated) keeps the user's choice for next time.
  */
-internal suspend fun KeyboardController.persistSelection() {
+internal suspend fun KeyboardController.persistSelection(active: InputSession) {
     if (preferredLayout == layoutKind) return
+    val set = active.resourceSet ?: return
+    if (InputLayoutPolicy.allows(preferredLayout, set.familyOf(active.selectedSchemaID))) return
     preferredLayout = layoutKind
     preferences?.setLayoutId(layoutKind.wire)
 }

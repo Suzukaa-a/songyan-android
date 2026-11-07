@@ -19,7 +19,6 @@ class GenericInputConfigurationTest {
         listOf(
             InputSchemeFamily.ZHUYIN,
             InputSchemeFamily.CANGJIE_RADICALS,
-            InputSchemeFamily.LATIN_PHONETIC,
             InputSchemeFamily.JAPANESE,
         )
 
@@ -47,6 +46,14 @@ class GenericInputConfigurationTest {
     )
 
     // MARK: - The rule table
+
+    @Test
+    fun aLatinPhoneticSchemeFoldsLikeAnyOther() {
+        // Jyutping is typed on Latin letters: a 9-key or 14-key keyboard saved for it keeps working.
+        for (kind in KeyboardLayoutKind.entries) {
+            assertTrue("$kind", InputLayoutPolicy.allows(kind, InputSchemeFamily.LATIN_PHONETIC))
+        }
+    }
 
     @Test
     fun aRestrictedFamilyKeepsOnlyTheIdentityShape() {
@@ -126,30 +133,30 @@ class GenericInputConfigurationTest {
 
     @Test
     fun aDeclaredCompactCompanionDoesNotOverrideTheFamilyRule() {
-        val jyutping = schema("jyut6ping3", "abcdefghijklmnopqrstuvwxyz")
+        val cangjie = schema("cangjie5", "abcdefghijklmnopqrstuvwxyz")
         val declared =
             set(
-                listOf(jyutping),
+                listOf(cangjie),
                 adapters =
                     listOf(
                         KeyboardResourceSet.EncodingAdapter(
-                            "jyut6ping3",
+                            "cangjie5",
                             "keyboard_0123456789abcdef0123_9",
                             KeyboardLayoutKind.PHONE9,
-                            "粵拼",
+                            "倉頡",
                         ),
                     ),
             )
         assertFalse(
-            "Cantonese must not run on 9 keys even when a companion was declared",
+            "Cangjie must not run on 9 keys even when a companion was declared",
             declared.availableCombinations.any { it.layout == KeyboardLayoutKind.PHONE9 },
         )
         assertEquals(
             UserTerminology.layoutUnavailableReason(KeyboardLayoutKind.PHONE9),
-            declared.incompatibilityReason(KeyboardLayoutKind.PHONE9, "jyut6ping3"),
+            declared.incompatibilityReason(KeyboardLayoutKind.PHONE9, "cangjie5"),
         )
-        assertNull(declared.logicalSchemaID("jyut6ping3", KeyboardLayoutKind.PHONE9))
-        assertEquals(listOf(KeyboardLayoutKind.QWERTY26), declared.layoutsFor("jyut6ping3"))
+        assertNull(declared.logicalSchemaID("cangjie5", KeyboardLayoutKind.PHONE9))
+        assertEquals(listOf(KeyboardLayoutKind.QWERTY26), declared.layoutsFor("cangjie5"))
 
         // The same declaration on a scheme without a family keeps today's availability.
         val ice =

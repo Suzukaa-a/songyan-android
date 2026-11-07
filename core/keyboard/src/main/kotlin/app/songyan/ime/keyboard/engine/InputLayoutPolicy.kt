@@ -6,7 +6,7 @@ import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
  * Which keyboard a scheme family may be typed on.
  *
  * The shipped shapes (26 / 14 / 18 / 9 keys) fold Latin letters, so a scheme whose own key map is
- * not the Latin alphabet keeps the identity shape. A scheme-driven keyboard (zhuyin, cangjie
+ * not the Latin alphabet keeps the identity shape; a Latin phonetic scheme folds like any other. A scheme-driven keyboard (zhuyin, cangjie
  * radicals, Japanese kana) is a physical layout of its own and belongs to exactly one family.
  *
  * Everything this table does not name keeps today's behavior: a scheme with no known family may use
@@ -38,11 +38,17 @@ object InputLayoutPolicy {
             InputSchemeFamily.LATIN_PHONETIC, InputSchemeFamily.GENERIC -> null
         }
 
-    /** Whether the family may use one of the shipped key shapes. */
+    /**
+     * Whether the family may use one of the shipped key shapes. A Latin-letter scheme such as
+     * Jyutping folds like pinyin, so only the families with keys of their own keep the identity shape.
+     */
     fun allows(
         kind: KeyboardLayoutKind,
         family: InputSchemeFamily,
-    ): Boolean = family == InputSchemeFamily.GENERIC || kind == KeyboardLayoutKind.QWERTY26
+    ): Boolean =
+        family == InputSchemeFamily.GENERIC ||
+            family == InputSchemeFamily.LATIN_PHONETIC ||
+            kind == KeyboardLayoutKind.QWERTY26
 
     /** Whether the family may use the physical layout [layoutID]. Unknown ids keep today's answer. */
     fun allows(

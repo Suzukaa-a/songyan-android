@@ -6,7 +6,6 @@ import android.view.inputmethod.EditorInfo
 import app.songyan.ime.content.ToolOpenCCConverter
 import app.songyan.ime.content.ToolRegexReplacementError
 import app.songyan.ime.content.ToolRegexReplacementProvider
-import app.songyan.ime.content.ToolStore
 import app.songyan.ime.ime.EditorConnection
 import app.songyan.ime.ime.EditorPolicy
 import app.songyan.ime.ime.tools.EditorConnectionKeyboardTools
@@ -51,7 +50,7 @@ class ImeKeyboardTools(
      * named the way the system names those apps.
      */
     private val processTextApps =
-        ProcessTextToolApps(appContext, File(appContext.filesDir, ToolStore.DIRECTORY_NAME))
+        ProcessTextToolApps(appContext, storage.toolsDir)
 
     val gateway: KeyboardToolsGateway =
         KeyboardToolsRuntime(
@@ -78,7 +77,7 @@ class ImeKeyboardTools(
             clipboard = appContext.getSystemService(ClipboardManager::class.java),
         )
 
-    private fun toolsDirectory(): Path = File(appContext.filesDir, ToolStore.DIRECTORY_NAME).toPath()
+    private fun toolsDirectory(): Path = storage.toolsDir.toPath()
 
     /** The bundled OpenCC data of the active generation; null while nothing is published. */
     private fun openccDirectory(): File? {

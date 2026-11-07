@@ -134,12 +134,13 @@ interface KeyboardToolsProcessText {
     suspend fun apps(): List<KeyboardToolApp>
 
     /**
-     * Hands the panel's text to the app [appId]; false when this editor may not run a tool or the
-     * app could not be opened.
+     * Hands [source], the text the panel shows, to the app [appId]; false when this editor may not
+     * run a tool, the source is no longer what the editor shows, or the app could not be opened.
      */
     fun open(
         appId: String,
         label: String,
+        source: KeyboardToolText,
     ): Boolean
 
     /** The answer waiting for the user; null while the other app is open or when it returned nothing. */

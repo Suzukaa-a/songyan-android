@@ -1,5 +1,6 @@
 package app.songyan.ime.tools
 
+import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -62,12 +63,33 @@ class ProcessTextSessionTest {
     }
 
     @Test
-    fun aSecondRequestIsRefusedWhileOneIsOpen() {
-        assertNotNull(session.start(request()))
+    fun aSecondRequestIsRefusedWhileAnAnswerWaits() {
+        val token = requireNotNull(session.start(request()))
+        session.onResult(token, "HELLO")
 
         assertNull(session.start(request()))
         session.dismiss()
         assertNotNull("a dismissed request must not block the next one", session.start(request()))
+    }
+
+    @Test
+    fun anAppThatNeverAnsweredDoesNotBlockTheNextRequest() {
+        val abandoned = requireNotNull(session.start(request()))
+
+        val next = requireNotNull(session.start(request(text = "again")))
+        assertFalse("the abandoned app's late answer must not count", session.onResult(abandoned, "OLD"))
+        assertTrue(session.onResult(next, "NEW"))
+        assertEquals("NEW", session.pendingResult()?.text)
+    }
+
+    @Test
+    fun aWindowWithoutAnEditorDoesNotRetireTheAnswer() {
+        val token = requireNotNull(session.start(request()))
+        session.onResult(token, "HELLO WORLD")
+
+        // The relay's own activity is bound while the answer comes back; it has no text field.
+        session.onEditor(editor(packageName = TARGET_PACKAGE, fieldId = 0, inputType = InputType.TYPE_NULL))
+        assertEquals("HELLO WORLD", session.pendingResult()?.text)
     }
 
     @Test
@@ -194,9 +216,11 @@ class ProcessTextSessionTest {
     private fun editor(
         packageName: String = "app.one",
         fieldId: Int = 101,
+        inputType: Int = InputType.TYPE_CLASS_TEXT,
     ) = EditorInfo().apply {
         this.packageName = packageName
         this.fieldId = fieldId
+        this.inputType = inputType
     }
 
     private companion object {

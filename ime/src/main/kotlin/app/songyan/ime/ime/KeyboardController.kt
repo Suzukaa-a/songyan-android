@@ -1065,12 +1065,17 @@ class KeyboardController(
      * sees the result and decides whether to write it. Nothing is confirmed or written here: the
      * panel's own action does that, through the same relay.
      */
-    fun openProcessTextResult(onlyIfToolsOpen: Boolean = false): Boolean {
+    fun openProcessTextResult(): Boolean {
         val quick = panels ?: return false
         if (retired || !toolsAvailable) return false
-        if (!quick.openProcessTextResult(onlyIfToolsOpen)) return false
+        if (!quick.openProcessTextResult()) return false
         callbacks.panelsChanged(true)
         return true
+    }
+
+    /** The app the tools panel waited for closed without an answer: back to the keys. */
+    fun closeToolsPanel() {
+        if (!retired) panels?.closeTools()
     }
 
     /** Opens the edit panel (the toolbar's edit entry). */

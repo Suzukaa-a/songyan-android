@@ -12,7 +12,6 @@ import app.songyan.ime.content.LearningBackupGatewayImpl
 import app.songyan.ime.content.LinkDownloadGatewayImpl
 import app.songyan.ime.content.SchemeImportGatewayImpl
 import app.songyan.ime.content.StoredSourcesGatewayImpl
-import app.songyan.ime.content.ToolStore
 import app.songyan.ime.deploy.RimeDeployRunner
 import app.songyan.ime.engine.EngineOwnership
 import app.songyan.ime.engine.PublishedEngineFactory
@@ -133,7 +132,7 @@ class SongyanApplication : Application() {
             SettingsPreferencesHolder.install(AppSettingsPreferences(this))
             // The apps that handle text, for the keyboard tools page; the keyboard reads the same list.
             ProcessTextToolHolder.install(
-                ProcessTextToolApps(this, File(filesDir, ToolStore.DIRECTORY_NAME)),
+                ProcessTextToolApps(this, storage.toolsDir),
             )
             // Imports and source switches are settings actions only; the work itself (including any
             // download) runs in the :deploy process.

@@ -213,6 +213,8 @@ internal class KeyboardToolsSession(
     ) {
         if (running) return
         val processText = gateway.processText ?: return
+        // The app gets exactly what the panel shows, never a source the user did not pick.
+        val source = currentSource() ?: return
         appFailed = null
         waitingFor = null
         answer = null
@@ -220,7 +222,7 @@ internal class KeyboardToolsSession(
         truncated = false
         failure = null
         copied = false
-        if (processText.open(appId, label)) {
+        if (processText.open(appId, label, source)) {
             waitingFor = label
         } else {
             appFailed = label

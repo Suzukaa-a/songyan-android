@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Build
+import android.text.InputType
 import android.view.inputmethod.EditorInfo
 
 /** What a tool was handed: the selected text, or the text before the caret. */
@@ -14,7 +15,16 @@ enum class ProcessTextKind {
 
     /** The text the user selected. */
     SELECTION,
+
+    /** The clipboard: it is not in the field, so an answer is only ever inserted or copied. */
+    CLIPBOARD,
 }
+
+/** The text the user picked for a tool, before the editor it came from is attached. */
+data class ProcessTextSource(
+    val text: String,
+    val kind: ProcessTextKind,
+)
 
 /** The text a tool was handed, and the editor it came from. */
 data class ProcessTextRequest(
@@ -113,14 +123,16 @@ internal class ProcessTextSession(
     private var pending: Pending? = null
 
     /**
-     * Starts a request; null while another one is unanswered or its answer still waits. [appLabel]
-     * names the app that was opened, so the preview can say where the answer came from.
+     * Starts a request; null while an answer still waits for the user to apply or dismiss it. An
+     * unanswered request is replaced: the app it opened may never return (Back, a crash), and the
+     * user starting another one has given up on it; its late answer no longer matches the token.
+     * [appLabel] names the app that was opened, so the preview can say where the answer came from.
      */
     fun start(
         request: ProcessTextRequest,
         appLabel: String? = null,
     ): String? {
-        if (pending != null) return null
+        if (pending?.answered == true) return null
         val token = newToken()
         pending = Pending(token, request, appLabel)
         return token
@@ -149,6 +161,9 @@ internal class ProcessTextSession(
         // The platform may bind an unidentified connection while the activity result returns.
         // It cannot authorize a write or prove that the source field was replaced.
         if (info.packageName.isNullOrEmpty()) return null
+        // Nor can a window without a text editor (the relay's own activity while the answer comes
+        // back): it is no field at all, so it is not evidence that the user moved to another one.
+        if (info.inputType == InputType.TYPE_NULL) return null
         if (current.request.sameEditorAs(info)) return null
         // Unnamed editors cannot authorize replacement, but their preview may still be copied
         // explicitly. A missing field id is not evidence of a different field in the same app.

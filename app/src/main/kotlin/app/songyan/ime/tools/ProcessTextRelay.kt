@@ -20,8 +20,12 @@ import java.util.UUID
 object ProcessTextRelay {
     /** What the input method provides: the editor being typed into and the clipboard. */
     interface Host {
-        /** The text and editor to hand out; null when this editor may not run a tool. */
-        fun snapshotForProcessText(): ProcessTextRequest?
+        /**
+         * The text and editor to hand out; null when this editor may not run a tool or [source] is
+         * no longer what the editor shows. Without a source the selection is used, else the
+         * paragraph before the caret, as the tools panel itself chooses.
+         */
+        fun snapshotForProcessText(source: ProcessTextSource? = null): ProcessTextRequest?
 
         /**
          * Whether [request]'s text can still be written where it came from: the same editor is
@@ -39,7 +43,7 @@ object ProcessTextRelay {
         /** Puts [text] on the clipboard and tells the user why it is there. */
         fun copyProcessText(text: String)
 
-        /** Refreshes a visible preview when the external app returns without a keyboard show. */
+        /** The other app answered or cancelled, possibly after the keyboard came back on screen. */
         fun onProcessTextAnswer() {}
     }
 
@@ -67,9 +71,11 @@ object ProcessTextRelay {
         target: ComponentName,
         /** The app's own name, so the preview can say which app answered. */
         targetLabel: String? = null,
+        /** The text the user picked; null hands over the selection, else the paragraph. */
+        source: ProcessTextSource? = null,
     ): Boolean {
         val host = host ?: return false
-        val request = host.snapshotForProcessText() ?: return false
+        val request = host.snapshotForProcessText(source) ?: return false
         val token = session.start(request, targetLabel) ?: return false
         // A relay left from a cancelled request must not stay behind while this one runs.
         ProcessTextTargetActivity.cancelOpen()

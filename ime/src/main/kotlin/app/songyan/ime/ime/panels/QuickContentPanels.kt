@@ -438,16 +438,21 @@ class QuickContentPanels(
      * The preview of an answer another app returned: the keyboard calls this when it comes back to
      * the editor that handed the text out. False when nothing waits, so the key area is left alone.
      */
-    fun openProcessTextResult(onlyIfToolsOpen: Boolean = false): Boolean {
+    fun openProcessTextResult(): Boolean {
         val toolsView = toolsPanel?.initializedValue
-        if (onlyIfToolsOpen && (!host.isShowing || toolsView == null || shown !== toolsView)) return false
+        // Another panel the user opened stays; the answer keeps waiting for the next show.
         if (host.isShowing && shown !== toolsView) return false
+        // Every keyboard show asks; with no answer waiting the tools panel is not built for it.
+        if (toolsView == null && tools?.processText?.pending() == null) return false
         val session = toolsSession?.value ?: return false
-        if (onlyIfToolsOpen) {
-            session.open()
-            return true
-        }
         return session.openAnswer()
+    }
+
+    /** Closes the tools panel when it is the one showing; false leaves any other panel alone. */
+    fun closeTools(): Boolean {
+        val toolsView = toolsPanel?.initializedValue ?: return false
+        if (!host.isShowing || shown !== toolsView) return false
+        return close()
     }
 
     /** A day/night or font-scale change reaches the panels built so far too; they outlive one keyboard show. */

@@ -5,6 +5,8 @@ import android.content.Context
 import app.songyan.ime.ime.tools.KeyboardToolAnswer
 import app.songyan.ime.ime.tools.KeyboardToolAnswerOutcome
 import app.songyan.ime.ime.tools.KeyboardToolApp
+import app.songyan.ime.ime.tools.KeyboardToolSourceKind
+import app.songyan.ime.ime.tools.KeyboardToolText
 import app.songyan.ime.ime.tools.KeyboardToolsProcessText
 import kotlinx.coroutines.CancellationException
 
@@ -34,9 +36,16 @@ class ProcessTextToolGateway(
     override fun open(
         appId: String,
         label: String,
+        source: KeyboardToolText,
     ): Boolean {
         val component = ComponentName.unflattenFromString(appId) ?: return false
-        return ProcessTextRelay.request(appContext, component, label)
+        val kind =
+            when (source.kind) {
+                KeyboardToolSourceKind.SELECTION -> ProcessTextKind.SELECTION
+                KeyboardToolSourceKind.PARAGRAPH -> ProcessTextKind.CURSOR
+                KeyboardToolSourceKind.CLIPBOARD -> ProcessTextKind.CLIPBOARD
+            }
+        return ProcessTextRelay.request(appContext, component, label, ProcessTextSource(source.text, kind))
     }
 
     override fun pending(): KeyboardToolAnswer? =

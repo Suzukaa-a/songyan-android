@@ -75,6 +75,7 @@ import app.songyan.ime.tools.ProcessTextKind
 import app.songyan.ime.tools.ProcessTextOutcome
 import app.songyan.ime.tools.ProcessTextRelay
 import app.songyan.ime.tools.ProcessTextRequest
+import app.songyan.ime.tools.ProcessTextSource
 import app.songyan.ime.tools.sameEditorAs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -252,20 +253,40 @@ class SongyanInputMethodService : InputMethodService() {
      */
     private val processTextHost =
         object : ProcessTextRelay.Host {
-            override fun snapshotForProcessText(): ProcessTextRequest? {
+            override fun snapshotForProcessText(source: ProcessTextSource?): ProcessTextRequest? {
                 val info = inputBinding ?: return null
                 if (policy.privateInput || editor.composing) return null
                 val connection = currentInputConnection ?: return null
-                val selected = runCatching { connection.getSelectedText(0)?.toString() }.getOrNull()
-                if (!selected.isNullOrEmpty()) {
-                    // A selection that cannot be handed over whole is refused, not cut silently.
-                    if (selected.length > MAX_PROCESS_TEXT) return null
-                    return ProcessTextRequest(selected, info.packageName, info.fieldId, ProcessTextKind.SELECTION)
-                }
-                // Only the paragraph the caret is in; an earlier one stays in the field.
-                val paragraph = (editor.contextBeforeCursor(MAX_PROCESS_TEXT) ?: return null).substringAfterLast('\n')
-                if (paragraph.isBlank()) return null
-                return ProcessTextRequest(paragraph, info.packageName, info.fieldId, ProcessTextKind.CURSOR)
+                val selected = runCatching { connection.getSelectedText(0)?.toString() }.getOrNull().orEmpty()
+                val chosen =
+                    source
+                        ?: if (selected.isNotEmpty()) {
+                            ProcessTextSource(selected, ProcessTextKind.SELECTION)
+                        } else {
+                            // Only the paragraph the caret is in; one unit past the limit tells a
+                            // paragraph that fits from one the read window cut.
+                            val paragraph =
+                                (
+                                    editor.contextBeforeCursor(
+                                        MAX_PROCESS_TEXT + 1,
+                                    ) ?: return null
+                                ).substringAfterLast('\n')
+                            ProcessTextSource(paragraph, ProcessTextKind.CURSOR)
+                        }
+                // Text that cannot be handed over whole is refused, not cut silently.
+                if (chosen.text.isBlank() || chosen.text.length > MAX_PROCESS_TEXT) return null
+                val stillShown =
+                    when (chosen.kind) {
+                        ProcessTextKind.SELECTION -> selected == chosen.text
+                        // A paragraph is only replaced up to a bare caret, so a selection retires it.
+                        ProcessTextKind.CURSOR ->
+                            selected.isEmpty() &&
+                                runCatching { connection.getTextBeforeCursor(chosen.text.length, 0)?.toString() }
+                                    .getOrNull() == chosen.text
+                        ProcessTextKind.CLIPBOARD -> true
+                    }
+                if (!stillShown) return null
+                return ProcessTextRequest(chosen.text, info.packageName, info.fieldId, chosen.kind)
             }
 
             /** The bound editor is the one the request came from, and it may run a tool at all. */
@@ -283,8 +304,11 @@ class SongyanInputMethodService : InputMethodService() {
                         runCatching { connection.getSelectedText(0)?.toString() }.getOrNull() == request.text
 
                     ProcessTextKind.CURSOR ->
-                        runCatching { connection.getTextBeforeCursor(request.text.length, 0)?.toString() }
-                            .getOrNull() == request.text
+                        runCatching { connection.getSelectedText(0) }.getOrNull().isNullOrEmpty() &&
+                            runCatching { connection.getTextBeforeCursor(request.text.length, 0)?.toString() }
+                                .getOrNull() == request.text
+                    // Never in the field, so there is nothing to replace.
+                    ProcessTextKind.CLIPBOARD -> false
                 }
             }
 
@@ -305,6 +329,7 @@ class SongyanInputMethodService : InputMethodService() {
                     when (request.kind) {
                         ProcessTextKind.SELECTION -> editor.replaceSelection(request.text, text)
                         ProcessTextKind.CURSOR -> editor.replaceBeforeCursor(request.text, text)
+                        ProcessTextKind.CLIPBOARD -> false
                     }
                 if (!written) {
                     copyProcessText(text)
@@ -314,7 +339,16 @@ class SongyanInputMethodService : InputMethodService() {
             }
 
             override fun onProcessTextAnswer() {
-                if (isInputViewShown && !policy.privateInput) controller?.openProcessTextResult(onlyIfToolsOpen = true)
+                if (!isInputViewShown || policy.privateInput) return
+                val pending = ProcessTextRelay.pendingResult()
+                if (pending == null) {
+                    // An app that returned nothing leaves no reason to keep the waiting panel up.
+                    controller?.closeToolsPanel()
+                } else if (pending.request.sameEditorAs(inputBinding)) {
+                    // The keyboard is already back on the editor that asked: the preview opens now.
+                    // Any other binding (the relay's own window) waits for that editor's next show.
+                    controller?.openProcessTextResult()
+                }
             }
 
             override fun copyProcessText(text: String) {

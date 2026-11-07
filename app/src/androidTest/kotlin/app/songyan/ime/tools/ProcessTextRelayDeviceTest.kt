@@ -120,6 +120,24 @@ class ProcessTextRelayDeviceTest {
         assertTrue("the selection was not replaced: " + hostText(0), awaitHostText("HELLO world"))
     }
 
+    /** The app gets the text the panel picked, not whatever the editor happens to select. */
+    @Test
+    fun theChosenSourceIsWhatTheAppReceives() {
+        openHost(identify = true)
+        selectHello()
+
+        val clip = ProcessTextSource("copied", ProcessTextKind.CLIPBOARD)
+        assertTrue("the tool was refused", requestTool(FakeProcessTextActivity::class.java, clip))
+        val pending = requireNotNull(awaitPending()) { "no answer came back" }
+        assertEquals("the selection was handed over instead", "copied", pending.request.text)
+        assertEquals("COPIED", pending.text)
+        requireNotNull(awaitKeyboardShown()) { "the keyboard did not come back" }
+
+        // A clipboard source was never in the field, so applying copies and writes nothing.
+        assertEquals(ProcessTextOutcome.COPIED, main2 { ProcessTextRelay.applyPending() })
+        assertEquals("the field was written to", ProcessTextHostActivity.FIRST_TEXT, hostText(0))
+    }
+
     /** An empty answer over a selection leaves the rest of the field as it was. */
     @Test
     fun anEmptyAnswerReplacesTheSelection() {
@@ -364,9 +382,12 @@ class ProcessTextRelayDeviceTest {
         )
     }
 
-    private fun requestTool(activity: Class<*>): Boolean {
+    private fun requestTool(
+        activity: Class<*>,
+        source: ProcessTextSource? = null,
+    ): Boolean {
         val target = ComponentName(testPackage, activity.name)
-        return main2 { ProcessTextRelay.request(context, target) }
+        return main2 { ProcessTextRelay.request(context, target, source = source) }
     }
 
     private fun tapSecondField() {

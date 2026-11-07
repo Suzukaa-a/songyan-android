@@ -224,19 +224,35 @@ class GenerationPublisher(
     /**
      * Keeps the active generation, the newest previous one (by publish sequence, not by name) and
      * every generation the input method holds a lease on; deletes the rest.
+     *
+     * The previous one is there so switching back is instant. An older build of the very input
+     * method in use (an option change or a package update rebuilt it) is never switched back to, and
+     * its own compiled tables can be as large as the build itself, so it does not count as previous.
      */
     fun prune(active: PublicationRecord? = readActive()) {
         if (active == null) return
         val generations = generationDirectories().sortedByDescending { sequenceOf(it) }
         val keep = mutableSetOf(active.generation)
         keep += GenerationLease(storage).leased()
-        generations.firstOrNull { it.name != active.generation }?.let { keep += it.name }
+        generations
+            .firstOrNull { it.name != active.generation && !rebuildsTheSameInput(it.name, active) }
+            ?.let { keep += it.name }
         for (dir in generations) {
             if (dir.name !in keep) {
                 dir.deleteRecursively()
             }
         }
         PrebuiltResourceStore(storage).prune()
+    }
+
+    private fun rebuildsTheSameInput(
+        generation: String,
+        active: PublicationRecord,
+    ): Boolean {
+        val record = publishedRecord(generation) ?: return false
+        return record.sourceId == active.sourceId &&
+            record.schemaId == active.schemaId &&
+            record.schemaIds == active.schemaIds
     }
 
     /** A publish that died mid-copy leaves a `.tmp-*` tree; callers hold the deploy lock. */

@@ -169,7 +169,7 @@
 
 备份范围见 `backup_rules.xml`、`data_extraction_rules.xml` 与 `BackupRulesTest`。键盘控制器自带 `SupervisorJob` 子作业（`KeyboardController.scope`），`retire()` 取消它，配置变更后旧控制器不再被收集（`KeyboardControllerLeakTest`）。
 
-`rime/versions/` 保留当前 generation、按 sequence 最新的上一个以及 IME 租约中的 generation，其余在发布后清理，崩溃遗留的 `.tmp-*` 一并清除。`rime/import-staging/` 与 `rime/sources/.previous-*` 只在进行中的请求期间存在。
+`rime/versions/` 保留当前 generation、按 sequence 最新的上一个（同一源、同一输入方式的旧版本不算，选项改动或更新后它不会再被用到）以及 IME 租约中的 generation，其余在发布后清理，崩溃遗留的 `.tmp-*` 一并清除。`rime/import-staging/` 与 `rime/sources/.previous-*` 只在进行中的请求期间存在。
 
 ## 7. 测试
 

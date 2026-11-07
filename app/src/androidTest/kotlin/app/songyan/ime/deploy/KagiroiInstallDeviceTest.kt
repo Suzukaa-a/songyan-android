@@ -327,6 +327,8 @@ class KagiroiInstallDeviceTest {
                     .put("productBytes", disk.productBytes)
                     .put("buildBytes", disk.buildBytes)
                     .put("sourceTreeBytes", disk.sourceTreeBytes)
+                    .put("uniqueByArea", JSONObject(disk.uniqueByArea as Map<*, *>))
+                    .put("largestUnique", JSONArray(disk.largestUnique))
                     .put(
                         "compiledStoreFiles",
                         JSONArray(

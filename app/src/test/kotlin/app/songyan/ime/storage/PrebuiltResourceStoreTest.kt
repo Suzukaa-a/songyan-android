@@ -58,6 +58,8 @@ class PrebuiltResourceStoreTest {
     fun identicalRebuiltTablesShareThePreviousImmutableOutput() {
         val source = source("one", "original")
         val first = publish(source, "one", "rebuilt")
+        // The keyboard is still running the earlier publication.
+        GenerationLease(storage).hold(listOf(first.generation))
         val second = publish(source, "two", "rebuilt")
         assertEquals("original", File(source, "build/kagiroi.table.bin").readText())
         assertTrue(Files.isSameFile(table(first).toPath(), table(second).toPath()))
@@ -67,6 +69,8 @@ class PrebuiltResourceStoreTest {
     fun aSourceUpdateDoesNotChangeThePreviousPublication() {
         val old = source("one", "old table")
         val first = publish(old, "one")
+        // The keyboard is still running the earlier publication.
+        GenerationLease(storage).hold(listOf(first.generation))
         Files.move(old.toPath(), File(files, "retired-source").toPath())
         val replacement = source("two", "new table")
         val second = publish(replacement, "two")
@@ -98,6 +102,8 @@ class PrebuiltResourceStoreTest {
         Files.move(old.toPath(), File(files, "retired-source").toPath())
         val current = source("two", "new")
         val second = publish(current, "two")
+        // The keyboard is still running the earlier publication.
+        GenerationLease(storage).hold(listOf(second.generation))
         val third = publish(current, "three")
         assertFalse(table(first).exists())
         assertFalse(oldBytes.exists())

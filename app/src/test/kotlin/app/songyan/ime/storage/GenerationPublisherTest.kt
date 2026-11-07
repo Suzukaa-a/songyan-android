@@ -177,11 +177,33 @@ class GenerationPublisherTest {
     }
 
     @Test
+    fun anOptionChangeDropsTheOlderBuildOfTheSameInputAndKeepsTheOneToSwitchBackTo() {
+        val storage = newStorage()
+        val source = sourceTree(Files.createTempDirectory("source").toFile())
+        val publisher = GenerationPublisher(storage)
+        val builtin = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "1")
+        Thread.sleep(5)
+        val installed = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "a")
+        Thread.sleep(5)
+        val changed = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "b")
+
+        assertEquals(changed, publisher.readActive())
+        assertFalse(
+            "the build before the option change is superseded",
+            storage.generationDir(installed.generation).exists(),
+        )
+        assertTrue(
+            "the input method used before the package stays ready to switch back to",
+            storage.generationDir(builtin.generation).isDirectory,
+        )
+    }
+
+    @Test
     fun prunesOnlyUnreferencedGenerations() {
         val storage = newStorage()
         val source = sourceTree(Files.createTempDirectory("source").toFile())
         val publisher = GenerationPublisher(storage)
-        val previous = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "1")
+        val previous = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_flypy", "1")
         Thread.sleep(5)
         val active = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "2")
         val stale = File(storage.versionsDir, "0000000000001-songyan-builtin-abcd")
@@ -240,7 +262,10 @@ class GenerationPublisherTest {
 
         assertTrue(first.sequence < second.sequence && second.sequence < third.sequence)
         assertTrue("a leased generation is never pruned", storage.generationDir(first.generation).isDirectory)
-        assertTrue(storage.generationDir(second.generation).isDirectory)
+        assertFalse(
+            "an older build of the input method in use is not kept as the one to switch back to",
+            storage.generationDir(second.generation).exists(),
+        )
 
         GenerationLease(storage).hold(listOf(third.generation))
         publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "4")
@@ -402,6 +427,8 @@ class GenerationPublisherTest {
         val publisher = GenerationPublisher(storage)
         val firstWork = workBuild(source, Files.createTempDirectory("work-first").toFile())
         val first = publisher.publish(source, firstWork, SOURCE_ID, SCHEMA_ID, "1")
+        // The keyboard is still running the first while the second publishes.
+        GenerationLease(storage).hold(listOf(first.generation))
         val firstBuild = File(storage.generationDir(first.generation), BUILD)
 
         val secondWork = workBuild(source, Files.createTempDirectory("work-second").toFile())
@@ -469,7 +496,9 @@ class GenerationPublisherTest {
         val work = workBuild(source, Files.createTempDirectory("work").toFile())
         val publisher = GenerationPublisher(storage)
 
-        publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "1")
+        val first = publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "1")
+        // The keyboard is still running the first while the second publishes.
+        GenerationLease(storage).hold(listOf(first.generation))
         publisher.publish(source, work, SOURCE_ID, SCHEMA_ID, "2")
 
         assertEquals("both publications are kept", 2, publisher.publishedRecords().size)

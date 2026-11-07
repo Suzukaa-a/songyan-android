@@ -77,6 +77,10 @@ internal class KagiroiInstallFixture(
         val buildBytes: Long,
         val sourceTreeBytes: Long,
         val generations: Int,
+        /** Unique bytes by the first two path levels under rime/, so an overshoot names its owner. */
+        val uniqueByArea: Map<String, Long> = emptyMap(),
+        /** The largest unique files, as `path:bytes`. */
+        val largestUnique: List<String> = emptyList(),
     ) {
         /** Bytes several paths point at through one device/inode: sharing, not deletion. */
         val sharedBytes: Long get() = logicalBytes - uniqueBytes
@@ -189,6 +193,8 @@ internal class KagiroiInstallFixture(
         var unique = 0L
         var uniqueInodes = 0
         val seen = HashSet<Pair<Long, Long>>()
+        val byArea = sortedMapOf<String, Long>()
+        val uniqueFiles = ArrayList<Pair<String, Long>>()
         for (file in files) {
             val length = file.length()
             logical += length
@@ -201,6 +207,10 @@ internal class KagiroiInstallFixture(
             if (seen.add(stat.st_dev to stat.st_ino)) {
                 unique += length
                 uniqueInodes++
+                val path = file.relativeTo(storage.rimeRoot).path
+                val area = path.split('/').take(2).joinToString("/")
+                byArea[area] = (byArea[area] ?: 0L) + length
+                uniqueFiles += path to length
             }
         }
         val build = File(generation, BUILD)
@@ -217,6 +227,12 @@ internal class KagiroiInstallFixture(
                     .listFiles()
                     .orEmpty()
                     .count { it.isDirectory && !it.name.startsWith(".") },
+            uniqueByArea = byArea,
+            largestUnique =
+                uniqueFiles
+                    .sortedByDescending { it.second }
+                    .take(LARGEST)
+                    .map { it.first + ":" + it.second },
         )
     }
 
@@ -360,6 +376,7 @@ internal class KagiroiInstallFixture(
         private const val SCHEMA_SUFFIX = ".schema.yaml"
         private const val DICTIONARY_SUFFIX = ".dict.yaml"
         private const val BUFFER_BYTES = 1024 * 1024
+        private const val LARGEST = 25
         private const val EXIT_RECORDS = 10
     }
 }

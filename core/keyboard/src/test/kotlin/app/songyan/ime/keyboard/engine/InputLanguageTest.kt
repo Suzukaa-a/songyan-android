@@ -91,6 +91,29 @@ class InputLanguageTest {
     }
 
     @Test
+    fun aDeclaredSimplificationMakesAChineseFamilySimplifiedButKeepsItsFamily() {
+        for (conversion in listOf("t2s", "tw2s", "tw2sp", "hk2s")) {
+            assertProfile(InputLanguage.ZH_HANS, InputSchemeFamily.ZHUYIN, "bopomofo_tw", conversion = conversion)
+            assertProfile(
+                InputLanguage.ZH_HANS,
+                InputSchemeFamily.CANGJIE_RADICALS,
+                "cangjie5",
+                conversion = conversion,
+            )
+            assertProfile(InputLanguage.ZH_HANS, InputSchemeFamily.CANGJIE_RADICALS, "quick5", conversion = conversion)
+            assertProfile(
+                InputLanguage.ZH_HANS,
+                InputSchemeFamily.LATIN_PHONETIC,
+                "jyut6ping3",
+                conversion = conversion,
+            )
+            assertProfile(InputLanguage.JA, InputSchemeFamily.JAPANESE, "kagiroi", conversion = conversion)
+        }
+        // A conversion the rules do not know proves nothing: the family's own script stands.
+        assertProfile(InputLanguage.ZH_HANT, InputSchemeFamily.CANGJIE_RADICALS, "cangjie5", conversion = "t2hkf")
+    }
+
+    @Test
     fun nonTraditionalConvertersKeepSimplified() {
         for (conversion in listOf("t2s", "tw2s", "tw2sp", "hk2s")) {
             assertProfile(InputLanguage.ZH_HANS, InputSchemeFamily.GENERIC, "songyan_quanpin", conversion = conversion)

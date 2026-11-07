@@ -36,9 +36,11 @@ data class InputLanguageProfile(
  * Decides a schema's input language and family from what the schema itself declares.
  *
  * Only the schema id, its speller alphabet and the script conversion the engine currently has in
- * force take part; the app or system language never does. Rules are checked in order and the first
- * match wins, so a known family stays known even when a traditional conversion is on. Everything
- * unlisted falls back to today's behavior: simplified Chinese, no family restriction.
+ * force take part; the app or system language never does. The family is decided first and no
+ * conversion changes it. A known Chinese family writes traditional Chinese unless its own declared
+ * simplification is on (Cangjie with simplified output still types Cangjie radicals, but its text
+ * and glyphs are simplified). Everything unlisted falls back to today's behavior: simplified
+ * Chinese, no family restriction.
  */
 object InputLanguageResolver {
     /**
@@ -55,11 +57,14 @@ object InputLanguageResolver {
         when {
             schemaID.startsWith("kagiroi") -> InputLanguageProfile(InputLanguage.JA, InputSchemeFamily.JAPANESE)
             schemaID.startsWith("bopomofo") || isBopomofoAlphabet(alphabet) ->
-                InputLanguageProfile(InputLanguage.ZH_HANT, InputSchemeFamily.ZHUYIN)
+                InputLanguageProfile(traditionalUnlessSimplified(declaredConversion), InputSchemeFamily.ZHUYIN)
             schemaID.startsWith("cangjie") || schemaID.startsWith("quick") ->
-                InputLanguageProfile(InputLanguage.ZH_HANT, InputSchemeFamily.CANGJIE_RADICALS)
+                InputLanguageProfile(
+                    traditionalUnlessSimplified(declaredConversion),
+                    InputSchemeFamily.CANGJIE_RADICALS,
+                )
             schemaID.startsWith("jyut6ping3") ->
-                InputLanguageProfile(InputLanguage.ZH_HANT, InputSchemeFamily.LATIN_PHONETIC)
+                InputLanguageProfile(traditionalUnlessSimplified(declaredConversion), InputSchemeFamily.LATIN_PHONETIC)
             isTraditionalConversion(declaredConversion) ->
                 InputLanguageProfile(InputLanguage.ZH_HANT, InputSchemeFamily.GENERIC)
             else -> InputLanguageProfile(InputLanguage.ZH_HANS, InputSchemeFamily.GENERIC)
@@ -75,7 +80,12 @@ object InputLanguageResolver {
     private fun isTraditionalConversion(declaredConversion: String?): Boolean =
         declaredConversion != null && declaredConversion in TRADITIONAL_CONVERSIONS
 
+    private fun traditionalUnlessSimplified(declaredConversion: String?): InputLanguage =
+        if (declaredConversion in SIMPLIFIED_CONVERSIONS) InputLanguage.ZH_HANS else InputLanguage.ZH_HANT
+
     private const val BOPOMOFO_PUNCTUATION = "-;,./"
+
+    private val SIMPLIFIED_CONVERSIONS = setOf("t2s", "tw2s", "tw2sp", "hk2s")
 
     private val TRADITIONAL_CONVERSIONS = setOf("s2t", "s2tw", "s2twp", "s2hk", "t2tw", "t2hk")
 }

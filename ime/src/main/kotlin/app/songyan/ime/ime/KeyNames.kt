@@ -6,9 +6,10 @@ import app.songyan.ime.keyboard.engine.InputLanguage
 import java.util.Locale
 
 /**
- * Automatic key names follow the scheme’s input language independently of the app UI locale.
- * Fixed Traditional Chinese and Japanese forms use neutral resources so app translations cannot
- * change them; the remaining key names retain their Simplified Chinese forms.
+ * Drawn key names follow the scheme’s input language independently of the app UI locale: fixed
+ * Traditional Chinese and Japanese forms use neutral resources so app translations cannot change
+ * them, and the remaining drawn names keep their Simplified Chinese forms. What a screen reader says
+ * is not here: it stays on the plain context and so follows the system or per-app language.
  */
 internal class KeyNames(
     base: Context,
@@ -60,56 +61,12 @@ internal class KeyNames(
             else -> null
         }
 
-    fun languageKeySpoken(
-        language: InputLanguage,
-        symbols: Boolean,
-        targetChinese: Boolean,
-    ): String {
-        val id =
-            when (language) {
-                InputLanguage.ZH_HANS -> hansLanguageKey(symbols, targetChinese)
-                InputLanguage.ZH_HANT ->
-                    when {
-                        symbols && targetChinese -> R.string.input_language_to_chinese_symbols_hant
-                        symbols -> R.string.input_language_to_english_symbols_hant
-                        targetChinese -> R.string.input_language_to_chinese_hant
-                        else -> R.string.input_language_to_english_hant
-                    }
-                InputLanguage.JA ->
-                    when {
-                        symbols && targetChinese -> R.string.input_language_to_chinese_symbols_ja
-                        symbols -> R.string.input_language_to_english_symbols_ja
-                        targetChinese -> R.string.input_language_to_chinese_ja
-                        else -> R.string.input_language_to_english_ja
-                    }
-            }
-        return chinese.getString(id)
-    }
-
     fun symbolPageDrawn(language: InputLanguage): String =
         chinese.getString(
             when (language) {
                 InputLanguage.ZH_HANS -> R.string.ime_symbol_key
                 InputLanguage.ZH_HANT -> R.string.input_symbol_key_hant
                 InputLanguage.JA -> R.string.input_symbol_key_ja
-            },
-        )
-
-    fun symbolPageSpoken(language: InputLanguage): String =
-        chinese.getString(
-            when (language) {
-                InputLanguage.ZH_HANS -> R.string.ime_open_symbols_page
-                InputLanguage.ZH_HANT -> R.string.input_open_symbols_page_hant
-                InputLanguage.JA -> R.string.input_open_symbols_page_ja
-            },
-        )
-
-    fun numbersPageSpoken(language: InputLanguage): String =
-        chinese.getString(
-            when (language) {
-                InputLanguage.ZH_HANS -> R.string.ime_open_numbers_page
-                InputLanguage.ZH_HANT -> R.string.input_open_numbers_page_hant
-                InputLanguage.JA -> R.string.input_open_numbers_page_ja
             },
         )
 
@@ -135,17 +92,6 @@ internal class KeyNames(
             },
         )
 
-    private fun hansLanguageKey(
-        symbols: Boolean,
-        targetChinese: Boolean,
-    ): Int =
-        when {
-            symbols && targetChinese -> R.string.ime_language_to_chinese_symbols
-            symbols -> R.string.ime_language_to_english_symbols
-            targetChinese -> R.string.ime_language_to_chinese
-            else -> R.string.ime_language_to_english
-        }
-
     private fun hantAction(action: Int): Int =
         when (action) {
             R.string.ime_enter -> R.string.input_enter_hant
@@ -154,6 +100,7 @@ internal class KeyNames(
             R.string.ime_send -> R.string.input_send_hant
             R.string.ime_next -> R.string.input_next_hant
             R.string.ime_done -> R.string.input_done_hant
+            R.string.ime_previous -> R.string.input_previous_hant
             else -> action
         }
 
@@ -165,8 +112,60 @@ internal class KeyNames(
             R.string.ime_send -> R.string.input_send_ja
             R.string.ime_next -> R.string.input_next_ja
             R.string.ime_done -> R.string.input_done_ja
+            R.string.ime_previous -> R.string.input_previous_ja
             else -> action
         }
+
+    /**
+     * TalkBack names Enter in the system language: the drawn face is mapped back to its action.
+     * A face the table does not know (an editor's own label, Japanese 確定) is read as drawn.
+     */
+    fun spokenEnter(
+        spoken: Context,
+        drawn: String,
+    ): String {
+        for (action in ENTER_ACTIONS) {
+            for (language in InputLanguage.entries) {
+                if (enterAction(language, action) == drawn) return spoken.getString(action)
+            }
+        }
+        return drawn
+    }
+
+    companion object {
+        private val ENTER_ACTIONS =
+            intArrayOf(
+                R.string.ime_enter,
+                R.string.ime_go,
+                R.string.ime_search,
+                R.string.ime_send,
+                R.string.ime_next,
+                R.string.ime_done,
+                R.string.ime_previous,
+            )
+
+        /** The spoken language key: it names the current side and the side a tap switches to. */
+        fun languageKeySpoken(
+            language: InputLanguage,
+            symbols: Boolean,
+            targetChinese: Boolean,
+        ): Int =
+            if (language == InputLanguage.JA) {
+                when {
+                    symbols && targetChinese -> R.string.ime_language_to_japanese_symbols
+                    symbols -> R.string.ime_language_japanese_to_english_symbols
+                    targetChinese -> R.string.ime_language_to_japanese
+                    else -> R.string.ime_language_japanese_to_english
+                }
+            } else {
+                when {
+                    symbols && targetChinese -> R.string.ime_language_to_chinese_symbols
+                    symbols -> R.string.ime_language_to_english_symbols
+                    targetChinese -> R.string.ime_language_to_chinese
+                    else -> R.string.ime_language_to_english
+                }
+            }
+    }
 
     private fun localized(
         base: Context,

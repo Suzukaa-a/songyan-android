@@ -228,7 +228,7 @@ class LocalizedQuickContentDeviceTest {
         clickWhenSettled(By.text(inLocale(tag).getString(SettingsR.string.row_tryout_title)))
         clickWhenSettled(FIELD)
         // Letter layouts expose the numbers page first; the symbols control appears on that page.
-        requireNotNull(awaitNode(pageKeyNames(), READY_TIMEOUT_MS)) {
+        requireNotNull(awaitNode(pageKeyNames(tag), READY_TIMEOUT_MS)) {
             "the keys never appeared for $tag; keyboard: ${keyboardLabels()}"
         }
     }
@@ -257,13 +257,13 @@ class LocalizedQuickContentDeviceTest {
         val recent = inLocale(tag).getString(ImeR.string.ime_panel_recent)
         repeat(3) {
             val key =
-                findNode(symbolKeyNames()) ?: run {
+                findNode(symbolKeyNames(tag)) ?: run {
                     val numbers =
-                        requireNotNull(awaitNode(numberKeyNames(), TIMEOUT_MS)) {
+                        requireNotNull(awaitNode(numberKeyNames(tag), TIMEOUT_MS)) {
                             "no numbers page control in ${keyboardLabels()}"
                         }
                     assertTrue(numbers.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                    requireNotNull(awaitNode(symbolKeyNames(), TIMEOUT_MS)) {
+                    requireNotNull(awaitNode(symbolKeyNames(tag), TIMEOUT_MS)) {
                         "no symbols control on the numbers page: ${keyboardLabels()}"
                     }
                 }
@@ -273,28 +273,14 @@ class LocalizedQuickContentDeviceTest {
         throw AssertionError("the symbol panel did not open; keyboard: ${keyboardLabels()}")
     }
 
-    private fun pageKeyNames(): Set<String> = numberKeyNames() + symbolKeyNames()
+    // TalkBack names of the page keys follow the app language whatever the input language (see KeyNames).
+    private fun pageKeyNames(tag: String): Set<String> = numberKeyNames(tag) + symbolKeyNames(tag)
 
-    private fun numberKeyNames(): Set<String> {
-        val simplified = inLocale("zh-CN")
-        return setOf(
-            simplified.getString(ImeR.string.ime_open_numbers_page),
-            simplified.getString(ImeR.string.input_open_numbers_page_hant),
-            simplified.getString(ImeR.string.input_open_numbers_page_ja),
-        )
-    }
+    private fun numberKeyNames(tag: String): Set<String> =
+        setOf(inLocale(tag).getString(ImeR.string.ime_open_numbers_page))
 
-    /** The localized accessibility name of the 符号 key for the input languages this build can hold. */
-    private fun symbolKeyNames(): Set<String> {
-        // Key names use the Simplified Chinese resources independent of the app UI (see KeyNames),
-        // so the same three candidates cover the Hans, Hant and Japanese input languages.
-        val simplified = inLocale("zh-CN")
-        return setOf(
-            simplified.getString(ImeR.string.ime_open_symbols_page),
-            simplified.getString(ImeR.string.input_open_symbols_page_hant),
-            simplified.getString(ImeR.string.input_open_symbols_page_ja),
-        )
-    }
+    private fun symbolKeyNames(tag: String): Set<String> =
+        setOf(inLocale(tag).getString(ImeR.string.ime_open_symbols_page))
 
     /**
      * The quick-insert rows of the phrases panel. They are filled when the panel opens from the core
@@ -337,7 +323,7 @@ class LocalizedQuickContentDeviceTest {
 
     private fun closePanel(tag: String) {
         closePanelIfOpen(tag)
-        requireNotNull(awaitNode(pageKeyNames(), TIMEOUT_MS)) {
+        requireNotNull(awaitNode(pageKeyNames(tag), TIMEOUT_MS)) {
             "the keyboard did not come back after closing the panel; keyboard: ${keyboardLabels()}"
         }
     }

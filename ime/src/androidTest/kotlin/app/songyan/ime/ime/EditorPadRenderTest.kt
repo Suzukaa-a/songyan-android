@@ -132,9 +132,9 @@ class EditorPadRenderTest {
         for (rejected in listOf("/", ".", "-")) {
             assertFalse("a time field rejects " + rejected, time.has(rejected))
         }
-        // The closing row still holds the digits and the editing keys the pad needs. Delete's
-        // automatic face names the input language's word, not the app locale's.
-        val delete = KeyNames(context).chinese().getString(R.string.ime_delete)
+        // The closing row still holds the digits and the editing keys the pad needs; TalkBack names
+        // them in the system language.
+        val delete = context.getString(R.string.ime_delete)
         for (key in listOf("0", delete, enter)) {
             assertTrue(time.spoken.toString(), time.has(key))
         }

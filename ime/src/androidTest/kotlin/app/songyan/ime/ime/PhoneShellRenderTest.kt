@@ -127,13 +127,13 @@ class PhoneShellRenderTest {
             descriptions.toString(),
             descriptions.containsAll(listOf("ABC 2", "DEF 3", "GHI 4", "JKL 5", "MNO 6", "PQRS 7", "TUV 8", "WXYZ 9")),
         )
-        // The shell feeds the 重输 and Return captions itself; Delete's automatic face names the
-        // input language's word. Each caption sits on the key that dispatches the matching action.
+        // TalkBack names the editing keys in the system language. Each caption sits on the key that
+        // dispatches the matching action.
         val captions =
             mapOf(
-                LayoutActionKind.BACKSPACE to KeyNames(targetContext).chinese().getString(R.string.ime_delete),
-                LayoutActionKind.CLEAR_INPUT to labels.clear,
-                LayoutActionKind.ENTER to labels.enter,
+                LayoutActionKind.BACKSPACE to targetContext.getString(R.string.ime_delete),
+                LayoutActionKind.CLEAR_INPUT to targetContext.getString(R.string.ime_clear),
+                LayoutActionKind.ENTER to targetContext.getString(R.string.ime_enter),
             )
         for ((action, caption) in captions) {
             val at = controls.indexOfFirst { it.action.type == action }
@@ -180,7 +180,7 @@ class PhoneShellRenderTest {
         assertTrue("no Delete key on $descriptions", deleteAt >= 0)
         assertTrue("no Return key on $descriptions", enterAt >= 0)
         assertTrue("no space key on $descriptions", spaceAt >= 0)
-        assertEquals(KeyNames(targetContext).chinese().getString(R.string.ime_delete), keys[deleteAt].first)
+        assertEquals(targetContext.getString(R.string.ime_delete), keys[deleteAt].first)
         // 3 marks + 9 digits + Delete, 0 and the comma + 返回, 中/英, space, 符号 and Return.
         assertEquals(descriptions.toString(), 20, keys.size)
         assertTrue(descriptions.toString(), controls.none { it.action.type == LayoutActionKind.CLEAR_INPUT })

@@ -19,6 +19,10 @@
     <string name="ime_language_to_chinese">English. Tap to switch to Chinese</string>
     <string name="ime_language_to_english_symbols">Chinese punctuation. Tap to switch to English</string>
     <string name="ime_language_to_chinese_symbols">English punctuation. Tap to switch to Chinese</string>
+    <string name="ime_language_japanese_to_english">Japanese. Tap to switch to English</string>
+    <string name="ime_language_to_japanese">English. Tap to switch to Japanese</string>
+    <string name="ime_language_japanese_to_english_symbols">Japanese punctuation. Tap to switch to English</string>
+    <string name="ime_language_to_japanese_symbols">English punctuation. Tap to switch to Japanese</string>
     <string name="ime_open_symbols_page">Open symbols page</string>
     <string name="ime_open_numbers_page">Open numbers page</string>
     <string name="ime_more_symbols" translatable="false">#+=</string>
@@ -45,21 +49,11 @@
     <string name="input_next_ja" translatable="false">次へ</string>
     <string name="input_done_hant" translatable="false">完成</string>
     <string name="input_done_ja" translatable="false">完了</string>
+    <string name="input_previous_hant" translatable="false">上一個</string>
+    <string name="input_previous_ja" translatable="false">前へ</string>
     <string name="input_symbol_key_hant" translatable="false">符</string>
     <string name="input_symbol_key_ja" translatable="false">記号</string>
-    <string name="input_open_symbols_page_hant" translatable="false">開啟符號頁</string>
-    <string name="input_open_symbols_page_ja" translatable="false">記号ページを開く</string>
-    <string name="input_open_numbers_page_hant" translatable="false">開啟數字符號頁</string>
-    <string name="input_open_numbers_page_ja" translatable="false">数字記号ページを開く</string>
     <string name="input_language_key_ja" translatable="false">あ/A</string>
-    <string name="input_language_to_english_hant" translatable="false">中文，點按切換為英文</string>
-    <string name="input_language_to_chinese_hant" translatable="false">英文，點按切換為中文</string>
-    <string name="input_language_to_english_symbols_hant" translatable="false">中文標點，點按切換為英文標點</string>
-    <string name="input_language_to_chinese_symbols_hant" translatable="false">英文標點，點按切換為中文標點</string>
-    <string name="input_language_to_english_ja" translatable="false">中国語（タップで英語に切り替え）</string>
-    <string name="input_language_to_chinese_ja" translatable="false">英語（タップで中国語に切り替え）</string>
-    <string name="input_language_to_english_symbols_ja" translatable="false">中国語の記号（タップで英語の記号に切り替え）</string>
-    <string name="input_language_to_chinese_symbols_ja" translatable="false">英語の記号（タップで中国語の記号に切り替え）</string>
     <string name="input_back_ja" translatable="false">戻る</string>
     <string name="input_more_chinese" translatable="false">更多</string>
     <string name="input_more_ja" translatable="false">その他</string>

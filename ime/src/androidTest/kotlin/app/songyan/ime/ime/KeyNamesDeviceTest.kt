@@ -21,9 +21,10 @@ import org.junit.runner.RunWith
 import java.util.Locale
 
 /**
- * Automatic key names follow the schemas input language on every phone language, also in English
- * mode; a keycap the user wrote keeps its own label. Panels not keyed by input language yet keep
- * the Chinese names.
+ * Drawn automatic key names follow the scheme's input language on every phone language, also in
+ * English mode; a keycap the user wrote keeps its own label. What TalkBack says follows the phone
+ * (or per-app) language, since that is the language its voice speaks. Panels not keyed by input
+ * language yet keep the Chinese names.
  */
 @RunWith(AndroidJUnit4::class)
 class KeyNamesDeviceTest {
@@ -45,19 +46,21 @@ class KeyNamesDeviceTest {
     private fun symbolPageKey() = LayoutKey("符号", action = LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS))
 
     @Test
-    fun automaticNamesFollowTheInputLanguageOnEveryPhoneLanguage() {
+    fun drawnNamesFollowTheInputLanguageAndSpokenNamesThePhoneLanguage() {
         for (locale in listOf(Locale.ENGLISH, Locale.JAPANESE, Locale.SIMPLIFIED_CHINESE, Locale.TRADITIONAL_CHINESE)) {
             onMain {
-                val view = KeyboardView(context(locale))
+                val phone = context(locale)
+                val view = KeyboardView(phone)
+                val spoken = phone.getString(R.string.ime_space)
                 view.faces = KeyboardFaces(language = InputLanguage.ZH_HANS)
                 assertEquals("空格", view.face(space(), false))
-                assertEquals("空格", view.face(space(), true))
+                assertEquals(spoken, view.face(space(), true))
                 view.faces = KeyboardFaces(language = InputLanguage.ZH_HANT)
                 assertEquals("空白", view.face(space(), false))
-                assertEquals("空白", view.face(space(), true))
+                assertEquals(spoken, view.face(space(), true))
                 view.faces = KeyboardFaces(language = InputLanguage.JA)
                 assertEquals("空白", view.face(space(), false))
-                assertEquals("空白", view.face(space(), true))
+                assertEquals(spoken, view.face(space(), true))
             }
         }
     }
@@ -68,7 +71,7 @@ class KeyNamesDeviceTest {
             val view = KeyboardView(context(Locale.ENGLISH))
             view.faces = KeyboardFaces(language = InputLanguage.JA, english = true)
             assertEquals("空白", view.face(space(), false))
-            assertEquals("空白", view.face(space(), true))
+            assertEquals("Space", view.face(space(), true))
         }
     }
 
@@ -78,7 +81,7 @@ class KeyNamesDeviceTest {
             val view = KeyboardView(context(Locale.ENGLISH))
             view.faces = KeyboardFaces(language = InputLanguage.JA, composing = true)
             assertEquals("変換", view.face(space(), false))
-            assertEquals("変換", view.face(space(), true))
+            assertEquals("Space", view.face(space(), true))
             view.actionLabel = requireNotNull(names(Locale.ENGLISH).enterComposing(InputLanguage.JA))
             assertEquals("確定", view.face(enter(), false))
             view.faces = KeyboardFaces(language = InputLanguage.ZH_HANS, composing = true)
@@ -101,8 +104,12 @@ class KeyNamesDeviceTest {
                 view.faces = KeyboardFaces(language = language)
                 view.actionLabel = names(Locale.ENGLISH).enterAction(language, R.string.ime_search)
                 assertEquals(label, view.face(enter(), false))
-                assertEquals(label, view.face(enter(), true))
+                assertEquals("Search", view.face(enter(), true))
             }
+            val names = names(Locale.ENGLISH)
+            assertEquals("上一项", names.enterAction(InputLanguage.ZH_HANS, R.string.ime_previous))
+            assertEquals("上一個", names.enterAction(InputLanguage.ZH_HANT, R.string.ime_previous))
+            assertEquals("前へ", names.enterAction(InputLanguage.JA, R.string.ime_previous))
         }
     }
 
@@ -112,16 +119,21 @@ class KeyNamesDeviceTest {
             val view = KeyboardView(context(Locale.ENGLISH))
             view.faces = KeyboardFaces(language = InputLanguage.ZH_HANS)
             assertEquals("符", view.face(symbolPageKey(), false))
-            assertEquals("打开符号页", view.face(symbolPageKey(), true))
+            assertEquals("Open symbols page", view.face(symbolPageKey(), true))
             view.faces = KeyboardFaces(language = InputLanguage.ZH_HANT)
             assertEquals("符", view.face(symbolPageKey(), false))
-            assertEquals("開啟符號頁", view.face(symbolPageKey(), true))
+            assertEquals("Open symbols page", view.face(symbolPageKey(), true))
             assertEquals("中/英", view.face(languageKey(), false))
             view.faces = KeyboardFaces(language = InputLanguage.JA)
             assertEquals("記号", view.face(symbolPageKey(), false))
-            assertEquals("記号ページを開く", view.face(symbolPageKey(), true))
+            assertEquals("Open symbols page", view.face(symbolPageKey(), true))
             assertEquals("あ/A", view.face(languageKey(), false))
-            assertEquals("中国語（タップで英語に切り替え）", view.face(languageKey(), true))
+            assertEquals("Japanese. Tap to switch to English", view.face(languageKey(), true))
+            val japanesePhone = KeyboardView(context(Locale.JAPANESE))
+            japanesePhone.faces = KeyboardFaces(language = InputLanguage.JA)
+            assertEquals("日本語（タップで英語に切り替え）", japanesePhone.face(languageKey(), true))
+            japanesePhone.faces = KeyboardFaces(language = InputLanguage.ZH_HANS)
+            assertEquals("中国語（タップで英語に切り替え）", japanesePhone.face(languageKey(), true))
         }
     }
 

@@ -75,9 +75,12 @@ class KeyboardLayoutNamesTest {
     @Test
     fun theJumpKeyNamesThePhysicalBoardItBelongsTo() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            val names = KeyNames(context).chinese()
-            val zhuyin = names.getString(R.string.ime_jump_to_numbers, names.getString(R.string.ime_layout_zhuyin41))
-            val shape = names.getString(R.string.ime_jump_to_numbers, names.getString(R.string.ime_layout_qwerty26))
+            val zhuyin =
+                context.getString(
+                    R.string.ime_jump_to_numbers,
+                    context.getString(R.string.ime_layout_zhuyin41),
+                )
+            val shape = context.getString(R.string.ime_jump_to_numbers, context.getString(R.string.ime_layout_qwerty26))
 
             val view = KeyboardView(context)
             view.faces = KeyboardFaces(mainLayoutId = BuiltinLayouts.zhuyin41.id)

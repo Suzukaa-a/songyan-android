@@ -19,6 +19,10 @@
     <string name="ime_language_to_chinese">英語（タップで中国語に切り替え）</string>
     <string name="ime_language_to_english_symbols">中国語の記号（タップで英語の記号に切り替え）</string>
     <string name="ime_language_to_chinese_symbols">英語の記号（タップで中国語の記号に切り替え）</string>
+    <string name="ime_language_japanese_to_english">日本語（タップで英語に切り替え）</string>
+    <string name="ime_language_to_japanese">英語（タップで日本語に切り替え）</string>
+    <string name="ime_language_japanese_to_english_symbols">日本語の記号（タップで英語の記号に切り替え）</string>
+    <string name="ime_language_to_japanese_symbols">英語の記号（タップで日本語の記号に切り替え）</string>
     <string name="ime_open_symbols_page">記号ページを開く</string>
     <string name="ime_open_numbers_page">数字記号ページを開く</string>
     <string name="ime_open_more_symbols">その他の記号を開く</string>

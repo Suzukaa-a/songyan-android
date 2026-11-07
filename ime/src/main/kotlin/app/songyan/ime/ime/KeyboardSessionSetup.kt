@@ -57,8 +57,7 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     render()
     ImePerf.ready()
     while (heldKeys.isNotEmpty() && ready) {
-        val (action, t9FirstKey) = heldKeys.removeFirst()
-        dispatch(action, t9FirstKey)
+        heldKeys.removeFirst()()
     }
 }
 
@@ -162,6 +161,9 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
         preferredSchema = target
         page = null
         preferences?.setActiveSchemaId(target)
+        // A family that cannot run the saved layout (zhuyin, cangjie, Japanese) replaced it; save
+        // that so the next start does not begin from a pairing it must repair again.
+        if (active != null && ready) persistSelection(active)
     }
     syncMenu()
     closeKeyboardMenu()

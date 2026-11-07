@@ -14,6 +14,7 @@ import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -100,6 +101,28 @@ class KanaFlickDeviceTest {
             host.assertText("にほん")
             assertFalse("the composition ended", host.editor.composing)
             assertFalse("the engine composition ended", host.backend.currentSnapshot().isComposing)
+        }
+
+    /**
+     * A restart of the same field does not finish its input: a kana press queued before it is still
+     * typed once the restarted session is ready, as every other key is.
+     */
+    @Test
+    fun aKanaPressQueuedForARestartOfItsFieldIsStillTyped() =
+        withKagiroi("restart") { host ->
+            host.startKana()
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            host.main { host.controller.handleKana12(Kana12Action.Kana("na", Kana12Direction.Left)) }
+            host.main {
+                val keep = host.editor.startInput(host.info, restarting = true)
+                val policy = EditorPolicy.from(host.info)
+                host.controller.configure(policy)
+                host.controller.startInput(policy, keep)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            host.assertComposed("に")
         }
 
     /**

@@ -111,6 +111,30 @@ class NextLayoutDeviceTest {
         }
     }
 
+    @Test
+    fun aSchemeThatRefusesTheSavedLayoutSavesTheOneItRuns() {
+        val host = FeatureHost(engine.backend(), "phone9")
+        try {
+            host.start()
+            host.main { host.controller.menu.onSchema("cangjie_probe") }
+            assertTrue(host.await { host.main2 { host.controller.schemaId } == "cangjie_probe" })
+            val running = host.main2 { host.controller.layoutKind }
+            assertTrue("a radical scheme never runs on the 9-key pad", running != KeyboardLayoutKind.PHONE9)
+            assertEquals(
+                "the next start would begin from a pairing it must repair",
+                running.wire,
+                runBlocking {
+                    host.controller.preferences!!
+                        .layoutId
+                        .first()
+                },
+            )
+        } finally {
+            host.close()
+            runBlocking { host.backend.shutdown() }
+        }
+    }
+
     companion object {
         private lateinit var engine: DeployedEngine
 
@@ -125,7 +149,13 @@ class NextLayoutDeviceTest {
                             .readText()
                             .replace("schema_id: songyan_quanpin", "schema_id: qwerty_only"),
                     )
-                    File(source, "default.yaml").appendText("  - schema: qwerty_only\n")
+                    // Named like a Cangjie scheme, so the family rules keep it off the folded layouts.
+                    File(source, "cangjie_probe.schema.yaml").writeText(
+                        File(source, "songyan_quanpin.schema.yaml")
+                            .readText()
+                            .replace("schema_id: songyan_quanpin", "schema_id: cangjie_probe"),
+                    )
+                    File(source, "default.yaml").appendText("  - schema: qwerty_only\n  - schema: cangjie_probe\n")
                 }
         }
 

@@ -58,15 +58,14 @@ internal fun KeyboardController.kana12Scheme(): Boolean {
 /**
  * Handles one press from the twelve-key surface on the UI thread.
  *
- * No engine work runs here: the press goes through the controller's own operation queue, so it is
- * resolved after whatever the engine is still doing and in press order. The queue token is the
- * editor generation at press time, so a press made for an editor that has since ended never types
- * into the one replacing it.
+ * No engine work runs here: the press goes through the same queue as every other key, so it is
+ * resolved after whatever the engine is still doing and in press order, kept across a restart of
+ * the same field and while the session is prepared, and never typed into an editor that replaced
+ * the one it was pressed in.
  */
 internal fun KeyboardController.handleKana12(action: Kana12Action) {
-    if (retired || engineNotice != null) return
     val at = kana12Now()
-    enqueue { performKana12(action, at) }
+    enqueuePress(action == Kana12Action.Backspace) { performKana12(action, at) }
 }
 
 /**

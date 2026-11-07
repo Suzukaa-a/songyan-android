@@ -430,7 +430,7 @@ class KeyboardController(
      * They are typed, in order, as soon as it is ready: a press is never dropped because the editor
      * restarted its input or the keyboard was still binding.
      */
-    internal val heldKeys = ArrayDeque<Pair<LayoutAction, Boolean>>()
+    internal val heldKeys = ArrayDeque<suspend () -> Unit>()
 
     /**
      * The twelve-key kana surface's binding state. The model is driven on the operation worker;
@@ -629,8 +629,21 @@ class KeyboardController(
             }
             return
         }
+        enqueuePress(action.type == LayoutActionKind.BACKSPACE) { dispatch(action, t9FirstKey, pressAt) }
+    }
+
+    /**
+     * Queues one press of any key surface (the kana pad included) with the rules of [enqueueKey]:
+     * it survives a restart of the same field and is held while the session is prepared, but never
+     * reaches the editor that replaces the one it was pressed in.
+     */
+    internal fun enqueuePress(
+        backspace: Boolean = false,
+        press: suspend () -> Unit,
+    ) {
+        if (retired || engineNotice != null) return
         val epoch = keyEpoch
-        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, pressAt, epoch) })
+        operations.trySend(ANY_GENERATION to { runOrHold(backspace, epoch, press) })
     }
 
     /**
@@ -666,17 +679,16 @@ class KeyboardController(
         drained.await()
     }
 
-    private suspend fun dispatchOrHold(
-        action: LayoutAction,
-        t9FirstKey: Boolean,
-        pressAt: Double,
+    private suspend fun runOrHold(
+        backspace: Boolean,
         epoch: Int,
+        press: suspend () -> Unit,
     ) {
         if (epoch != keyEpoch) return
         if (!ready && pendingBackend != null) {
             val held = heldKeys.size < MAX_HELD_KEYS
-            if (held) heldKeys.addLast(action to t9FirstKey)
-            if (action.type == LayoutActionKind.BACKSPACE) {
+            if (held) heldKeys.addLast(press)
+            if (backspace) {
                 BackspaceTrace.record(
                     if (held) {
                         BackspaceTrace.Event.HELD_WHILE_PREPARING
@@ -687,7 +699,7 @@ class KeyboardController(
             }
             return
         }
-        dispatch(action, t9FirstKey, pressAt)
+        press()
     }
 
     /** Engine confirmation must not authorize a follow-up write to a replacement editor. */

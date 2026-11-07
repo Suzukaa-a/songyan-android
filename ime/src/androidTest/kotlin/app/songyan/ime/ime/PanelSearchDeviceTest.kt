@@ -77,7 +77,7 @@ class PanelSearchDeviceTest {
             host.assertText("★")
             host.tap("红心", SymbolPanelView::class.java)
             host.assertText("★♥")
-            host.tap("最近", SymbolPanelView::class.java)
+            host.tap(host.string(R.string.ime_panel_recent), SymbolPanelView::class.java)
             val labels = host.symbolLabels()
             val newest = labels.indexOf("♥")
             val older = labels.indexOf("★")

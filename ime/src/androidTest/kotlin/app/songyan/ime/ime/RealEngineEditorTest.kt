@@ -1772,12 +1772,13 @@ class RealEngineEditorTest {
     }
 
     /**
-     * A saved layout the keyboard cannot run right now (here: no 9-key form of this scheme) falls back
-     * for this editor only; the saved choice stays, so the layout comes back once it can run again.
+     * A saved layout the keyboard cannot run right now (here: no 9-key form of this scheme, which no
+     * deployment generated companions for) falls back for this editor only; the saved choice stays,
+     * so the layout comes back once it can run again.
      */
     @Test
     fun aLayoutThatCannotRunNowKeepsTheSavedChoice() {
-        withHost(layout = "phone9", schema = "songyan_flypy") { host ->
+        withHost(layout = "phone9", schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
             host.start()
             host.awaitIdle()
             var running: KeyboardLayoutKind? = null

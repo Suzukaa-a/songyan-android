@@ -100,27 +100,38 @@ class KeyboardToolsDeviceTest {
     fun aClipMarkedSensitiveIsNeverShownAsTheSource() =
         withToolsHost { host, _, _ ->
             val clipboard = host.context.getSystemService(ClipboardManager::class.java)
-            host.start()
-            // An empty field leaves the clipboard as the source; an ordinary clip is offered...
-            host.main2 { clipboard.setPrimaryClip(ClipData.newPlainText("", "普通剪贴")) }
-            host.openTools()
-            assertTrue("an ordinary clip was not offered", host.await { host.toolLabels().any { it.contains("普通剪贴") } })
-            assertTrue(host.main2 { host.controller.closePanels() })
-            host.await { host.toolLabels().isEmpty() }
-            // ...but one the host flagged sensitive (a copied password) is never read.
-            val sensitive =
-                ClipData.newPlainText("", "秘密口令").apply {
-                    // EXTRA_IS_SENSITIVE's value, also the spelling hosts used before API 33.
-                    description.extras =
-                        PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                }
-            host.main2 { clipboard.setPrimaryClip(sensitive) }
-            host.openTools()
-            host.awaitIdle()
-            assertFalse(
-                "a sensitive clip reached the tool panel: ${host.toolLabels()}",
-                host.toolLabels().any { it.contains("秘密口令") },
-            )
+            // The real keyboard may read the clipboard as the default input method; this host is not
+            // one, so it borrows the shell's background read instead.
+            val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+            automation.adoptShellPermissionIdentity("android.permission.READ_CLIPBOARD_IN_BACKGROUND")
+            try {
+                host.start()
+                // An empty field leaves the clipboard as the source; an ordinary clip is offered...
+                host.main2 { clipboard.setPrimaryClip(ClipData.newPlainText("", "普通剪贴")) }
+                host.openTools()
+                assertTrue(
+                    "an ordinary clip was not offered: ${host.toolLabels()}",
+                    host.await { host.toolLabels().any { it.contains("普通剪贴") } },
+                )
+                assertTrue(host.main2 { host.controller.closePanels() })
+                host.await { host.toolLabels().isEmpty() }
+                // ...but one the host flagged sensitive (a copied password) is never read.
+                val sensitive =
+                    ClipData.newPlainText("", "秘密口令").apply {
+                        // EXTRA_IS_SENSITIVE's value, also the spelling hosts used before API 33.
+                        description.extras =
+                            PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+                    }
+                host.main2 { clipboard.setPrimaryClip(sensitive) }
+                host.openTools()
+                host.awaitIdle()
+                assertFalse(
+                    "a sensitive clip reached the tool panel: ${host.toolLabels()}",
+                    host.toolLabels().any { it.contains("秘密口令") },
+                )
+            } finally {
+                automation.dropShellPermissionIdentity()
+            }
         }
 
     @Test
@@ -171,6 +182,7 @@ class KeyboardToolsDeviceTest {
         } finally {
             host.close()
             runBlocking { backend.shutdown() }
+            toolsDir.deleteRecursively()
         }
     }
 

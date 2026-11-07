@@ -96,12 +96,7 @@ sealed interface RimeConfigFileResult {
 sealed interface RimeConfigSaveResult {
     data object Saved : RimeConfigSaveResult
 
-    /** The text is not valid; [line] is the 1-based line the reader stopped at, when it says. Nothing was written. */
-    data class Invalid(
-        val line: Int?,
-    ) : RimeConfigSaveResult
-
-    /** Refused or not written; [message] is already localized, null for generic copy. */
+    /** Refused or not written; [message] is ready for display, null for generic copy. */
     data class Failure(
         val message: String?,
     ) : RimeConfigSaveResult

@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import android.graphics.Rect
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.ime.panels.PhraseClipboardPanelView
 import org.junit.AfterClass
@@ -85,6 +86,65 @@ class ClipboardPanelDeviceTest {
             assertEquals("second clip", host.text())
             assertEquals(listOf("second clip"), host.clipboardEntries)
         }
+
+    @Test
+    fun trimmingMemoryReleasesTheRowsOfAClosedPanelAndReopeningLoadsThemAgain() =
+        withHost { host ->
+            host.clipboardEnabled = true
+            host.clipboardEntries = listOf("first clip", "second clip")
+            host.start()
+            val type = PhraseClipboardPanelView::class.java
+            host.tapToolbar(host.string(R.string.ime_panel_clipboard))
+            assertTrue(host.await { "first clip" in host.labelsOf(type) })
+            val panel = host.main2 { host.find(type) }
+            assertTrue("the held view shows the rows", "first clip" in host.main2 { labels(panel) })
+
+            // The open panel keeps what it shows, so a trim does not take the rows from under the user.
+            host.main { host.controller.trimMemory() }
+            host.awaitIdle()
+            assertTrue("the open panel keeps its rows", "first clip" in host.labelsOf(type))
+            host.tap("first clip", type)
+            host.assertText("first clip")
+            host.awaitIdle()
+            assertFalse("inserting an entry closes the panel", host.backOwned)
+            assertTrue("the panel leaves the window", host.await { host.main2 { host.findOrNull(type) == null } })
+
+            // The view outlives the close: once trimmed while hidden it must hold no rows of its own,
+            // however it was closed (the title's close button leaves the panel through the host).
+            host.tapToolbar(host.string(R.string.ime_panel_clipboard))
+            assertTrue(host.await { "second clip" in host.labelsOf(type) })
+            host.tap(host.string(R.string.ime_panel_close), type)
+            assertTrue("the panel leaves the window", host.await { host.main2 { host.findOrNull(type) == null } })
+            host.awaitIdle()
+            assertFalse("the close button closes the panel", host.backOwned)
+            host.main { host.controller.trimMemory() }
+            host.awaitIdle()
+            val kept = host.main2 { labels(panel) }
+            assertTrue("the closed panel view still answers", kept.isNotEmpty())
+            assertFalse("a trimmed closed panel keeps no rows: $kept", "first clip" in kept || "second clip" in kept)
+
+            // Opening it again loads the rows from the store, and they still insert.
+            host.tapToolbar(host.string(R.string.ime_panel_clipboard))
+            assertTrue(host.await { "second clip" in host.labelsOf(type) })
+            host.tap("second clip", type)
+            host.assertText("first clipsecond clip")
+        }
+
+    /**
+     * The accessibility labels of a panel view, also after it left the window: the provider reads the
+     * view's own rows, which a kept reference must no longer hold after the panel was trimmed.
+     */
+    private fun labels(view: View): List<String> {
+        val provider = view.accessibilityNodeProvider
+        val result = ArrayList<String>()
+        var id = 0
+        while (true) {
+            val node = provider.createAccessibilityNodeInfo(id) ?: break
+            result += (node.contentDescription ?: node.text ?: "").toString()
+            id++
+        }
+        return result
+    }
 
     private fun <T> withHost(block: (FeatureHost) -> T): T {
         val host = FeatureHost(engine.backend())

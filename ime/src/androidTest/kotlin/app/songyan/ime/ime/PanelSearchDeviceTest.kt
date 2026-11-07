@@ -15,7 +15,10 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The symbol panel's and the phrase panel's search keys: the keyboard types the query, the band lists matches. */
+/**
+ * The symbol panel's and the phrase panel's search keys: the keyboard types the query, the band lists
+ * matches. Also the symbol panel's recent row, which follows each use without a full library read.
+ */
 @RunWith(AndroidJUnit4::class)
 class PanelSearchDeviceTest {
     private val catalog =
@@ -57,6 +60,29 @@ class PanelSearchDeviceTest {
             host.tapBar("★")
             host.assertText("★★")
             assertEquals("a found symbol is a recent one", listOf("★"), host.recentSymbols)
+        }
+
+    @Test
+    fun insertingASymbolShowsItInTheRecentRowEvenWhenAFullReadIsOlder() =
+        withHost { host ->
+            host.symbolCatalog = catalog
+            host.start()
+            host.main { host.controller.openSymbolPanel() }
+            assertTrue(host.await { "标记" in host.symbolLabels() })
+            // Reloading this stale snapshot would discard the newly returned recent uses.
+            host.pinFullReads()
+            host.tap("标记", SymbolPanelView::class.java)
+            // The cells of a category are spoken by name; the recent row by the mark itself.
+            host.tap("五角星", SymbolPanelView::class.java)
+            host.assertText("★")
+            host.tap("红心", SymbolPanelView::class.java)
+            host.assertText("★♥")
+            host.tap("最近", SymbolPanelView::class.java)
+            val labels = host.symbolLabels()
+            val newest = labels.indexOf("♥")
+            val older = labels.indexOf("★")
+            assertTrue("the recent row lists the marks just used: $labels", newest >= 0 && older >= 0)
+            assertTrue("the newest use comes first: $labels", newest < older)
         }
 
     @Test

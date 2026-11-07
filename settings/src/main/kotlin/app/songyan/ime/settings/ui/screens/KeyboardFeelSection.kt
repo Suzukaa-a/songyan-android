@@ -36,7 +36,7 @@ data class KeyboardFeelState(
     val longPressDelayMs: Int? = null,
     val showSwitchKey: Boolean = false,
     val keyPreview: Boolean = true,
-    val keyFlick: Boolean = true,
+    val keyFlickDirection: String = SettingsPreferences.DEFAULT_FLICK_DIRECTION,
     val doubleSpacePeriod: Boolean = true,
     val hideIdleToolbar: Boolean = false,
     val releaseHaptic: Boolean = false,
@@ -56,7 +56,7 @@ fun KeyboardFeelSection(
     onLongPressDelay: (Int?) -> Unit = {},
     onOneHand: (String) -> Unit,
     onKeyPreview: (Boolean) -> Unit,
-    onKeyFlick: (Boolean) -> Unit = {},
+    onKeyFlickDirection: (String) -> Unit = {},
     onDoubleSpacePeriod: (Boolean) -> Unit = {},
     onReleaseHaptic: (Boolean) -> Unit,
     onWidePosition: (String) -> Unit = {},
@@ -189,6 +189,28 @@ fun KeyboardFeelSection(
             )
         }
 
+        SectionHeader(stringResource(R.string.options_key_flick_title))
+        Text(
+            text = stringResource(R.string.options_key_flick_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        for (direction in SettingsPreferences.FLICK_DIRECTIONS) {
+            RadioRow(
+                title =
+                    stringResource(
+                        when (direction) {
+                            "up" -> R.string.options_key_flick_up
+                            "down" -> R.string.options_key_flick_down
+                            else -> R.string.options_key_flick_off
+                        },
+                    ),
+                selected = state.keyFlickDirection == direction,
+                onClick = { onKeyFlickDirection(direction) },
+            )
+        }
+
         SectionHeader(stringResource(R.string.options_key_feel_section))
         SettingsRow(
             title = stringResource(R.string.options_long_press_title),
@@ -196,12 +218,6 @@ fun KeyboardFeelSection(
                 state.longPressDelayMs?.let { stringResource(R.string.options_long_press_value, it) }
                     ?: stringResource(R.string.options_follow_system),
             onClick = { longPressOpen = true },
-        )
-        SwitchRow(
-            title = stringResource(R.string.options_key_flick_title),
-            subtitle = stringResource(R.string.options_key_flick_body),
-            checked = state.keyFlick,
-            onCheckedChange = onKeyFlick,
         )
         SwitchRow(
             title = stringResource(R.string.options_double_space_title),

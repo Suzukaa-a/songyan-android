@@ -2,14 +2,19 @@ package app.songyan.ime.settings
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.Density
 import app.songyan.ime.settings.state.RimeConfigApplyResult
 import app.songyan.ime.settings.state.RimeConfigEditResult
 import app.songyan.ime.settings.state.RimeConfigFileResult
@@ -67,25 +72,41 @@ class RimeFileEditorScreenTest {
 
     private var closed = 0
 
-    private fun show(gateway: Gateway) {
+    private fun show(
+        gateway: Gateway,
+        fontScale: Float = 1f,
+    ) {
         val model = RimeFileEditorViewModel(gateway, "songyan_quanpin", false)
         compose.setContent {
-            SongyanTheme(dynamicColor = false) {
-                RimeFileEditorScreen(
-                    key = "songyan_quanpin",
-                    grammarExample = false,
-                    onClose = { closed++ },
-                    onApply = {},
-                    viewModel = model,
-                )
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
+                SongyanTheme(dynamicColor = false) {
+                    RimeFileEditorScreen(
+                        key = "songyan_quanpin",
+                        grammarExample = false,
+                        onClose = { closed++ },
+                        onApply = {},
+                        viewModel = model,
+                    )
+                }
             }
         }
         compose.waitForIdle()
     }
 
     @Test
-    fun theFileShowsAndAnInvalidSaveNamesTheLineAndKeepsTheText() {
-        show(Gateway(save = RimeConfigSaveResult.Invalid(3)))
+    fun theFileShowsAndARefusedSavePreservesTheOriginalErrorAndText() {
+        val message =
+            """
+            songyan_quanpin.custom.yaml: while parsing a block mapping
+             in reader, line 5, column 1:
+                patch: {}
+                ^
+            expected <block end>, but found '['
+             in reader, line 6, column 1:
+                [
+                ^
+            """.trimIndent()
+        show(Gateway(save = RimeConfigSaveResult.Failure(message)), fontScale = 2f)
 
         compose.onNodeWithText("内置全拼").assertExists()
         compose.onNodeWithTag(RIME_EDITOR_FIELD_TAG).performTextInput("x")
@@ -93,7 +114,8 @@ class RimeFileEditorScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(RIME_EDITOR_ERROR_TAG).assertExists()
-        compose.onNodeWithText(str(R.string.rime_editor_invalid_line, 3)).assertExists()
+        compose.onNodeWithText(message).assertExists()
+        compose.onNodeWithTag(RIME_EDITOR_FIELD_TAG).assertIsDisplayed().assertTextContains("x", substring = true)
         assertEquals(0, closed)
     }
 

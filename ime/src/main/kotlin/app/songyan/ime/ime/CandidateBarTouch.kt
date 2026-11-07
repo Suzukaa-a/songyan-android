@@ -46,6 +46,7 @@ internal fun CandidateBarView.commitPopupCharacter(index: Int) {
 }
 
 internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
+    ui.removeCallbacks(repeatBackspace)
     gestureX = event.x
     gestureY = event.y
     scrollingGesture = false
@@ -71,25 +72,40 @@ internal fun CandidateBarView.onDown(event: MotionEvent): Boolean {
     // A pull still showing absorbs this touch too.
     val catchesPull = EdgeEffectCompat.getDistance(startEdge) > 0f || EdgeEffectCompat.getDistance(endEdge) > 0f
     val hit = hitTest(event.x, event.y)
+    // Only the moving candidates consume a touch to stop motion; fixed controls and the
+    // independent readings section must respond immediately, even during a fling or edge pull.
+    val catchesMotion =
+        (flinging || catchesPull) &&
+            viewport.contains(event.x.toInt(), event.y.toInt()) &&
+            !inReadings(event.x, event.y)
+    if (!catchesMotion) releaseEdges()
     downRevision = listRevision
     down = -1
     downControl = -1
-    if (hit in 0 until entries.size && !flinging && !catchesPull) {
+    if (hit in 0 until entries.size && !catchesMotion) {
         down = hit
         val entry = entries[hit]
         pressed = Press(hit, entry.absoluteIndex, entry.text, listRevision, event.x, event.y, entry.comment)
         ui.postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
-    } else if (hit >= readingBase && !flinging && !catchesPull) {
+    } else if (hit >= readingBase) {
         downReading = hit - readingBase
         if (readings[downReading].selected) downReading = -1
-    } else if (hit >= entries.size && !flinging) {
+    } else if (hit in entries.size until entries.size + controls.size) {
         downControl = hit - entries.size
     }
     if (down >= 0 || downReading >= 0 || downControl >= 0) onPressFeedback()
+    if (controls.getOrNull(downControl) == Control.BACKSPACE) {
+        backspaceStartedComposing = snapshot.isComposing
+        onBackspace()
+        if (canRepeatBackspace) {
+            backspaceHold = Any()
+            ui.postDelayed(repeatBackspace, ViewConfiguration.getLongPressTimeout().toLong())
+        }
+    }
     // A new touch may try a read that failed before, once.
     pages.resume()
     scrollingReadings = false
-    if ((flinging || catchesPull) && !inReadings(event.x, event.y)) scrollingGesture = true
+    scrollingGesture = catchesMotion
     if (scrollingGesture) lastTouch = if (expanded) event.y else event.x
     invalidate()
     return true
@@ -109,6 +125,13 @@ internal fun CandidateBarView.onMove(event: MotionEvent): Boolean {
                 invalidate()
             }
         }
+        return true
+    }
+    if (controls.getOrNull(downControl) == Control.BACKSPACE &&
+        hitTest(event.x, event.y) != entries.size + downControl
+    ) {
+        cancelPress()
+        invalidate()
         return true
     }
     val position = if (expanded) event.y else event.x
@@ -165,6 +188,8 @@ internal fun CandidateBarView.canOverscroll(): Boolean = snapshot.candidates.isN
 
 internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     ui.removeCallbacks(longPress)
+    ui.removeCallbacks(repeatBackspace)
+    backspaceHold = null
     velocity?.addMovement(event)
     if (menu != null) {
         val open = menu
@@ -230,7 +255,8 @@ internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
             ImePerf.commitStart()
             onCandidate(choice)
         }
-    } else if (control >= 0 && hit == entries.size + control) {
+    } else if (control >= 0 && hit == entries.size + control && controls.getOrNull(control) != Control.BACKSPACE) {
+        // Delete already acted on DOWN; lifting never adds another deletion.
         // Expansion is bound to the same list revision as a selection.
         if (downRevision == listRevision) activateControl(control)
     }

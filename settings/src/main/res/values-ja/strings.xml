@@ -143,8 +143,11 @@
     <string name="options_one_hand_left">左</string>
     <string name="options_one_hand_right">右</string>
     <string name="options_key_feel_section">キーの操作感</string>
-    <string name="options_key_flick_title">フリックで数字と記号を入力</string>
-    <string name="options_key_flick_body">上へフリックするとキーの 1 つ目の記号、下へフリックすると 2 つ目の記号を入力します。</string>
+    <string name="options_key_flick_title">フリックで角の文字を入力</string>
+    <string name="options_key_flick_body">キーの右上にある小さな文字をフリックで入力します。</string>
+    <string name="options_key_flick_off">オフ</string>
+    <string name="options_key_flick_up">上フリック</string>
+    <string name="options_key_flick_down">下フリック</string>
     <string name="options_double_space_title">スペース 2 回でピリオド</string>
     <string name="options_double_space_body">英単語のあとでスペースを 2 回タップすると、ピリオドとスペースを入力します。</string>
     <string name="options_key_preview_title">キーのプレビュー</string>

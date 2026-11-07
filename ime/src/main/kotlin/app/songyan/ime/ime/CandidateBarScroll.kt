@@ -28,17 +28,34 @@ internal fun CandidateBarView.scrollTo(target: Float) {
     if (next == scroll) return
     scroll = next
     invalidate()
-    maybeLoadMore()
+    maybeLoadMore(userBrowsing = true)
 }
 
 /**
- * Asks the owner for the next engine page when the end of what was read is near: within
- * [LOAD_AHEAD_ROWS] row heights of the viewport's end, along the strip or down the grid. A list
- * that does not even fill the viewport counts as near, so a new code fills the row at once.
+ * Whether the next engine page is due at [visibleEnd] (where the viewport ends in content
+ * coordinates) for content running to [contentExtent].
+ *
+ * A call caused by the view itself (a new list, a page that landed, a size change) only fills what
+ * can be seen: it asks while the content still ends before the viewport does, so a list that already
+ * runs past the viewport reads nothing off screen. A real scroll keeps the [lookAhead] lead, so the
+ * page lands before the finger gets there.
  */
-internal fun CandidateBarView.maybeLoadMore() {
+internal fun loadMoreDue(
+    visibleEnd: Float,
+    contentExtent: Float,
+    lookAhead: Float,
+    userBrowsing: Boolean,
+): Boolean = if (userBrowsing) visibleEnd >= contentExtent - lookAhead else visibleEnd > contentExtent
+
+/**
+ * Asks the owner for the next engine page the view can put to use: an automatic refresh (see
+ * [loadMoreDue]) only fills the visible area, while a scroll, drag, fling or reveal by the user
+ * reads [LOAD_AHEAD_ROWS] row heights ahead, along the strip or down the grid. A list that does not
+ * even fill the viewport is filled at once either way.
+ */
+internal fun CandidateBarView.maybeLoadMore(userBrowsing: Boolean = false) {
     if (width <= 0 || entries.isEmpty() || !pages.hasMore) return
-    val nearEnd = scroll + viewportExtent() >= contentExtent - barPx * LOAD_AHEAD_ROWS
+    val nearEnd = loadMoreDue(scroll + viewportExtent(), contentExtent, barPx * LOAD_AHEAD_ROWS, userBrowsing)
     val page = pages.nextRead(nearEnd) ?: return
     onLoadMore(listRevision, page)
 }
@@ -70,7 +87,7 @@ internal fun CandidateBarView.dragBy(delta: Float) {
         EdgeEffectCompat.onPullDistance(startEdge, -overshoot / extent, 0.5f)
     }
     invalidate()
-    maybeLoadMore()
+    maybeLoadMore(userBrowsing = true)
 }
 
 internal fun CandidateBarView.releaseEdges() {

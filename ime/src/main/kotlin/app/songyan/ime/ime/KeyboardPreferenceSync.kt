@@ -87,7 +87,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.showSwitchKey.collect { applyShowSwitchKey(it) } }
     scope.launch { source.longPressDelayMs.collect { keyboard.longPressOverrideMs = HoldDelay.clamp(it) } }
     scope.launch { source.colorMode.collect { colorMode = ColorMode.resolve(it) } }
-    scope.launch { source.keyFlick.collect { keyboard.keyFlickEnabled = it } }
+    scope.launch { source.keyFlickDirection.collect { keyboard.flickDirection = FlickDirection.resolve(it) } }
     scope.launch { source.doubleSpacePeriod.collect { doubleSpacePeriodEnabled = it } }
     scope.launch { source.keyPreview.collect { keyboard.keyPreviewEnabled = it } }
     scope.launch { source.hideIdleToolbar.collect { applyHideIdleToolbar(it) } }
@@ -177,7 +177,9 @@ internal suspend fun KeyboardController.readPreferences() {
     }
     runCatching { source.colorMode.first() }.getOrNull()?.let { colorMode = ColorMode.resolve(it) }
     runCatching { source.symbolLock.first() }.getOrNull()?.let { symbolLock = it }
-    runCatching { source.keyFlick.first() }.getOrNull()?.let { keyboard.keyFlickEnabled = it }
+    runCatching { source.keyFlickDirection.first() }.getOrNull()?.let {
+        keyboard.flickDirection = FlickDirection.resolve(it)
+    }
     runCatching { source.doubleSpacePeriod.first() }.getOrNull()?.let { doubleSpacePeriodEnabled = it }
     runCatching { source.keyPreview.first() }.getOrNull()?.let { keyboard.keyPreviewEnabled = it }
     runCatching { source.hideIdleToolbar.first() }.getOrNull()?.let { applyHideIdleToolbar(it) }

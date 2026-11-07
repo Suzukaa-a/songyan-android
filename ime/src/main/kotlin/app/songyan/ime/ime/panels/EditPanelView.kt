@@ -38,6 +38,10 @@ class EditPanelView(
     /** A key of the pad was pressed; the flag is true when it extends the selection (Select is on). */
     var onEdit: (EditAction, Boolean) -> Unit = { _, _ -> }
 
+    /** One step of a held key; [stillHeld] is asked when the step runs. */
+    var onEditRepeated: (EditAction, Boolean, () -> Boolean) -> Unit =
+        { action, extend, _ -> onEdit(action, extend) }
+
     private val state = EditPadState()
 
     /** Whether the arrow keys extend the selection. */
@@ -114,6 +118,19 @@ class EditPanelView(
         }
         val hadSelection = state.availability.hasSelection
         onEdit(action, state.extends(key))
+        state.afterKey(key, hadSelection)
+        invalidate()
+    }
+
+    /** A held key repeats the same action, and only for as long as its hold lasts. */
+    override fun onCellRepeated(
+        index: Int,
+        stillHeld: () -> Boolean,
+    ) {
+        val key = keyAt(index) ?: return
+        val action = key.action ?: return
+        val hadSelection = state.availability.hasSelection
+        onEditRepeated(action, state.extends(key), stillHeld)
         state.afterKey(key, hadSelection)
         invalidate()
     }

@@ -2,6 +2,7 @@ package app.songyan.ime.benchmark
 
 import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.ExperimentalMetricApi
+import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.TraceSectionMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,6 +26,8 @@ import org.junit.runner.RunWith
  * The input latencies, read from the ImePerf trace sections of a
  * benchmarkRelease build: keyboard show to first frame, key down to preedit applied, candidate up
  * to commit applied. Each iteration starts with a warm IME process and a hidden keyboard.
+ * Frame timings capture rendering costs outside those intervals, including the tryout host that
+ * shares the IME process; use the accompanying trace to distinguish their work.
  */
 @OptIn(ExperimentalMetricApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -36,7 +39,11 @@ class KeyboardBenchmarks {
     fun keyboardShow() =
         rule.measureRepeated(
             packageName = PACKAGE,
-            metrics = listOf(TraceSectionMetric(SHOW_SECTION, TraceSectionMetric.Mode.First)),
+            metrics =
+                listOf(
+                    TraceSectionMetric(SHOW_SECTION, TraceSectionMetric.Mode.First),
+                    FrameTimingMetric(),
+                ),
             compilationMode = CompilationMode.Partial(),
             iterations = ITERATIONS,
             setupBlock = {
@@ -61,6 +68,7 @@ class KeyboardBenchmarks {
                     TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Max),
                     TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Count),
                     TraceSectionMetric(COMMIT_SECTION, TraceSectionMetric.Mode.First),
+                    FrameTimingMetric(),
                 ),
             compilationMode = CompilationMode.Partial(),
             iterations = ITERATIONS,

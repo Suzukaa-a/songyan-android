@@ -107,7 +107,11 @@ class KeyboardPanelHost(
             onHidden()
             return
         }
+        current.animate().cancel()
         leaving = current
+        // Overlay views are visual-only: the exit can continue while the keys accept input again.
+        container.overlay.add(current)
+        restoreKeys()
         current
             .animate()
             .alpha(0f)
@@ -117,7 +121,7 @@ class KeyboardPanelHost(
             .withEndAction {
                 if (leaving === current) {
                     leaving = null
-                    remove(current)
+                    container.overlay.remove(current)
                 }
             }.start()
         onHidden()
@@ -130,11 +134,16 @@ class KeyboardPanelHost(
         val current = leaving ?: return
         leaving = null
         current.animate().cancel()
-        remove(current)
+        container.overlay.remove(current)
     }
 
     private fun remove(panel: View) {
+        panel.animate().cancel()
         container.removeView(panel)
+        restoreKeys()
+    }
+
+    private fun restoreKeys() {
         keyArea.visibility = keyAreaVisibility
         candidateBar?.visibility = candidateBarVisibility
     }

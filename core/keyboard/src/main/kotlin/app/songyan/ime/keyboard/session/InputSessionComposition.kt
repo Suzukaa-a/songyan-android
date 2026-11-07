@@ -136,17 +136,17 @@ internal suspend fun InputSession.confirmCandidateAbsoluteImpl(index: Int): Inpu
 
 internal suspend fun InputSession.discardCompositionImpl(): Boolean {
     if (retired) return false
-    if (!snapshot.isComposing && inputUnavailableReason == null) {
+    if (!snapshot.isComposing && !snapshot.isPrediction && inputUnavailableReason == null) {
         // A fresh session (new editor) has not observed the composition the engine may still
         // own from the previous editor; clearing the host text without clearing it would leave
         // the stale composition behind.
         val engineState = catchingNonCancellation { engine.currentSnapshot() }.getOrNull()
-        if (engineState == null || !engineState.isComposing) return true
+        if (engineState == null || (!engineState.isComposing && !engineState.isPrediction)) return true
     }
     return try {
         val updated = engine.cancelComposition().copy(committed = "")
         apply(updated)
-        if (snapshot.isComposing) {
+        if (snapshot.isComposing || snapshot.isPrediction) {
             onError?.invoke(EngineBackendError.OperationFailed("composition still active after cancel"))
             return false
         }

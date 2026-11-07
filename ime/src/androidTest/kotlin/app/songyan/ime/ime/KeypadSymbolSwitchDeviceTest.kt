@@ -10,6 +10,7 @@ import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import org.junit.After
 import org.junit.AfterClass
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
@@ -17,7 +18,8 @@ import org.junit.runner.RunWith
 
 /**
  * 26-key letters paired with the keypad 123 page: its symbol key opens whichever symbol page the
- * pairing names, a symbol types there, and the page's 123 key comes back to the pad.
+ * pairing names and a symbol types there. The row symbol pages leave for letters; the categorized
+ * page's 123 tab comes back to the pad.
  */
 @RunWith(AndroidJUnit4::class)
 class KeypadSymbolSwitchDeviceTest {
@@ -59,25 +61,25 @@ class KeypadSymbolSwitchDeviceTest {
     }
 
     @Test
-    fun theRowShapedSymbolPageOpensTypesAndReturnsToThePad() =
+    fun theRowShapedSymbolPageOpensTypesAndReturnsToLetters() =
         withKeypadPairedTo(KeyboardPagePresets.symbolsSystem.id) { host ->
             host.tapSymbolsPage()
             host.awaitIdle()
-            assertTrue(
-                host.labelsOf(KeyboardView::class.java).toString(),
-                "9" !in host.labelsOf(KeyboardView::class.java),
-            )
+            val marks = host.labelsOf(KeyboardView::class.java)
+            assertTrue(marks.toString(), "9" !in marks)
             // The pad lacks the 123 page's everyday marks, so the symbol page opens on them first.
             host.tapSymbolsPage()
             host.awaitIdle()
             host.tap("\$")
             host.assertText("\$")
-            host.tapNumbersPage()
+            // Both row symbol pages share one switch, so it turns back rather than escaping to the pad.
+            host.tap(host.string(R.string.ime_open_more_symbols))
             host.awaitIdle()
-            assertTrue(
-                host.labelsOf(KeyboardView::class.java).toString(),
-                "9" in host.labelsOf(KeyboardView::class.java),
-            )
+            assertEquals(marks, host.labelsOf(KeyboardView::class.java))
+            host.tap(host.string(R.string.ime_return_to_letters))
+            host.awaitIdle()
+            val letters = host.labelsOf(KeyboardView::class.java)
+            assertTrue(letters.toString(), "a" in letters)
         }
 
     @Test

@@ -75,6 +75,18 @@ class SymbolPagePanelView(
         invalidate()
     }
 
+    /**
+     * A hidden page holds no categories: the next [update] fills the tabs and cells again. The open
+     * category id stays so a refresh that reopens the page still finds its tab.
+     */
+    override fun releaseData() {
+        super.releaseData()
+        categories = emptyList()
+        asciiMarks = false
+        updateRail(emptyList())
+        invalidate()
+    }
+
     private fun open(): KeyboardPageCategory? = categories.getOrNull(selectedRail)
 
     private fun keys(): List<LayoutKey> = open()?.keys.orEmpty()

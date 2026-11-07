@@ -210,6 +210,26 @@ class KeyboardSettingsPanelDeviceTest {
         }
 
     @Test
+    fun closingAPanelRestoresTheKeysBeforeItsExitAnimationEnds() =
+        withHost { host ->
+            ImeMotion.scaleOverride = 1f
+            try {
+                host.start()
+                host.tap(host.string(R.string.ime_language_to_english))
+                host.openPanel()
+                host.main {
+                    assertTrue(host.controller.closePanels())
+                    // Check in the closing event itself, before an animation frame can restore the keys.
+                    assertEquals(android.view.View.VISIBLE, host.controller.keyboard.visibility)
+                }
+                host.tap("a")
+                host.assertText("a")
+            } finally {
+                ImeMotion.scaleOverride = null
+            }
+        }
+
+    @Test
     fun theLayoutTileOpensTheMenuInPlaceOfTheKeys() =
         withHost { host ->
             // The panel's exit has to animate for its end to race the menu.

@@ -261,12 +261,17 @@ class KeyboardPreferences(
             .map { it[KEY_PREVIEW] ?: true }
             .distinctUntilChanged()
 
-    /** Vertical flicks on character keys type the key's first and second long-press option; on by default. */
-    val keyFlick: Flow<Boolean> =
+    /**
+     * Which vertical flick types the hint drawn on a key: `off`, `up` or `down`; up by default. A store
+     * that only has the earlier on/off switch turned off reads as `off`, so that choice survives.
+     */
+    val keyFlickDirection: Flow<String> =
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
-            .map { it[KEY_FLICK] ?: true }
-            .distinctUntilChanged()
+            .map { prefs ->
+                prefs[KEY_FLICK_DIRECTION]?.takeIf { it in FLICK_DIRECTIONS }
+                    ?: if (prefs[KEY_FLICK] == false) "off" else DEFAULT_FLICK_DIRECTION
+            }.distinctUntilChanged()
 
     /** Two quick spaces after an English word type a period and a space; on by default. */
     val doubleSpacePeriod: Flow<Boolean> =
@@ -342,8 +347,12 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_PREVIEW] = value }
     }
 
-    suspend fun setKeyFlick(value: Boolean) {
-        appContext.keyboardDataStore.edit { it[KEY_FLICK] = value }
+    suspend fun setKeyFlickDirection(value: String) {
+        require(value in FLICK_DIRECTIONS) { "unknown flick direction: $value" }
+        appContext.keyboardDataStore.edit {
+            it[KEY_FLICK_DIRECTION] = value
+            it.remove(KEY_FLICK)
+        }
     }
 
     suspend fun setDoubleSpacePeriod(value: Boolean) {
@@ -467,6 +476,8 @@ class KeyboardPreferences(
         private val SPLIT_MODES = setOf("layout", "on", "off")
         private val WIDE_POSITIONS = setOf("left", "center", "right", "custom")
         private val KEY_HEIGHTS = setOf("compact", "standard", "tall")
+        const val DEFAULT_FLICK_DIRECTION = "up"
+        private val FLICK_DIRECTIONS = setOf("off", "up", "down")
 
         private val KEY_WIDE_POSITION = stringPreferencesKey("wide_position")
         private val KEY_WIDE_POSITION_CUSTOM = intPreferencesKey("wide_position_custom")
@@ -483,7 +494,10 @@ class KeyboardPreferences(
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")
+
+        /** The earlier on/off flick switch: read so an "off" carries over, removed on the next write. */
         private val KEY_FLICK = booleanPreferencesKey("key_flick")
+        private val KEY_FLICK_DIRECTION = stringPreferencesKey("key_flick_direction")
         private val KEY_DOUBLE_SPACE_PERIOD = booleanPreferencesKey("double_space_period")
         private val KEY_PREVIEW = booleanPreferencesKey("key_preview")
         private val KEY_HIDE_IDLE_TOOLBAR = booleanPreferencesKey("hide_idle_toolbar")

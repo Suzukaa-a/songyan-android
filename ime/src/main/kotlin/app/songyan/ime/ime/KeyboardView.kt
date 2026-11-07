@@ -149,8 +149,11 @@ class KeyboardView(
     /** The user's key hold delay in ms, or null to follow the system; backspace repeat ignores it. */
     var longPressOverrideMs: Int? = null
 
-    /** Vertical flicks on character keys type their long-press options; off leaves only the nine-key digit flick. */
-    var keyFlickEnabled = true
+    /** Which vertical flick types the hint drawn on a character key; off leaves only taps and long presses. */
+    var flickDirection = FlickDirection.UP
+
+    /** The flicked key turning into its hint; the popup layer's bubble reads the same progress. */
+    internal val flickMorph = FlickMorph()
 
     /** Magnified preview of a tapped key; the keyboard turns it off in a private editor. */
     var keyPreviewEnabled = true
@@ -219,16 +222,33 @@ class KeyboardView(
     /** Accessibility-only repeat of the Backspace key; a virtual node cannot hold a finger. */
     private var accessibleRepeatKey = -1
     private var accessibleRepeatSteps = 0
+
+    /** Bumped by every burst start and stop: a queued step only runs for the burst that queued it. */
+    private var accessibleRepeatToken = 0
+
+    /** Whether the composition the burst started in was still there; the burst stops when it ends. */
+    private var accessibleRepeatComposing = false
     private val accessibleRepeat =
         object : Runnable {
             override fun run() {
                 val index = accessibleRepeatKey
-                if (index !in keys.indices || accessibleRepeatSteps >= MAX_ACCESSIBILITY_REPEAT_STEPS) {
+                if (index !in keys.indices ||
+                    accessibleRepeatSteps >= MAX_ACCESSIBILITY_REPEAT_STEPS ||
+                    (accessibleRepeatComposing && !composing())
+                ) {
                     stopAccessibilityRepeat()
                     return
                 }
                 accessibleRepeatSteps += 1
-                activateItem(index)
+                // A step belongs to the burst that queued it: once that burst is stopped (another
+                // action, touch exploration, its composition gone) a newer burst on the same key
+                // must not run it, and it must not delete text the composition left behind.
+                val token = accessibleRepeatToken
+                val startedComposing = accessibleRepeatComposing
+                onRepeatAction(keySnapshot(index).action) {
+                    token == accessibleRepeatToken &&
+                        !(startedComposing && !composing())
+                }
                 timers.postDelayed(this, BACKSPACE_REPEAT_MS)
             }
         }
@@ -242,6 +262,14 @@ class KeyboardView(
      * the caller's kana model decides what to send, the same way [onAction] carries other pages.
      */
     var onKana12Action: (Kana12Action) -> Unit = {}
+
+    /**
+     * One step of a held key. [stillHeld] is asked when the step runs, so a hold that ended while
+     * the step was queued (a release, a cancel, a second finger, the composition it was deleting)
+     * types nothing more. The default treats a step as a plain press.
+     */
+    var onRepeatAction: (action: LayoutAction, stillHeld: () -> Boolean) -> Unit =
+        { action, _ -> onAction(action) }
     internal var t9FirstKeyIndex = -1
     var onCursor: (Int) -> Unit = {}
 
@@ -332,10 +360,10 @@ class KeyboardView(
         var cursorSampleX: Float = 0f,
         var cursorSampleAt: Long = 0L,
         var cursorFast: Boolean = false,
-        /** A nine-key digit key's upward flick is past its threshold: release types the digit. */
-        var risen: Boolean = false,
-        /** A character key's flick is armed: release types this long-press option; -1 when not armed. */
-        var flickIndex: Int = -1,
+        /** What this key's flick types (its drawn hint), fixed at the press; null when it has none. */
+        var flickTarget: LayoutOption? = null,
+        /** The flick is past its threshold: release types [flickTarget]. */
+        var flickArmed: Boolean = false,
         /**
          * A vertical flick past the threshold that has nothing to type that way: the release types
          * nothing, not the key the finger ended on.
@@ -589,6 +617,11 @@ class KeyboardView(
                 animating = true
                 dirtyUnion(box)
             }
+            val flicked = i == flickMorph.key
+            if (flicked && flickMorph.animating(now, motionScale)) {
+                animating = true
+                dirtyUnion(box)
+            }
             // A dirty-rect invalidate (one key pressed or released) skips the keys outside it.
             if (box.right < clipRect.left ||
                 box.left > clipRect.right ||
@@ -646,6 +679,11 @@ class KeyboardView(
             }
             val onAccent = (emphasized || railChosen) && !pressed
             val contentColor = if (onAccent) palette.accentText else palette.text
+            val morph = if (flicked) flickMorph.value(now, motionScale) else 0f
+            // A flick turns the key into its hint; a merged key's sideways swipe into one of its letters.
+            val flick = if (flickMorph.towardY != 0) morph else 0f
+            val swipe = if (flickMorph.towardY == 0) morph else 0f
+            val labelLayer = if (flick > 0f) beginFlickLabel(canvas, drawBounds, flick) else -1
             when {
                 key.action.type == LayoutActionKind.SHIFT && !railKey -> drawShiftIcon(canvas, drawBounds, contentColor)
                 key.action.type == LayoutActionKind.BACKSPACE && !railKey ->
@@ -656,22 +694,49 @@ class KeyboardView(
                 else -> {
                     val syllable = syllableLines.getOrNull(i)
                     if (syllable == null) {
-                        drawKeyLabel(canvas, i, drawBounds, contentColor)
+                        if (swipe > 0f) {
+                            drawSwipeLetters(canvas, i, drawBounds, contentColor, false, flickMorph.towardX, swipe)
+                        } else {
+                            drawKeyLabel(canvas, i, drawBounds, contentColor)
+                        }
                     } else {
                         // The letter moves up so the hint line under it reads as its own.
                         liftedBounds.set(drawBounds)
                         liftedBounds.offset(0f, -SYLLABLE_LIFT_DP * density)
                         if (syllable.columns.size > 1 && labels[i].length == syllable.columns.size) {
-                            drawSpreadLetters(canvas, i, liftedBounds, contentColor)
+                            if (swipe > 0f) {
+                                drawSwipeLetters(canvas, i, liftedBounds, contentColor, true, flickMorph.towardX, swipe)
+                            } else {
+                                drawSpreadLetters(canvas, i, liftedBounds, contentColor)
+                            }
                         } else {
-                            drawKeyLabel(canvas, i, liftedBounds, contentColor)
+                            if (swipe > 0f) {
+                                drawSwipeLetters(
+                                    canvas,
+                                    i,
+                                    liftedBounds,
+                                    contentColor,
+                                    false,
+                                    flickMorph.towardX,
+                                    swipe,
+                                )
+                            } else {
+                                drawKeyLabel(canvas, i, liftedBounds, contentColor)
+                            }
                         }
                         drawSyllableHint(canvas, syllable, drawBounds)
                     }
                 }
             }
+            if (labelLayer >= 0) canvas.restoreToCount(labelLayer)
             val hint = key.secondaryLabel
-            if (!hint.isNullOrEmpty()) drawHint(canvas, i, hint, drawBounds)
+            if (!hint.isNullOrEmpty()) {
+                if (flick > 0f) {
+                    drawFlickHint(canvas, i, hint, drawBounds, contentColor, flick)
+                } else {
+                    drawHint(canvas, i, hint, drawBounds)
+                }
+            }
         }
         drawKana12Preview(canvas)
         drawCursorCue(canvas)
@@ -955,6 +1020,8 @@ class KeyboardView(
         if (key.action.type != LayoutActionKind.BACKSPACE) return
         accessibleRepeatKey = index
         accessibleRepeatSteps = 0
+        accessibleRepeatToken++
+        accessibleRepeatComposing = composing()
         timers.post(accessibleRepeat)
     }
 
@@ -962,6 +1029,8 @@ class KeyboardView(
         if (accessibleRepeatKey < 0) return
         accessibleRepeatKey = -1
         accessibleRepeatSteps = 0
+        // Invalidates steps of this burst that are still queued.
+        accessibleRepeatToken++
         timers.removeCallbacks(accessibleRepeat)
     }
 
@@ -1023,7 +1092,7 @@ class KeyboardView(
         /** Sideways finger travel that turns a press on the space bar into a caret drag (dp). */
         const val CURSOR_START_DP = 14f
 
-        /** A nine-key digit flick: rise needed (dp), share of the key's height, and the way back (dp). */
+        /** A flick: travel needed (dp), share of the key's height, and the way back that disarms it (dp). */
         const val FLICK_DISTANCE_DP = 24f
         const val FLICK_KEY_SHARE = 0.4f
         const val FLICK_RETURN_DP = 10f
@@ -1033,9 +1102,6 @@ class KeyboardView(
 
         /** The preview grows this much beyond the keycap on each side (dp). */
         const val PREVIEW_GROW_DP = 4f
-
-        /** The merged-key swipe letter bubble (dp). */
-        const val SWIPE_PREVIEW_DP = 46f
 
         /** Finger travel that turns a tap into a slide (dp). */
         const val TOUCH_SLOP_DP = 8f

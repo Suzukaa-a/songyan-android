@@ -14,7 +14,6 @@ import app.songyan.ime.ime.KeyboardView.Companion.FLICK_RETURN_DP
 import app.songyan.ime.ime.KeyboardView.Companion.NO_POINTER
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_GROW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_MAX_CHARS
-import app.songyan.ime.ime.KeyboardView.Companion.SWIPE_PREVIEW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.TOUCH_SLOP_DP
 import app.songyan.ime.ime.KeyboardView.Press
 import app.songyan.ime.layout.LayoutAction
@@ -86,6 +85,7 @@ internal fun KeyboardView.handleDown(
         )
     val codes = press.snapshot.swipeCodes
     if (codes != null && codes.size > 1) press.tracker = LetterSwipeTracker(codes.size)
+    press.flickTarget = flickTarget(press.snapshot)
     pointers.put(pointerId, press)
     // Accepted press: the tick is synchronous with the touch, not with the release.
     feedback(press.snapshot)
@@ -120,15 +120,18 @@ internal fun KeyboardView.showPreview(press: Press) {
     val type = key.action.type
     if (type != LayoutActionKind.CODE && type != LayoutActionKind.LITERAL) return
     val label = labels.getOrNull(index)?.takeIf { it.isNotEmpty() && it.length <= PREVIEW_MAX_CHARS } ?: return
-    val slot = bounds.getOrNull(index) ?: return
+    layer.showPreview(label, previewBubble(index) ?: return)
+}
+
+/** Where key [index]'s preview bubble sits, in the popup layer's coordinates. */
+internal fun KeyboardView.previewBubble(index: Int): KeyBounds? {
+    val layer = popupLayer ?: return null
+    val slot = bounds.getOrNull(index) ?: return null
     updateLayerOffset()
     val cap = toLayer(capBounds(slot))
     val width = max(metrics.popupCellWidthDp * density, cap.right - cap.left + 2 * PREVIEW_GROW_DP * density)
     val height = metrics.popupCellHeightDp * density
-    layer.showPreview(
-        label,
-        PopupGeometry.preview(cap, width, height, layer.width.toFloat(), 0f, PopupGeometry.GAP_DP * density / 2),
-    )
+    return PopupGeometry.preview(cap, width, height, layer.width.toFloat(), 0f, PopupGeometry.GAP_DP * density / 2)
 }
 
 /** The drawn keycap inside its slot, in this view's coordinates. */
@@ -177,6 +180,7 @@ internal fun KeyboardView.rollOver() {
         if (popupKey >= 0 && popupOwner == press.pointerId) continue
         press.task?.let { timers.removeCallbacks(it) }
         fadeOut(press, SystemClock.uptimeMillis())
+        endFlick(press.key)
         pointers.removeAt(i)
         invalidateKey(press.key)
         if (press.snapshot.isBackspace) {
@@ -259,7 +263,7 @@ internal fun KeyboardView.beginLongPress(press: Press) {
             // The DOWN deleted once; the hold's first repeat lands now, then one per tick.
             BackspaceTrace.record(BackspaceTrace.Event.TOUCH_HOLD_START, composing())
             feedback(press.snapshot, FeedbackKind.REPEAT)
-            activate(press.snapshot)
+            repeatStep(press)
             scheduleRepeat(press, press.startedComposing)
         }
         press.snapshot.isSpace -> {
@@ -296,6 +300,17 @@ internal fun KeyboardView.beginLongPress(press: Press) {
     }
 }
 
+/**
+ * One step of a held Backspace: the delete is queued, and dropped if the hold ends (the finger
+ * lifts, is cancelled, or the composition it was deleting ends) before the queue reaches it.
+ */
+internal fun KeyboardView.repeatStep(press: Press) {
+    val startedComposing = press.startedComposing
+    onRepeatAction(press.snapshot.action) {
+        pointers.get(press.pointerId) === press && !(startedComposing && !composing())
+    }
+}
+
 /** One delete per repeat tick, bound to the same pointer and its captured action. */
 internal fun KeyboardView.scheduleRepeat(
     press: Press,
@@ -311,7 +326,7 @@ internal fun KeyboardView.scheduleRepeat(
                 }
                 BackspaceTrace.record(BackspaceTrace.Event.TOUCH_REPEAT, startedComposing)
                 feedback(press.snapshot, FeedbackKind.REPEAT)
-                activate(press.snapshot)
+                repeatStep(press)
                 timers.postDelayed(this, BACKSPACE_REPEAT_MS)
             }
         }
@@ -323,6 +338,7 @@ internal fun KeyboardView.openPopup(press: Press) {
     val options = press.snapshot.longPress
     if (options.isEmpty()) return
     val slot = bounds.getOrNull(press.key) ?: return
+    endFlick(press.key)
     popupKey = press.key
     popupOwner = press.pointerId
     showPopup(slot, options)
@@ -340,20 +356,24 @@ internal fun KeyboardView.showPopup(
 ) {
     popupOptions = options
     popupIndex = 0
-    popupLayer?.hidePreview(0)
     updateLayerOffset()
     val layer = popupLayer
     val layerWidth = layer?.width?.toFloat()?.takeIf { it > 0f } ?: (width.toFloat() + layerOffset[0])
+    val singleBubble = if (options.size == 1) previewBubble(popupKey) else null
     val geometry =
-        PopupGeometry.alternates(
-            anchor = toLayer(capBounds(slot)),
-            count = options.size,
-            cellWidth = metrics.popupCellWidthDp * density,
-            cellHeight = metrics.popupCellHeightDp * density,
-            layerWidth = layerWidth,
-            layerTop = 0f,
-            gap = PopupGeometry.GAP_DP * density,
-        )
+        if (singleBubble != null) {
+            PopupGeometry.Alternates(singleBubble, false)
+        } else {
+            PopupGeometry.alternates(
+                anchor = toLayer(capBounds(slot)),
+                count = options.size,
+                cellWidth = metrics.popupCellWidthDp * density,
+                cellHeight = metrics.popupCellHeightDp * density,
+                layerWidth = layerWidth,
+                layerTop = 0f,
+                gap = PopupGeometry.GAP_DP * density,
+            )
+        }
     popupBounds = fromLayer(geometry.bounds)
     popupMirrored = geometry.mirrored
     layer?.open(options.map { it.label }, geometry, 0)
@@ -369,25 +389,14 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         if (trackKana12Flick(press, x, y)) continue
         val tracker = press.tracker
         if (tracker != null) {
-            val changed =
-                tracker.update(
-                    ((x - press.startX) / density).toDouble(),
-                    ((y - press.startY) / density).toDouble(),
-                )
-            if (tracker.choice != null) press.moved = true
-            if (changed) updateSwipePreview(press)
+            mergedMove(press, tracker, x, y)
             continue
         }
         if (press.snapshot.railPosition >= 0) {
             dragRail(press, y)
             continue
         }
-        val flickDigit = flickDigit(press.snapshot)
-        if (flickDigit != null && popupKey < 0 && !press.held) {
-            flick(press, flickDigit, y)
-        } else if (flickDigit == null && popupKey < 0 && !press.held) {
-            flickOption(press, y)
-        }
+        if (popupKey < 0 && !press.held) flickMove(press, y)
         when {
             popupKey >= 0 && popupOwner == press.pointerId -> {
                 val next = popupSelection(press, x, y)
@@ -437,85 +446,51 @@ internal fun KeyboardView.dragRail(
     }
 }
 
-/** The digit a nine-key digit key types on an upward flick (its long press types it too), else null. */
+/** The digit a nine-key digit key shows in its corner and types on a flick (its long press types it too), else null. */
 internal fun KeyboardView.flickDigit(snapshot: KeyPressSnapshot): String? {
     if (!faces.phone || snapshot.action.type != LayoutActionKind.CODE) return null
     val digit = snapshot.action.value ?: return null
     return digit.takeIf { it.length == 1 && it[0] in '2'..'9' }
 }
 
-/**
- * The upward flick of a nine-key digit key (as on iOS): rising past [FLICK_DISTANCE_DP] or 40% of
- * the key arms the digit, shown above the key; coming back down disarms it and the release is a tap.
- */
-internal fun KeyboardView.flick(
-    press: Press,
-    digit: String,
-    y: Float,
-) {
-    val rise = press.startY - y
-    val box = bounds.getOrNull(press.key)
-    val threshold = max(FLICK_DISTANCE_DP * density, (box?.let { it.bottom - it.top } ?: 0f) * FLICK_KEY_SHARE)
-    flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, true, false))
-    if (!press.risen && rise >= threshold) {
-        press.risen = true
-        press.moved = true
-        popupLayer?.hidePreview(0)
-        showFlickPreview(press, digit)
-    } else if (press.risen && rise < FLICK_RETURN_DP * density) {
-        press.risen = false
-        press.moved = false
-        popupLayer?.hideSwipe()
-    }
-}
+/** What a flick on this key types under the current setting: its drawn hint, or nothing. */
+internal fun KeyboardView.flickTarget(snapshot: KeyPressSnapshot): LayoutOption? =
+    KeyFlick.target(snapshot, flickDirection, flickDigit(snapshot))
 
 /**
- * The vertical flick of a character key: up arms its first long-press option, down its second.
- * Same threshold and disarm rule as the digit flick; the release types the option's own action.
+ * The vertical flick of a character key, the configured way only. Past the touch slop the key
+ * turns into its hint as the finger travels ([FlickMorph]); reaching [FLICK_DISTANCE_DP] or 40% of
+ * the key arms it, and coming back within [FLICK_RETURN_DP] disarms it so the release is a tap.
  */
-internal fun KeyboardView.flickOption(
+internal fun KeyboardView.flickMove(
     press: Press,
     y: Float,
 ) {
     val rise = press.startY - y
     val box = bounds.getOrNull(press.key)
     val threshold = max(FLICK_DISTANCE_DP * density, (box?.let { it.bottom - it.top } ?: 0f) * FLICK_KEY_SHARE)
-    val back = FLICK_RETURN_DP * density
-    if (press.flickIndex >= 0) {
-        val armedUp = press.flickIndex == 0
-        if ((armedUp && rise < back) || (!armedUp && -rise < back)) {
-            press.flickIndex = -1
+    val target = press.flickTarget
+    if (target != null) {
+        val up = flickDirection != FlickDirection.DOWN
+        val travel = if (up) rise else -rise
+        if (!press.flickArmed && travel >= threshold) {
+            press.flickArmed = true
+            press.flickVoid = false
+            press.moved = true
+        } else if (press.flickArmed && travel < FLICK_RETURN_DP * density) {
+            press.flickArmed = false
             press.moved = false
-            popupLayer?.hideSwipe()
-        } else {
-            return
         }
+        val progress = if (press.flickArmed) 1f else KeyFlick.progress(travel, TOUCH_SLOP_DP * density, threshold)
+        showFlick(press, target.label, 0, if (up) -1 else 1, progress)
+        if (press.flickArmed) return
     }
-    val up =
-        when {
-            rise >= threshold -> true
-            -rise >= threshold -> false
-            else -> {
-                flickVoid(press, rise, threshold, false)
-                return
-            }
-        }
-    val option = flickTarget(press.snapshot, up)
-    if (option == null) {
-        flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, keyFlickEnabled, false))
-        return
-    }
-    press.flickVoid = false
-    press.flickIndex = if (up) 0 else 1
-    press.moved = true
-    popupLayer?.hidePreview(0)
-    showFlickPreview(press, option.label)
+    flickVoid(press, rise, threshold, KeyFlick.eligible(press.snapshot, flickDirection))
 }
 
 /**
  * A flick-capable key dragged up or down past [threshold] with nothing to type that way voids the
- * press, so the key under the lifted finger is not typed instead; coming back near the key undoes
- * it. The nine-key digit flick only types upward, so its downward flick voids too.
+ * press, so the key under the lifted finger is not typed instead; coming back near the key undoes it.
  */
 internal fun KeyboardView.flickVoid(
     press: Press,
@@ -523,9 +498,8 @@ internal fun KeyboardView.flickVoid(
     threshold: Float,
     eligible: Boolean,
 ) {
-    val digitUp = press.risen || (flickDigit(press.snapshot) != null && rise >= threshold)
     when {
-        eligible && !digitUp && abs(rise) >= threshold -> {
+        eligible && abs(rise) >= threshold -> {
             press.flickVoid = true
             press.moved = true
         }
@@ -536,38 +510,88 @@ internal fun KeyboardView.flickVoid(
     }
 }
 
-internal fun KeyboardView.flickTarget(
-    snapshot: KeyPressSnapshot,
-    up: Boolean,
-    merged: Boolean = false,
-): LayoutOption? = KeyFlick.option(snapshot, up, keyFlickEnabled, flickDigit(snapshot) != null, merged)
-
-internal fun KeyboardView.showFlickPreview(
+/**
+ * A merged key picks a letter sideways and flicks vertically, whichever way the finger first goes
+ * clearly: a swipe that locked ignores vertical travel, and a flick that armed or voided the press
+ * ignores sideways travel, as on any other key.
+ */
+internal fun KeyboardView.mergedMove(
     press: Press,
-    digit: String,
+    tracker: LetterSwipeTracker,
+    x: Float,
+    y: Float,
 ) {
-    val layer = popupLayer ?: return
-    val slot = bounds.getOrNull(press.key) ?: return
-    updateLayerOffset()
-    val size = SWIPE_PREVIEW_DP * density
-    val cap = toLayer(capBounds(slot))
-    layer.showSwipe(digit, PopupGeometry.preview(cap, size, size, layer.width.toFloat(), 0f, 4 * density))
+    val dx = (x - press.startX) / density
+    val dy = (y - press.startY) / density
+    if (!press.flickArmed && !press.flickVoid) {
+        tracker.update(dx.toDouble(), dy.toDouble())
+        if (tracker.choice != null) press.moved = true
+        if (tracker.isLocked || abs(dx) > abs(dy)) {
+            swipeMove(press, dx, dy)
+            return
+        }
+    }
+    if (popupKey < 0 && !press.held) flickMove(press, y)
 }
 
-/** The swipe letter of a merged key, above the key while the finger has picked a side. */
-internal fun KeyboardView.updateSwipePreview(press: Press) {
+/**
+ * A merged key's sideways swipe turns the key into the letter it will type, as a flick does: once
+ * the drag is mostly sideways it grows from the return distance to the lock distance, and is whole
+ * while a letter is picked. [dx] and [dy] are the finger's offset in dp.
+ */
+internal fun KeyboardView.swipeMove(
+    press: Press,
+    dx: Float,
+    dy: Float,
+) {
+    val tracker = press.tracker ?: return
+    val letters = swipeLetters.getOrNull(press.key) ?: return
+    val left = dx < 0
+    val label = letters.getOrNull(if (left) 0 else letters.lastIndex) ?: return
+    val progress =
+        when {
+            tracker.choice != null -> 1f
+            !tracker.isLocked && abs(dx) <= abs(dy) -> 0f
+            else ->
+                KeyFlick.progress(
+                    abs(dx),
+                    LetterSwipeTracker.RETURN_DISTANCE.toFloat(),
+                    LetterSwipeTracker.LOCK_DISTANCE.toFloat(),
+                )
+        }
+    showFlick(press, label, if (left) -1 else 1, 0, progress)
+}
+
+/**
+ * Moves [press]'s key toward [target], what the gesture will type; the finger goes ([towardX],
+ * [towardY]). The bubble above the finger follows the same progress; it is left out in an editor
+ * that must not echo what is typed.
+ */
+internal fun KeyboardView.showFlick(
+    press: Press,
+    target: String,
+    towardX: Int,
+    towardY: Int,
+    progress: Float,
+) {
+    val started = flickMorph.key == press.key
+    if (!started && progress <= 0f) return
+    flickMorph.set(press.key, towardX, towardY, progress, SystemClock.uptimeMillis(), ImeMotion.scale)
+    invalidateKey(press.key)
     val layer = popupLayer ?: return
-    val choice = press.tracker?.choice
-    val label = choice?.let { swipeLetters.getOrNull(press.key)?.getOrNull(it) }
-    val slot = bounds.getOrNull(press.key)
-    if (label == null || slot == null) {
-        layer.hideSwipe()
-        return
-    }
-    updateLayerOffset()
-    val size = SWIPE_PREVIEW_DP * density
-    val cap = toLayer(capBounds(slot))
-    layer.showSwipe(label, PopupGeometry.preview(cap, size, size, layer.width.toFloat(), 0f, 4 * density))
+    if (previewSuppressed) return
+    val bubble = previewBubble(press.key) ?: return
+    val from = if (keyPreviewEnabled) labels.getOrNull(press.key)?.takeIf { it.length <= PREVIEW_MAX_CHARS } else null
+    // A swipe that crosses to the other letter changes the target; the layer keeps its own label.
+    layer.showFlick(flickMorph, from, target, bubble)
+}
+
+/** Drops the flick drawing of [key], if it is the key being flicked. */
+internal fun KeyboardView.endFlick(key: Int) {
+    if (flickMorph.key != key) return
+    flickMorph.clear()
+    popupLayer?.hideFlick()
+    invalidateKey(key)
 }
 
 /**
@@ -647,11 +671,7 @@ internal fun KeyboardView.handleUp(
                     choice != null && codes != null -> {
                         codes.getOrNull(choice)?.let { onAction(LayoutAction(LayoutActionKind.CODE, it)) }
                     }
-                    press.flickIndex >= 0 ->
-                        press.snapshot.longPress
-                            .getOrNull(press.flickIndex)
-                            ?.let { onAction(it.action) }
-                    press.risen -> flickDigit(press.snapshot)?.let { onAction(LayoutAction.literal(it)) }
+                    press.flickArmed -> press.flickTarget?.let { onAction(it.action) }
                     press.railDragged -> Unit
                     press.flickVoid -> Unit
                     // Delete already acted at its DOWN (and on every repeat); the release adds nothing.
@@ -675,13 +695,13 @@ internal fun KeyboardView.handleUp(
             }
         }
         fadeOut(press, now)
+        endFlick(press.key)
         if (press.snapshot.isSpace) setCursorDragging(false)
         if (press.held || !press.moved || press.tracker?.choice != null || isKana12FlickPress(press)) {
             onReleaseFeedback()
         }
         pointers.remove(pointerId)
         popupLayer?.hidePreview(KeyMotion.PREVIEW_HOLD_MS)
-        popupLayer?.hideSwipe()
         invalidateKey(press.key)
     }
     performClick()
@@ -754,8 +774,9 @@ internal fun KeyboardView.cancelTouches() {
     }
     pointers.clear()
     clearPopup()
+    flickMorph.clear()
     popupLayer?.hidePreview(0)
-    popupLayer?.hideSwipe()
+    popupLayer?.hideFlick()
     setCursorDragging(false)
     stopAccessibilityRepeat()
     invalidate()

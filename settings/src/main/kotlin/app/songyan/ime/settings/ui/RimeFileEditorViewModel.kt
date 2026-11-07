@@ -23,17 +23,9 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /** Why a save did not happen; the text stays as typed. */
-sealed interface RimeFileSaveError {
-    /** The text is not valid; [line] is the line the reader stopped at, when known. */
-    data class Invalid(
-        val line: Int?,
-    ) : RimeFileSaveError
-
-    /** [text] is already localized, null for generic copy. */
-    data class Failed(
-        val text: String?,
-    ) : RimeFileSaveError
-}
+data class RimeFileSaveError(
+    val text: String?,
+)
 
 data class RimeFileEditorState(
     val loading: Boolean = true,
@@ -70,7 +62,7 @@ sealed interface EditorNotice {
 /**
  * The in-app editor for one of the user's configuration files (an input method's `xxx.custom.yaml`
  * or the shared `default.custom.yaml`). The file is read and saved by the app module off the main
- * thread; a save the reader refuses leaves the text as typed and names the line.
+ * thread; a refused save leaves the text as typed and preserves the original error.
  */
 class RimeFileEditorViewModel(
     private val gateway: RimeConfigGateway,
@@ -190,10 +182,8 @@ class RimeFileEditorViewModel(
             mutable.update {
                 when (result) {
                     RimeConfigSaveResult.Saved -> it.copy(saving = false, baseline = text, saved = it.text == text)
-                    is RimeConfigSaveResult.Invalid ->
-                        it.copy(saving = false, error = RimeFileSaveError.Invalid(result.line))
                     is RimeConfigSaveResult.Failure ->
-                        it.copy(saving = false, error = RimeFileSaveError.Failed(result.message))
+                        it.copy(saving = false, error = RimeFileSaveError(result.message))
                 }
             }
         }

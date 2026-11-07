@@ -201,11 +201,13 @@ internal class RimeConfigGatewayImpl(
                             }?.let { overrides.recordBase(name, it) }
                         RimeConfigSaveResult.Saved
                     }
-                    refusal.problem == UserConfigProblem.INVALID_YAML -> RimeConfigSaveResult.Invalid(refusal.line)
-                    else -> RimeConfigSaveResult.Failure(failureText(refusal))
+                    else ->
+                        RimeConfigSaveResult.Failure(
+                            message(refusal.problem.name, refusal.file, refusal.detail ?: refusal.message),
+                        )
                 }
-            } catch (_: IOException) {
-                RimeConfigSaveResult.Failure(null)
+            } catch (e: IOException) {
+                RimeConfigSaveResult.Failure(message(null, name, e.message))
             }
         }
 

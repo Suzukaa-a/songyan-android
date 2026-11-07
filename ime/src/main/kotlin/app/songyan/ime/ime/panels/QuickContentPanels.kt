@@ -15,15 +15,31 @@ import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.SymbolPageCategories
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
- * Owns the three quick-content panels of one keyboard instance and the actions they trigger.
+ * The view of a panel that has been opened at least once, or null while it has never opened.
+ *
+ * Editor, insert and refresh callbacks can arrive while a panel is closed, so they read this
+ * instead of the lazy value itself, which would build a panel the user never opened.
+ */
+private val <T> Lazy<T>.initializedValue: T?
+    get() = if (isInitialized()) value else null
+
+/**
+ * Owns the quick-content panels of one keyboard instance and the actions they trigger.
+ * UI-thread access lets each view wait until it opens, keeping unused panels out of keyboard startup.
  *
  * The keyboard only calls [openSymbols], [openPhrases], [openKeyboardSettings], [onTextInserted]
  * and [close]: this type shows the panel immediately, loads its lists off the main thread, keeps
  * them in sync with what the user inserts, and forwards actions to [Callbacks]. Everything the
  * editor needs (commit, repeat, date insert, mode switch, settings) stays behind those callbacks,
  * so no panel ever touches the engine or the input connection.
+ *
+ * A panel's view is built the first time it opens and then reused; a keyboard that never opens one
+ * does not pay for it, and only an opening may create one. The factory that creates them also
+ * records them, so appearance refresh and memory trimming reach every existing panel by themselves.
  *
  * The symbol panel stays open for multiple insertions; inserting a phrase, a clipboard entry or a
  * quick insert closes it. The settings panel stays open while settings change.
@@ -98,6 +114,16 @@ class QuickContentPanels(
             extend: Boolean,
         )
 
+        /**
+         * One step of a held edit-panel key. [stillHeld] is asked when the step runs: a hold that
+         * ended while the step was queued must not act. The default treats it as a plain key.
+         */
+        fun repeatEdit(
+            action: EditAction,
+            extend: Boolean,
+            stillHeld: () -> Boolean,
+        ) = edit(action, extend)
+
         /** A panel's search key: the keyboard takes over to type the query. */
         fun startSearch(kind: PanelSearchKind)
 
@@ -108,155 +134,203 @@ class QuickContentPanels(
         fun manageTools()
     }
 
-    private val symbols: SymbolPanelView =
-        SymbolPanelView(context).apply {
-            onOpenSettings = { openSettingsScreen(SettingsTarget.QUICK_CONTENT) }
-            onInsert = { text ->
-                callbacks.insert(text)
-                scope.launch {
-                    dataSource.recordRecentSymbol(text)
-                    refreshSymbols()
+    /** Every panel view created so far; appearance refresh and memory trimming walk it. */
+    private val initializedPanels = mutableListOf<QuickContentPanelView>()
+
+    /**
+     * A panel view created at most once, the first time its panel opens.
+     *
+     * The factory registers what it creates, so declaring a panel through it is all it takes to be
+     * reached by [refreshAppearance] and [trimMemory]; a new panel cannot be left out of them.
+     */
+    private fun <T : QuickContentPanelView> lazyPanel(factory: () -> T): Lazy<T> =
+        lazy(LazyThreadSafetyMode.NONE) {
+            val panel = factory()
+            initializedPanels += panel
+            panel
+        }
+
+    private val symbols: Lazy<SymbolPanelView> =
+        lazyPanel {
+            SymbolPanelView(context).apply {
+                onOpenSettings = { openSettingsScreen(SettingsTarget.QUICK_CONTENT) }
+                onInsert = { text ->
+                    callbacks.insert(text)
+                    scope.launch { recordRecentSymbol(text) }
                 }
-            }
-            onBackspace = { callbacks.deleteBackward() }
-            onSpace = { callbacks.insert(" ") }
-            onSearch = {
-                close()
-                callbacks.startSearch(PanelSearchKind.SYMBOLS)
+                onBackspace = { callbacks.deleteBackward() }
+                onSpace = { callbacks.insert(" ") }
+                onSearch = {
+                    close()
+                    callbacks.startSearch(PanelSearchKind.SYMBOLS)
+                }
             }
         }
 
-    private val symbolPage: SymbolPagePanelView =
-        SymbolPagePanelView(context).apply {
-            onInsert = { text ->
-                callbacks.insert(text)
-                scope.launch { dataSource.recordRecentSymbol(text) }
-                callbacks.symbolPageInserted()
+    private val symbolPage: Lazy<SymbolPagePanelView> =
+        lazyPanel {
+            SymbolPagePanelView(context).apply {
+                onInsert = { text ->
+                    callbacks.insert(text)
+                    // The page's own grid stays as it was: the recent row is rebuilt when it next opens.
+                    scope.launch { recordRecentSymbol(text) }
+                    callbacks.symbolPageInserted()
+                }
+                onAction = { action -> callbacks.symbolPageAction(action) }
+                isLocked = { callbacks.symbolPageLocked() }
             }
-            onAction = { action -> callbacks.symbolPageAction(action) }
-            isLocked = { callbacks.symbolPageLocked() }
         }
 
     /** The page being shown, and whether its next data push is the first (the page then opens on its first tab). */
     private var symbolPageRequest: SymbolPageRequest? = null
     private var symbolPageFresh = false
 
-    private val phrases: PhraseClipboardPanelView =
-        PhraseClipboardPanelView(context).apply {
-            onOpenSettings = { target -> openSettingsScreen(target) }
-            onRepeat = {
-                callbacks.repeatLastInput()
-                close()
-            }
-            onInsertDateFormat = { format ->
-                callbacks.insertDateFormat(format)
-                close()
-            }
-            onInsertText = { text ->
-                callbacks.insert(text)
-                close()
-            }
-            onDeleteClipboard = { text ->
-                scope.launch {
-                    dataSource.deleteClipboardEntry(text)
-                    refreshContent()
+    private val phrases: Lazy<PhraseClipboardPanelView> =
+        lazyPanel {
+            PhraseClipboardPanelView(context).apply {
+                onOpenSettings = { target -> openSettingsScreen(target) }
+                onRepeat = {
+                    callbacks.repeatLastInput()
+                    close()
                 }
-            }
-            onEnableClipboard = {
-                scope.launch {
-                    dataSource.setClipboardEnabled(true)
-                    refreshContent()
+                onInsertDateFormat = { format ->
+                    callbacks.insertDateFormat(format)
+                    close()
                 }
-            }
-            onSearch = {
-                close()
-                callbacks.startSearch(PanelSearchKind.PHRASES)
+                onInsertText = { text ->
+                    callbacks.insert(text)
+                    close()
+                }
+                onDeleteClipboard = { text ->
+                    scope.launch {
+                        dataSource.deleteClipboardEntry(text)
+                        refreshContent()
+                    }
+                }
+                onEnableClipboard = {
+                    scope.launch {
+                        dataSource.setClipboardEnabled(true)
+                        refreshContent()
+                    }
+                }
+                onSearch = {
+                    close()
+                    callbacks.startSearch(PanelSearchKind.PHRASES)
+                }
             }
         }
 
-    private val settings: KeyboardSettingsPanelView =
-        KeyboardSettingsPanelView(context).apply {
-            onChange = { change -> callbacks.applyQuickSetting(change) }
-            onChooseLayout = {
-                close()
-                callbacks.openLayoutChooser()
-            }
-            onOpenQuickContent = { openPhrases() }
-            onManageTools = {
-                // The tools page is a settings screen: the keyboard leaves before it opens.
-                close()
-                callbacks.manageTools()
-            }
-            onOpenSettings = {
-                close()
-                callbacks.openSettings()
+    private val settings: Lazy<KeyboardSettingsPanelView> =
+        lazyPanel {
+            KeyboardSettingsPanelView(context).apply {
+                onChange = { change -> callbacks.applyQuickSetting(change) }
+                onChooseLayout = {
+                    close()
+                    callbacks.openLayoutChooser()
+                }
+                onOpenQuickContent = { openPhrases() }
+                onManageTools = {
+                    // The tools page is a settings screen: the keyboard leaves before it opens.
+                    close()
+                    callbacks.manageTools()
+                }
+                onOpenSettings = {
+                    close()
+                    callbacks.openSettings()
+                }
             }
         }
 
     private val emojiSource = EmojiSource(context)
 
-    private val emoji: EmojiPanelView =
-        EmojiPanelView(context).apply {
-            onInsert = { text ->
-                callbacks.insert(text)
-                scope.launch {
-                    dataSource.recordRecentEmoji(text)
-                    updateEmojiRecents()
+    private val emoji: Lazy<EmojiPanelView> =
+        lazyPanel {
+            EmojiPanelView(context).apply {
+                onInsert = { text ->
+                    callbacks.insert(text)
+                    scope.launch {
+                        dataSource.recordRecentEmoji(text)
+                        updateEmojiRecents()
+                    }
                 }
+                onSearch = {
+                    close()
+                    callbacks.startSearch(PanelSearchKind.EMOJI)
+                }
+                onBackspace = { callbacks.deleteBackward() }
             }
-            onSearch = {
-                close()
-                callbacks.startSearch(PanelSearchKind.EMOJI)
-            }
-            onBackspace = { callbacks.deleteBackward() }
         }
 
-    private val edit: EditPanelView =
-        EditPanelView(context).apply {
-            onEdit = { action, extend -> callbacks.edit(action, extend) }
+    private val edit: Lazy<EditPanelView> =
+        lazyPanel {
+            EditPanelView(context).apply {
+                onEdit = { action, extend -> callbacks.edit(action, extend) }
+                onEditRepeated = { action, extend, stillHeld -> callbacks.repeatEdit(action, extend, stillHeld) }
+            }
         }
 
-    private val toolsPanel: KeyboardToolsPanel? =
-        if (tools != null && toolEditor != null) KeyboardToolsPanel(context) else null
+    /** The tools panel; null when this keyboard has no tools (no gateway or no editor side). */
+    private val toolsPanel: Lazy<KeyboardToolsPanel>? =
+        if (tools != null && toolEditor != null) lazyPanel { KeyboardToolsPanel(context) } else null
 
     /**
      * The tools panel's decisions. It captures and writes through [toolEditor], runs tools through
-     * [tools] on this panel's own scope, and never touches the engine.
+     * [tools] on this panel's own scope, and never touches the engine. Built with the panel.
      */
-    private val toolsSession: KeyboardToolsSession? =
-        toolsPanel?.let { view ->
-            KeyboardToolsSession(
-                scope = scope,
-                panel = view,
-                gateway = requireNotNull(tools),
-                editor = requireNotNull(toolEditor),
-                inputLanguage = inputLanguage,
-                insert = { text ->
-                    callbacks.insert(text)
-                    close()
-                },
-                manage = { callbacks.manageTools() },
-                present = { show(view) },
-                dismiss = { close() },
-            ).apply {
-                view.onChoice = { kind -> chooseSource(kind) }
-                view.onTool = { id -> run(id) }
-                view.onApp = { id, label -> runApp(id, label) }
-                view.onReplace = { replace() }
-                view.onInsert = { insertResult() }
-                view.onCopy = { copyResult() }
-                view.onManage = { manageTools() }
+    private val toolsSession: Lazy<KeyboardToolsSession>? =
+        toolsPanel?.let { panel ->
+            lazy(LazyThreadSafetyMode.NONE) {
+                val view = panel.value
+                KeyboardToolsSession(
+                    scope = scope,
+                    panel = view,
+                    gateway = requireNotNull(tools),
+                    editor = requireNotNull(toolEditor),
+                    inputLanguage = inputLanguage,
+                    insert = { text ->
+                        callbacks.insert(text)
+                        close()
+                    },
+                    manage = { callbacks.manageTools() },
+                    present = { show(view) },
+                    dismiss = { close() },
+                ).apply {
+                    view.onChoice = { kind -> chooseSource(kind) }
+                    view.onTool = { id -> run(id) }
+                    view.onApp = { id, label -> runApp(id, label) }
+                    view.onReplace = { replace() }
+                    view.onInsert = { insertResult() }
+                    view.onCopy = { copyResult() }
+                    view.onManage = { manageTools() }
+                }
             }
         }
 
+    /** The panel the keyboard last opened; null before the first one and after [close]. */
     private var shown: QuickContentPanelView? = null
     private var content: QuickContentPanelContent? = null
+
+    /**
+     * Puts full content reads and recent-list writes in one order.
+     *
+     * A read that started before an insertion could otherwise finish after it and push its older
+     * snapshot over the newer recent row, and two taps in a row could show their lists swapped.
+     */
+    private val contentMutex = Mutex()
+
+    /**
+     * The panel actually on screen. [shown] alone is stale after a panel closes itself through the
+     * host (its own close button, a bottom key), and a hidden panel must receive nothing.
+     */
+    private val visiblePanel: QuickContentPanelView?
+        get() = if (host.isShowing) shown else null
 
     /** Whether a panel currently covers the key area. */
     val isShowing: Boolean get() = host.isShowing
 
     fun openSymbols() {
-        show(symbols)
+        val panel = symbols.value
+        show(panel)
         content?.let { applyContent(it) }
         scope.launch { refreshContent() }
     }
@@ -265,63 +339,70 @@ class QuickContentPanels(
     fun openSymbolPage(request: SymbolPageRequest) {
         symbolPageRequest = request
         symbolPageFresh = true
-        symbolPage.enterLabel = request.enterLabel
-        content?.let { applySymbolPage(it) }
-        show(symbolPage)
+        val panel = symbolPage.value
+        panel.enterLabel = request.enterLabel
+        show(panel)
+        content?.let { applyContent(it) }
         scope.launch { refreshContent() }
     }
 
     /** Draws the page again (the lock changed). */
     fun refreshSymbolPage() {
-        symbolPage.invalidate()
+        symbolPage.initializedValue?.invalidate()
     }
 
     fun openPhrases() {
-        phrases.openSection(clipboard = false)
-        phrases.updateQuickInsert(callbacks.quickInsertState())
-        show(phrases)
+        val panel = phrases.value
+        panel.openSection(clipboard = false)
+        panel.updateQuickInsert(callbacks.quickInsertState())
+        show(panel)
         content?.let { applyContent(it) }
         scope.launch { refreshContent() }
     }
 
     /** The phrases and clipboard panel, on the clipboard history. */
     fun openClipboard() {
-        phrases.openSection(clipboard = true)
-        phrases.updateQuickInsert(callbacks.quickInsertState())
-        show(phrases)
+        val panel = phrases.value
+        panel.openSection(clipboard = true)
+        panel.updateQuickInsert(callbacks.quickInsertState())
+        show(panel)
         content?.let { applyContent(it) }
         scope.launch { refreshContent() }
     }
 
     /** The emoji panel: categories, recents, skin tones; the lists load off the main thread. */
     fun openEmoji() {
-        emoji.reset()
-        show(emoji)
+        val panel = emoji.value
+        panel.reset()
+        show(panel)
         scope.launch {
             val catalog = emojiSource.catalog(callbacks.emojiMetadataVersion())
             val recents = dataSource.loadRecentEmoji()
             // The panel may have been closed or replaced while the catalog loaded.
-            if (shown === emoji) {
-                emoji.lookup(catalog::find)
-                emoji.update(catalog.categories, recents)
+            if (visiblePanel === panel) {
+                panel.lookup(catalog::find)
+                panel.update(catalog.categories, recents)
             }
         }
     }
 
     /** The edit panel: arrows, select, select all, copy, cut, paste, undo. */
     fun openEdit() {
-        edit.reset()
-        show(edit)
+        val panel = edit.value
+        panel.reset()
+        show(panel)
     }
 
     /** The edit panel's live keys; ignored while another panel is showing. */
     fun updateEditAvailability(value: EditAvailability) {
-        if (shown === edit) edit.setAvailability(value)
+        val panel = edit.initializedValue ?: return
+        if (visiblePanel === panel) panel.setAvailability(value)
     }
 
     /** A new selection state from the editor, for Copy and Cut. */
     fun updateEditSelection(hasSelection: Boolean) {
-        if (shown === edit) edit.setSelection(hasSelection)
+        val panel = edit.initializedValue ?: return
+        if (visiblePanel === panel) panel.setSelection(hasSelection)
     }
 
     /** The emoji catalog for the editor's renderer, for the keyboard's own emoji search. */
@@ -331,12 +412,16 @@ class QuickContentPanels(
     suspend fun content(): QuickContentPanelContent = content ?: dataSource.loadContent()
 
     private suspend fun updateEmojiRecents() {
-        emoji.updateRecents(dataSource.loadRecentEmoji())
+        val recents = dataSource.loadRecentEmoji()
+        val panel = emoji.initializedValue ?: return
+        // The rows are loaded again when the panel opens; a closed panel keeps none of them.
+        if (visiblePanel === panel) panel.updateRecents(recents)
     }
 
     fun openKeyboardSettings() {
-        settings.update(callbacks.quickSettingsState())
-        show(settings)
+        val panel = settings.value
+        panel.update(callbacks.quickSettingsState())
+        show(panel)
     }
 
     /**
@@ -344,7 +429,7 @@ class QuickContentPanels(
      * runs that tool at once, which is what a pinned toolbar entry does.
      */
     fun openTools(pinnedToolId: String? = null): Boolean {
-        val session = toolsSession ?: return false
+        val session = toolsSession?.value ?: return false
         session.open(pinnedToolId)
         return true
     }
@@ -354,9 +439,10 @@ class QuickContentPanels(
      * the editor that handed the text out. False when nothing waits, so the key area is left alone.
      */
     fun openProcessTextResult(onlyIfToolsOpen: Boolean = false): Boolean {
-        if (onlyIfToolsOpen && (!host.isShowing || shown !== toolsPanel)) return false
-        if (host.isShowing && shown !== toolsPanel) return false
-        val session = toolsSession ?: return false
+        val toolsView = toolsPanel?.initializedValue
+        if (onlyIfToolsOpen && (!host.isShowing || toolsView == null || shown !== toolsView)) return false
+        if (host.isShowing && shown !== toolsView) return false
+        val session = toolsSession?.value ?: return false
         if (onlyIfToolsOpen) {
             session.open()
             return true
@@ -364,29 +450,31 @@ class QuickContentPanels(
         return session.openAnswer()
     }
 
-    /** A day/night or font-scale change reaches the panels too; they outlive one keyboard show. */
+    /** A day/night or font-scale change reaches the panels built so far too; they outlive one keyboard show. */
     fun refreshAppearance() {
-        symbols.refreshAppearance()
-        symbolPage.refreshAppearance()
-        phrases.refreshAppearance()
-        settings.refreshAppearance()
-        emoji.refreshAppearance()
-        edit.refreshAppearance()
-        toolsPanel?.refreshAppearance()
+        for (panel in initializedPanels) panel.refreshAppearance()
     }
 
     /**
      * Releases what hidden panels and the emoji catalog hold; each is loaded again when its panel
-     * opens. The open panel keeps its data, so trimming never changes what the user sees.
+     * opens. The open panel keeps its data, so trimming never changes what the user sees. A panel
+     * that never opened holds nothing and is not built just to be released.
      */
     fun trimMemory() {
         content = null
-        val panels =
-            listOfNotNull<QuickContentPanelView>(symbols, symbolPage, phrases, settings, emoji, edit, toolsPanel)
-        for (panel in panels) {
-            if (panel === shown) panel.releaseLayoutCache() else panel.releaseData()
+        val visible = visiblePanel
+        // A hidden page loads its categories again from the request of its own next opening.
+        val pagePanel = symbolPage.initializedValue
+        if (pagePanel == null || visible !== pagePanel) {
+            symbolPageRequest = null
+            symbolPageFresh = false
         }
-        if (shown !== emoji) emojiSource.release()
+        for (panel in initializedPanels) {
+            if (panel === visible) panel.releaseLayoutCache() else panel.releaseData()
+        }
+        // The catalog also serves the keyboard's own emoji search, so it goes unless the panel shows it.
+        val emojiPanel = emoji.initializedValue
+        if (emojiPanel == null || visible !== emojiPanel) emojiSource.release()
     }
 
     /** Leaves the keyboard surface and opens the app's settings, where the empty list is filled. */
@@ -397,18 +485,22 @@ class QuickContentPanels(
 
     /** After a commit the repeat preview changed while the settings panel may be open. */
     fun onTextInserted() {
-        if (shown === phrases) phrases.updateQuickInsert(callbacks.quickInsertState())
+        val panel = phrases.initializedValue ?: return
+        if (visiblePanel === panel) panel.updateQuickInsert(callbacks.quickInsertState())
     }
 
     /** Back inside a panel that has pages (an open choice of the settings panel); false when there is none. */
-    fun navigateBack(): Boolean = shown === settings && settings.backToGrid()
+    fun navigateBack(): Boolean {
+        val panel = settings.initializedValue ?: return false
+        return visiblePanel === panel && panel.backToGrid()
+    }
 
     /**
      * The panel surface went away without [close] (its own close button hides the host directly).
      * Nothing may update a panel that is no longer on screen, and no tool run may land in it.
      */
     fun onHostHidden() {
-        toolsSession?.closed()
+        toolsSession?.initializedValue?.closed()
         shown = null
     }
 
@@ -420,11 +512,11 @@ class QuickContentPanels(
         if (!host.isShowing) return false
         // Host hiding also reports onHostHidden synchronously; clear the session first so a
         // lifecycle close cannot let that callback consume a pending external answer.
-        toolsSession?.closed(preserveExternalAnswer)
+        toolsSession?.initializedValue?.closed(preserveExternalAnswer)
         host.hide()
         shown = null
-        edit.reset()
-        emoji.reset()
+        edit.initializedValue?.reset()
+        emoji.initializedValue?.reset()
         return true
     }
 
@@ -433,27 +525,55 @@ class QuickContentPanels(
         host.show(panel)
     }
 
-    private suspend fun refreshContent() {
-        val loaded = dataSource.loadContent()
-        content = loaded
-        applyContent(loaded)
-    }
+    private suspend fun refreshContent() =
+        contentMutex.withLock {
+            val loaded = dataSource.loadContent()
+            // Closed while loading: the panel is gone, so neither it nor the owner keeps the result.
+            if (visiblePanel == null) return@withLock
+            content = loaded
+            applyContent(loaded)
+        }
 
-    /** Re-reads the recent list after an insert; the cached snapshot still holds the old one. */
-    private suspend fun refreshSymbols() {
-        val loaded = dataSource.loadContent()
-        content = loaded
-        symbols.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
-    }
+    /**
+     * Records an inserted symbol and shows it in the open panel's recent row.
+     *
+     * The store answers with the list to show, so this updates that list only: reading the whole
+     * content again would reload the catalog, the phrases and the clipboard for one row.
+     */
+    private suspend fun recordRecentSymbol(text: String) =
+        contentMutex.withLock {
+            val recents = dataSource.recordRecentSymbol(text)
+            // Closed or trimmed meanwhile: the next opening loads everything, so nothing comes back here.
+            val panel = visiblePanel ?: return@withLock
+            content = content?.copy(recentSymbols = recents)
+            val symbolView = symbols.initializedValue
+            if (symbolView != null && panel === symbolView) symbolView.updateRecents(recents)
+        }
 
+    /**
+     * Pushes freshly loaded content to the panel on screen only. A hidden panel was released on trim
+     * and must not be filled back by a load that finishes after it closed.
+     */
     private fun applyContent(loaded: QuickContentPanelContent) {
-        symbols.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
-        applySymbolPage(loaded)
-        phrases.update(loaded.phrases.map { it.text }, loaded.clipboard, loaded.clipboardEnabled)
+        val panel = visiblePanel ?: return
+        val symbolView = symbols.initializedValue
+        val phraseView = phrases.initializedValue
+        when {
+            symbolView != null && panel === symbolView ->
+                symbolView.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
+            phraseView != null && panel === phraseView ->
+                phraseView.update(
+                    loaded.phrases.map { it.text },
+                    loaded.clipboard,
+                    loaded.clipboardEnabled,
+                )
+            panel === symbolPage.initializedValue -> applySymbolPage(loaded)
+        }
     }
 
     private fun applySymbolPage(loaded: QuickContentPanelContent) {
         val request = symbolPageRequest ?: return
+        val panel = symbolPage.initializedValue ?: return
         val categories =
             request.categories?.let { SymbolPageCategories.resolved(it, loaded.recentSymbols) }
                 ?: SymbolPageCategories.builtin(
@@ -491,7 +611,7 @@ class QuickContentPanels(
             } else {
                 categories
             }
-        symbolPage.update(titled, request.asciiMarks, reopen = symbolPageFresh)
+        panel.update(titled, request.asciiMarks, reopen = symbolPageFresh)
         symbolPageFresh = false
     }
 }

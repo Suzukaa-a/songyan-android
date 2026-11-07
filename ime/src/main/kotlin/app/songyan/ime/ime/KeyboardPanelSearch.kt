@@ -132,9 +132,9 @@ internal fun KeyboardController.endPanelSearch() {
     val ending = panelSearch ?: return
     enqueue {
         if (panelSearch !== ending) return@enqueue
-        // Keep callbacks routed to the query until its engine composition has been discarded.
-        val active = session.takeIf { ready }
-        if (active != null && !active.discardComposition()) return@enqueue
+        // Keep callbacks routed to the query until its engine composition has been discarded. A
+        // failed discard is reported by the session; the search still ends so Back always works.
+        session.takeIf { ready }?.discardComposition()
         panelSearch = null
         render()
         syncBackOwnership()

@@ -140,8 +140,7 @@ internal object KeyboardPages {
                     ?: BuiltPage(rowsPage(numericPreset(config), config, symbols = false))
             KeyboardPageKind.SYMBOLS ->
                 authoredPage(KeyboardPageKind.SYMBOLS, config)
-                    ?: everydayMarksPage(config)
-                    ?: BuiltPage(rowsPage(symbolsPreset(config), config, symbols = true))
+                    ?: symbolRowsPage(config)
             KeyboardPageKind.ENGLISH -> letters(config.copy(englishDirectInput = true))
         }
 
@@ -254,6 +253,27 @@ internal object KeyboardPages {
             mainLayoutIsPhoneKeypad = layout == KeyboardLayoutKind.PHONE9,
             ascii = ascii,
         )
+    }
+
+    private fun symbolRowsPage(config: Config): BuiltPage {
+        val extra = everydayMarksPage(config.copy(everydayMarksPage = true))
+        if (config.everydayMarksPage && extra != null) return extra
+        val shown = rowsPage(symbolsPreset(config), config, symbols = true)
+        if (extra == null) return BuiltPage(shown)
+        // Both symbol pages share the same switch; the second must not escape to the paired pad.
+        val rows =
+            shown.rows.dropLast(1).map { row ->
+                LayoutRow(
+                    row.keys.map { key ->
+                        if (key.action.pageSwitchTarget == LayoutPageTarget.NUMERIC) {
+                            key.copy(action = LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS))
+                        } else {
+                            key
+                        }
+                    },
+                )
+            }
+        return BuiltPage(shown.copy(rows = rows + shown.rows.last()))
     }
 
     /**
@@ -665,8 +685,8 @@ internal object KeyboardPages {
     /**
      * A letter key on the Chinese page carries the long-press marks of the input scheme: the
      * bundled rows show the script language's defaults (a: "、" or "，", s: "。" ...) in their
-     * corner, while a page the author owns keeps its own literals and hint untouched. A merged pair
-     * keeps its partner letters first.
+     * corner, while a page the author owns keeps its own literals and hint untouched. A merged
+     * pair (14 / 18 keys) gets the marks of the letter it stands for.
      */
     private fun chineseLetterKey(
         key: LayoutKey,
@@ -674,10 +694,11 @@ internal object KeyboardPages {
         nativeDefaults: Boolean,
     ): LayoutKey {
         val label = key.label
-        if (key.action.type != LayoutActionKind.CODE || label.length != 1 || !label[0].isLetter()) return key
+        if (key.action.type != LayoutActionKind.CODE || label.isEmpty() || !label.all { it.isLetter() }) return key
         // The layout is the provenance: only untouched bundled rows get the script language's
         // defaults; a page the author owns keeps its literals as written, an empty list included.
         if (!nativeDefaults) return key
+        if (label.length > 1) return mergedPairKey(key, config.inputLanguage)
         val literals = AlternateKeyPolicy.defaultLetterLiterals(label, config.inputLanguage)
         if (config.inputLanguage == InputLanguage.ZH_HANS) {
             // Simplified Chinese keeps the faces the bundled rows already describe, completed the
@@ -734,6 +755,23 @@ internal object KeyboardPages {
                 BuiltinLayouts.byId(builtin.wire) ?: return false
             }
         return main.id == bundled.id && main.rows == bundled.rows
+    }
+
+    /**
+     * A merged pair keeps its partner letter as the first alternate and adds its pair's marks
+     * after it. The corner shows the first mark unless the layout's own hint is one of the
+     * alternates: a flick types only an alternate the corner shows, so a decorative hint like
+     * the QW key's "1 !" gives way to "1".
+     */
+    private fun mergedPairKey(
+        key: LayoutKey,
+        language: InputLanguage,
+    ): LayoutKey {
+        val marks = AlternateKeyPolicy.mergedPairLiterals(key.label, language)
+        if (marks.isEmpty()) return key
+        val options = (key.longPress.orEmpty() + marks.map { option(it) }).distinctBy { it.label }
+        val hint = key.secondaryLabel?.takeIf { hint -> options.any { it.label == hint } } ?: marks.first()
+        return key.copy(secondaryLabel = hint, longPress = options)
     }
 
     private const val MERGED_KEY_HINT = "合并键"

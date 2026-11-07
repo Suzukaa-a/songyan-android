@@ -27,9 +27,7 @@ class RepositoryQuickContentPanelDataSource(
         )
     }
 
-    override suspend fun recordRecentSymbol(text: String) {
-        repository.recordRecentSymbol(text)
-    }
+    override suspend fun recordRecentSymbol(text: String): List<String> = repository.recordRecentSymbol(text)
 
     override suspend fun deleteClipboardEntry(text: String) {
         repository.deleteClipboardEntry(text)

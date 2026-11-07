@@ -367,6 +367,16 @@ class ImeMotionScaleTest {
     }
 
     @Test
+    fun theSystemScaledSpringKeepsItsPhysicalResponse() {
+        ImeMotion.scaleOverride = 1f
+        val normal = ImeMotion.revealSpring(1f).getAcceleration(0.25f, 0.5f)
+        for (scale in listOf(0.5f, 2f)) {
+            ImeMotion.scaleOverride = scale
+            assertEquals(normal, ImeMotion.revealSpring(1f).getAcceleration(0.25f, 0.5f), 0.001f)
+        }
+    }
+
+    @Test
     fun aDurationIsNeverZero() {
         ImeMotion.scaleOverride = 0f
         assertEquals(1L, ImeMotion.duration(0L))

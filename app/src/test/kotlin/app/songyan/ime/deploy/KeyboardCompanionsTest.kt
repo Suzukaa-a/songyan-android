@@ -82,7 +82,7 @@ class KeyboardCompanionsTest {
     @Test
     fun familiesWithoutCompactKeyboardsDoNotPublishCompanions() =
         runBlocking {
-            for (schemaId in listOf("cangjie5", "quick5", "bopomofo_tw", "jyut6ping3", "kagiroi")) {
+            for (schemaId in listOf("cangjie5", "quick5", "bopomofo_tw", "kagiroi")) {
                 val (sourceDir, workDir, engine) = setUp(name = schemaId)
                 File(engine.compiledDir, "$schemaId.schema.yaml").writeText(schemaText.replace(source, schemaId))
                 engine.projectionBytes = String(projection, Charsets.UTF_8).replace(source, schemaId).toByteArray()
@@ -91,6 +91,19 @@ class KeyboardCompanionsTest {
 
                 assertTrue(schemaId, EncodingAdapterRegistry.read(engine.compiledDir, setOf(schemaId)).isEmpty())
             }
+        }
+
+    @Test
+    fun aRomanizationSchemeFoldsLikePinyin() =
+        runBlocking {
+            val schemaId = "jyut6ping3"
+            val (sourceDir, workDir, engine) = setUp(name = schemaId)
+            File(engine.compiledDir, "$schemaId.schema.yaml").writeText(schemaText.replace(source, schemaId))
+            engine.projectionBytes = String(projection, Charsets.UTF_8).replace(source, schemaId).toByteArray()
+
+            KeyboardCompanions(sourceDir, workDir, listOf(schemaId)).generate(engine)
+
+            assertEquals(3, EncodingAdapterRegistry.read(engine.compiledDir, setOf(schemaId)).size)
         }
 
     @Test

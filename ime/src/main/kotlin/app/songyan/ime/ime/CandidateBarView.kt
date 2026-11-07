@@ -218,6 +218,7 @@ class CandidateBarView(
     internal val viewport = Rect()
     internal var down = -1
     internal var downControl = -1
+    internal var backspaceStartedComposing = false
 
     /** The revision of the list on screen; a replaced list gets a new one, a grown list keeps it. */
     internal val listRevision: Int get() = pages.revision
@@ -290,6 +291,12 @@ class CandidateBarView(
      */
     var onLoadMore: (revision: Int, page: Int) -> Unit = { _, _ -> }
     var onBackspace: () -> Unit = {}
+
+    /**
+     * One step of a held Delete. [stillHeld] is asked when the step runs, so a step queued by a
+     * touch that has since ended deletes nothing.
+     */
+    var onRepeatBackspace: (stillHeld: () -> Boolean) -> Unit = { onBackspace() }
     var onRetype: () -> Unit = {}
 
     /** Scroll offset in px: horizontal while collapsed, vertical while expanded; 0 is the start. */
@@ -389,6 +396,29 @@ class CandidateBarView(
     /** Delayed work runs on the main looper directly, so it also runs for a view not yet attached. */
     internal val ui = Handler(Looper.getMainLooper())
 
+    internal val canRepeatBackspace: Boolean
+        get() =
+            expanded &&
+                controls.getOrNull(downControl) == Control.BACKSPACE &&
+                (!backspaceStartedComposing || snapshot.isComposing)
+
+    /**
+     * The live hold on Delete, or null. Steps repeat through the owner's queue, so each one checks
+     * that its own hold is still this one when it runs.
+     */
+    internal var backspaceHold: Any? = null
+
+    internal val repeatBackspace =
+        object : Runnable {
+            override fun run() {
+                val hold = backspaceHold ?: return
+                val stillHeld = { hold === backspaceHold && canRepeatBackspace }
+                if (!stillHeld()) return
+                onRepeatBackspace(stillHeld)
+                if (stillHeld()) ui.postDelayed(this, KeyboardView.BACKSPACE_REPEAT_MS)
+            }
+        }
+
     internal val longPress =
         Runnable {
             val press = pressed ?: return@Runnable
@@ -418,9 +448,11 @@ class CandidateBarView(
             invalidate()
         }
 
-    /** Breaks a long-press delay if the finger moves before the popup opens. */
+    /** No hold survives the pointer leaving its control or the control disappearing. */
     internal fun cancelPress() {
+        backspaceHold = null
         ui.removeCallbacks(longPress)
+        ui.removeCallbacks(repeatBackspace)
         downReading = -1
         beginFade(down, downControl)
         pressed = null
@@ -439,6 +471,8 @@ class CandidateBarView(
         rebuild()
         val chosen = value.indexOfLast { it.selected }
         if (chosen >= 0) revealReading(chosen)
+        // The readings are items of this same virtual surface, after the chips in index order.
+        announceContentChanged()
         invalidate()
     }
 
@@ -465,6 +499,8 @@ class CandidateBarView(
         browsable: Boolean = true,
     ) {
         val highlightBefore = highlightedAbsolute
+        val listBefore = entrySource
+        val hadCandidates = snapshot.candidates.isNotEmpty()
         val replaced = pages.update(value, browsable)
         snapshot = value
         highlightedAbsolute = highlightOf(value)
@@ -484,6 +520,12 @@ class CandidateBarView(
         // The engine moved its highlight (a page or arrow key it handles): keep it in sight.
         if (!replaced && highlightedAbsolute != highlightBefore) revealHighlight()
         maybeLoadMore()
+        // The rows are virtual nodes addressed by item index: a replaced list describes different
+        // words under the same ids, and the appearance or disappearance of the controls changes the
+        // list as a whole. Only the reference from [pages] is consulted, not the labels themselves.
+        if (listBefore !== entrySource || hadCandidates != value.candidates.isNotEmpty()) {
+            announceContentChanged()
+        }
         invalidate()
     }
 
@@ -578,6 +620,9 @@ class CandidateBarView(
         scroll = 0f
         rebuild()
         maybeLoadMore()
+        // The engine's list was replaced under the same code (a deleted word): every index may now
+        // describe another word.
+        announceContentChanged()
         invalidate()
     }
 
@@ -644,7 +689,14 @@ class CandidateBarView(
         pages.abandonRead()
     }
 
-    /** The accessible surface changed wholesale (the strip replaced the chips, or went away). */
+    /**
+     * The accessible surface changed wholesale (the strip replaced the chips, or went away).
+     *
+     * The items are virtual nodes addressed by their index, and a replaced list reuses those indices
+     * for different words. The event must therefore report a subtree change: without that type the
+     * accessibility cache only refreshes the host node and keeps the cached children, so a screen
+     * reader reads the previous candidates at the same ids.
+     */
     internal fun announceContentChanged() {
         val manager = context.getSystemService(AccessibilityManager::class.java) ?: return
         if (!manager.isEnabled) return
@@ -652,10 +704,12 @@ class CandidateBarView(
         event.setSource(this)
         event.packageName = context.packageName
         event.className = javaClass.name
+        event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE
         parent?.requestSendAccessibilityEvent(this, event)
     }
 
     internal fun setExpanded(value: Boolean) {
+        if (expanded != value) cancelPress()
         expanded = value
         if (value) expandedHeightPx = expandedHeight()
         scroll = 0f
@@ -670,6 +724,9 @@ class CandidateBarView(
         animateReveal()
         onExpanded(value)
         maybeLoadMore()
+        // Expanded, this surface lists other controls and lays the cells out differently, while the
+        // item indices stay the same.
+        announceContentChanged()
     }
 
     /**
@@ -721,7 +778,7 @@ class CandidateBarView(
     }
 
     override fun onDetachedFromWindow() {
-        ui.removeCallbacks(longPress)
+        cancelPress()
         ui.removeCallbacks(clearNotice)
         revealAnimator?.cancel()
         revealAnimator = null
@@ -758,7 +815,7 @@ class CandidateBarView(
             if (atStart) startEdge.onAbsorb(speed) else endEdge.onAbsorb(speed)
             scroller.abortAnimation()
         }
-        maybeLoadMore()
+        maybeLoadMore(userBrowsing = true)
         postInvalidateOnAnimation()
     }
 
@@ -913,7 +970,7 @@ class CandidateBarView(
         pages.resume()
         scroller.abortAnimation()
         scrollTo(target)
-        maybeLoadMore()
+        maybeLoadMore(userBrowsing = true)
         sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_SCROLLED)
         return true
     }
@@ -957,6 +1014,9 @@ class CandidateBarView(
             MotionEvent.ACTION_DOWN -> return onDown(event)
             MotionEvent.ACTION_MOVE -> return onMove(event)
             MotionEvent.ACTION_UP -> return onUp(event)
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                if (controls.getOrNull(downControl) == Control.BACKSPACE) cancelPress()
+            }
             MotionEvent.ACTION_CANCEL -> {
                 cancelPress()
                 scrollingGesture = false
@@ -1005,9 +1065,10 @@ class CandidateBarView(
         const val FADE_MS = 150L
 
         /**
-         * The strip and the grid ask for the next engine page once the end of what was read is
-         * this many candidate rows (row heights) away: far enough that a read lands before an
-         * ordinary scroll gets there, near enough that a new code costs at most one read up front.
+         * A scroll, drag, fling or reveal asks for the next engine page while the end of what was
+         * read is this many candidate rows (row heights) short of the viewport's end: far enough
+         * that a read lands before an ordinary scroll gets there. The view's own refreshes never
+         * read off screen; they only fill a row that does not cover the viewport yet.
          */
         const val LOAD_AHEAD_ROWS = 2f
 

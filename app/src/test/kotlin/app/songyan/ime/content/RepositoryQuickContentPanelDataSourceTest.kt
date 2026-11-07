@@ -30,10 +30,22 @@ class RepositoryQuickContentPanelDataSourceTest {
             val repository = QuickContentRepository(Files.createTempDirectory("panels-recent").toFile())
             val source = RepositoryQuickContentPanelDataSource(repository)
             repository.refresh()
-            source.recordRecentSymbol("①")
-            source.recordRecentSymbol("②")
+            assertEquals(listOf("①"), source.recordRecentSymbol("①"))
+            assertEquals(listOf("②", "①"), source.recordRecentSymbol("②"))
             assertEquals(listOf("②", "①"), source.loadContent().recentSymbols)
             source.clearRecentSymbols()
+            assertEquals(emptyList<String>(), source.loadContent().recentSymbols)
+        }
+
+    @Test
+    fun anInsertThatCannotBeSavedStillAnswersWithTheListToShow() =
+        runBlocking {
+            val repository = QuickContentRepository(Files.createTempDirectory("panels-oversize").toFile())
+            val source = RepositoryQuickContentPanelDataSource(repository)
+            repository.refresh()
+            // Over the store's byte budget, so the file is refused; the use still happened.
+            val oversize = "①".repeat(8 * 1024)
+            assertEquals(listOf(oversize), source.recordRecentSymbol(oversize))
             assertEquals(emptyList<String>(), source.loadContent().recentSymbols)
         }
 

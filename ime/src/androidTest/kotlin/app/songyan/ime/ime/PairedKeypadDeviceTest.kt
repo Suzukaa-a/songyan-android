@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -110,6 +111,37 @@ class PairedKeypadDeviceTest {
             assertThePadIsDrawn(host)
             host.tap("5")
             host.assertText("5")
+        }
+
+    @Test
+    fun theRowSymbolPagesCycleWhenPairedWithTheNumericKeypad() =
+        withPairedKeypad { host ->
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(host.string(R.string.ime_open_symbols_page))
+            val firstPage = host.labelsOf(KeyboardView::class.java)
+            repeat(4) { turn ->
+                host.main {
+                    val view = host.find(KeyboardView::class.java)
+                    val thirdRow =
+                        view.bounds
+                            .map { it.top }
+                            .distinct()
+                            .sorted()[2]
+                    val switch = view.bounds.indexOfFirst { it.top == thirdRow }
+                    assertTrue(
+                        view.accessibilityNodeProvider.performAction(switch, AccessibilityNodeInfo.ACTION_CLICK, null),
+                    )
+                }
+                host.awaitIdle()
+                val current = host.labelsOf(KeyboardView::class.java)
+                if (turn % 2 == 0) {
+                    assertTrue("the other symbol page is shown", firstPage != current)
+                } else {
+                    assertEquals("the switch returns to the first symbol page", firstPage, current)
+                }
+            }
+            host.tap(host.string(R.string.ime_return_to_letters))
+            assertTrue("typing resumes on letters", "a" in host.labelsOf(KeyboardView::class.java))
         }
 
     @Test

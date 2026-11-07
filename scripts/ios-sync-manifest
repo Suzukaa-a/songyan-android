@@ -37,6 +37,7 @@ Tools/Localization/zh-Hant-overrides.json scripts/zh-Hant-overrides.json
 Tests/EngineFixtures/Builtin/ core/rime/src/androidTest/assets/engine-fixtures/builtin/
 Tests/EngineFixtures/Traditional/ core/rime/src/androidTest/assets/engine-fixtures/traditional/
 Tests/EngineFixtures/Japanese/ core/rime/src/androidTest/assets/engine-fixtures/japanese/
+Tests/EngineFixtures/Prediction/ ime/src/androidTest/assets/engine-fixtures/prediction/
 Tests/Fixtures/GrammarRanking/ core/rime/src/androidTest/assets/engine-fixtures/grammar-ranking/
 Tools/BuildRimeIOS/testdata/generic-ambiguity/ core/rime/src/androidTest/assets/engine-fixtures/ambiguity/
 # --- Package manager fixtures (cross-checked schema projections) ----------

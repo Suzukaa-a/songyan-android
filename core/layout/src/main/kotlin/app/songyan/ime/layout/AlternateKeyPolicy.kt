@@ -97,6 +97,41 @@ object AlternateKeyPolicy {
     }
 
     /**
+     * The marks of a builtin merged pair key ("df"), empty for any other group. Each pair borrows
+     * one letter's 26-key marks, picked so the most used Chinese marks sit on the home row of both
+     * merged layouts.
+     */
+    fun mergedPairLiterals(
+        pair: String,
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
+    ): List<String> =
+        MERGED_PAIR_MARKS[pair.lowercase()]?.let { defaultLetterLiterals(it, inputLanguage) } ?: emptyList()
+
+    private val MERGED_PAIR_MARKS: Map<String, String> =
+        mapOf(
+            // 14 keys: qw er ty ui op / as df gh jk l / zx cv bn m
+            "qw" to "q",
+            "er" to "e",
+            "ty" to "t",
+            "ui" to "u",
+            "op" to "o",
+            "as" to "a",
+            "df" to "s",
+            "gh" to "d",
+            "jk" to "f",
+            "zx" to "z",
+            "cv" to "c",
+            "bn" to "b",
+            // 18 keys: q we rt y u io p / a sd fg h jk l / z xc v bn m
+            "we" to "w",
+            "rt" to "r",
+            "io" to "i",
+            "sd" to "s",
+            "fg" to "d",
+            "xc" to "x",
+        )
+
+    /**
      * Each full-width mark is paired with the ASCII key a desktop Chinese IME types it from, so
      * English mode and ASCII fields still show a distinct mark; no two letters offer the same symbol.
      */

@@ -133,9 +133,16 @@ class KeyboardController(
     /** The system asked for the keyboard to draw its own input method switcher (API 35+). */
     internal var customSwitcherRequested = false
 
-    /** English direct input: the editor forces ASCII, the field is private, or the session is in English mode. */
+    /**
+     * English direct input: the editor forces ASCII, the field is private, the session is in English
+     * mode, or Rime owns ASCII mode itself (a schema switch or a key binding). The last one still
+     * sends keys to the engine; the front end only follows it for the faces and the marks.
+     */
     internal val englishInput: Boolean
-        get() = policy.ascii || privateDirectInput || session.takeIf { ready }?.mode == InputMode.ENGLISH
+        get() =
+            policy.ascii ||
+                privateDirectInput ||
+                session.takeIf { ready }?.let { it.mode == InputMode.ENGLISH || it.snapshot.isAsciiMode } == true
 
     /**
      * Whether the marks the open page types and shows are ASCII now: the 中/英 branch the user
@@ -272,6 +279,13 @@ class KeyboardController(
 
     /** The page above the letter keyboard; null is the letter page itself. */
     internal var page: KeyboardPageKind? = null
+        set(value) {
+            field = value
+            typedOnSymbolPage = false
+        }
+
+    /** A delivered digit or symbol arms the next space to return to letters for this visit. */
+    internal var typedOnSymbolPage = false
 
     /** A phone field's pad is showing its page of the other dial characters. */
     internal var phoneSymbols = false
@@ -424,6 +438,13 @@ class KeyboardController(
      */
     internal val kana12 = Kana12BindingState()
 
+    /**
+     * Bumped when an input finishes: the presses still queued for it were meant for that field and
+     * must not type into the field that replaces it. A restart of the same field does not finish its
+     * input (it only starts it again), so the epoch stays and its queued presses still arrive.
+     */
+    private var keyEpoch = 0
+
     private val worker =
         scope.launch {
             for ((token, operation) in operations) {
@@ -532,6 +553,18 @@ class KeyboardController(
                 }
             }
 
+            override fun repeatEdit(
+                action: EditAction,
+                extend: Boolean,
+                stillHeld: () -> Boolean,
+            ) {
+                enqueueRepeat(stillHeld) {
+                    if (confirmComposition()) callbacks.editAction(action, extend, !policy.privateInput)
+                    refreshEditPanel()
+                    render()
+                }
+            }
+
             override fun startSearch(kind: PanelSearchKind) = beginPanelSearch(kind)
 
             override fun emojiMetadataVersion(): Int = policy.emojiMetaVersion
@@ -577,7 +610,8 @@ class KeyboardController(
     }
 
     /**
-     * Key presses outlive an input restart: they belong to whatever editor is current when they run.
+     * Key presses outlive an input restart, but not the end of their input connection: they belong
+     * to whatever editor is current when they run.
      *
      * [pressAt] is the monotonic press time, read here on the UI thread: a key whose effect depends
      * on how fast the user pressed it (the kana tap cycle) must not measure the queue delay.
@@ -595,8 +629,30 @@ class KeyboardController(
             }
             return
         }
-        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, pressAt) })
+        val epoch = keyEpoch
+        operations.trySend(ANY_GENERATION to { dispatchOrHold(action, t9FirstKey, pressAt, epoch) })
     }
+
+    /**
+     * Queues one step of a held control. [stillHeld] is asked on the main thread when the step is
+     * about to run: a release, a cancel or a second finger may end the hold while its steps are
+     * still queued, and such a step must do nothing. Unlike [enqueueKey] a step is never kept for a
+     * session that is still being prepared: a hold cannot outlive the session it was made in.
+     */
+    internal fun enqueueRepeat(
+        stillHeld: () -> Boolean,
+        step: suspend () -> Unit,
+    ) {
+        if (retired || engineNotice != null) return
+        val epoch = keyEpoch
+        val stepOp: suspend () -> Unit = {
+            if (!retired && ready && epoch == keyEpoch && stillHeld()) step()
+        }
+        operations.trySend(ANY_GENERATION to stepOp)
+    }
+
+    /** Engine replies cannot authorize writes after the owning input generation ends. */
+    internal fun fieldStillCurrent(): Boolean = dispatchGeneration == generation && !retired && !preparing
 
     /**
      * Returns once every press and operation queued so far has run. An engine swap waits for this
@@ -614,7 +670,9 @@ class KeyboardController(
         action: LayoutAction,
         t9FirstKey: Boolean,
         pressAt: Double,
+        epoch: Int,
     ) {
+        if (epoch != keyEpoch) return
         if (!ready && pendingBackend != null) {
             val held = heldKeys.size < MAX_HELD_KEYS
             if (held) heldKeys.addLast(action to t9FirstKey)
@@ -632,10 +690,11 @@ class KeyboardController(
         dispatch(action, t9FirstKey, pressAt)
     }
 
-    /** Confirms the composition through the engine before a quick insert; true when nothing remains. */
+    /** Engine confirmation must not authorize a follow-up write to a replacement editor. */
     private suspend fun confirmComposition(): Boolean {
         val active = session.takeIf { ready } ?: return true
-        return active.commitComposition()
+        val committed = active.commitComposition()
+        return committed && fieldStillCurrent()
     }
 
     /**
@@ -831,6 +890,8 @@ class KeyboardController(
     fun finishInput() {
         inlineSuggestions.clear()
         generation++
+        keyEpoch++
+        heldKeys.clear()
         candidates.abandonLoad()
         ready = false
         resetEnglishWord()
@@ -1087,7 +1148,7 @@ class KeyboardController(
 
     internal fun openKeyboardMenu() {
         if (retired || menuOpen) return
-        // Opened from the settings panel, whose exit would otherwise bring the keys back over the menu.
+        // Finish the settings panel's visual exit before the menu replaces the same surface.
         panels?.settle()
         syncMenu()
         refreshInputMethodOptions()

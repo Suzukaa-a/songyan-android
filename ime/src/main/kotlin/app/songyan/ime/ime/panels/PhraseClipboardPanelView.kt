@@ -115,6 +115,20 @@ class PhraseClipboardPanelView(
         announceItemsChanged()
     }
 
+    /**
+     * A hidden panel holds neither list nor the quick rows; an [update] fills them again. The
+     * clipboard setting stays, and a section chosen before the next opening is still applied, so
+     * the panel comes back where it was left.
+     */
+    override fun releaseData() {
+        super.releaseData()
+        phrases = emptyList()
+        clipboard = emptyList()
+        quickRows = emptyList()
+        updateRail(emptyList())
+        invalidate()
+    }
+
     /** The section the next opening shows; applied as soon as the rail exists. */
     private var wantedSection: Section? = null
 

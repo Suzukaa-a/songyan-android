@@ -108,18 +108,23 @@ internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardRes
     KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters)
 
 internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
-    preferredLayout = kind
-    visitingLayout = false
-    page = null
-    preferences?.setLayoutId(kind.wire)
     val active = session
-    if (active != null && ready) {
-        active.selectLayout(kind, preferredSchema)
-        syncSelection(active)
-        persistSelection(active)
-        updateSwipe(active)
-    } else {
-        layoutKind = kind
+    val accepted =
+        if (active != null && ready) {
+            active.selectLayout(kind, preferredSchema)
+            syncSelection(active)
+            updateSwipe(active)
+            active.layout == kind && active.selectedSchemaID == preferredSchema
+        } else {
+            layoutKind = kind
+            true
+        }
+    // The next startup must use an accepted pairing, even when the menu offered an unsupported one.
+    if (accepted) {
+        preferredLayout = kind
+        visitingLayout = false
+        page = null
+        preferences?.setLayoutId(kind.wire)
     }
     syncMenu()
     closeKeyboardMenu()
@@ -142,17 +147,21 @@ internal fun KeyboardController.jumpableLayouts(): Set<KeyboardLayoutKind> {
 
 internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (target.isBlank()) return
-    preferredSchema = target
-    page = null
-    preferences?.setActiveSchemaId(target)
     val active = session
-    if (active != null && ready) {
-        active.selectLayout(layoutKind, target)
-        syncSelection(active)
-        persistSelection(active)
-        updateSwipe(active)
-    } else {
-        schemaId = target
+    val accepted =
+        if (active != null && ready) {
+            active.selectLayout(layoutKind, target)
+            syncSelection(active)
+            updateSwipe(active)
+            active.selectedSchemaID == target
+        } else {
+            schemaId = target
+            true
+        }
+    if (accepted) {
+        preferredSchema = target
+        page = null
+        preferences?.setActiveSchemaId(target)
     }
     syncMenu()
     closeKeyboardMenu()

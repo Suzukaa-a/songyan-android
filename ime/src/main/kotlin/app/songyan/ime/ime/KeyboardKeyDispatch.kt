@@ -11,14 +11,26 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
 import app.songyan.ime.layout.LayoutPageJump
 import app.songyan.ime.layout.LayoutPageTarget
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 internal suspend fun KeyboardController.toggleInputMode(active: InputSession?) {
     if (active == null || policy.ascii || privateDirectInput) return
-    val target = if (active.mode == InputMode.ENGLISH) InputMode.CHINESE else InputMode.ENGLISH
-    active.setMode(target)
-    active.setAutomaticShift(automaticShift)
-    if (target == InputMode.ENGLISH) callbacks.automaticCapsWanted()
+    if (active.mode == InputMode.CHINESE && active.snapshot.isAsciiMode) {
+        // The engine owns ASCII mode (a schema switch or a key binding put it there): turn it off.
+        try {
+            active.setOption("ascii_mode", false)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            callbacks.error(error)
+        }
+    } else {
+        val target = if (active.mode == InputMode.ENGLISH) InputMode.CHINESE else InputMode.ENGLISH
+        active.setMode(target)
+        active.setAutomaticShift(automaticShift)
+        if (target == InputMode.ENGLISH) callbacks.automaticCapsWanted()
+    }
     symbolMarksOverride = null
     updateSwipe(active)
     resetEnglishWord()
@@ -48,8 +60,8 @@ internal fun KeyboardController.openPage(target: LayoutPageTarget?) {
         return
     }
     if (target == LayoutPageTarget.SYMBOLS && page == KeyboardPageKind.SYMBOLS) {
-        // The switch on the symbol page's extra page of everyday marks turns to the usual rows.
-        everydayMarksPage = false
+        // The two row symbol pages share this switch in both directions.
+        everydayMarksPage = !everydayMarksPage
         render()
         return
     }
@@ -95,7 +107,7 @@ internal suspend fun KeyboardController.jumpToPage(jump: LayoutPageJump?) {
  * so a jump key on their symbol page and 符 on the visited page take them round in a loop. False when
  * not visiting, or when [target] is the visited layout's own page kind the user is already on.
  */
-private suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget): Boolean {
+internal suspend fun KeyboardController.endLayoutVisit(target: LayoutPageTarget): Boolean {
     if (!visitingLayout) return false
     if (target == LayoutPageTarget.NUMERIC && page == KeyboardPageKind.NUMERIC) return false
     val active = session.takeIf { ready } ?: return false
@@ -173,8 +185,11 @@ internal suspend fun KeyboardController.dispatch(
                         )
                     }
                 } else {
-                    BackspaceTrace.record(BackspaceTrace.Event.EDITOR_DELETE)
+                    // A failed dismissal is reported by the session and must not swallow the delete;
+                    // only an editor that changed meanwhile stops it.
                     active?.dismissPrediction()
+                    if (!fieldStillCurrent()) return
+                    BackspaceTrace.record(BackspaceTrace.Event.EDITOR_DELETE)
                     callbacks.delete()
                     noteBackspaceForEnglishWord()
                 }
@@ -184,6 +199,8 @@ internal suspend fun KeyboardController.dispatch(
                 ) {
                     active.tap(KeyAction.Enter)
                 } else {
+                    active?.dismissPrediction()
+                    if (!fieldStillCurrent()) return
                     callbacks.action()
                 }
             LayoutActionKind.SPACE ->
@@ -214,12 +231,14 @@ internal suspend fun KeyboardController.dispatch(
                     handleT9FirstKey()
                     return
                 }
+                val delivered = deliveredCommits
                 if (active != null) {
                     active.tap(KeyAction.Literal(text))
                 } else {
                     callbacks.commit(text, selectingCandidate)
                 }
-                // The row-shaped 123 and symbol pages keep their place, as Gboard's do: marks and
+                if (page != null && deliveredCommits != delivered) typedOnSymbolPage = true
+                // The row-shaped 123 and symbol pages keep their place until space: marks and
                 // digits come in runs. Only the categorised symbol panel returns after one symbol
                 // unless locked.
             }

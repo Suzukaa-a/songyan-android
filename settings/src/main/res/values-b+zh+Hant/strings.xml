@@ -144,8 +144,11 @@
     <string name="options_one_hand_left">靠左</string>
     <string name="options_one_hand_right">靠右</string>
     <string name="options_key_feel_section">按鍵手感</string>
-    <string name="options_key_flick_title">上下滑輸入數字與符號</string>
-    <string name="options_key_flick_body">上滑輸入鍵上的第一個符號，下滑輸入第二個。</string>
+    <string name="options_key_flick_title">滑動輸入角上的字元</string>
+    <string name="options_key_flick_body">按鍵右上角的小字，滑一下就能輸入。</string>
+    <string name="options_key_flick_off">關閉</string>
+    <string name="options_key_flick_up">上滑</string>
+    <string name="options_key_flick_down">下滑</string>
     <string name="options_double_space_title">雙擊空格輸入句號</string>
     <string name="options_double_space_body">輸入英文單詞後，連按兩次空格會變成句號加空格。</string>
     <string name="options_key_preview_title">按鍵預覽</string>

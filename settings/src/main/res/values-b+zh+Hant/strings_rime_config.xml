@@ -35,8 +35,6 @@
     <string name="rime_editor_more">更多選項</string>
     <string name="rime_editor_open_elsewhere">用其他應用開啟</string>
     <string name="rime_editor_saved">已儲存。應用更改後生效。</string>
-    <string name="rime_editor_invalid_line">第 %1$d 行格式有誤，沒有儲存。</string>
-    <string name="rime_editor_invalid">格式有誤，沒有儲存。</string>
     <string name="rime_editor_load_failed">沒能開啟這個檔案。</string>
     <string name="rime_editor_discard_title">放棄修改？</string>
     <string name="rime_editor_discard_body">你改的內容還沒有儲存。</string>

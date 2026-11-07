@@ -47,9 +47,11 @@ class KeyboardFeelDeviceTest {
     fun theKeyFlickPreferenceReachesAShownKeyboard() =
         withHost { host ->
             host.start()
-            assertTrue(host.main2 { host.controller.keyboard.keyFlickEnabled })
-            host.keyFlickFlow.value = false
-            assertTrue(host.await { !host.main2 { host.controller.keyboard.keyFlickEnabled } })
+            assertTrue(host.main2 { host.controller.keyboard.flickDirection == FlickDirection.UP })
+            host.keyFlickFlow.value = FlickDirection.DOWN.wire
+            assertTrue(host.await { host.main2 { host.controller.keyboard.flickDirection == FlickDirection.DOWN } })
+            host.keyFlickFlow.value = FlickDirection.OFF.wire
+            assertTrue(host.await { host.main2 { host.controller.keyboard.flickDirection == FlickDirection.OFF } })
         }
 
     @Test

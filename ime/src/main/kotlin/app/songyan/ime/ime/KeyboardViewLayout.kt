@@ -817,6 +817,7 @@ internal fun KeyboardView.keySnapshot(index: Int): KeyPressSnapshot =
         railApplied = index in railIndices && railPosition(index) < railSelectedCount,
         longPress = keys[index].longPress.orEmpty(),
         swipeCodes = swipeCodes.getOrNull(index),
+        hint = keys[index].secondaryLabel,
     )
 
 /** Solves [KeyboardView.labelInkX]/[KeyboardView.labelInkY] for key [i] at its fitted size. */

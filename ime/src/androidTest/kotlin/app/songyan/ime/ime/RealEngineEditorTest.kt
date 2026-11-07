@@ -26,12 +26,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.content.CommonPhrase
 import app.songyan.ime.content.SymbolCatalog
+import app.songyan.ime.ime.panels.EditPanelView
 import app.songyan.ime.ime.panels.PhraseClipboardPanelView
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -43,6 +46,7 @@ import app.songyan.ime.layout.ShuangpinHintPresets
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -218,7 +222,7 @@ class RealEngineEditorTest {
                     .first()
                     .text,
             )
-            host.longPressCandidate("鱼我")
+            host.longPressBarItem("鱼我")
             // The hold's release left the word's menu, not the character strip.
             assertEquals(listOf(host.string(R.string.ime_candidate_delete_word)), host.barLabels())
             host.main {
@@ -261,7 +265,7 @@ class RealEngineEditorTest {
                     .candidates
                     .first()
                     .text
-            host.longPressCandidate(first)
+            host.longPressBarItem(first)
             host.tap(host.string(R.string.ime_candidate_delete_word), bar = true)
             host.awaitIdle()
             assertEquals(
@@ -282,7 +286,7 @@ class RealEngineEditorTest {
             for (key in "nihao") host.tap(key.toString())
             host.awaitComposing()
             val before = host.text()
-            host.longPressCandidate("你好")
+            host.longPressBarItem("你好")
             // Whatever is left on screen after the release, touching the candidate again must only
             // close it: no character of the long-pressed word is typed.
             host.tapBarAt("你好")
@@ -320,6 +324,40 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun theExpandButtonRespondsToTheFirstTapDuringCandidateInertia() =
+        withHost(fontScale = 2f) { host ->
+            // Keep the five real candidates wider than the row even when font scaling is capped.
+            host.start(width = (200 * host.density).toInt())
+            for (key in "ji") host.tap(key.toString())
+            host.awaitComposing()
+            val expected =
+                host.backend
+                    .currentSnapshot()
+                    .candidates
+                    .first()
+                    .text
+            host.flingBarThenTap(expected)
+            host.awaitField("ji")
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("j")
+            host.tap("i")
+            host.awaitIdle()
+            host.flingBarThenTap(host.string(R.string.ime_expand))
+            host.awaitIdle()
+            assertTrue(
+                "the first tap expands the moving candidate row",
+                host.barLabels().contains(host.string(R.string.ime_candidate_back)),
+            )
+            assertEquals("ji", host.text())
+            host.tap(host.string(R.string.ime_candidate_back), bar = true)
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("j")
+            host.tap("i")
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField(expected)
+        }
+
+    @Test
     fun theExpandedColumnGoesBackDeletesAndRetypes() =
         withHost { host ->
             host.start()
@@ -339,6 +377,43 @@ class RealEngineEditorTest {
             assertEquals("", host.text())
             assertTrue("the toolbar is back", host.toolbarLabelsNow().isNotEmpty())
         }
+
+    @Test
+    fun holdingExpandedBackspaceStopsWhenCandidatesClose() =
+        withHost { host ->
+            host.start(initial = "abc")
+            for (key in "jiu") host.tap(key.toString())
+            host.awaitField("abcjiu")
+            host.tap(host.string(R.string.ime_expand), bar = true)
+            host.awaitIdle()
+            host.longPressBarItem(
+                host.string(R.string.ime_delete),
+                ViewConfiguration.getLongPressTimeout() + 1_200L,
+            )
+            host.awaitField("abcj")
+            assertFalse(host.main2 { host.find(CandidateBarView::class.java).expanded })
+            host.tap(host.string(R.string.ime_delete))
+            host.awaitField("abc")
+            host.tap("n")
+            host.tap("i")
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField("abc你")
+        }
+
+    @Test
+    fun cancelingExpandedBackspaceStopsBeforeRepeat() {
+        for (cancelAction in listOf(MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_MOVE)) {
+            withHost { host ->
+                host.start(initial = "abc")
+                for (key in "jiu") host.tap(key.toString())
+                host.awaitField("abcjiu")
+                host.tap(host.string(R.string.ime_expand), bar = true)
+                host.awaitIdle()
+                host.cancelBarPress(host.string(R.string.ime_delete), cancelAction)
+                host.awaitField("abcji")
+            }
+        }
+    }
 
     @Test
     fun anIdleSpaceTypesASpace() =
@@ -505,6 +580,380 @@ class RealEngineEditorTest {
             }
             host.awaitIdle()
             assertEquals("", host.text())
+        }
+
+    /** A Delete answered after its field ended must not delete in the field that replaced it. */
+    @Test
+    fun aDeleteAnsweredAfterItsFieldEndedDeletesNothingInTheNextField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abc")
+            typePredictionContext(host)
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            // Release before the field changes: a finger still down would add its own repeats.
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+        }
+
+    /** The same Delete in the field it was made in: dismissing the prediction still deletes once. */
+    @Test
+    fun aDeleteStillDeletesAfterDismissingThePredictionInItsOwnField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abc")
+            typePredictionContext(host)
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, delete) }
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            // Release before the gate opens: a finger still down would add its own repeats.
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the committed word is deleted", "abc", host.text())
+        }
+
+    /**
+     * Commits 你 through the engine, so the pinned predictor offers 好 as its real post-commit
+     * prediction: the fixture is a real scheme with a real predict.db, never a fabricated snapshot.
+     */
+    private fun typePredictionContext(host: Host) {
+        val before = host.text()
+        host.tap("n")
+        host.tap("i")
+        host.awaitField(before + "ni")
+        val you = host.barLabels().firstOrNull { it.startsWith("你") }
+        assertTrue("the dictionary offers 你: " + host.barLabels(), you != null)
+        host.tap(you!!, bar = true)
+        host.awaitIdle()
+        val snapshot = host.backend.currentSnapshot()
+        assertEquals("only 你 was committed", before + "你", host.text())
+        assertTrue("a post-commit prediction: " + snapshot, snapshot.isPrediction)
+        assertFalse("prediction is not a composition", snapshot.isComposing)
+        assertEquals("prediction shows no preedit", "", snapshot.preedit)
+        assertTrue("the prediction offers 好: " + snapshot, snapshot.candidates.any { it.text == "好" })
+    }
+
+    /** A space after a prediction types only a space: the predicted word is never picked for the user. */
+    @Test
+    fun aSpaceAfterAPredictionTypesOnlyASpace() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            assertTrue(
+                "the row offers the prediction: " + host.barLabels(),
+                host.barLabels().any { it.startsWith("好") },
+            )
+            host.tap(host.string(R.string.ime_space))
+            host.awaitField("你 ")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+        }
+
+    /** A punctuation key after a prediction types only that mark, never the predicted word. */
+    @Test
+    fun aMarkAfterAPredictionTypesOnlyTheMark() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            assertTrue(
+                "the row offers the prediction: " + host.barLabels(),
+                host.barLabels().any { it.startsWith("好") },
+            )
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tap("【")
+            host.awaitField("你【")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+        }
+
+    /** Choosing the predicted word in the row is the one way it commits. */
+    @Test
+    fun tappingAPredictedCandidateCommitsIt() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            val word = host.barLabels().firstOrNull { it.startsWith("好") }
+            assertTrue("the row offers the prediction: " + host.barLabels(), word != null)
+            host.tap(word!!, bar = true)
+            host.awaitField("你好")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+        }
+
+    /** Typing on after a prediction types only what was typed: the predicted word never leaks in. */
+    @Test
+    fun typingAfterAPredictionDoesNotTypeThePredictedWord() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start()
+            typePredictionContext(host)
+            host.tap("n")
+            host.tap("i")
+            host.awaitField("你ni")
+            host.awaitIdle()
+            assertFalse(
+                "the predicted word was not typed: " + host.text(),
+                host.text().contains("好"),
+            )
+            assertTrue(
+                "the new keys compose: " + host.backend.currentSnapshot(),
+                host.backend.currentSnapshot().isComposing,
+            )
+        }
+
+    /**
+     * A panel edit confirms the composition through the engine before it edits. If the field ends
+     * while that answer is pending, the edit must not reach the field that replaced it.
+     */
+    @Test
+    fun aPanelEditAnsweredAfterItsFieldEndedEditsNothingInTheNextField() =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            pauseDismiss = true,
+        ) { host ->
+            host.start(initial = "abcdef")
+            typePredictionContext(host)
+            host.main { host.controller.openEditPanel() }
+            host.awaitIdle()
+            val paused = host.backend as PausedDismissBackend
+            val gate = CompletableDeferred<Unit>()
+            host.main { paused.gate = gate }
+            host.tapPanelCell(EditPanelView::class.java, host.string(R.string.ime_edit_delete))
+            host.awaitUntil("the engine to be asked to dismiss the prediction") { paused.dismissals > 0 }
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.main { gate.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+        }
+
+    /** A prediction belongs to its field: it must not survive into the next one. */
+    @Test
+    fun aPredictionDoesNotSurviveIntoTheNextField() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start(initial = "abcdef")
+            typePredictionContext(host)
+            host.main {
+                host.finishInput()
+                host.switchField(restarting = false, initialText = "abcdef")
+            }
+            host.awaitIdle()
+            assertEquals("the new field keeps its text", "abcdef", host.text())
+            assertFalse("the prediction went with its field", host.backend.currentSnapshot().isPrediction)
+            assertTrue("no predicted word is offered", host.barLabels().none { it.startsWith("好") })
+        }
+
+    /** Enter on a multi-line host types a newline and closes the prediction, never a predicted word. */
+    @Test
+    fun aReturnAfterAPredictionTypesANewline() =
+        withHost(schema = PREDICTION_SCHEMA, fixtureAssetRoot = PREDICTION_FIXTURE) { host ->
+            host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+            typePredictionContext(host)
+            host.tap(host.string(R.string.ime_enter))
+            host.awaitField("你\n")
+            host.awaitIdle()
+            assertFalse("the prediction is gone", host.backend.currentSnapshot().isPrediction)
+            assertFalse("the predicted word was not typed: " + host.text(), host.text().contains("好"))
+        }
+
+    /**
+     * The keyboard is still busy with a hold when the finger lifts: the hold's queued repeat was
+     * made for that hold and must delete nothing, not even when the same key is pressed again.
+     */
+    @Test
+    fun aQueuedRepeatThatOutlivesItsHoldDeletesNothing() =
+        withHost { host ->
+            host.start(initial = "abcd")
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val first = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(first, MotionEvent.ACTION_DOWN, delete)
+                // The hold's first step: a real repeat, queued behind the blocked operation.
+                val pointers = host.controller.keyboard.pointers
+                requireNotNull(pointers.valueAt(0).task).run()
+                host.touch(first + 20, MotionEvent.ACTION_UP, delete, downTime = first)
+            }
+            // A new press on the same key while the old hold's step is still queued.
+            val second = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(second, MotionEvent.ACTION_DOWN, delete)
+                host.touch(second + 20, MotionEvent.ACTION_UP, delete, downTime = second)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            assertEquals("one delete per press, none from the finished hold", "ab", host.text())
+        }
+
+    @Test
+    fun aQueuedRepeatStopsOnceTheCompositionItWasDeletingIsGone() =
+        withHost { host ->
+            host.start(initial = "abc")
+            host.tap("n")
+            host.awaitField("abcn")
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val delete = host.keyCenter(host.string(R.string.ime_delete))
+            val start = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(start, MotionEvent.ACTION_DOWN, delete)
+                // The hold's first step is queued while the composition it deletes is still there.
+                val pointers = host.controller.keyboard.pointers
+                requireNotNull(pointers.valueAt(0).task).run()
+            }
+            host.main { queue.complete(Unit) }
+            // The DOWN deletes the last letter and the composition ends: the queued repeat must not
+            // delete the text that is already committed (the finger is still down, so only the
+            // composition rule can stop it).
+            host.awaitIdle()
+            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, delete, downTime = start) }
+            host.awaitIdle()
+            assertEquals("abc", host.text())
+        }
+
+    /**
+     * The expanded candidates' held Delete repeats through the keyboard's queue too: a step queued
+     * by one touch must not delete for the next touch on the same control, even though the control,
+     * the grid and the composition rule all say "held" again.
+     */
+    @Test
+    fun aQueuedCandidateRepeatDoesNotDeleteForTheNextTouchOnTheSameControl() =
+        withHost { host ->
+            host.start(initial = "xyz")
+            host.typeKeys("nihao")
+            host.main {
+                host.controller.candidates.setExpanded(true)
+                host.relayout()
+            }
+            host.awaitIdle()
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            val bar = host.controller.candidates
+            val (x, y) = host.main2 { bar.controlCells[1].let { it.exactCenterX() to it.exactCenterY() } }
+
+            fun touch(
+                action: Int,
+                downTime: Long,
+                eventTime: Long,
+            ) {
+                val event = MotionEvent.obtain(downTime, eventTime, action, x, y, 0)
+                bar.dispatchTouchEvent(event)
+                event.recycle()
+            }
+            val first = SystemClock.uptimeMillis()
+            host.main {
+                touch(MotionEvent.ACTION_DOWN, first, first)
+                // The touch's own hold step, queued behind the blocked operation.
+                bar.repeatBackspace.run()
+                touch(MotionEvent.ACTION_UP, first, first + 20)
+                // No second step of this touch: the one below is what the queue must judge.
+                bar.ui.removeCallbacks(bar.repeatBackspace)
+            }
+            // A new hold on the same control, still down when the queue is let go.
+            val second = SystemClock.uptimeMillis()
+            host.main {
+                touch(MotionEvent.ACTION_DOWN, second, second)
+                bar.ui.removeCallbacks(bar.repeatBackspace)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            host.main { touch(MotionEvent.ACTION_UP, second, SystemClock.uptimeMillis()) }
+            host.awaitIdle()
+            assertEquals(
+                "only the two presses delete, while composition stays active",
+                "nih",
+                host.backend.currentSnapshot().rawInput,
+            )
+            assertTrue("committed text stays untouched", host.text().startsWith("xyz"))
+        }
+
+    /**
+     * The keyboard is still busy with a press when its field ends: that press was made for the field
+     * and must not be typed into the one that replaces it, while the new field's own press is typed
+     * there and only there.
+     */
+    @Test
+    fun aPressQueuedWhenItsFieldEndsIsNotTypedIntoTheNextField() =
+        withHost { host ->
+            host.start()
+            val queue = CompletableDeferred<Unit>()
+            // Hold the keyboard's operation queue so the press is still queued when the field ends:
+            // the engine answering a press opens the same window while typing.
+            host.main { host.controller.enqueue { queue.await() } }
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "h")) }
+            var left: EditText? = null
+            // The system finishes the old input before it starts the next field.
+            host.main {
+                host.connection.finishComposingText()
+                host.finishInput()
+                left = host.switchField(restarting = false)
+            }
+            // The new field's own press, made while its session is still being prepared.
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "n")) }
+            host.main { queue.complete(Unit) }
+            // Only the new field's letter: the finished field's press is dropped, not the new one's.
+            host.awaitField("n")
+            assertEquals("n", host.backend.currentSnapshot().rawInput)
+            var leftText = ""
+            host.main { leftText = left!!.text.toString() }
+            assertEquals("the field that ended does not take it", "", leftText)
+        }
+
+    /**
+     * A restart of the same field does not finish its input, so a press queued for it is still its
+     * own and arrives once the restarted session is ready.
+     */
+    @Test
+    fun aPressQueuedForARestartOfItsFieldIsStillTyped() =
+        withHost { host ->
+            host.start()
+            val queue = CompletableDeferred<Unit>()
+            host.main { host.controller.enqueue { queue.await() } }
+            host.main { host.controller.enqueueKey(LayoutAction(LayoutActionKind.CODE, "n")) }
+            // onStartInput(restarting = true) on the same field, as the service does on a restart.
+            host.main {
+                val keep = host.editor.startInput(host.info, restarting = true)
+                val policy = EditorPolicy.from(host.info)
+                host.controller.configure(policy)
+                host.controller.startInput(policy, keep)
+            }
+            host.main { queue.complete(Unit) }
+            host.awaitIdle()
+            host.awaitField("n")
         }
 
     @Test
@@ -677,14 +1126,13 @@ class RealEngineEditorTest {
     fun theStripReadsLaterPagesAsItScrollsWithoutPagingTheEngine() =
         withHost(smallPages = true) { host ->
             // Five candidates for ji, two per engine page, in a row about one candidate wide: the
-            // first read fills the row and the last page is left for the scroll to ask for.
+            // first page already runs past the row, so nothing more is read until the user scrolls.
             host.start(width = STRIP_WIDTH_PX)
             for (key in "ji") host.tap(key.toString())
             host.awaitComposing()
             val pageSize = host.backend.currentSnapshot().pageSize
             val first = host.stripLabels()
-            assertTrue("the row is filled past one engine page: $first", first.size > pageSize)
-            assertTrue("a page is left to read: $first", first.size < JI_CANDIDATES)
+            assertEquals("only the first engine page is read before scrolling: $first", pageSize, first.size)
             repeat(STRIP_SWIPES) { host.swipeStrip() }
             val after = host.stripLabels()
             assertTrue("scrolling reads later pages: ${first.size} -> ${after.size}", after.size > first.size)
@@ -1099,6 +1547,35 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun spaceAfterDigitsOrSymbolsReturnsToLettersForContinuedTyping() =
+        withHost { host ->
+            host.start()
+            val space = host.string(R.string.ime_space)
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(space)
+            host.awaitField(" ")
+            assertTrue(host.keyLabels().contains("1"))
+            host.tap("1")
+            host.tap("2")
+            host.tap(space)
+            host.awaitField(" 12 ")
+            assertTrue(host.keyLabels().contains("a"))
+            host.tap("n")
+            host.tap("i")
+            host.tap(space)
+            host.awaitField(" 12 你")
+            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tap(space)
+            host.awaitField(" 12 你 ")
+            assertTrue(host.keyLabels().contains("1"))
+            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tap("【")
+            host.tap(space)
+            host.awaitField(" 12 你 【 ")
+            assertTrue(host.keyLabels().contains("a"))
+        }
+
+    @Test
     fun anEmailFieldHasTheAtSignBesideTheSpaceBarAndNoLanguageKey() =
         withHost { host ->
             host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
@@ -1123,6 +1600,52 @@ class RealEngineEditorTest {
             host.tap("n")
             host.tap("i")
             host.awaitComposing()
+        }
+
+    @Test
+    fun oneLanguageSwitchTurnsOffTheAsciiModeRimeOwns() =
+        withHost { host ->
+            host.start()
+            // Rime itself owns ASCII mode here (a schema switch, or a key binding on a hardware
+            // keyboard) while the front end is still Chinese: only the snapshot shows it.
+            host.main { host.controller.enqueue { host.controller.session?.setOption("ascii_mode", true) } }
+            host.awaitIdle()
+
+            fun engineAsciiMode(): Boolean =
+                host.main2 {
+                    host.controller.session
+                        ?.snapshot
+                        ?.isAsciiMode == true
+                }
+            assertTrue("the engine is in ASCII mode", engineAsciiMode())
+            assertEquals(InputMode.CHINESE, host.main2 { host.controller.session?.mode })
+            // The keyboard already shows English while Rime owns ASCII mode, so its language key
+            // offers the way back — and one press turns that option off. Handing the front end
+            // English instead would leave the engine ASCII with no press able to return.
+            val toChinese = host.string(R.string.ime_language_to_chinese)
+            assertTrue("the keyboard shows English: " + host.keyLabels(), toChinese in host.keyLabels())
+            // The marks follow the same face: the letters footer offers the ASCII comma, not the
+            // fullwidth one, while the engine is in ASCII mode.
+            val asciiComma = ","
+            val chineseComma = "，"
+            assertTrue("ASCII marks: " + host.keyLabels(), asciiComma in host.keyLabels())
+            assertFalse("no fullwidth comma: " + host.keyLabels(), chineseComma in host.keyLabels())
+            host.tap(toChinese)
+            host.awaitIdle()
+            assertFalse("one press turns Rime's ASCII mode off", engineAsciiMode())
+            assertEquals(InputMode.CHINESE, host.main2 { host.controller.session?.mode })
+            assertTrue(
+                "the keyboard shows Chinese again: " + host.keyLabels(),
+                host.string(R.string.ime_language_to_english) in host.keyLabels(),
+            )
+            assertTrue("Chinese marks are back: " + host.keyLabels(), chineseComma in host.keyLabels())
+            host.tap("n")
+            host.tap("i")
+            host.awaitComposing()
+            val you = host.barLabels().firstOrNull { it.startsWith("你") }
+            assertTrue("Chinese candidates are back: " + host.barLabels(), you != null)
+            host.touchCandidate(you!!)
+            host.awaitField("你")
         }
 
     @Test
@@ -1337,7 +1860,7 @@ class RealEngineEditorTest {
     }
 
     @Test
-    fun anUpwardFlickOnALetterKeyTypesItsFirstLongPressOption() =
+    fun anUpwardFlickOnALetterKeyTypesTheHintItShows() =
         withHost { host ->
             host.start()
             flickKey(host, "a", -30f)
@@ -1345,12 +1868,54 @@ class RealEngineEditorTest {
         }
 
     @Test
-    fun aDownwardFlickOnALetterKeyTypesItsSecondLongPressOption() =
+    fun aDownwardFlickTypesNothingWhileTheFlickGoesUp() =
         withHost { host ->
             host.start()
+            // "a" also offers "," in its long press; only the hint drawn on the key is a flick.
             flickKey(host, "a", 30f)
-            host.awaitField(",")
+            host.awaitIdle()
+            assertEquals("", host.text())
         }
+
+    @Test
+    fun withTheFlickSetDownADownwardFlickTypesTheHintAndAnUpwardOneDoesNot() =
+        withHost { host ->
+            host.preferences.keyFlickDirection.value = FlickDirection.DOWN.wire
+            host.start()
+            host.awaitUntil("flick set down") {
+                host.main2 { host.controller.keyboard.flickDirection } ==
+                    FlickDirection.DOWN
+            }
+            flickKey(host, "a", 30f)
+            host.awaitField("，")
+            flickKey(host, "a", -30f)
+            host.awaitIdle()
+            assertEquals("，", host.text())
+        }
+
+    @Test
+    fun withTheFlickOffAnUpwardFlickNeverTypesTheHint() =
+        withHost { host ->
+            host.preferences.keyFlickDirection.value = FlickDirection.OFF.wire
+            host.start()
+            host.awaitUntil(
+                "flick off",
+            ) { host.main2 { host.controller.keyboard.flickDirection } == FlickDirection.OFF }
+            flickKey(host, "a", -30f)
+            host.awaitIdle()
+            assertFalse(host.text(), host.text().contains("，"))
+        }
+
+    @Test
+    fun anUpwardFlickOnAMergedKeyTypesTheMarkItShows() {
+        for ((layout, pair, mark) in listOf(Triple("merged14", "df", "。"), Triple("merged18", "fg", "？"))) {
+            withHost(layout = layout) { host ->
+                host.start()
+                flickKey(host, pair, -30f)
+                host.awaitField(mark)
+            }
+        }
+    }
 
     @Test
     fun aShortVerticalJitterOnALetterKeyStillTypesTheLetter() =
@@ -1388,8 +1953,8 @@ class RealEngineEditorTest {
     fun aDownwardFlickWithNothingToTypeDoesNotTypeTheKeyItEndsOn() =
         withHost { host ->
             host.start()
-            // "q" has one long-press option, so a downward flick has nothing to type; the finger
-            // lifts over "a", which must not be typed in its place.
+            // The flick goes up, so a downward one has nothing to type; the finger lifts over "a",
+            // which must not be typed in its place.
             dragKey(host, "q", "a")
             host.awaitIdle()
             assertEquals("", host.text())
@@ -2036,16 +2601,43 @@ class RealEngineEditorTest {
         schema: String = "",
         readingPlacement: String = "row",
         smallestWidthDp: Int? = null,
+        /** An asset tree under engine-fixtures/ deployed and opened instead of the builtin scheme. */
+        fixtureAssetRoot: String? = null,
+        /** Wraps the real backend so a prediction dismissal can be held before the engine answers. */
+        pauseDismiss: Boolean = false,
         block: (Host) -> T,
     ): T {
         val user = File(root, "user-" + SystemClock.uptimeMillis())
-        val engineSource = if (smallPages) smallPageDeployment.first else source
-        val engineCompiled = if (smallPages) smallPageDeployment.second else compiled
+        var fixture: File? = null
+        var fixtureCompiled: File? = null
+        val engineSource =
+            if (fixtureAssetRoot != null) {
+                val fixtureDir = File(root, "fixture-" + SystemClock.uptimeMillis())
+                copyAssetTree(fixtureAssetRoot, fixtureDir)
+                val deployment = runBlocking { RimeDeployment.deploy(fixtureDir, user, appVersion = "test") }
+                check(deployment.success) { "fixture deployment failed: " + deployment.lastError }
+                fixture = fixtureDir
+                fixtureCompiled = deployment.compiledDir
+                fixtureDir
+            } else if (smallPages) {
+                smallPageDeployment.first
+            } else {
+                source
+            }
+        val engineCompiled = fixtureCompiled ?: if (smallPages) smallPageDeployment.second else compiled
         val backend =
             runBlocking {
                 RimeEngineBackend.create(engineSource, user, engineCompiled, RimeEngine.DEFAULT_APP_NAME, "test")
             }
-        val host = Host(backend, layout, fontScale, schema, readingPlacement, smallestWidthDp)
+        val host =
+            Host(
+                if (pauseDismiss) PausedDismissBackend(backend) else backend,
+                layout,
+                fontScale,
+                schema,
+                readingPlacement,
+                smallestWidthDp,
+            )
         try {
             return block(host)
         } finally {
@@ -2054,7 +2646,55 @@ class RealEngineEditorTest {
             } finally {
                 runBlocking { backend.shutdown() }
                 user.deleteRecursively()
+                fixture?.deleteRecursively()
             }
+        }
+    }
+
+    /** Copies a fixture out of the androidTest assets into [target], where the engine deploys it. */
+    private fun copyAssetTree(
+        assetPath: String,
+        target: File,
+    ) {
+        val assets = instrumentation.context.assets
+
+        fun copy(
+            path: String,
+            into: File,
+        ) {
+            into.mkdirs()
+            for (name in assets.list(path).orEmpty()) {
+                val childPath = path + "/" + name
+                val child = File(into, name)
+                if (assets.list(childPath).orEmpty().isNotEmpty()) {
+                    copy(childPath, child)
+                } else {
+                    assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
+                }
+            }
+        }
+        copy(assetPath, target)
+    }
+
+    /**
+     * The real backend with one test seam: a prediction dismissal can be held before the engine
+     * answers it. Snapshots are always the engine's own; nothing is fabricated.
+     */
+    private class PausedDismissBackend(
+        private val inner: EngineBackend,
+    ) : EngineBackend by inner {
+        /** Set to hold the next dismissal; cleared once it has been awaited. */
+        @Volatile
+        var gate: CompletableDeferred<Unit>? = null
+
+        @Volatile
+        var dismissals = 0
+
+        override suspend fun dismissPrediction(): EngineSnapshot {
+            dismissals++
+            gate?.await()
+            gate = null
+            return inner.dismissPrediction()
         }
     }
 
@@ -2126,7 +2766,9 @@ class RealEngineEditorTest {
                 context,
                 scope,
                 editor.keyboardCallbacks(
-                    action = { editor.sendReturn(false) },
+                    // As the service does: a multi-line field takes the newline as text. This host's
+                    // field is not in a window, so a key event would never reach it.
+                    action = { editor.sendReturn(EditorPolicy.from(info).returnsNewline) },
                     onCommitted = { controller.onTextInserted() },
                     panelsChanged = { backOwned = it },
                     hideKeyboard = { hidden = true },
@@ -2446,12 +3088,30 @@ class RealEngineEditorTest {
             return center
         }
 
-        /** Holds a finger on the candidate [text] past the long-press time, then lifts it without moving. */
-        fun longPressCandidate(text: String) {
+        /** Holds a candidate or fixed control, then lifts without moving. */
+        fun longPressBarItem(
+            text: String,
+            holdMs: Long = ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS,
+        ) {
             val center = barItemCenter(text)
             lastBarPoint = center
             val start = SystemClock.uptimeMillis()
             main { touchBar(start, MotionEvent.ACTION_DOWN, center, start) }
+            SystemClock.sleep(holdMs)
+            main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
+            awaitIdle()
+        }
+
+        fun cancelBarPress(
+            label: String,
+            cancelAction: Int,
+        ) {
+            val center = barItemCenter(label)
+            val start = SystemClock.uptimeMillis()
+            main { touchBar(start, MotionEvent.ACTION_DOWN, center, start) }
+            awaitIdle()
+            val point = if (cancelAction == MotionEvent.ACTION_MOVE) -1f to -1f else center
+            main { touchBar(SystemClock.uptimeMillis(), cancelAction, point, start) }
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
             main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
             awaitIdle()
@@ -2493,6 +3153,24 @@ class RealEngineEditorTest {
             }
             main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x to startY - upBy, start) }
             awaitIdle()
+        }
+
+        /** A short, fast flick followed immediately by a tap on the named candidate or control. */
+        fun flingBarThenTap(label: String) {
+            val target = barItemCenter(label)
+            main {
+                val bar = find(CandidateBarView::class.java)
+                val x = bar.width * 0.5f
+                val y = bar.height * 0.5f
+                val start = SystemClock.uptimeMillis()
+                touchBar(start, MotionEvent.ACTION_DOWN, x to y, start)
+                for (step in 1..3) {
+                    touchBar(start + step * 8, MotionEvent.ACTION_MOVE, x - step * 10 * density to y, start)
+                }
+                touchBar(start + 32, MotionEvent.ACTION_UP, x - 30 * density to y, start)
+                touchBar(start + 40, MotionEvent.ACTION_DOWN, target, start + 40)
+                touchBar(start + 56, MotionEvent.ACTION_UP, target, start + 40)
+            }
         }
 
         /** Swipes the collapsed strip toward its end by four tenths of the host's width. */
@@ -2634,13 +3312,20 @@ class RealEngineEditorTest {
          * its composition itself when it loses focus, and the new one starts on the same connection
          * (restarting = true). Returns the field that was left.
          */
-        fun switchField(): EditText {
+        fun switchField(
+            restarting: Boolean = true,
+            initialText: String = "",
+        ): EditText {
             val left = field
             connection.finishComposingText()
             field = EditText(context)
             field.inputType = InputType.TYPE_CLASS_TEXT
+            if (initialText.isNotEmpty()) {
+                field.setText(initialText)
+                field.setSelection(initialText.length)
+            }
             connect()
-            beginInput(restarting = true)
+            beginInput(restarting = restarting)
             return left
         }
 
@@ -2893,6 +3578,26 @@ class RealEngineEditorTest {
 
         fun labelsOf(view: View): List<String> = labels(view)
 
+        /**
+         * Clicks a panel cell spoken as [label], as a screen reader does. The click is queued only:
+         * a caller that holds the work it starts must not wait for idle here.
+         */
+        fun tapPanelCell(
+            type: Class<out View>,
+            label: String,
+        ) {
+            main {
+                val view = find(type)
+                val spoken = labels(view)
+                val index = spoken.indexOfFirst { matches(it, label) }
+                assertTrue("no '" + label + "' in " + spoken, index >= 0)
+                assertTrue(
+                    "the panel cell answered",
+                    view.accessibilityNodeProvider.performAction(index, AccessibilityNodeInfo.ACTION_CLICK, null),
+                )
+            }
+        }
+
         private fun labels(view: View): List<String> {
             val provider = view.accessibilityNodeProvider
             val result = ArrayList<String>()
@@ -2956,8 +3661,13 @@ class RealEngineEditorTest {
                 instrumentation.waitForIdleSync()
                 SystemClock.sleep(POLL_MS)
                 var state = ""
-                main { state = field.text.toString() + "|" + barLabelsNow() }
-                if (state == last) stable++ else stable = 0
+                var ready = false
+                main {
+                    state = field.text.toString() + "|" + barLabelsNow()
+                    ready = controller.ready && !controller.preparing
+                }
+                // Initial engine preparation can leave the text unchanged while the layout is still pending.
+                if (ready && state == last) stable++ else stable = 0
                 last = state
             }
         }
@@ -2981,6 +3691,7 @@ class RealEngineEditorTest {
         override val shuangpinHints = MutableStateFlow<Map<Char, String>>(emptyMap())
         override val menuHiddenSchemas = MutableStateFlow<Set<String>>(emptySet())
         override val widePosition = MutableStateFlow(50)
+        override val keyFlickDirection = MutableStateFlow(FlickDirection.UP.wire)
 
         override suspend fun setLayoutId(id: String) {
             layoutId.value = id
@@ -2995,7 +3706,8 @@ class RealEngineEditorTest {
         override suspend fun loadContent() =
             QuickContentPanelContent(SymbolCatalog(), emptyList(), listOf(CommonPhrase("。")), emptyList(), false)
 
-        override suspend fun recordRecentSymbol(text: String) = Unit
+        // The panel's symbol library is empty here, so no use is ever recorded.
+        override suspend fun recordRecentSymbol(text: String): List<String> = emptyList()
 
         override suspend fun deleteClipboardEntry(text: String) = Unit
 
@@ -3014,6 +3726,10 @@ class RealEngineEditorTest {
         private const val MIN_OVERFLOW_PAGE = 4
         private const val PICKED_RANK = 4
         private const val BUILTIN_ASSET_ROOT = "rime/builtin"
+
+        /** This module's own prediction fixture (a real predict.db and the schema that mounts it). */
+        private const val PREDICTION_FIXTURE = "engine-fixtures/prediction"
+        private const val PREDICTION_SCHEMA = "prediction_probe"
         private const val MAX_FONT_SCALE = 1.3f
         private const val LAST_OF_FIVE = 4
         private const val EXPANDED_DRAG_PX = 700f

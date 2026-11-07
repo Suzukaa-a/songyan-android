@@ -445,7 +445,8 @@ class EditorConnection(
 
     /**
      * Replaces [expected] with [replacement] in one batch edit, only when the editor shows exactly
-     * [expected] right before the caret. False leaves the text untouched.
+     * [expected] right before a bare caret; a selection would be overwritten by the replacement too.
+     * False leaves the text untouched.
      */
     fun replaceBeforeCursor(
         expected: String,
@@ -455,6 +456,7 @@ class EditorConnection(
         if (keyEventEditor || composing || expected.isEmpty()) return false
         ic.beginBatchEdit()
         try {
+            if (!ic.getSelectedText(0).isNullOrEmpty()) return false
             if (ic.getTextBeforeCursor(expected.length, 0)?.toString() != expected) return false
             deleteBeforeCursor(expected.length)
             update("", listOf(replacement))

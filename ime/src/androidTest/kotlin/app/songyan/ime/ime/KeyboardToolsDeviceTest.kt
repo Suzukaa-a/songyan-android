@@ -23,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
@@ -81,6 +82,36 @@ class KeyboardToolsDeviceTest {
             host.setText("软件x")
             host.tapToolAction(R.string.ime_tools_replace)
             host.assertText("软件x軟體")
+        }
+
+    /**
+     * A paragraph is what precedes a bare caret. Once text is selected it is neither offered nor
+     * replaced: deleting before the selection and then typing would also overwrite the selection.
+     */
+    @Test
+    fun aSelectionKeepsTheParagraphFromBeingReplaced() =
+        withToolsHost { host, _, _ ->
+            host.start()
+            val tools = requireNotNull(host.toolsEditor)
+            host.setText("你好世界", 2)
+            val paragraph = requireNotNull(host.main2 { tools.paragraph() }) { "no paragraph before a bare caret" }
+            host.setText("你好世界", 2, 4)
+            assertNull("a paragraph was offered over a selection", host.main2 { tools.paragraph() })
+            assertFalse("a paragraph was replaced over a selection", host.main2 { tools.replace(paragraph, "X") })
+            assertEquals("你好世界", host.text())
+        }
+
+    /** A paragraph longer than a tool may take is refused whole, never cut to its last part. */
+    @Test
+    fun aParagraphOverTheLimitIsNotOffered() =
+        withToolsHost { host, _, _ ->
+            host.start()
+            val tools = requireNotNull(host.toolsEditor)
+            val limit = EditorConnectionKeyboardTools.TOOL_TEXT_LIMIT
+            host.setText("前\n" + "字".repeat(limit))
+            assertEquals("字".repeat(limit), host.main2 { tools.paragraph() }?.text)
+            host.setText("😀" + "字".repeat(limit - 1))
+            assertNull("an over-long paragraph was cut instead of refused", host.main2 { tools.paragraph() })
         }
 
     @Test

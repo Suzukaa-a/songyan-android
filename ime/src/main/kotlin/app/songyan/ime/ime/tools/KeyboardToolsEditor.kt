@@ -74,10 +74,13 @@ class EditorConnectionKeyboardTools(
 
     override fun paragraph(): KeyboardToolText? {
         if (!mayRead()) return null
-        // A paragraph is what the caret is in: the text after the last line break before it.
-        val before = editor.contextBeforeCursor(TOOL_TEXT_LIMIT) ?: return null
+        // A paragraph is what a bare caret is in: the text after the last line break before it. With
+        // a selection there is no caret to replace up to, so the selection is the only source.
+        if (!editor.connection()?.getSelectedText(0).isNullOrEmpty()) return null
+        // One unit past the limit tells a paragraph that fits from one the read window cut.
+        val before = editor.contextBeforeCursor(TOOL_TEXT_LIMIT + 1) ?: return null
         val paragraph = before.substringAfterLast('\n')
-        if (paragraph.isBlank()) return null
+        if (paragraph.isBlank() || paragraph.length > TOOL_TEXT_LIMIT) return null
         return capture(KeyboardToolSourceKind.PARAGRAPH, paragraph)
     }
 

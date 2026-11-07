@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
@@ -47,6 +48,30 @@ class InputLanguageKeyLabelsDeviceTest {
             switchTo(host, "songyan_quanpin")
             assertTrue("built-in space: " + drawn(host), "空格" in drawn(host))
             assertTrue("built-in search: " + drawn(host), "搜索" in drawn(host))
+        }
+    }
+
+    /**
+     * Opening a composition is on the key path: it must not solve the page again, and where the
+     * space key keeps its name (simplified Chinese) it must not even relabel the keys.
+     */
+    @Test
+    fun openingACompositionKeepsTheSolvedPage() {
+        withHost { host ->
+            host.start()
+            val keyboard = host.main2 { host.find(KeyboardView::class.java) }
+            val (keys, labels) = host.main2 { keyboard.keys to keyboard.labels }
+            host.type("ni")
+            host.awaitIdle()
+            assertSame("simplified page solved again", keys, host.main2 { keyboard.keys })
+            assertSame("simplified page relabelled", labels, host.main2 { keyboard.labels })
+
+            switchTo(host, "kagiroi_test")
+            val japaneseKeys = host.main2 { keyboard.keys }
+            host.type("ka")
+            host.awaitIdle()
+            assertTrue("ja composing space: " + drawn(host), "変換" in drawn(host))
+            assertSame("japanese page solved again", japaneseKeys, host.main2 { keyboard.keys })
         }
     }
 

@@ -396,8 +396,18 @@ class KeyboardView(
         faces: KeyboardFaces = KeyboardFaces(),
         swipe: MergedSwipeConfig? = null,
     ) {
-        val sameKeys = shell == null && layout === definition && this.faces == faces && swipeConfig === swipe
-        if (sameKeys && shifted == shift && capsLocked == locked && actionLabel == enterLabel) {
+        // An opening or closing composition only renames keys; it must not solve the rows again.
+        val sameKeys =
+            shell == null &&
+                layout === definition &&
+                this.faces.copy(composing = faces.composing) == faces &&
+                swipeConfig === swipe
+        if (sameKeys &&
+            this.faces.composing == faces.composing &&
+            shifted == shift &&
+            capsLocked == locked &&
+            actionLabel == enterLabel
+        ) {
             // The controller renders after every key; an unchanged page must cost nothing.
             return
         }
@@ -405,8 +415,9 @@ class KeyboardView(
         capsLocked = locked
         actionLabel = enterLabel
         if (sameKeys) {
-            // Only the faces changed (shift, caps lock, the editor's action label): the same keys in the
-            // same places, so there is nothing to solve again.
+            // Only the faces changed (shift, caps lock, the editor's action label, the composition):
+            // the same keys in the same places, so there is nothing to solve again.
+            this.faces = faces
             applyKeyFaces()
             invalidate()
             announceItemsChanged()

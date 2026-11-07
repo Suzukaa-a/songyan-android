@@ -86,7 +86,9 @@ internal fun KeyboardController.render() {
             phone = layoutKind == KeyboardLayoutKind.PHONE9,
             symbolLocked = symbolLock,
             language = language,
-            composing = visible.isComposing,
+            // Only a language whose space key names the open composition tells the faces about it:
+            // otherwise every word would relabel the whole page twice for nothing.
+            composing = visible.isComposing && keyNames.spaceFollowsComposition(language),
             mainLayoutId = mainDefinition().id,
         )
     val shiftState = active?.shiftState

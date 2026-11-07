@@ -20,6 +20,9 @@ internal class KeyNames(
     /** The Simplified Chinese key names, also the fallback for entries the table does not rename. */
     fun chinese(): Context = chinese
 
+    /** Whether [space] names the key differently while a composition is open. */
+    fun spaceFollowsComposition(language: InputLanguage): Boolean = language != InputLanguage.ZH_HANS
+
     fun space(
         language: InputLanguage,
         composing: Boolean,

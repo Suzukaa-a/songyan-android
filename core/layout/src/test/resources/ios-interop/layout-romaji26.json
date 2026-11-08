@@ -394,6 +394,13 @@
               "label" : ")"
             }
           ]
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "-"
+          },
+          "label" : "ー"
         }
       ]
     },
@@ -587,13 +594,6 @@
               "label" : "/"
             }
           ]
-        },
-        {
-          "action" : {
-            "type" : "code",
-            "value" : "-"
-          },
-          "label" : "ー"
         }
       ]
     },

@@ -20,20 +20,20 @@ import org.junit.Test
 class RomajiLayoutTest {
     private val layout get() = BuiltinLayouts.romaji26
 
-    /** The cap of every key of the three letter rows, in drawn order: the long vowel sits right of M. */
+    /** The cap of every key of the three letter rows, in drawn order: the long vowel sits right of L. */
     private val letterCaps =
         listOf(
             listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
-            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
-            listOf("z", "x", "c", "v", "b", "n", "m", "ー"),
+            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l", "ー"),
+            listOf("z", "x", "c", "v", "b", "n", "m"),
         )
 
     /** The engine code of every letter key in the same order: ー is the scheme's minus. */
     private val letterCodes =
         listOf(
             listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
-            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
-            listOf("z", "x", "c", "v", "b", "n", "m", "-"),
+            listOf("a", "s", "d", "f", "g", "h", "j", "k", "l", "-"),
+            listOf("z", "x", "c", "v", "b", "n", "m"),
         )
 
     private fun key(
@@ -92,7 +92,7 @@ class RomajiLayoutTest {
     @Test
     fun theLetterRowsAreQwertyWithTheLongVowelRightOfM() {
         assertEquals("three letter rows and one control row", 4, layout.rows.size)
-        assertEquals(listOf(10, 9, 8, 5), layout.rows.map { it.keys.size })
+        assertEquals(listOf(10, 10, 7, 5), layout.rows.map { it.keys.size })
         assertEquals(letterCaps, layout.rows.dropLast(1).map { row -> row.keys.map { it.label } })
     }
 
@@ -109,7 +109,7 @@ class RomajiLayoutTest {
         }
         // ー must reach the scheme as the minus code, never as an inserted literal: the scheme turns
         // the code into the long vowel mark mid-composition.
-        val longVowel = rows.last().keys.last()
+        val longVowel = rows[1].keys.last()
         assertEquals("ー", longVowel.label)
         assertEquals(LayoutAction.code("-"), longVowel.action)
         assertNull(longVowel.longPress)
@@ -165,18 +165,18 @@ class RomajiLayoutTest {
                 it.action.type != LayoutActionKind.CODE && it.action.type != LayoutActionKind.LITERAL
             },
         )
-        // Every main key is one unit wide, so the shell's weight projection gives the eight-key third
+        // Every main key is one unit wide, so the shell's weight projection gives the ten-key second
         // row equal shares; the preset's fixed ten columns are not claimed.
         for (key in layout.rows.take(3).flatMap { it.keys }) {
             assertEquals(key.label, 1.0, key.widthWeight, 1e-9)
         }
-        assertEquals(8, layout.rows[2].keys.size)
+        assertEquals(10, layout.rows[1].keys.size)
         assertEquals(
-            7,
-            BuiltinLayouts.qwerty26.rows[2]
+            9,
+            BuiltinLayouts.qwerty26.rows[1]
                 .keys.size,
         )
-        // ー right of M is one more key in a main row, not a shape of its own.
+        // ー right of L is one more key in a main row, not a shape of its own.
         assertNull(BuiltinLayouts.handSplit(layout))
         assertFalse(PhoneKeypadStructure.matches(layout))
         assertFalse(CompactSpellingLayout.matches(layout))

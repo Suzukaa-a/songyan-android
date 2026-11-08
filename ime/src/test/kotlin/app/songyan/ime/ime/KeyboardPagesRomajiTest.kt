@@ -109,13 +109,13 @@ class KeyboardPagesRomajiTest {
             definition.rows.take(3).map { row ->
                 row.keys.filter { it.action.type == LayoutActionKind.CODE }.joinToString("") { it.label }
             }
-        assertEquals(listOf("qwertyuiop", "asdfghjkl", "zxcvbnmー"), caps)
+        assertEquals(listOf("qwertyuiop", "asdfghjklー", "zxcvbnm"), caps)
     }
 
     @Test
     fun theLongVowelSendsTheSchemesMinusCode() {
         val page = letters(defaultConfig())
-        val longVowel = page.rows[2].keys.first { it.label == "ー" }
+        val longVowel = page.rows[1].keys.first { it.label == "ー" }
         assertEquals(LayoutActionKind.CODE, longVowel.action.type)
         assertEquals("-", longVowel.action.value)
         assertNull(longVowel.longPress)
@@ -170,7 +170,7 @@ class KeyboardPagesRomajiTest {
         )
         assertEquals(
             listOf("ー"),
-            page.rows[2]
+            page.rows[1]
                 .keys
                 .map { it.label }
                 .filter { it == "ー" },

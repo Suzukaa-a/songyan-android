@@ -63,11 +63,15 @@ import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.keyboard.support.SettingsTarget
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
+import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.ui.SettingsRoutes
 import app.songyan.ime.settings.ui.theme.ThemeMode
 import app.songyan.ime.storage.GenerationPublisher
@@ -173,6 +177,22 @@ class SongyanInputMethodService : InputMethodService() {
             override suspend fun setLayoutId(id: String) = store.setLayoutId(id)
 
             override suspend fun setActiveSchemaId(id: String) = store.setActiveSchemaId(id)
+
+            // The same catalog edit the settings app makes; it publishes to the keyboard's catalog.
+            override suspend fun setMainLayout(
+                schemaId: String,
+                families: LayoutFamilyContext,
+                boardId: String,
+            ): Boolean =
+                withContext(Dispatchers.IO) {
+                    val key = KeyboardCompositionKey(schemaId, LayoutInput.Builtin.QWERTY26)
+                    (application as SongyanApplication).layoutRepository.edit { registry ->
+                        registry.withComposition(
+                            registry.composition(key, families).withMainLayoutId(boardId),
+                            key.rawValue,
+                        )
+                    } is LayoutEditResult.Saved
+                }
         }
     }
 

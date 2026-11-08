@@ -345,7 +345,7 @@ class KanaFlickDeviceTest {
  * A missing argument, a missing archive, or an archive that is not a prebuilt deployment fails the
  * test. Nothing is written outside this test package's cache.
  */
-private object KanaFixture {
+internal object KanaFixture {
     /** Instrumentation argument: the pushed ZIP's absolute path, inside this test package's cache. */
     const val ARG_FIXTURE = "kagiroiFixture"
 

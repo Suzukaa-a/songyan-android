@@ -295,6 +295,7 @@ internal fun KeyboardController.wireViews() {
     }
     menu.onSchema = { id -> enqueue { chooseSchema(id) } }
     menu.onLayout = { kind -> enqueue { chooseLayout(kind) } }
+    menu.onBoard = { id -> enqueue { chooseBoard(id) } }
     menu.onQuickContent = { openQuickContentPanel() }
     menu.onKeyboardSettings = { openKeyboardSettingsPanel() }
     menu.onEmoji = { openEmojiPanel() }

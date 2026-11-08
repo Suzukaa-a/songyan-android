@@ -253,10 +253,15 @@ internal fun KeyboardController.syncMenu() {
             ?.map { it.id to it.displayName }
             .orEmpty()
     menu.setSchemas(KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema)))
-    menu.setLayouts(KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts()))
+    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts())
     menu.setLayoutNames(layoutNamesByKind())
+    menu.setLayouts(offered, layoutBoards(), mainDefinition().id)
     menu.update(schemaId, layoutKind)
 }
+
+/** The physical boards the running input method types on, preferred first; empty keeps the shapes. */
+internal fun KeyboardController.layoutBoards(): List<String> =
+    InputLayoutPolicy.boardsOf(layoutFamilies().familyOf(schemaId))
 
 internal object KeyboardMenuEntries {
     /** Before the engine has listed its input methods the bundled ones stand in. */
@@ -280,6 +285,33 @@ internal object KeyboardMenuEntries {
     ): List<KeyboardLayoutKind> =
         KeyboardLayoutKind.entries.filter {
             (it.wire !in hidden || it == current) && (it in usable || it == current)
+        }
+
+    /**
+     * One chip of the layout row: a shape, and the physical board it stands for when the input
+     * method types on several boards that share the identity shape's slot.
+     */
+    data class LayoutChip(
+        val kind: KeyboardLayoutKind,
+        val boardId: String? = null,
+    )
+
+    /**
+     * The layout row for [offered] shapes. The identity shape's chip is replaced by one chip per
+     * entry of [boards] (preferred first); a main layout that is none of them (the user's own) keeps
+     * a chip of the shape itself, after the boards. Without boards the row is the shapes as they are.
+     */
+    fun layoutChips(
+        offered: List<KeyboardLayoutKind>,
+        boards: List<String>,
+        mainLayoutId: String?,
+    ): List<LayoutChip> =
+        offered.flatMap { kind ->
+            when {
+                kind != KeyboardLayoutKind.QWERTY26 || boards.isEmpty() -> listOf(LayoutChip(kind))
+                mainLayoutId in boards -> boards.map { LayoutChip(kind, it) }
+                else -> boards.map { LayoutChip(kind, it) } + LayoutChip(kind)
+            }
         }
 
     /**

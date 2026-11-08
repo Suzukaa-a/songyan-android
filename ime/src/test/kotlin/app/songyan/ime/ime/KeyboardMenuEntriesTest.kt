@@ -1,5 +1,7 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -124,5 +126,62 @@ class KeyboardMenuEntriesTest {
         val usable = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "rime_ice")
         val offered = KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26).filter { it in usable }
         assertEquals(null, KeyboardMenuEntries.nextLayout(offered, KeyboardLayoutKind.QWERTY26))
+    }
+
+    private fun chips(
+        family: InputSchemeFamily,
+        main: String?,
+        offered: List<KeyboardLayoutKind> = KeyboardLayoutKind.entries,
+    ) = KeyboardMenuEntries.layoutChips(offered, InputLayoutPolicy.boardsOf(family), main)
+
+    @Test
+    fun japaneseOffersBothBoardsInPlaceOfTheIdentityShape() {
+        val shown = chips(InputSchemeFamily.JAPANESE, "kana12")
+        assertEquals(
+            listOf("romaji26", "kana12"),
+            shown.filter { it.kind == KeyboardLayoutKind.QWERTY26 }.map { it.boardId },
+        )
+        assertEquals(
+            listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
+            shown.filter { it.kind != KeyboardLayoutKind.QWERTY26 }.map { it.kind },
+        )
+    }
+
+    @Test
+    fun zhuyinKeepsOneChipNamedByItsBoard() {
+        assertEquals(
+            listOf(KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "zhuyin41")),
+            chips(InputSchemeFamily.ZHUYIN, "zhuyin41", listOf(KeyboardLayoutKind.QWERTY26)),
+        )
+    }
+
+    @Test
+    fun pinyinKeepsTheShapes() {
+        assertEquals(
+            KeyboardLayoutKind.entries.map { KeyboardMenuEntries.LayoutChip(it) },
+            chips(InputSchemeFamily.GENERIC, "qwerty26"),
+        )
+    }
+
+    @Test
+    fun aUsersOwnMainLayoutKeepsTheShapeChipAfterTheBoards() {
+        val shown = chips(InputSchemeFamily.JAPANESE, "my-keys", listOf(KeyboardLayoutKind.QWERTY26))
+        assertEquals(
+            listOf(
+                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "romaji26"),
+                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "kana12"),
+                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26),
+            ),
+            shown,
+        )
+    }
+
+    @Test
+    fun aHiddenIdentityShapeLeavesNoBoardChips() {
+        val offered = KeyboardMenuEntries.layouts(setOf("qwerty26"), KeyboardLayoutKind.PHONE9)
+        assertEquals(
+            listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
+            chips(InputSchemeFamily.JAPANESE, "romaji26", offered).map { it.kind },
+        )
     }
 }

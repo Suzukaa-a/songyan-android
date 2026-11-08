@@ -2,5 +2,5 @@
 <resources>
     <!-- Kana gesture preference; key faces follow the input language. -->
     <string name="ime_qs_kana12_flick_only">Flick only</string>
-    <string name="ime_layout_kana12">Japanese 12-key</string>
+    <string name="ime_layout_kana12">Kana 12 keys</string>
 </resources>

@@ -2,5 +2,5 @@
 <resources>
     <!-- Kana gesture preference; key faces follow the input language. -->
     <string name="ime_qs_kana12_flick_only">只用滑動</string>
-    <string name="ime_layout_kana12">日語十二鍵</string>
+    <string name="ime_layout_kana12">假名 12 鍵</string>
 </resources>

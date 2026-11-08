@@ -131,6 +131,21 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
 }
 
 /**
+ * Makes [boardId] the main layout of the running input method's identity shape and moves the keyboard
+ * to that shape. Only the pairing and the layout change: the engine keeps its schema, so nothing is
+ * redeployed. The pairing is saved first; the catalog it publishes redraws the board, and a refused
+ * save leaves the keyboard where it was.
+ */
+internal suspend fun KeyboardController.chooseBoard(boardId: String) {
+    val saved = preferences?.setMainLayout(schemaId, layoutFamilies(), boardId) ?: false
+    if (!saved) {
+        closeKeyboardMenu()
+        return
+    }
+    chooseLayout(KeyboardLayoutKind.QWERTY26)
+}
+
+/**
  * The layouts a jump key may open now; see [JumpTargets.usable]. The renderer asks after every key, so
  * the answer is kept until the layout, the input method or the resource set changes.
  */

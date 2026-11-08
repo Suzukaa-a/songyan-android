@@ -380,6 +380,27 @@ internal class FeatureHost(
             override suspend fun setActiveSchemaId(id: String) {
                 activeSchemaId.value = id
             }
+
+            // The app stores the edit and publishes the catalog to the keyboard; the host publishes directly.
+            override suspend fun setMainLayout(
+                schemaId: String,
+                families: app.songyan.ime.keyboard.engine.LayoutFamilyContext,
+                boardId: String,
+            ): Boolean {
+                val key =
+                    app.songyan.ime.layout.KeyboardCompositionKey(
+                        schemaId,
+                        app.songyan.ime.layout.LayoutInput.Builtin.QWERTY26,
+                    )
+                val registry = KeyboardLayoutCatalog.snapshot.value.registry
+                KeyboardLayoutCatalog.install(
+                    registry.withComposition(
+                        registry.composition(key, families).withMainLayoutId(boardId),
+                        key.rawValue,
+                    ),
+                )
+                return true
+            }
         }
 
     fun string(id: Int): String = context.getString(id)

@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import kotlinx.coroutines.flow.Flow
@@ -78,6 +79,17 @@ interface KeyboardPreferencesSource {
     suspend fun setLayoutId(id: String)
 
     suspend fun setActiveSchemaId(id: String)
+
+    /**
+     * Saves [boardId] as the main layout of the pairing for [schemaId] on the identity (26-key) shape,
+     * off the main thread; true when it was stored. The owner publishes the stored catalog to
+     * [KeyboardLayoutCatalog], which is what redraws the keyboard.
+     */
+    suspend fun setMainLayout(
+        schemaId: String,
+        families: LayoutFamilyContext,
+        boardId: String,
+    ): Boolean = false
 
     suspend fun setOneHand(value: String) = Unit
 

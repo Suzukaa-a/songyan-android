@@ -1,0 +1,17 @@
+<resources>
+    <!-- 工具栏：空闲时工具栏显示哪些按钮、按什么顺序 -->
+    <string name="toolbar_title">工具栏</string>
+    <string name="toolbar_entry_subtitle">选择要显示的按钮和顺序</string>
+    <string name="toolbar_body">关掉的按钮不会出现在工具栏上。收起键盘的按钮固定在最右边。</string>
+    <string name="toolbar_limit">这台设备的工具栏最多显示 %1$d 个</string>
+    <string name="toolbar_over_width">超出宽度，不显示</string>
+    <string name="toolbar_reset">恢复默认</string>
+    <string name="toolbar_more">%1$s的更多操作</string>
+    <string name="toolbar_item_clipboard">剪贴板</string>
+    <string name="toolbar_item_input_methods">键盘菜单</string>
+    <string name="toolbar_item_emoji">表情</string>
+    <string name="toolbar_item_edit">编辑</string>
+    <string name="toolbar_item_tools">键盘工具</string>
+    <string name="toolbar_item_one_hand">单手模式</string>
+    <string name="toolbar_item_settings">键盘设置</string>
+</resources>

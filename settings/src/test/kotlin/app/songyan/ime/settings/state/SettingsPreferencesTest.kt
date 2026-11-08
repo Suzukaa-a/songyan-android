@@ -1,5 +1,7 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.candidate.ToolbarItem
+import app.songyan.ime.candidate.ToolbarLayout
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -142,5 +144,17 @@ class SettingsPreferencesTest {
     fun rejectsAnUnknownSplitMode() =
         runTest {
             InMemorySettingsPreferences().setSplitMode("always")
+        }
+
+    @Test
+    fun `the toolbar choice defaults to nothing stored and a stored choice round-trips`() =
+        runTest {
+            val preferences = InMemorySettingsPreferences()
+            assertEquals(ToolbarLayout.DEFAULT, ToolbarLayout.parse(preferences.toolbarLayout.first()))
+            val chosen = ToolbarLayout.DEFAULT.withShown(ToolbarItem.EMOJI, false).moveEarlier(ToolbarItem.EDIT)
+            preferences.setToolbarLayout(chosen.toWire())
+            assertEquals(chosen, ToolbarLayout.parse(preferences.toolbarLayout.first()))
+            preferences.setToolbarLayout(null)
+            assertEquals(ToolbarLayout.DEFAULT, ToolbarLayout.parse(preferences.toolbarLayout.first()))
         }
 }

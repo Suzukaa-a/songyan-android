@@ -14,6 +14,9 @@ import android.text.TextUtils
 import android.view.MotionEvent
 import androidx.core.content.ContextCompat
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarCapacity
+import app.songyan.ime.candidate.ToolbarItem
+import app.songyan.ime.candidate.ToolbarLayout
 
 /**
  * The idle row of the keyboard's top band: while nothing is being composed the candidate row shows
@@ -40,6 +43,13 @@ class ToolbarView(
         HIDE(R.drawable.ic_toolbar_hide, R.string.ime_toolbar_hide),
         SWITCH_INPUT_METHOD(R.drawable.ic_toolbar_globe, R.string.ime_toolbar_switch_input_method),
         VOICE_INPUT(R.drawable.ic_toolbar_mic, R.string.ime_toolbar_voice_input),
+        ;
+
+        /** The user-chosen item this action stands for; null for the collapse button and system-driven entries. */
+        val item: ToolbarItem? get() = ToolbarItem.entries.firstOrNull { it.name == name }
+
+        /** Whether overflow may drop it: only the user's own choices, never the system-driven ones. */
+        val chosen: Boolean get() = item != null
     }
 
     /** An entry at the right end of the engine notice: a text button or one of the icon actions. */
@@ -111,7 +121,7 @@ class ToolbarView(
         set(value) {
             if (field == value) return
             field = value
-            slotCache = null
+            resetSlots()
             requestLayout()
             invalidate()
         }
@@ -130,7 +140,7 @@ class ToolbarView(
         set(value) {
             if (field == value) return
             field = value
-            slotCache = null
+            resetSlots()
             requestLayout()
             invalidate()
         }
@@ -149,14 +159,62 @@ class ToolbarView(
         ) : Entry
     }
 
-    /** The entries from left to right; a pinned tool sits right after the tools entry. */
-    private fun entries(): List<Entry> =
-        buildList {
-            for (action in actions) {
-                add(Entry.Icon(action))
-                if (action == Action.TOOLS) tools.forEach { add(Entry.Tool(it)) }
+    /**
+     * The entries from left to right; a pinned tool sits right after the tools entry. What does not
+     * fit the width is dropped from the end of the user's order, so the first choices stay.
+     */
+    private fun entries(): List<Entry> {
+        val cached = entryCache
+        if (cached != null && entryCacheWidth == width) return cached
+        val all =
+            buildList {
+                for (action in actions) {
+                    add(Entry.Icon(action))
+                    if (action == Action.TOOLS) tools.forEach { add(Entry.Tool(it)) }
+                }
             }
-        }
+        val kept =
+            if (width <= 0) {
+                all
+            } else {
+                val slots =
+                    all.map { entry ->
+                        when (entry) {
+                            is Entry.Icon ->
+                                ToolbarCapacity.Slot(
+                                    ToolbarCapacity.MIN_ICON_SLOT_DP,
+                                    droppable = entry.action.chosen,
+                                )
+                            is Entry.Tool ->
+                                ToolbarCapacity.Slot(
+                                    toolSlotPx(entry.tool.label) / density,
+                                    droppable = true,
+                                )
+                        }
+                    }
+                val keep = ToolbarCapacity.keep(width / density, slots)
+                all.filterIndexed { index, _ -> keep[index] }
+            }
+        entryCache = kept
+        entryCacheWidth = width
+        return kept
+    }
+
+    private var entryCache: List<Entry>? = null
+    private var entryCacheWidth = -1
+
+    private fun resetSlots() {
+        slotCache = null
+        entryCache = null
+    }
+
+    /** A pinned tool's slot: its name's width plus padding, kept between the bounds. */
+    private fun toolSlotPx(label: String): Int {
+        textPaint.textSize = metrics.candidateTextSizeSp * resources.configuration.fontScale * density
+        return (textPaint.measureText(label) + 2 * TOOL_PADDING_DP * density)
+            .toInt()
+            .coerceIn((MIN_TOOL_DP * density).toInt(), (MAX_TOOL_DP * density).toInt())
+    }
 
     /** Slot boxes of the drawn entries; a pinned tool gets the room its name needs. */
     private var slotCache: List<Rect>? = null
@@ -169,18 +227,7 @@ class ToolbarView(
         val entries = entries()
         if (entries.isEmpty() || width <= 0) return emptyList()
         val iconCount = entries.count { it is Entry.Icon }
-        val padding = TOOL_PADDING_DP * density
-        textPaint.textSize = metrics.candidateTextSizeSp * resources.configuration.fontScale * density
-        val measured =
-            entries.map { entry ->
-                if (entry !is Entry.Tool) {
-                    0
-                } else {
-                    (textPaint.measureText(entry.tool.label) + 2 * padding)
-                        .toInt()
-                        .coerceIn((MIN_TOOL_DP * density).toInt(), (MAX_TOOL_DP * density).toInt())
-                }
-            }
+        val measured = entries.map { entry -> if (entry is Entry.Tool) toolSlotPx(entry.tool.label) else 0 }
         val wantedTools = measured.sum()
         // The icons keep a usable slot: a long tool name first loses width, then gives back the rest.
         val iconFloor = (MIN_ICON_SLOT_DP * density).toInt()
@@ -225,7 +272,7 @@ class ToolbarView(
             field = value
             chipLayout = null
             noticeLayout = null
-            slotCache = null
+            resetSlots()
             requestLayout()
             invalidate()
         }
@@ -236,7 +283,7 @@ class ToolbarView(
         drawables.clear()
         chipLayout = null
         noticeLayout = null
-        slotCache = null
+        resetSlots()
         requestLayout()
         invalidate()
     }
@@ -249,7 +296,7 @@ class ToolbarView(
     ) {
         chipLayout = null
         noticeLayout = null
-        slotCache = null
+        resetSlots()
         super.onSizeChanged(w, h, oldw, oldh)
     }
 
@@ -646,29 +693,23 @@ class ToolbarView(
         /** The store's pin limit, mirrored so the row never grows past it. */
         const val MAXIMUM_PINNED_TOOLS: Int = 2
 
-        /** The entries in the order the idle band lists them. */
-        val DEFAULT_ACTIONS =
-            listOf(
-                Action.CLIPBOARD,
-                Action.INPUT_METHODS,
-                Action.EMOJI,
-                Action.EDIT,
-                Action.ONE_HAND,
-                Action.SETTINGS,
-                Action.HIDE,
-            )
+        /**
+         * The default entries in order, without the tools entry: that one is added only where tools are
+         * available.
+         */
+        val DEFAULT_ACTIONS: List<Action> =
+            ToolbarLayout.DEFAULT.shown
+                .filter { it != ToolbarItem.TOOLS }
+                .map { Action.valueOf(it.name) } + Action.HIDE
 
         private const val ICON_DP = 24f
         private const val ICON_SMALL_DP = 18f
         private const val ICON_GAP_DP = 6f
 
-        /** A pinned tool's slot: its name's own width, kept between these bounds. */
-        private const val MIN_TOOL_DP = 44f
-        private const val MAX_TOOL_DP = 96f
-        private const val TOOL_PADDING_DP = 8f
-
-        /** The smallest slot an icon shortcut keeps when pinned tools need room. */
-        private const val MIN_ICON_SLOT_DP = 32f
+        private const val MIN_TOOL_DP = ToolbarCapacity.MIN_TOOL_DP
+        private const val MAX_TOOL_DP = ToolbarCapacity.MAX_TOOL_DP
+        private const val TOOL_PADDING_DP = ToolbarCapacity.TOOL_PADDING_DP
+        private const val MIN_ICON_SLOT_DP = ToolbarCapacity.MIN_ICON_SLOT_DP
         private const val CHIP_MARGIN_DP = 8f
         private const val CHIP_INSET_DP = 6f
         private const val CROSS_DP = 12f

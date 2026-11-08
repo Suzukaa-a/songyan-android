@@ -1,0 +1,17 @@
+<resources>
+    <!-- 工具欄：空閒時工具欄顯示哪些按鈕、按什麼順序 -->
+    <string name="toolbar_title">工具欄</string>
+    <string name="toolbar_entry_subtitle">選擇要顯示的按鈕和順序</string>
+    <string name="toolbar_body">關掉的按鈕不會出現在工具欄上。收起鍵盤的按鈕固定在最右邊。</string>
+    <string name="toolbar_limit">這臺裝置的工具欄最多顯示 %1$d 個</string>
+    <string name="toolbar_over_width">超出寬度，不顯示</string>
+    <string name="toolbar_reset">恢復預設</string>
+    <string name="toolbar_more">%1$s的更多操作</string>
+    <string name="toolbar_item_clipboard">剪貼簿</string>
+    <string name="toolbar_item_input_methods">鍵盤選單</string>
+    <string name="toolbar_item_emoji">表情</string>
+    <string name="toolbar_item_edit">編輯</string>
+    <string name="toolbar_item_tools">鍵盤工具</string>
+    <string name="toolbar_item_one_hand">單手模式</string>
+    <string name="toolbar_item_settings">鍵盤設定</string>
+</resources>

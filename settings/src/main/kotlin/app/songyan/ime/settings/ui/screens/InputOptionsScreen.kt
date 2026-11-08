@@ -87,6 +87,7 @@ fun InputOptionsScreen(
     onBack: (() -> Unit)?,
     onOpenFeatures: () -> Unit = {},
     onOpenCandidateBar: () -> Unit = {},
+    onOpenToolbar: () -> Unit = {},
     onOpenShuangpinHints: () -> Unit = {},
     engineOptions: EngineOptionsUiState = EngineOptionsUiState(),
     onEngineOptionChanged: (String, Boolean) -> Unit = { _, _ -> },
@@ -151,6 +152,11 @@ fun InputOptionsScreen(
                 title = stringResource(R.string.candidate_bar_title),
                 subtitle = stringResource(R.string.candidate_bar_entry_subtitle),
                 onClick = onOpenCandidateBar,
+            )
+            SettingsRow(
+                title = stringResource(R.string.toolbar_title),
+                subtitle = stringResource(R.string.toolbar_entry_subtitle),
+                onClick = onOpenToolbar,
             )
 
             SectionHeader(stringResource(R.string.options_candidate_size_section))

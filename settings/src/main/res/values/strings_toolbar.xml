@@ -1,0 +1,17 @@
+<resources>
+    <!-- Toolbar: which idle-toolbar buttons show, and in what order -->
+    <string name="toolbar_title">Toolbar</string>
+    <string name="toolbar_entry_subtitle">Choose which buttons show and their order</string>
+    <string name="toolbar_body">Buttons you turn off stay off the toolbar. The hide-keyboard button always stays at the far right.</string>
+    <string name="toolbar_limit">This device\'s toolbar shows at most %1$d</string>
+    <string name="toolbar_over_width">Over the width, not shown</string>
+    <string name="toolbar_reset">Restore defaults</string>
+    <string name="toolbar_more">More actions for %1$s</string>
+    <string name="toolbar_item_clipboard">Clipboard</string>
+    <string name="toolbar_item_input_methods">Keyboard menu</string>
+    <string name="toolbar_item_emoji">Emoji</string>
+    <string name="toolbar_item_edit">Edit</string>
+    <string name="toolbar_item_tools">Keyboard tools</string>
+    <string name="toolbar_item_one_hand">One-handed mode</string>
+    <string name="toolbar_item_settings">Keyboard settings</string>
+</resources>

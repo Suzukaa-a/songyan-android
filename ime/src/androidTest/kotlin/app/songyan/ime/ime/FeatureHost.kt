@@ -312,6 +312,7 @@ internal class FeatureHost(
     val keyHeightFlow = MutableStateFlow("standard")
     val colorModeFlow = MutableStateFlow("system")
     val hideToolbarFlow = MutableStateFlow(false)
+    val toolbarLayoutFlow = MutableStateFlow("")
     val bottomGapFlow = MutableStateFlow(0)
     val longPressFlow = MutableStateFlow<Int?>(null)
     val switchKeyFlow = MutableStateFlow(false)
@@ -359,6 +360,7 @@ internal class FeatureHost(
             override val t9QuickSymbols = quickSymbolsFlow
             override val colorMode = colorModeFlow
             override val hideIdleToolbar = hideToolbarFlow
+            override val toolbarLayout = toolbarLayoutFlow
             override val menuHiddenLayouts = hiddenLayoutsFlow
 
             override suspend fun setOneHand(value: String) {

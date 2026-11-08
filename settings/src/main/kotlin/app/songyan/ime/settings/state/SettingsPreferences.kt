@@ -47,6 +47,12 @@ interface SettingsPreferences {
 
     suspend fun setHideIdleToolbar(value: Boolean)
 
+    /** The idle toolbar's entries in order ([app.songyan.ime.candidate.ToolbarLayout.toWire]); empty is the default. */
+    val toolbarLayout: Flow<String>
+
+    /** Null returns to the default entries. */
+    suspend fun setToolbarLayout(wire: String?)
+
     /** Haptic tick when a key is released (off by default). */
     val releaseHaptic: Flow<Boolean>
 
@@ -289,6 +295,14 @@ class InMemorySettingsPreferences(
 
     override suspend fun setHideIdleToolbar(value: Boolean) {
         hideToolbar.value = value
+    }
+
+    private val toolbar = MutableStateFlow("")
+
+    override val toolbarLayout: Flow<String> = toolbar.asStateFlow()
+
+    override suspend fun setToolbarLayout(wire: String?) {
+        toolbar.value = wire.orEmpty()
     }
 
     override val releaseHaptic: Flow<Boolean> = release.asStateFlow()

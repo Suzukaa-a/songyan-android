@@ -8,6 +8,8 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.emoji2.text.EmojiCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.songyan.ime.candidate.ToolbarItem
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.EditPanelView
 import app.songyan.ime.ime.panels.EmojiPanelView
 import org.junit.AfterClass
@@ -30,6 +32,26 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.string(R.string.ime_toolbar_emoji) in toolbar)
             assertTrue(host.string(R.string.ime_toolbar_edit) in toolbar)
             assertEquals(ToolbarView.DEFAULT_ACTIONS.size, toolbar.size)
+        }
+
+    @Test
+    fun theToolbarFollowsTheChosenItemsAndTheirOrderWhileShown() =
+        withHost { host ->
+            host.start()
+            val emoji = host.string(R.string.ime_toolbar_emoji)
+            val clipboard = host.string(R.string.ime_panel_clipboard)
+            val chosen =
+                ToolbarLayout.DEFAULT
+                    .withShown(ToolbarItem.EMOJI, false)
+                    .moveEarlier(ToolbarItem.EDIT)
+            host.toolbarLayoutFlow.value = chosen.toWire()
+            assertTrue(host.await { emoji !in host.toolbarLabels() })
+            val labels = host.toolbarLabels()
+            assertEquals(host.string(R.string.ime_toolbar_hide), labels.last())
+            assertEquals(labels.indexOf(clipboard) + 2, labels.indexOf(host.string(R.string.ime_toolbar_edit)))
+            host.toolbarLayoutFlow.value = ""
+            assertTrue(host.await { emoji in host.toolbarLabels() })
+            assertEquals(ToolbarView.DEFAULT_ACTIONS.size, host.toolbarLabels().size)
         }
 
     // ---- edit panel -------------------------------------------------------------------------

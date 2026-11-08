@@ -99,6 +99,7 @@ import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
 import app.songyan.ime.settings.ui.screens.SchemeDetailScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
+import app.songyan.ime.settings.ui.screens.ToolbarScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
 import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
@@ -141,6 +142,7 @@ object SettingsRoutes {
     const val OPTIONS = "options"
     const val FEATURES = "features"
     const val CANDIDATE_BAR = "candidateBar"
+    const val TOOLBAR = "toolbar"
     const val SHUANGPIN = "shuangpinHints"
     const val T9_SYMBOLS = "t9QuickSymbols"
     const val NINE_KEY_EDITOR = "nineKeyEditor"
@@ -171,7 +173,7 @@ object SettingsRoutes {
     fun topLevelOf(route: String?): String? =
         when (route) {
             null, HOME -> null
-            FEATURES, CANDIDATE_BAR, SHUANGPIN -> OPTIONS
+            FEATURES, CANDIDATE_BAR, TOOLBAR, SHUANGPIN -> OPTIONS
             LAYOUTS,
             LAYOUT_EDITOR,
             PAGES,
@@ -606,6 +608,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onBack = topBack(navController),
                 onOpenFeatures = { navController.navigate(SettingsRoutes.FEATURES) },
                 onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
+                onOpenToolbar = { navController.navigate(SettingsRoutes.TOOLBAR) },
                 onOpenShuangpinHints = { navController.navigate(SettingsRoutes.SHUANGPIN) },
             )
         }
@@ -633,6 +636,10 @@ private fun NavGraphBuilder.settingsGraph(
             onHideIdleToolbarChanged = viewModel::setHideIdleToolbar,
             onBack = { navController.popBackStack() },
         )
+    }
+
+    composable(SettingsRoutes.TOOLBAR) {
+        ToolbarScreen(onBack = { navController.popBackStack() })
     }
 
     composable(SettingsRoutes.KEYBOARD_MENU) {

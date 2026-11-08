@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import app.songyan.ime.candidate.AmbiguitySpellingPicker
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.palette.KeyboardPalettes
@@ -386,6 +387,9 @@ class KeyboardController(
     internal var oneHandMode = KeyboardOneHandMode.OFF
     internal var lastOneHandSide = KeyboardOneHandMode.RIGHT
     internal var hideIdleToolbar = false
+
+    /** The user's choice of idle toolbar entries and their order. */
+    internal var toolbarLayout = ToolbarLayout.DEFAULT
 
     /** Input methods (engine ids) and layouts (wire ids) the user took out of the keyboard menu. */
     internal var menuHiddenSchemas: Set<String> = emptySet()

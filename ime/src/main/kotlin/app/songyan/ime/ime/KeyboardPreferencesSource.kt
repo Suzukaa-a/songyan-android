@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
@@ -39,6 +40,9 @@ interface KeyboardPreferencesSource {
 
     /** Whether the idle candidate row hides its toolbar; the menu then carries its entries. */
     val hideIdleToolbar: Flow<Boolean> get() = flowOf(false)
+
+    /** [ToolbarLayout.toWire]: the idle toolbar's entries in order; empty is the default. */
+    val toolbarLayout: Flow<String> get() = flowOf("")
 
     /** A second haptic tick when a key is released. */
     val releaseHaptic: Flow<Boolean> get() = flowOf(false)

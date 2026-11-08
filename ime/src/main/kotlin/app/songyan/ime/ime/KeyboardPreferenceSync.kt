@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
@@ -59,6 +60,13 @@ internal fun KeyboardController.applyHideIdleToolbar(hide: Boolean) {
     syncToolbar()
 }
 
+internal fun KeyboardController.applyToolbarLayout(wire: String) {
+    val layout = ToolbarLayout.parse(wire)
+    if (toolbarLayout == layout) return
+    toolbarLayout = layout
+    syncToolbar()
+}
+
 /** The toolbar's one-handed button: off, or back to the side used last (right until one was chosen). */
 internal fun KeyboardController.toggleOneHand() {
     val next = if (oneHandMode == KeyboardOneHandMode.OFF) lastOneHandSide else KeyboardOneHandMode.OFF
@@ -91,6 +99,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.doubleSpacePeriod.collect { doubleSpacePeriodEnabled = it } }
     scope.launch { source.keyPreview.collect { keyboard.keyPreviewEnabled = it } }
     scope.launch { source.hideIdleToolbar.collect { applyHideIdleToolbar(it) } }
+    scope.launch { source.toolbarLayout.collect { applyToolbarLayout(it) } }
     scope.launch {
         source.symbolLock.collect {
             if (symbolLock == it) return@collect
@@ -183,6 +192,7 @@ internal suspend fun KeyboardController.readPreferences() {
     runCatching { source.doubleSpacePeriod.first() }.getOrNull()?.let { doubleSpacePeriodEnabled = it }
     runCatching { source.keyPreview.first() }.getOrNull()?.let { keyboard.keyPreviewEnabled = it }
     runCatching { source.hideIdleToolbar.first() }.getOrNull()?.let { applyHideIdleToolbar(it) }
+    runCatching { source.toolbarLayout.first() }.getOrNull()?.let { applyToolbarLayout(it) }
     runCatching { source.releaseHaptic.first() }.getOrNull()?.let { feedback.releaseEnabled = it }
     runCatching { source.oneHand.first() }.getOrNull()?.let {
         oneHandMode = KeyboardOneHandMode.resolve(it)

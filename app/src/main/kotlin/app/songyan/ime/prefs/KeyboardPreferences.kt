@@ -291,6 +291,20 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_HIDE_IDLE_TOOLBAR] = value }
     }
 
+    /** The idle toolbar's entries (the wire form of the core toolbar layout); empty until the user changes them. */
+    val toolbarLayout: Flow<String> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_TOOLBAR_LAYOUT].orEmpty() }
+            .distinctUntilChanged()
+
+    /** Null returns to the default entries. */
+    suspend fun setToolbarLayout(wire: String?) {
+        appContext.keyboardDataStore.edit {
+            if (wire == null) it.remove(KEY_TOOLBAR_LAYOUT) else it[KEY_TOOLBAR_LAYOUT] = wire
+        }
+    }
+
     /** A second haptic tick on key release; off by default because some systems answer a press twice. */
     val releaseHaptic: Flow<Boolean> =
         appContext.keyboardDataStore.data
@@ -483,6 +497,7 @@ class KeyboardPreferences(
         private val KEY_WIDE_POSITION_CUSTOM = intPreferencesKey("wide_position_custom")
         private val KEY_SPLIT_MODE = stringPreferencesKey("split_mode")
         private val KEY_SHUANGPIN_HINTS = stringPreferencesKey("shuangpin_hints")
+        private val KEY_TOOLBAR_LAYOUT = stringPreferencesKey("toolbar_layout")
         private val KEY_T9_QUICK_SYMBOLS = stringPreferencesKey("t9_quick_symbols")
         private val KEY_MENU_HIDDEN_SCHEMAS = stringSetPreferencesKey("menu_hidden_schemas")
         private val KEY_MENU_HIDDEN_LAYOUTS = stringSetPreferencesKey("menu_hidden_layouts")

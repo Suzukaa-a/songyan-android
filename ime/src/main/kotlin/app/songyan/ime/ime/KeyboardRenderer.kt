@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import app.songyan.ime.candidate.ToolbarItem
 import app.songyan.ime.keyboard.display.CompositionText
 import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.display.SentenceSpelling
@@ -407,40 +408,20 @@ internal fun KeyboardController.syncToolbar() {
         }
     // One-handed mode only exists on a phone-width portrait window; elsewhere the button would do nothing.
     val oneHandAvailable = shell.isAvailable()
-    val actions =
-        if (hideIdleToolbar) {
-            emptyList()
-        } else if (customSwitcherRequested && options.canSwitch) {
-            ToolbarView.DEFAULT_ACTIONS.flatMap { action ->
-                if (action ==
-                    ToolbarView.Action.HIDE
-                ) {
-                    listOf(ToolbarView.Action.SWITCH_INPUT_METHOD, action)
-                } else {
-                    listOf(action)
-                }
-            }
-        } else {
-            ToolbarView.DEFAULT_ACTIONS
-        }.filter { it != ToolbarView.Action.ONE_HAND || oneHandAvailable }
     // A private field (a password, or an editor that asked for no personalized learning) offers no
     // tools at all, neither the entry nor a pinned tool: the rule is about the field, not the tool.
     // A hidden idle toolbar keeps its row but shows nothing, pinned tools included.
     val showsTools = toolsAvailable && !hideIdleToolbar
     toolbar.actions =
-        if (showsTools) {
-            actions.flatMap { action ->
-                if (action == ToolbarView.Action.EDIT) {
-                    listOf(action, ToolbarView.Action.TOOLS)
-                } else {
-                    listOf(action)
-                }
-            }
-        } else {
-            actions
-        }
+        ToolbarActions.assemble(
+            layout = toolbarLayout,
+            hidden = hideIdleToolbar,
+            switcher = customSwitcherRequested && options.canSwitch,
+            oneHandAvailable = oneHandAvailable,
+            toolsAvailable = toolsAvailable,
+        )
     toolbar.tools =
-        if (showsTools) {
+        if (showsTools && ToolbarItem.TOOLS in toolbarLayout.shown) {
             keyboardTools
                 .filter { it.pinned }
                 .take(ToolbarView.MAXIMUM_PINNED_TOOLS)

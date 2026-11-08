@@ -161,6 +161,10 @@ internal fun KeyboardController.jumpableLayouts(): Set<KeyboardLayoutKind> {
 
 internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (target.isBlank()) return
+    if (target.startsWith(OtherInputMethod.MENU_ID_PREFIX)) {
+        otherInputMethods.firstOrNull { it.menuId == target }?.let { switchToOtherPackage(it) }
+        return
+    }
     val active = session
     val accepted =
         if (active != null && ready) {
@@ -183,6 +187,18 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
     syncMenu()
     closeKeyboardMenu()
     render()
+}
+
+/**
+ * Another package's input method was picked. The composition is committed first, as before any
+ * outside write, because the engine is replaced and its spelling cannot continue; a field that is
+ * no longer current keeps the keyboard where it is.
+ */
+private suspend fun KeyboardController.switchToOtherPackage(method: OtherInputMethod) {
+    val settled = confirmComposition()
+    closeKeyboardMenu()
+    render()
+    if (settled) callbacks.switchSource(method.sourceId, method.schemaId)
 }
 
 internal suspend fun KeyboardController.cycleLayout() {

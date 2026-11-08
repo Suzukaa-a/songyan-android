@@ -63,8 +63,8 @@ class DeploymentCoordinator(
 ) {
     private val installer = BuiltinSourceInstaller(assets)
     private val scriptDefault = BuiltinScriptDefault(storage, localeTags)
-    private val publisher = GenerationPublisher(storage)
     private val catalog = SourceCatalog(storage)
+    private val publisher = GenerationPublisher(storage, keptSources = ::menuSourceIds)
     private val builder = SourceBuilder(assets)
     private val overlay = DeployOverlay(storage)
     private val featureStore = EngineFeatureStore(storage)
@@ -78,6 +78,19 @@ class DeploymentCoordinator(
 
     /** The applied configuration's files (name, size, time) and whether they passed [UserConfigFiles.verify]. */
     private var verifiedConfig: Pair<String, Boolean>? = null
+
+    /**
+     * The packages that offer at least one input method in the keyboard menu: only these keep a
+     * ready generation, so switching to them from the menu needs no rebuild. A package whose input
+     * methods are all hidden is rebuilt on the first switch after they are shown again.
+     */
+    private fun menuSourceIds(): Set<String> {
+        val hidden = runCatching { storage.menuHiddenSchemasFile.readLines().toSet() }.getOrDefault(emptySet())
+        return catalog
+            .list()
+            .filter { manifest -> manifest.schemes.any { it.schemaId !in hidden } }
+            .mapTo(mutableSetOf()) { it.sourceId }
+    }
 
     /** The built-in source's install stamp: an app or data update reinstalls it. */
     private val builtinRevision: String = "builtin-" + stamp.data + "-" + stamp.app

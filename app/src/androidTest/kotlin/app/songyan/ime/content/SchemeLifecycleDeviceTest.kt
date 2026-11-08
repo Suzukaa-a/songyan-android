@@ -5,6 +5,9 @@ import android.net.Uri
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.deploy.DeployState
+import app.songyan.ime.deploy.DeployStatusStore
+import app.songyan.ime.deploy.DeploymentStarter
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
 import app.songyan.ime.settings.state.SettingsAppStateHolder
@@ -174,6 +177,35 @@ class SchemeLifecycleDeviceTest {
             )
             assertTrue(after.revision.startsWith("newer-"))
             awaitRow(id) { it?.status == StoredSourceStatus.IN_USE }
+        }
+
+    @Test
+    fun aMenuRequestForAStoredPackageReusesItsKeptGenerationWithoutARebuild() =
+        runBlocking<Unit> {
+            val id = importPackage()
+            val first = requireNotNull(publisher.readActive())
+            assertEquals(StoredSourceResult.Success, sources.use(SourceIds.BUILTIN))
+            assertEquals(SourceIds.BUILTIN, publisher.readActive()?.sourceId)
+            assertTrue(
+                "the package's generation is kept while another one is active",
+                storage.generationDir(first.generation).isDirectory,
+            )
+
+            // The request the keyboard menu sends from the input method process.
+            assertTrue(DeploymentStarter.requestActivate(context, id))
+            val deadline = SystemClock.elapsedRealtime() + 60_000
+            while (publisher.readActive()?.sourceId != id && SystemClock.elapsedRealtime() < deadline) {
+                Thread.sleep(100)
+            }
+
+            val after = requireNotNull(publisher.readActive())
+            assertEquals(id, after.sourceId)
+            assertEquals("the kept generation was switched to, not compiled again", first.generation, after.generation)
+            // The deploy process may still be finishing up; the next test must not start under it.
+            val status = DeployStatusStore(storage)
+            while (status.read() == DeployState.PREPARING && SystemClock.elapsedRealtime() < deadline) {
+                Thread.sleep(100)
+            }
         }
 
     @Test

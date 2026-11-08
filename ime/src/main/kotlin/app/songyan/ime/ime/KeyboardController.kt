@@ -119,6 +119,8 @@ class KeyboardController(
         val inputMethods: InputMethodAccess = InputMethodAccess.NONE,
         /** A button of the engine notice (retry, settings). */
         val engineNoticeAction: (EngineNoticeAction) -> Unit = {},
+        /** The user picked an input method of another installed package from the menu; the composition is settled. */
+        val switchSource: (sourceId: String, schemaId: String) -> Unit = { _, _ -> },
     )
 
     /**
@@ -394,6 +396,17 @@ class KeyboardController(
     /** Input methods (engine ids) and layouts (wire ids) the user took out of the keyboard menu. */
     internal var menuHiddenSchemas: Set<String> = emptySet()
     internal var menuHiddenLayouts: Set<String> = emptySet()
+
+    /** Input methods of the other installed packages the menu offers next to the running one's. */
+    internal var otherInputMethods: List<OtherInputMethod> = emptyList()
+        private set
+
+    /** Main thread. */
+    fun setOtherInputMethods(value: List<OtherInputMethod>) {
+        if (value == otherInputMethods) return
+        otherInputMethods = value
+        syncMenu()
+    }
 
     /** The user's shuangpin hints per letter; empty while they are off. */
     internal var shuangpinHints: Map<Char, String> = emptyMap()
@@ -707,7 +720,7 @@ class KeyboardController(
     }
 
     /** Engine confirmation must not authorize a follow-up write to a replacement editor. */
-    private suspend fun confirmComposition(): Boolean {
+    internal suspend fun confirmComposition(): Boolean {
         val active = session.takeIf { ready } ?: return true
         val committed = active.commitComposition()
         return committed && fieldStillCurrent()
@@ -1185,6 +1198,7 @@ class KeyboardController(
         menu.layoutParams =
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, surface)
         menu.visibility = View.VISIBLE
+        menu.revealSelection()
         keyboard.visibility = View.GONE
         barRow.visibility = View.GONE
         callbacks.panelsChanged(true)

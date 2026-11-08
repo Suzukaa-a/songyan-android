@@ -130,6 +130,7 @@ class ImeEngineRuntime(
     /** A newer generation is published but waits until the input view is gone. */
     @Volatile
     private var swapDeferred = false
+    private var swapWhileShownOnce = false
 
     val isRunning: Boolean get() = handle != null
 
@@ -156,6 +157,16 @@ class ImeEngineRuntime(
     fun setInputViewShown(shown: Boolean) {
         inputViewShown = shown
         if (!shown && swapDeferred) reloadLater()
+    }
+
+    /**
+     * Main thread only. The user asked for another package from the keyboard menu: the next swap
+     * proceeds while the input view is shown, because the composition was settled before asking and
+     * waiting for a hide would leave the old package's keys on screen. One-shot; pass false to take
+     * it back when the request could not be sent or the window for an immediate swap has passed.
+     */
+    fun allowNextSwapWhileShown(allow: Boolean = true) {
+        swapWhileShownOnce = allow
     }
 
     /** True while a published generation waits for the input view to close; for tests. */
@@ -219,12 +230,13 @@ class ImeEngineRuntime(
         val swapping = handle != null
         val proceed =
             withContext(mainDispatcher) {
-                if (swapping && inputViewShown) {
+                if (swapping && inputViewShown && !swapWhileShownOnce) {
                     // Set here, not after the hop: [setInputViewShown] runs on this thread too, so a
                     // hide that follows always sees the deferral and reloads.
                     swapDeferred = true
                     false
                 } else {
+                    swapWhileShownOnce = false
                     callbacks.onState(EngineRuntimeState.PREPARING)
                     true
                 }

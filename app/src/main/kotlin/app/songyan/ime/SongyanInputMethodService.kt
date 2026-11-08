@@ -58,6 +58,7 @@ import app.songyan.ime.ime.KeyboardController
 import app.songyan.ime.ime.KeyboardGeometry
 import app.songyan.ime.ime.KeyboardPalette
 import app.songyan.ime.ime.KeyboardPreferencesSource
+import app.songyan.ime.ime.OtherInputMethod
 import app.songyan.ime.ime.keyboardCallbacks
 import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
@@ -74,7 +75,11 @@ import app.songyan.ime.rime.RimeBindings
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.ui.SettingsRoutes
 import app.songyan.ime.settings.ui.theme.ThemeMode
+import app.songyan.ime.state.BUILTIN_SCHEME_NAMES
+import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.SourceCatalog
+import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.tools.ProcessTextKind
 import app.songyan.ime.tools.ProcessTextOutcome
 import app.songyan.ime.tools.ProcessTextRelay
@@ -93,11 +98,15 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import app.songyan.ime.ime.R as ImeR
 
 /** How long a first deployment may take before the engine notice offers the settings path. */
 private const val SETTINGS_ACTION_DELAY_MS = 2_000L
 private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
+
+// Long enough for a stored generation to be swapped in, deploy process start included.
+private const val SWITCH_WAIT_MS = 5_000L
 private const val TAG = "SongyanIme"
 
 /** How much of the field a tool may be handed: the selection or the whole field, never more than this. */
@@ -397,6 +406,9 @@ class SongyanInputMethodService : InputMethodService() {
     private var runtime: ImeEngineRuntime? = null
     private var runtimeState = EngineRuntimeState.NO_PUBLICATION
     private var settingsOffered = false
+    private var otherInputMethods: List<OtherInputMethod> = emptyList()
+    private var otherMethodsJob: Job? = null
+    private var switchJob: Job? = null
 
     /** The system asked for the keyboard to carry its own input method switcher (API 35+). */
     private var customSwitcherRequested = false
@@ -444,6 +456,7 @@ class SongyanInputMethodService : InputMethodService() {
                 ) {
                     // Deferred by the runtime while the keys are on screen; repeated broadcasts are no-ops.
                     runtime?.refreshIfChanged()
+                    refreshOtherInputMethods()
                 }
             }
         }
@@ -510,6 +523,7 @@ class SongyanInputMethodService : InputMethodService() {
                             override fun onState(state: EngineRuntimeState) {
                                 runtimeState = state
                                 renderRuntimeState()
+                                if (state == EngineRuntimeState.READY) refreshOtherInputMethods()
                             }
 
                             override fun onEngine(backend: EngineBackend) {
@@ -597,6 +611,83 @@ class SongyanInputMethodService : InputMethodService() {
             }
         }
 
+    /**
+     * The input methods of the other stored packages, for the keyboard menu. Read on IO: the catalog
+     * lists the sources directory and reads each manifest. Cheap enough to repeat on every show.
+     */
+    private fun refreshOtherInputMethods() {
+        val storage = (application as SongyanApplication).storage
+        otherMethodsJob?.cancel()
+        otherMethodsJob =
+            scope.launch {
+                val methods = withContext(Dispatchers.IO) { readOtherInputMethods(storage) }
+                otherInputMethods = methods
+                controller?.setOtherInputMethods(methods)
+            }
+    }
+
+    private fun readOtherInputMethods(storage: AppStorage): List<OtherInputMethod> {
+        val catalog = SourceCatalog(storage)
+        val active = GenerationPublisher(storage).readActive()?.sourceId
+        val damaged = catalog.damaged().toSet()
+        return catalog
+            .list()
+            .filter { it.sourceId != active && it.sourceId !in damaged }
+            .flatMap { manifest ->
+                val builtin = manifest.kind == SourceKind.BUILTIN
+                val packageName = if (builtin) getString(R.string.source_builtin_name) else manifest.displayName
+                manifest.schemes.map {
+                    val localized = BUILTIN_SCHEME_NAMES[it.schemaId]?.takeIf { builtin }?.let(::getString)
+                    OtherInputMethod(
+                        manifest.sourceId,
+                        it.schemaId,
+                        localized ?: it.name.ifBlank { it.schemaId },
+                        packageName,
+                    )
+                }
+            }
+    }
+
+    /**
+     * The user picked another package's input method in the menu: its choice is saved for the
+     * reconciliation that follows, then the deploy process activates the package. The keys stay
+     * usable meanwhile. A stored generation is a pointer swap, so the runtime may swap engines while
+     * the keys are shown for [SWITCH_WAIT_MS]; a package that has to be built again takes longer,
+     * and swapping under the user's fingers then would cut into what they type, so it waits for the
+     * keyboard to close like any other new generation.
+     */
+    private fun switchSource(
+        sourceId: String,
+        schemaId: String,
+    ) {
+        val running = runtime ?: return
+        val app = application as SongyanApplication
+        val name = otherInputMethods.firstOrNull { it.sourceId == sourceId && it.schemaId == schemaId }?.name
+        // A toast, not the candidate bar: the bar is hidden behind the idle toolbar at this point.
+        name?.let { Toast.makeText(this, getString(ImeR.string.ime_switching_package, it), Toast.LENGTH_SHORT).show() }
+        switchJob?.cancel()
+        switchJob =
+            scope.launch {
+                withContext(Dispatchers.IO) { app.keyboardPreferences.requestInputMethod(sourceId, schemaId) }
+                running.allowNextSwapWhileShown()
+                if (!DeploymentStarter.requestActivate(this@SongyanInputMethodService, sourceId)) {
+                    running.allowNextSwapWhileShown(false)
+                    return@launch
+                }
+                delay(SWITCH_WAIT_MS)
+                running.allowNextSwapWhileShown(false)
+                val switched =
+                    withContext(Dispatchers.IO) {
+                        GenerationPublisher(app.storage).readActive()?.sourceId ==
+                            sourceId
+                    }
+                if (!switched && name != null) {
+                    val later = getString(ImeR.string.ime_switch_package_later, name)
+                    Toast.makeText(this@SongyanInputMethodService, later, Toast.LENGTH_LONG).show()
+                }
+            }
+    }
+
     private fun retryEngine() {
         runtimeState = EngineRuntimeState.PREPARING
         renderRuntimeState()
@@ -667,6 +758,7 @@ class SongyanInputMethodService : InputMethodService() {
                             EngineNoticeAction.SETTINGS -> openSongyanSettings()
                         }
                     },
+                    switchSource = { sourceId, schemaId -> switchSource(sourceId, schemaId) },
                 ),
                 preferences,
                 quickContentDataSource = panelDataSource,
@@ -683,6 +775,7 @@ class SongyanInputMethodService : InputMethodService() {
         controller?.retire()
         controller = pad
         pad.setCustomSwitcherRequested(customSwitcherRequested)
+        pad.setOtherInputMethods(otherInputMethods)
         controllerInput = NO_INPUT
         val palette = KeyboardPalette.from(this)
         val container =
@@ -827,6 +920,7 @@ class SongyanInputMethodService : InputMethodService() {
         viewOwners.show()
         runtime?.setInputViewShown(true)
         runtime?.refreshIfChanged()
+        refreshOtherInputMethods()
         applyPolicy(EditorPolicy.from(info))
         // The keyboard window lives across shows: re-resolve the palette here so a change made in
         // settings (appearance, dynamic colour, light/dark) is in effect on the next show. The

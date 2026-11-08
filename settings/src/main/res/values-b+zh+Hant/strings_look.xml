@@ -250,7 +250,7 @@
     <!-- 鍵盤選單 -->
     <string name="keyboard_menu_title">鍵盤選單</string>
     <string name="keyboard_menu_entry_body">選擇鍵盤選單裡顯示哪些輸入方式和佈局</string>
-    <string name="keyboard_menu_body">關掉的專案不會出現在鍵盤選單裡，仍可在這裡開啟。使用中的總會顯示。</string>
+    <string name="keyboard_menu_body">關掉的專案不會出現在鍵盤選單裡，仍可在這裡開啟。使用中的總會顯示。其他輸入方案裡保持開啟的輸入方式，可以在鍵盤選單裡直接切換過去。</string>
     <string name="keyboard_menu_input_methods">輸入方式</string>
     <string name="keyboard_menu_layouts">鍵盤配置</string>
     <string name="keyboard_menu_in_use">使用中</string>

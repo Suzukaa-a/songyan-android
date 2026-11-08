@@ -48,6 +48,8 @@ data class SettingsAppState(
     val stackedDictionaries: List<ImportedDictionaryInfo> = emptyList(),
     /** Every stored input scheme, the bundled one first. */
     val sources: List<StoredSourceInfo> = emptyList(),
+    /** Stored packages other than the one in use, the bundled one included: the keyboard menu offers their input methods. */
+    val otherSources: List<StoredSourceInfo> = emptyList(),
 ) {
     val inUseScheme: InstalledScheme?
         get() = inUseSchemeId?.let { id -> schemes.firstOrNull { it.id == id } }

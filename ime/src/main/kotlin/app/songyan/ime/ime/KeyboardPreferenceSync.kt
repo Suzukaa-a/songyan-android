@@ -262,7 +262,10 @@ internal fun KeyboardController.syncMenu() {
             ?.filter { it.id !in companions && !KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }
             ?.map { it.id to it.displayName }
             .orEmpty()
-    menu.setSchemas(KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema)))
+    val own = KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema))
+    val others =
+        KeyboardMenuEntries.otherSchemas(otherInputMethods, menuHiddenSchemas, listed.map { it.first }.toSet(), own)
+    menu.setSchemas(own + others.map { it.menuId to it.label }, others.associate { it.menuId to it.method })
     val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts())
     menu.setLayoutNames(layoutNamesByKind())
     menu.setLayouts(offered, layoutBoards(), mainDefinition().id)
@@ -273,7 +276,50 @@ internal fun KeyboardController.syncMenu() {
 internal fun KeyboardController.layoutBoards(): List<String> =
     InputLayoutPolicy.boardsOf(layoutFamilies().familyOf(schemaId))
 
+/** An input method of an installed package other than the running one; plain data the service reads from storage. */
+data class OtherInputMethod(
+    val sourceId: String,
+    val schemaId: String,
+    val name: String,
+    val packageName: String,
+) {
+    /** Cannot collide with an engine schema id, which never starts with a NUL. */
+    val menuId: String get() = "$MENU_ID_PREFIX$sourceId/$schemaId"
+
+    companion object {
+        const val MENU_ID_PREFIX = "\u0000src/"
+    }
+}
+
 internal object KeyboardMenuEntries {
+    /** A chip that switches to another package: its menu id, its label and the data it acts on. */
+    data class OtherChip(
+        val menuId: String,
+        val label: String,
+        val method: OtherInputMethod,
+    )
+
+    /**
+     * The chips for [others], after the running package's [own] chips. Ones the user hid in settings
+     * are dropped by plain schema id, and so are ones whose id the running engine already lists, so
+     * a chip never stands for two input methods. A name that would read the same as another chip
+     * gets the package name appended.
+     */
+    fun otherSchemas(
+        others: List<OtherInputMethod>,
+        hidden: Set<String>,
+        running: Set<String>,
+        own: List<Pair<String, String>>,
+    ): List<OtherChip> {
+        val offered = others.filter { it.schemaId !in hidden && it.schemaId !in running }
+        val ownNames = own.map { (id, name) -> name.ifBlank { BuiltinTemplateSchemas.NAMES[id] ?: id } }
+        val counts = (ownNames + offered.map { it.name }).groupingBy { it }.eachCount()
+        return offered.map {
+            val label = if ((counts[it.name] ?: 0) > 1) "${it.name} · ${it.packageName}" else it.name
+            OtherChip(it.menuId, label, it)
+        }
+    }
+
     /** Before the engine has listed its input methods the bundled ones stand in. */
     fun schemas(
         listed: List<Pair<String, String>>,

@@ -163,6 +163,11 @@ class AppSettingsStateSource(
                     .filter { it.kind != SourceKind.BUILTIN || active?.sourceId == it.sourceId }
                     .map { sourceInfo(it, if (it.kind == SourceKind.BUILTIN) active else usable, activeSchemaId) } +
                     damaged.map(::damagedInfo),
+            otherSources =
+                stored
+                    .filter { it.sourceId != active?.sourceId }
+                    .map { sourceInfo(it, usable, activeSchemaId) }
+                    .filter { it.usable },
         )
     }
 
@@ -360,13 +365,15 @@ class AppSettingsStateSource(
 
     companion object {
         private const val DEFAULT_KEYBOARD_ID = "default"
-        private val BUILTIN_SCHEME_NAMES =
-            mapOf(
-                KeyboardPreferences.DEFAULT_SCHEMA_ID to R.string.scheme_builtin_quanpin,
-                "songyan_flypy" to R.string.scheme_builtin_flypy,
-            )
     }
 }
+
+/** Localized names of the built-in package's input methods, whose manifest names them by id. */
+internal val BUILTIN_SCHEME_NAMES =
+    mapOf(
+        KeyboardPreferences.DEFAULT_SCHEMA_ID to R.string.scheme_builtin_quanpin,
+        "songyan_flypy" to R.string.scheme_builtin_flypy,
+    )
 
 internal fun missingGrammarModels(
     storage: AppStorage,

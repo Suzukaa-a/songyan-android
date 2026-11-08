@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +54,36 @@ class KeyboardSwitcherPanelTest {
                 view.height >= (48 * density).toInt() - 1,
             )
         }
+    }
+
+    @Test
+    fun openingTheMenuShowsTheSelectedInputMethodWhereverTheRowWasLeft() {
+        val base = ApplicationProvider.getApplicationContext<Context>()
+        val panel = KeyboardSwitcherPanel(base, BuiltinTemplateSchemas.QUANPIN, KeyboardLayoutKind.QWERTY26)
+        val ids = (0 until 15).map { "schema_$it" }
+        panel.setSchemas(ids.map { it to "Input method $it" })
+        val density = base.resources.displayMetrics.density
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec((411 * density).toInt(), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(1_000_000, View.MeasureSpec.AT_MOST),
+        )
+        panel.layout(0, 0, panel.measuredWidth, panel.measuredHeight)
+        val row = panel.schemaScroll
+        assertTrue("the chips overflow the row", row.canScrollHorizontally(1))
+
+        // Left at the end by an earlier visit, while the first one is selected.
+        row.scrollTo(Int.MAX_VALUE / 2, 0)
+        panel.update(ids.first(), KeyboardLayoutKind.QWERTY26)
+        panel.revealSelection()
+        assertEquals(0, row.scrollX)
+
+        panel.update(ids.last(), KeyboardLayoutKind.QWERTY26)
+        panel.revealSelection()
+        val chip = panel.schemaChip(ids.last())!!
+        assertTrue(
+            "the selected chip is inside the visible part of the row",
+            chip.left >= row.scrollX && chip.right <= row.scrollX + row.width,
+        )
     }
 
     @Test

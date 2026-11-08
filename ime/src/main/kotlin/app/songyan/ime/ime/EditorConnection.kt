@@ -795,6 +795,7 @@ fun EditorConnection.keyboardCallbacks(
     clipboard: ClipboardManager? = null,
     inputMethods: InputMethodAccess = InputMethodAccess.NONE,
     engineNoticeAction: (EngineNoticeAction) -> Unit = {},
+    switchSource: (sourceId: String, schemaId: String) -> Unit = { _, _ -> },
 ): KeyboardController.Callbacks =
     KeyboardController.Callbacks(
         commit = { text, selected -> update("", listOf(text), selected).also { if (it) onCommitted(text) } },
@@ -818,4 +819,5 @@ fun EditorConnection.keyboardCallbacks(
         editAvailability = { mayRead -> editAvailability(clipboard, mayRead) },
         inputMethods = inputMethods,
         engineNoticeAction = engineNoticeAction,
+        switchSource = switchSource,
     )

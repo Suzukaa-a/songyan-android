@@ -250,7 +250,7 @@
     <!-- Keyboard menu -->
     <string name="keyboard_menu_title">Keyboard menu</string>
     <string name="keyboard_menu_entry_body">Choose which input methods and layouts the keyboard menu shows</string>
-    <string name="keyboard_menu_body">Items you turn off don\'t appear in the keyboard menu; you can turn them back on here. The ones in use always show.</string>
+    <string name="keyboard_menu_body">Items you turn off don\'t appear in the keyboard menu; you can turn them back on here. The ones in use always show. Input methods of your other input schemes that stay on can be switched to straight from the keyboard menu.</string>
     <string name="keyboard_menu_input_methods">Input methods</string>
     <string name="keyboard_menu_layouts">Keyboard layouts</string>
     <string name="keyboard_menu_in_use">In use</string>

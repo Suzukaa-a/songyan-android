@@ -29,6 +29,8 @@ import java.nio.file.StandardOpenOption
  */
 class GenerationPublisher(
     private val storage: AppStorage,
+    /** The sources whose newest generation survives pruning; see [prune]. Read when pruning. */
+    private val keptSources: () -> Set<String> = { emptySet() },
 ) {
     fun readActive(): PublicationRecord? =
         try {
@@ -222,14 +224,22 @@ class GenerationPublisher(
     fun usablePublication(): PublicationRecord? = readActive()?.takeIf { isComplete(it) }
 
     /**
-     * Keeps the active generation, the newest previous one (by publish sequence, not by name) and
-     * every generation the input method holds a lease on; deletes the rest.
+     * Keeps the active generation, the newest previous one (by publish sequence, not by name),
+     * every generation the input method holds a lease on and, for each source in [keepSources], that
+     * source's newest generation; deletes the rest.
+     *
+     * The per-source generation is what lets the keyboard menu switch to another installed package
+     * without compiling it again. Callers pass the packages that still offer an input method there;
+     * a removed package, or one whose input methods the user all hid, is not in the set.
      *
      * The previous one is there so switching back is instant. An older build of the very input
      * method in use (an option change or a package update rebuilt it) is never switched back to, and
      * its own compiled tables can be as large as the build itself, so it does not count as previous.
      */
-    fun prune(active: PublicationRecord? = readActive()) {
+    fun prune(
+        active: PublicationRecord? = readActive(),
+        keepSources: Set<String> = keptSources(),
+    ) {
         if (active == null) return
         val generations = generationDirectories().sortedByDescending { sequenceOf(it) }
         val keep = mutableSetOf(active.generation)
@@ -237,6 +247,15 @@ class GenerationPublisher(
         generations
             .firstOrNull { it.name != active.generation && !rebuildsTheSameInput(it.name, active) }
             ?.let { keep += it.name }
+        val sourcesKept = mutableSetOf(active.sourceId)
+        for (dir in generations) {
+            val record = publishedRecord(dir.name) ?: continue
+            val sourceId = record.sourceId
+            // A build from another app version is never reused, so keeping it only costs space.
+            if (record.stamp != active.stamp || sourceId in sourcesKept || sourceId !in keepSources) continue
+            sourcesKept += sourceId
+            keep += dir.name
+        }
         for (dir in generations) {
             if (dir.name !in keep) {
                 dir.deleteRecursively()

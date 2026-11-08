@@ -95,6 +95,7 @@ data class SettingsUiState(
     val schemeImportAvailable: Boolean = false,
     /** Every stored input scheme, the bundled one first. */
     val sources: List<StoredSourceInfo> = emptyList(),
+    val otherSources: List<StoredSourceInfo> = emptyList(),
     /** The one in-flight use or delete request of a stored input scheme. */
     val sourceAction: StoredSourceUiState = StoredSourceUiState.Idle,
     /** A scheme package another app handed over, waiting for the user's yes. */
@@ -156,6 +157,7 @@ class SettingsViewModel(
             importedDictionary = appStateSource.state.value.importedDictionary,
             stackedDictionaries = appStateSource.state.value.stackedDictionaries,
             sources = appStateSource.state.value.sources,
+            otherSources = appStateSource.state.value.otherSources,
             dictionaryImport = dictionaryImport.value,
             schemeImport = schemeImport.value,
             sourceAction = sourceAction.value,
@@ -248,6 +250,7 @@ class SettingsViewModel(
                 importedDictionary = app.importedDictionary,
                 stackedDictionaries = app.stackedDictionaries,
                 sources = app.sources,
+                otherSources = app.otherSources,
                 layoutId = prefs.layoutId,
                 candidateTextSize = prefs.candidateTextSize,
                 keyFeedback = prefs.keyFeedback,

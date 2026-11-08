@@ -57,6 +57,13 @@ class AppStorage(
     val keyboardSchemaFile: File = File(rimeRoot, "keyboard-schema")
 
     /**
+     * The input methods the user took out of the keyboard menu, one id per line, mirrored from the
+     * preferences for the deploy process: it keeps a ready generation only for packages that still
+     * offer an input method there.
+     */
+    val menuHiddenSchemasFile: File = File(rimeRoot, "menu-hidden-schemas")
+
+    /**
      * The user's choice for each schema switch (simplified / traditional output, emoji candidates),
      * written by the keyboard and the settings app and read by the keyboard's engine.
      */

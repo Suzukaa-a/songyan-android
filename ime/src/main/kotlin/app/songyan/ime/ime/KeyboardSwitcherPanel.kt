@@ -49,6 +49,7 @@ internal class KeyboardSwitcherPanel(
     private val actionDividers = mutableListOf<View>()
     private val schemaChips = linkedMapOf<String, TextView>()
     private val schemaNames = mutableMapOf<String, String>()
+    private var otherChips: Map<String, OtherInputMethod> = emptyMap()
     private lateinit var schemaRow: LinearLayout
     private val layoutChips = mutableListOf<Pair<KeyboardMenuEntries.LayoutChip, TextView>>()
     private var layoutRow: LinearLayout
@@ -155,7 +156,9 @@ internal class KeyboardSwitcherPanel(
         currentLayout = layout
         for ((id, view) in schemaChips) {
             style(view, id == schemaId)
-            view.contentDescription = chipDescription(schemaLabel(id), id == schemaId)
+            view.contentDescription =
+                otherChips[id]?.let { context.getString(R.string.ime_menu_switch_package, it.packageName, it.name) }
+                    ?: chipDescription(schemaLabel(id), id == schemaId)
         }
         for ((entry, view) in layoutChips) {
             val selected = isSelected(entry)
@@ -163,6 +166,34 @@ internal class KeyboardSwitcherPanel(
             view.contentDescription = chipDescription(layoutLabel(entry), selected)
         }
     }
+
+    /**
+     * Opening the menu shows the selected chips. A row keeps the offset of the last visit, which
+     * could leave another input method where the selected one was and put it under the finger.
+     */
+    fun revealSelection() {
+        reveal(schemaRow, schemaChips[currentSchema])
+        reveal(layoutRow, layoutChips.firstOrNull { isSelected(it.first) }?.second)
+    }
+
+    private fun reveal(
+        row: LinearLayout,
+        chip: View?,
+    ) {
+        val scroll = row.parent as? HorizontalScrollView ?: return
+        val apply = {
+            val offset =
+                if (chip == null || chip.right <= scroll.width) 0 else chip.left - (scroll.width - chip.width) / 2
+            scroll.scrollTo(offset, 0)
+        }
+        // Chips rebuilt for this opening have no positions until the next layout pass.
+        if (scroll.isLaidOut && !row.isLayoutRequested) apply() else scroll.post(apply)
+    }
+
+    /** The input method chips' row, for tests. */
+    internal val schemaScroll: HorizontalScrollView get() = schemaRow.parent as HorizontalScrollView
+
+    internal fun schemaChip(id: String): View? = schemaChips[id]
 
     /** A board chip is on only while the keyboard is on the identity shape drawing that board. */
     private fun isSelected(entry: KeyboardMenuEntries.LayoutChip): Boolean =
@@ -172,14 +203,20 @@ internal class KeyboardSwitcherPanel(
 
     /**
      * The input methods the menu offers, in order, as (id, engine name); the chips are rebuilt only
-     * when the list changes. A bundled one keeps its translated name.
+     * when the list changes. A bundled one keeps its translated name. [others] are the entries that
+     * switch to another package, by id.
      */
-    fun setSchemas(entries: List<Pair<String, String>>) {
+    fun setSchemas(
+        entries: List<Pair<String, String>>,
+        others: Map<String, OtherInputMethod> = emptyMap(),
+    ) {
         if (entries.map { it.first } == schemaChips.keys.toList() &&
-            entries.all { (id, name) -> schemaNames[id] == name }
+            entries.all { (id, name) -> schemaNames[id] == name } &&
+            others == otherChips
         ) {
             return
         }
+        otherChips = others
         schemaChips.clear()
         schemaNames.clear()
         schemaRow.removeAllViews()

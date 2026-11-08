@@ -184,4 +184,39 @@ class KeyboardMenuEntriesTest {
             chips(InputSchemeFamily.JAPANESE, "romaji26", offered).map { it.kind },
         )
     }
+
+    private val kana = OtherInputMethod("scheme-kana", "kagiroi", "かな", "Kagiroi")
+    private val romaji = OtherInputMethod("scheme-kana", "kagiroi_romaji", "ローマ字", "Kagiroi")
+    private val running = ice.map { it.first }.toSet()
+
+    @Test
+    fun inputMethodsOfOtherPackagesFollowTheRunningOnesWithAnIdThatCannotCollide() {
+        val chips = KeyboardMenuEntries.otherSchemas(listOf(kana, romaji), emptySet(), running, ice)
+        assertEquals(listOf("かな", "ローマ字"), chips.map { it.label })
+        assertEquals(listOf(kana.menuId, romaji.menuId), chips.map { it.menuId })
+        assertEquals(true, chips.all { it.menuId.startsWith(OtherInputMethod.MENU_ID_PREFIX) && it.menuId !in running })
+    }
+
+    @Test
+    fun hiddenOnesAndOnesTheRunningEngineAlreadyListsAreLeftOut() {
+        val same = OtherInputMethod("scheme-2", "rime_ice", "雾凇拼音", "Other")
+        val chips = KeyboardMenuEntries.otherSchemas(listOf(kana, romaji, same), setOf("kagiroi_romaji"), running, ice)
+        assertEquals(listOf(kana), chips.map { it.method })
+    }
+
+    @Test
+    fun aNameThatReadsLikeAnotherChipGetsItsPackageName() {
+        val clash = OtherInputMethod("scheme-2", "other_ice", "雾凇拼音", "Other")
+        val chips = KeyboardMenuEntries.otherSchemas(listOf(clash, kana), emptySet(), running, ice)
+        assertEquals(listOf("雾凇拼音 · Other", "かな"), chips.map { it.label })
+        val twins =
+            KeyboardMenuEntries.otherSchemas(
+                listOf(clash, clash.copy(sourceId = "scheme-3")),
+                emptySet(),
+                setOf(),
+                emptyList(),
+            )
+        assertEquals(2, twins.map { it.menuId }.toSet().size)
+        assertEquals(true, twins.all { it.label.endsWith(" · Other") })
+    }
 }

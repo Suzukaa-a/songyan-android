@@ -199,6 +199,68 @@ class GenerationPublisherTest {
     }
 
     @Test
+    fun everyOtherStoredPackageKeepsItsNewestGenerationForSwitching() {
+        val storage = newStorage()
+        val source = sourceTree(Files.createTempDirectory("source").toFile())
+        val publisher = GenerationPublisher(storage, keptSources = { setOf("songyan-builtin", "scheme-kagiroi") })
+        val builtin = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "1")
+        Thread.sleep(5)
+        val kagiroiOld = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "a")
+        Thread.sleep(5)
+        val kagiroiNew = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "b")
+        Thread.sleep(5)
+        val other = publisher.publish(source, File(source, "build"), "scheme-other", "other", "1")
+
+        assertEquals(other, publisher.readActive())
+        assertTrue(storage.generationDir(builtin.generation).isDirectory)
+        assertTrue(storage.generationDir(kagiroiNew.generation).isDirectory)
+        assertFalse(storage.generationDir(kagiroiOld.generation).exists())
+    }
+
+    @Test
+    fun aPackageWithEveryInputMethodHiddenOrRemovedDoesNotKeepItsGeneration() {
+        val storage = newStorage()
+        val source = sourceTree(Files.createTempDirectory("source").toFile())
+        // Only the built-in package still offers an input method in the menu.
+        val publisher = GenerationPublisher(storage, keptSources = { setOf("songyan-builtin") })
+        val removed = publisher.publish(source, File(source, "build"), "scheme-gone", "gone", "1")
+        Thread.sleep(5)
+        val builtin = publisher.publish(source, File(source, "build"), "songyan-builtin", "songyan_quanpin", "1")
+        Thread.sleep(5)
+        val active = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "1")
+
+        assertEquals(active, publisher.readActive())
+        assertTrue(storage.generationDir(builtin.generation).isDirectory)
+        assertFalse(storage.generationDir(removed.generation).exists())
+    }
+
+    @Test
+    fun aKeptPackageDropsItsGenerationFromAnotherAppVersion() {
+        val storage = newStorage()
+        val source = sourceTree(Files.createTempDirectory("source").toFile())
+        val publisher = GenerationPublisher(storage, keptSources = { setOf("songyan-builtin", "scheme-kagiroi") })
+        val before = BuildStamp("1", "1.17.0", "1")
+        val after = BuildStamp("1", "1.17.0", "2")
+        val stale = publisher.publish(source, File(source, "build"), "scheme-kagiroi", "kagiroi", "a", stamp = before)
+        Thread.sleep(5)
+        // The newest earlier generation stays as the previous one; the stale one is older than it.
+        publisher.publish(source, File(source, "build"), "scheme-other", "other", "1", stamp = after)
+        Thread.sleep(5)
+        val active =
+            publisher.publish(
+                source,
+                File(source, "build"),
+                "songyan-builtin",
+                "songyan_quanpin",
+                "1",
+                stamp = after,
+            )
+
+        assertEquals(active, publisher.readActive())
+        assertFalse(storage.generationDir(stale.generation).exists())
+    }
+
+    @Test
     fun prunesOnlyUnreferencedGenerations() {
         val storage = newStorage()
         val source = sourceTree(Files.createTempDirectory("source").toFile())

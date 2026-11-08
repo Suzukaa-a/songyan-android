@@ -249,7 +249,7 @@
     <!-- キーボードメニュー -->
     <string name="keyboard_menu_title">キーボードメニュー</string>
     <string name="keyboard_menu_entry_body">キーボードメニューに表示する入力方式とキー配列を選びます</string>
-    <string name="keyboard_menu_body">オフにした項目はキーボードメニューに表示されませんが、ここでオンに戻せます。使用中の項目は常に表示されます。</string>
+    <string name="keyboard_menu_body">オフにした項目はキーボードメニューに表示されませんが、ここでオンに戻せます。使用中の項目は常に表示されます。ほかの入力パックの入力方式も、オンのままならキーボードメニューからそのまま切り替えられます。</string>
     <string name="keyboard_menu_input_methods">入力方式</string>
     <string name="keyboard_menu_layouts">キー配列</string>
     <string name="keyboard_menu_in_use">使用中</string>

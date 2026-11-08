@@ -20,6 +20,7 @@ import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.state.SettingsPreferencesHolder
+import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.SwitchRow
@@ -28,7 +29,9 @@ import kotlinx.coroutines.launch
 /**
  * 键盘菜单: which input methods and layouts the keyboard's menu offers. A scheme package can carry
  * a dozen input methods; hiding the ones you never use keeps the menu short. The ones in use stay
- * in the menu, so their switches are fixed on.
+ * in the menu, so their switches are fixed on. The input methods of the other installed packages
+ * ([otherSources]) are listed under each package's name; the ones left on can be switched to from
+ * the keyboard menu.
  */
 @Composable
 fun KeyboardMenuScreen(
@@ -37,6 +40,7 @@ fun KeyboardMenuScreen(
     layoutId: String,
     onBack: () -> Unit,
     preferences: SettingsPreferences = SettingsPreferencesHolder.current,
+    otherSources: List<StoredSourceInfo> = emptyList(),
 ) {
     val hiddenSchemas by preferences.menuHiddenSchemas.collectAsStateWithLifecycle(emptySet())
     val hiddenLayouts by preferences.menuHiddenLayouts.collectAsStateWithLifecycle(emptySet())
@@ -61,24 +65,13 @@ fun KeyboardMenuScreen(
             SectionHeader(stringResource(R.string.keyboard_menu_input_methods))
             for (scheme in schemes.filterNot { KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }) {
                 val current = scheme.id == inUseSchemeId
-                SwitchRow(
-                    title = scheme.name,
-                    subtitle = if (current) inUse else null,
-                    checked = current || scheme.id !in hiddenSchemas,
-                    enabled = !current,
-                    onCheckedChange = { shown ->
-                        scope.launch {
-                            preferences.setMenuHiddenSchemas(
-                                if (shown) {
-                                    hiddenSchemas - scheme.id
-                                } else {
-                                    hiddenSchemas +
-                                        scheme.id
-                                },
-                            )
-                        }
-                    },
-                )
+                SchemeSwitch(scheme, current, inUse, hiddenSchemas, preferences)
+            }
+            for (source in otherSources) {
+                SectionHeader(source.name)
+                for (scheme in source.schemes.filterNot { KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }) {
+                    SchemeSwitch(scheme, false, inUse, hiddenSchemas, preferences)
+                }
             }
             SectionHeader(stringResource(R.string.keyboard_menu_layouts))
             for (option in KeyboardLayoutOption.entries) {
@@ -104,4 +97,26 @@ fun KeyboardMenuScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SchemeSwitch(
+    scheme: InstalledScheme,
+    current: Boolean,
+    inUse: String,
+    hiddenSchemas: Set<String>,
+    preferences: SettingsPreferences,
+) {
+    val scope = rememberCoroutineScope()
+    SwitchRow(
+        title = scheme.name,
+        subtitle = if (current) inUse else null,
+        checked = current || scheme.id !in hiddenSchemas,
+        enabled = !current,
+        onCheckedChange = { shown ->
+            scope.launch {
+                preferences.setMenuHiddenSchemas(if (shown) hiddenSchemas - scheme.id else hiddenSchemas + scheme.id)
+            }
+        },
+    )
 }

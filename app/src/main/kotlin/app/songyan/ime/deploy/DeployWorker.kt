@@ -100,6 +100,12 @@ class DeployWorker private constructor(
 
     /** Under [lock]. */
     private fun offer(request: DeployRequest) {
+        if (request.mode == DeployMode.ACTIVATE_SOURCE) {
+            // A switch the user asked for does not wait behind the layouts of the package being left:
+            // its generation keeps them pending, and they are completed when it is used again.
+            current?.takeIf { it.request.mode == DeployMode.COMPLETE_COMPANIONS }?.let { cancelled += it.requestIds }
+            cancelled += queue.waiting(DeployMode.COMPLETE_COMPANIONS)
+        }
         if (queue.offer(request)) markQueued(request.requestId)
     }
 

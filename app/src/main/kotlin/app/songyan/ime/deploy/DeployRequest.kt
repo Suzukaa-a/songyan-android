@@ -255,6 +255,10 @@ class DeployQueue {
 
     val size: Int get() = pending.size
 
+    /** Every waiting request id of [mode], merged ones included. */
+    fun waiting(mode: DeployMode): List<String> =
+        pending.filter { it.mode == mode }.flatMap { listOf(it.requestId) + merged[it.requestId].orEmpty() }
+
     /** Whether [requestId] still waits, on its own or merged into a queued rebuild. */
     fun contains(requestId: String): Boolean =
         pending.any { it.requestId == requestId } || merged.values.any { requestId in it }

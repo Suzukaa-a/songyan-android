@@ -250,7 +250,7 @@
     <!-- 键盘菜单 -->
     <string name="keyboard_menu_title">键盘菜单</string>
     <string name="keyboard_menu_entry_body">选择键盘菜单里显示哪些输入方式和布局</string>
-    <string name="keyboard_menu_body">关掉的项目不会出现在键盘菜单里，仍可在这里打开。正在使用的总会显示。</string>
+    <string name="keyboard_menu_body">关掉的项目不会出现在键盘菜单里，仍可在这里打开。正在使用的总会显示。其他输入方案里保持打开的输入方式，可以在键盘菜单里直接切换过去。</string>
     <string name="keyboard_menu_input_methods">输入方式</string>
     <string name="keyboard_menu_layouts">键盘布局</string>
     <string name="keyboard_menu_in_use">正在使用</string>

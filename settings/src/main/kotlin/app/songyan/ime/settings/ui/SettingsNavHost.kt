@@ -647,6 +647,7 @@ private fun NavGraphBuilder.settingsGraph(
             schemes = state.value.schemes,
             inUseSchemeId = state.value.inUseSchemeId,
             layoutId = state.value.layoutId,
+            otherSources = state.value.otherSources,
             onBack = { navController.popBackStack() },
         )
     }

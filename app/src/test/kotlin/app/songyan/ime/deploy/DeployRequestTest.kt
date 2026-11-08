@@ -101,6 +101,18 @@ class DeployRequestTest {
     }
 
     @Test
+    fun theWaitingCompanionCompletionsCanBeFoundToMakeWayForASwitch() {
+        val queue = DeployQueue()
+        queue.offer(DeployRequest("a", DeployMode.COMPLETE_COMPANIONS))
+        queue.offer(DeployRequest("b", DeployMode.COMPLETE_COMPANIONS))
+        queue.offer(DeployRequest("c", DeployMode.REDEPLOY_ACTIVE))
+        queue.offer(DeployRequest("d", DeployMode.COMPLETE_COMPANIONS))
+
+        assertEquals(listOf("a", "b", "d"), queue.waiting(DeployMode.COMPLETE_COMPANIONS))
+        assertEquals(listOf("c"), queue.waiting(DeployMode.REDEPLOY_ACTIVE))
+    }
+
+    @Test
     fun requestsRunInArrivalOrderAndOnlyIdenticalRebuildsMerge() {
         val queue = DeployQueue()
         assertTrue(queue.offer(DeployRequest("a", DeployMode.IMPORT_DICTIONARY)))

@@ -209,8 +209,8 @@ internal fun splitColumns(
         val rows = ArrayList<List<LayoutKey>>(halves.size)
         val breaks = ArrayList<Int>(halves.size)
         for (row in halves) {
-            val left = if (showsGlobe) row.left else row.left.filterNot { it.action.type == LayoutActionKind.GLOBE }
-            val right = if (showsGlobe) row.right else row.right.filterNot { it.action.type == LayoutActionKind.GLOBE }
+            val left = if (showsGlobe) row.left else KeyRowSolver.withoutGlobe(row.left)
+            val right = if (showsGlobe) row.right else KeyRowSolver.withoutGlobe(row.right)
             rows += left + right
             breaks += left.size
         }

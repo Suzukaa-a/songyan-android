@@ -797,9 +797,6 @@ internal object KeyboardPages {
         const val PAGE = 1.4
         const val LANGUAGE = 1.2
         const val MARK = 1.0
-
-        /** The full stop right of the space bar; it balances the comma on the left. */
-        const val PERIOD = 2.0
         const val ENTER = 1.6
         const val SPACE = 4.8
         const val GLOBE = 1.0
@@ -873,7 +870,7 @@ internal object KeyboardPages {
                 FieldKind.URL -> markKey("/")
                 else -> null
             }
-        val side = spaceSideMarks(config, symbolPage = false)
+        val side = spaceSideMarks(config)
         val punctuation =
             when {
                 side != null -> side.second
@@ -937,7 +934,9 @@ internal object KeyboardPages {
             add(if (globe) SPACE_KEY.copy(width = FooterWeight.SPACE - FooterWeight.GLOBE) else SPACE_KEY)
             if (spaceRight != null) add(spaceRight)
             add(right)
-            add(ENTER_KEY)
+            // A mark left of the space bar is balanced by a wider Return, so the space bar stays
+            // centred and the marks either side of it are the same size.
+            add(if (spaceLeft != null) ENTER_KEY.copy(width = FooterWeight.ENTER + FooterWeight.MARK) else ENTER_KEY)
         }
 
     /** The comma key right of the space bar: the full stop first in its long press, so it is the corner hint. */
@@ -950,13 +949,9 @@ internal object KeyboardPages {
 
     /**
      * The comma left of the space bar and the full stop right of it of the native footer, for the
-     * script language. Null keeps the ASCII/field-specific single mark. The full stop's share
-     * balances the row so the space bar stays centred.
+     * script language. Null keeps the ASCII/field-specific single mark.
      */
-    private fun spaceSideMarks(
-        config: Config,
-        symbolPage: Boolean,
-    ): Pair<LayoutKey, LayoutKey>? {
+    private fun spaceSideMarks(config: Config): Pair<LayoutKey, LayoutKey>? {
         if (config.englishDirectInput || config.symbolMarksAscii || config.field != FieldKind.TEXT) return null
         val japanese = config.inputLanguage == InputLanguage.JA
         val comma = if (japanese) "、" else "，"
@@ -964,14 +959,12 @@ internal object KeyboardPages {
         // under the comma, the sentence ends under the full stop.
         val pauses = if (japanese) listOf("・", "：", "；") else listOf("、", "：", "；")
         val ends = listOf("？", "！", "…")
-        // A constant share on both sides keeps the space bar centred and the row's total width.
-        val periodWidth = if (symbolPage) FooterWeight.MARK else FooterWeight.PERIOD
-        return markKey(comma, pauses).copy(width = FooterWeight.MARK) to markKey("。", ends).copy(width = periodWidth)
+        return markKey(comma, pauses) to markKey("。", ends)
     }
 
     /** The 123 page footer: `返回 | 中/英 | 空格 | ，| 回车`; the symbol switch opens the third row. */
     private fun numericFooter(config: Config): List<LayoutKey> {
-        val side = spaceSideMarks(config, symbolPage = false)
+        val side = spaceSideMarks(config)
         return footer(
             page =
                 footerKey(
@@ -994,10 +987,11 @@ internal object KeyboardPages {
 
     /**
      * The symbol page footer: `返回 | 中/英 | 空格 | 更多 | 回车`. The page already types every mark, so
-     * the comma key's place goes to 更多; the 123 switch is in the third row.
+     * the full stop's place goes to 更多 and the row keeps the letters footer's shape; the 123 switch
+     * is in the third row.
      */
     private fun symbolsFooter(config: Config): List<LayoutKey> {
-        val side = spaceSideMarks(config, symbolPage = true)
+        val side = spaceSideMarks(config)
         return footer(
             page =
                 footerKey(
@@ -1018,7 +1012,6 @@ internal object KeyboardPages {
                 ),
             globe = config.showsGlobe,
             spaceLeft = side?.first,
-            spaceRight = side?.second,
         )
     }
 

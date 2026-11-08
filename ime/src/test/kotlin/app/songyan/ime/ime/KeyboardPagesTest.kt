@@ -65,6 +65,9 @@ class KeyboardPagesTest {
         assertEquals(listOf("？", "！", "…"), footer[4].longPress?.map { it.label })
         // The space bar keeps one share on every page, so every bottom row lines up.
         assertEquals(KeyboardPages.FooterWeight.SPACE, footer[3].widthWeight, 0.001)
+        // The marks either side of the space bar match; Return takes the rest of the right side.
+        assertEquals(footer[2].widthWeight, footer[4].widthWeight, 0.001)
+        assertTrue(footer[5].widthWeight > footer[4].widthWeight)
         val forcedAscii =
             KeyboardPages
                 .definition(null, letters.copy(languageSwitch = false))
@@ -196,8 +199,8 @@ class KeyboardPagesTest {
         assertEquals("123", third.first().label)
         assertEquals(LayoutActionKind.BACKSPACE, third.last().action.type)
         val footer = definition.rows.last().keys
-        // The page types every mark itself; the native comma and full stop still bracket the space bar.
-        assertEquals(listOf("返回", "中/英", "，", "空格", "。", "更多", "⏎"), footer.map { it.label })
+        // The page types every mark itself, so 更多 takes the full stop's place beside the space bar.
+        assertEquals(listOf("返回", "中/英", "，", "空格", "更多", "⏎"), footer.map { it.label })
         assertTrue(footer.none { it.action.type == LayoutActionKind.SYMBOL_LOCK })
         assertTrue(footer.none { it.action.pageSwitchTarget == LayoutPageTarget.NUMERIC })
         assertEquals(

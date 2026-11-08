@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">松烟</string>
     <string name="ime_name">松烟输入法</string>
-    <string name="subtype_pinyin">拼音</string>
 
     <!-- Deploy process foreground notification. -->
     <string name="deploy_channel_name">输入方案准备</string>

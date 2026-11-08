@@ -12,5 +12,5 @@
         android:imeSubtypeMode="keyboard"
         android:languageTag="zh-CN"
         android:isAsciiCapable="true"
-        android:label="@string/subtype_pinyin" />
+        android:label="@string/subtype_locale" />
 </input-method>

@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">Songyan</string>
     <string name="ime_name">Songyan</string>
-    <string name="subtype_pinyin">Pinyin</string>
+    <!-- The system words the subtype by its locale; the input method in use can be any language. -->
+    <string name="subtype_locale" translatable="false">%s</string>
 
     <!-- Deploy process foreground notification. -->
     <string name="deploy_channel_name">Input scheme setup</string>

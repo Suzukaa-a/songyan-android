@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">松煙</string>
     <string name="ime_name">松煙キーボード</string>
-    <string name="subtype_pinyin">ピンイン</string>
 
     <!-- 入力パックの準備中に出す通知 -->
     <string name="deploy_channel_name">入力パックの準備</string>

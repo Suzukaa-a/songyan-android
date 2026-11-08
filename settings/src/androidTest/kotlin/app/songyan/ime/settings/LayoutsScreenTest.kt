@@ -68,7 +68,7 @@ class LayoutsScreenTest {
         }
         compose
             .onNodeWithContentDescription(
-                str(R.string.layouts_more_actions, BuiltinLayouts.phone9.name),
+                str(R.string.layouts_more_actions, str(R.string.layout_name_9)),
             ).performClick()
         compose.onNodeWithText(str(R.string.layouts_action_edit)).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.layouts_action_copy)).performClick()
@@ -76,7 +76,8 @@ class LayoutsScreenTest {
         val copy = source.registry.value!!.layout("copy-id")
         assertNotNull(copy)
         assertEquals(BuiltinLayouts.phone9.rows, copy!!.rows)
-        assertEquals(BuiltinLayouts.phone9.name + str(R.string.layout_copy_suffix), copy.name)
+        // A bundled layout is shown, and copied, under its name in the UI language.
+        assertEquals(str(R.string.layout_name_9) + str(R.string.layout_copy_suffix), copy.name)
     }
 
     @Test
@@ -113,7 +114,7 @@ class LayoutsScreenTest {
                 )
             }
         }
-        compose.onNodeWithText(BuiltinLayouts.phone9.name).performClick()
+        compose.onNodeWithText(str(R.string.layout_name_9)).performClick()
         assertEquals("phone9", edited)
     }
 
@@ -124,7 +125,7 @@ class LayoutsScreenTest {
                 PagesScreen(onBack = null, onEdit = {}, viewModel = viewModel(factory = factory()))
             }
         }
-        val name = KeyboardPagePresets.symbolsCategorized.name
+        val name = str(R.string.page_name_symbols_categorized)
         compose.onNodeWithContentDescription(str(R.string.layouts_more_actions, name)).performScrollTo().performClick()
         compose.onNodeWithText(str(R.string.layouts_action_copy)).performClick()
         compose.waitForIdle()

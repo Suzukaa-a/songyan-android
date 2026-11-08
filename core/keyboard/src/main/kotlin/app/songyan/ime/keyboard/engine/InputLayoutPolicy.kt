@@ -56,6 +56,17 @@ object InputLayoutPolicy {
         family: InputSchemeFamily,
     ): Boolean = OWNER_OF[layoutID]?.let { it == family } ?: true
 
+    /**
+     * The physical boards [family] types on, the preferred one first; they share the identity
+     * shape's slot, so a keyboard picks one of them as its main layout. Empty for the families that
+     * keep the shipped shapes.
+     */
+    fun boardsOf(family: InputSchemeFamily): List<String> =
+        preferredLayoutID(family)
+            ?.let { preferred ->
+                listOf(preferred) + OWNER_OF.filter { it.value == family && it.key != preferred }.keys
+            }.orEmpty()
+
     private val OWNER_OF =
         mapOf(
             ZHUYIN_LAYOUT to InputSchemeFamily.ZHUYIN,

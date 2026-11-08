@@ -7,8 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.settings.state.AppKeyboardInfo
 import app.songyan.ime.settings.state.CurrentMainLayout
 import app.songyan.ime.settings.state.DictionaryImportGateway
@@ -401,6 +404,23 @@ class SettingsViewModel(
         preferences.setActiveSchemaId(key.inputMethodId)
         preferences.setLayoutId(key.layout.wire)
         appStateSource.refresh()
+    }
+
+    /**
+     * Makes [boardId] the main layout of the input method in use and switches to the identity shape
+     * that carries it, so a Japanese keyboard moves between romaji and kana in one tap.
+     */
+    fun selectBoard(boardId: String) {
+        val scheme = uiState.value.inUseScheme ?: return
+        val key = KeyboardCompositionKey(scheme.id, LayoutInput.Builtin.QWERTY26)
+        viewModelScope.launch {
+            layoutLibrary.edit { registry ->
+                val families = LayoutFamilyContext.of(scheme.id to scheme.family)
+                registry.withComposition(registry.composition(key, families).withMainLayoutId(boardId), key.rawValue)
+            }
+            preferences.setLayoutId(KeyboardLayoutOption.QWERTY26.id)
+            appStateSource.refresh()
+        }
     }
 
     /** Switches the keyboard layout. */

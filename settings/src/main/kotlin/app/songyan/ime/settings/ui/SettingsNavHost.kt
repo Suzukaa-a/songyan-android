@@ -56,6 +56,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
@@ -429,6 +430,12 @@ private fun NavGraphBuilder.settingsGraph(
                 mainLayout = state.value.mainLayout,
                 supportedLayouts = state.value.inUseScheme?.supportedLayouts,
                 onSelectLayout = viewModel::selectLayout,
+                boards =
+                    state.value.inUseScheme
+                        ?.family
+                        ?.let(InputLayoutPolicy::boardsOf)
+                        .orEmpty(),
+                onSelectBoard = viewModel::selectBoard,
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
                 onOpenComposition = { navController.navigate(SettingsRoutes.COMPOSITION) },

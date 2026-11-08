@@ -117,8 +117,12 @@ class EngineLifecycleDeviceTest {
             // Two generations exist before any engine of this process opens (the deploy process
             // owns librime in production); the older one is active first.
             val first = coordinator().deployBuiltin(force = true).getOrThrow()
+            // Pruning drops an older build of the same input unless a keyboard holds it; these
+            // leases stand in for keyboards running each build while the test moves between them.
+            GenerationLease(storage).hold(listOf(first.generation))
             val second = coordinator().deployBuiltin(force = true).getOrThrow()
             assertTrue(first.generation != second.generation)
+            GenerationLease(storage).hold(listOf(first.generation, second.generation))
             GenerationPublisher(storage).reactivate(first.generation)
 
             val callbacks = Recorder()

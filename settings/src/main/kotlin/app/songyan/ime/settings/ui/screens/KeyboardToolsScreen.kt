@@ -357,13 +357,13 @@ private fun ToolListItem(
     val pinned = if (tool.metadata.pinned) stringResource(R.string.tools_pinned) else null
     val steps = stringResource(R.string.tools_steps_count, tool.definition.steps.size)
     val subtitle = listOfNotNull(pinned, origin, steps).joinToString(" · ")
-    Box {
-        ListItem(
-            headlineContent = { Text(name) },
-            supportingContent = { Text(subtitle) },
-            leadingContent = { Icon(Icons.Outlined.Build, contentDescription = null) },
-            trailingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+    ListItem(
+        headlineContent = { Text(name) },
+        supportingContent = { Text(subtitle) },
+        leadingContent = { Icon(Icons.Outlined.Build, contentDescription = null) },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box {
                     IconButton(
                         onClick = { menuOpen = true },
                         modifier = Modifier.testTag(toolMenuTag(tool.id)),
@@ -373,81 +373,82 @@ private fun ToolListItem(
                             contentDescription = stringResource(R.string.tools_more),
                         )
                     }
-                    Switch(
-                        checked = tool.metadata.enabled,
-                        onCheckedChange = onEnabledChange,
-                        modifier = Modifier.testTag(toolSwitchTag(tool.id)),
-                    )
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        if (tool.origin == ToolOrigin.USER) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tools_edit)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onEdit()
+                                },
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tools_copy)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onCopy()
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = {
+                                val label = if (tool.metadata.pinned) R.string.tools_unpin else R.string.tools_pin
+                                Text(stringResource(label))
+                            },
+                            onClick = {
+                                menuOpen = false
+                                if (tool.metadata.pinned) onUnpin() else onPin()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.tools_move_up)) },
+                            enabled = canMoveEarlier,
+                            onClick = {
+                                menuOpen = false
+                                onMoveEarlier()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.tools_move_down)) },
+                            enabled = canMoveLater,
+                            onClick = {
+                                menuOpen = false
+                                onMoveLater()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.tools_export)) },
+                            onClick = {
+                                menuOpen = false
+                                onExport()
+                            },
+                        )
+                        if (tool.origin == ToolOrigin.USER) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tools_delete)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onDelete()
+                                },
+                            )
+                        }
+                    }
                 }
-            },
-            modifier =
-                Modifier
-                    .testTag(toolRowTag(tool.id))
-                    .clickable(role = Role.Button) {
-                        if (tool.origin == ToolOrigin.USER) onEdit() else menuOpen = true
-                    },
-        )
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            if (tool.origin == ToolOrigin.USER) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tools_edit)) },
-                    onClick = {
-                        menuOpen = false
-                        onEdit()
-                    },
-                )
-            } else {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tools_copy)) },
-                    onClick = {
-                        menuOpen = false
-                        onCopy()
-                    },
+                Switch(
+                    checked = tool.metadata.enabled,
+                    onCheckedChange = onEnabledChange,
+                    modifier = Modifier.testTag(toolSwitchTag(tool.id)),
                 )
             }
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(if (tool.metadata.pinned) R.string.tools_unpin else R.string.tools_pin))
+        },
+        modifier =
+            Modifier
+                .testTag(toolRowTag(tool.id))
+                .clickable(role = Role.Button) {
+                    if (tool.origin == ToolOrigin.USER) onEdit() else menuOpen = true
                 },
-                onClick = {
-                    menuOpen = false
-                    if (tool.metadata.pinned) onUnpin() else onPin()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.tools_move_up)) },
-                enabled = canMoveEarlier,
-                onClick = {
-                    menuOpen = false
-                    onMoveEarlier()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.tools_move_down)) },
-                enabled = canMoveLater,
-                onClick = {
-                    menuOpen = false
-                    onMoveLater()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.tools_export)) },
-                onClick = {
-                    menuOpen = false
-                    onExport()
-                },
-            )
-            if (tool.origin == ToolOrigin.USER) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tools_delete)) },
-                    onClick = {
-                        menuOpen = false
-                        onDelete()
-                    },
-                )
-            }
-        }
-    }
+    )
 }
 
 /** One muted sentence under a section heading: what the group below does. */

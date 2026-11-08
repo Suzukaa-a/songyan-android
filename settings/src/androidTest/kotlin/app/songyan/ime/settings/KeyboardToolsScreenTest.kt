@@ -2,6 +2,7 @@ package app.songyan.ime.settings
 
 import android.app.Application
 import android.net.Uri
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -140,6 +141,18 @@ class KeyboardToolsScreenTest {
             listOf(BuiltinToolDefinitions.WIDTH_ID, BuiltinToolDefinitions.LETTER_CASE_ID),
             pinned,
         )
+    }
+
+    /** The menu was anchored to the whole row, so it opened at the row's start, far from ⋮. */
+    @Test
+    fun theActionsMenuOpensAtItsButton() {
+        show()
+        // The menu is a popup window, so both spans are taken on screen rather than in a root.
+        val span = { node: SemanticsNode -> node.positionOnScreen.x..(node.positionOnScreen.x + node.size.width) }
+        val button = span(compose.onNodeWithTag(toolMenuTag(BuiltinToolDefinitions.WIDTH_ID)).fetchSemanticsNode())
+        openActions(BuiltinToolDefinitions.WIDTH_ID)
+        val item = span(compose.onNodeWithText(str(R.string.tools_export)).fetchSemanticsNode())
+        assertTrue("$item does not reach $button", item.start < button.endInclusive && item.endInclusive > button.start)
     }
 
     @Test

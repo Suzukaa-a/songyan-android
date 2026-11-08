@@ -75,6 +75,7 @@
     <string name="tryout_kind_password">パスワード</string>
     <string name="tryout_hint">ここに入力…</string>
     <string name="tryout_note">「中/英」をタップすると中国語と英語を切り替えられます。長押しするとキーボードのメニューが開き、入力方式やキー配列を変更できます。ほかの入力メソッドはシステムのナビゲーションバーから切り替えられます。</string>
+    <string name="tryout_note_japanese">「あ/A」をタップすると日本語と英語を切り替えられます。長押しするとキーボードのメニューが開き、入力方式やキー配列を変更できます。ほかの入力メソッドはシステムのナビゲーションバーから切り替えられます。</string>
     <string name="tryout_needs_enable">松煙キーボードがまだ有効になっていません。先に有効にしてください。</string>
     <string name="tryout_needs_select">松煙がデフォルト キーボードになっていません。先に松煙に切り替えてください。</string>
     <string name="tryout_action">システム設定を開く</string>
@@ -97,6 +98,11 @@
     <string name="layout_name_cangjie26">倉頡 26キー</string>
     <string name="layout_name_romaji26">ローマ字 26キー</string>
     <string name="layout_name_kana12">かな 12キー</string>
+    <string name="page_name_symbols_system">標準の記号</string>
+    <string name="page_name_symbols_categorized">カテゴリ別記号</string>
+    <string name="page_name_numeric_automatic">自動 123</string>
+    <string name="page_name_numeric_keypad">テンキー 123</string>
+    <string name="page_name_english_qwerty">英語 QWERTY</string>
     <string name="layout_unavailable_note">このキー配列はまだキーボードで使えません。</string>
 
     <!-- 入力オプション -->

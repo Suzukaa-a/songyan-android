@@ -483,9 +483,9 @@ internal fun bundledLayoutNameRes(layoutId: String?): Int? =
     }
 
 /**
- * The name a keyboard drawing [definition] calls its layout: a board still identical to the bundled
- * preset is worded by resources; an edited bundled board or the user's own layout keeps the name it
- * was saved with.
+ * The name a keyboard drawing [definition] calls its layout: a bundled board whose name was never
+ * changed is worded by resources, since its stored name is the shipped data's Chinese; a renamed
+ * board or the user's own layout keeps the name it was saved with.
  */
 internal fun layoutName(
     context: Context,
@@ -493,7 +493,7 @@ internal fun layoutName(
     kind: KeyboardLayoutKind,
 ): String {
     if (definition != null) {
-        if (definition != BuiltinLayouts.byId(definition.id)) return definition.name
+        if (definition.name != BuiltinLayouts.byId(definition.id)?.name) return definition.name
         bundledLayoutNameRes(definition.id)?.let { return context.getString(it) }
     }
     return layoutName(context, kind)

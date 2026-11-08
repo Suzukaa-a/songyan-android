@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.R
@@ -89,6 +90,33 @@ class LayoutDisplayNamesTest {
             LayoutDisplayName.Authored("我的键盘"),
             layoutDisplayName(BuiltinLayouts.qwerty26.renamed("我的键盘"), qwerty),
         )
+    }
+
+    @Test
+    fun `a bundled board with edited keys but its shipped name is still worded by resources`() {
+        // The stored name is the shipped data's Chinese; a Japanese or English screen must not show it.
+        val edited = BuiltinLayouts.zhuyin41.copy(rows = BuiltinLayouts.zhuyin41.rows.dropLast(1))
+        assertEquals(LayoutDisplayName.Worded(R.string.layout_name_zhuyin41), layoutDisplayName(edited, qwerty))
+        val editedShape = BuiltinLayouts.qwerty26.copy(rows = BuiltinLayouts.qwerty26.rows.dropLast(1))
+        assertEquals(LayoutDisplayName.Worded(R.string.layout_name_26), layoutDisplayName(editedShape, qwerty))
+    }
+
+    @Test
+    fun `the bundled pages are worded by resources and the user's pages keep their names`() {
+        val expected =
+            mapOf(
+                KeyboardPagePresets.symbolsSystem to R.string.page_name_symbols_system,
+                KeyboardPagePresets.symbolsCategorized to R.string.page_name_symbols_categorized,
+                KeyboardPagePresets.numericAutomatic to R.string.page_name_numeric_automatic,
+                KeyboardPagePresets.numericKeypad to R.string.page_name_numeric_keypad,
+                KeyboardPagePresets.englishQwerty to R.string.page_name_english_qwerty,
+            )
+        assertEquals("every page the library lists is covered", KeyboardPagePresets.all.toSet(), expected.keys)
+        for ((page, resource) in expected) {
+            assertEquals(page.id, LayoutDisplayName.Worded(resource), pageDisplayName(page))
+        }
+        val mine = KeyboardPagePresets.symbolsCategorized.copy(id = "mine", name = "我的符号")
+        assertEquals(LayoutDisplayName.Authored("我的符号"), pageDisplayName(mine))
     }
 
     @Test

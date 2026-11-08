@@ -5,6 +5,8 @@ import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.KeyboardPageDefinition
+import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
@@ -48,17 +50,18 @@ fun bundledLayoutNameRes(layoutId: String?): Int? =
     }
 
 /**
- * Names [layout], the main layout a keyboard draws. Only a layout still identical to the bundled
- * preset is worded by resources; an edited bundled board or the user's own layout keeps the name it
- * was saved with, so no automatic name ever replaces the author's text. A null [layout] (the catalog
- * is not read yet) keeps [shape]'s name as before.
+ * Names [layout], the main layout a keyboard draws. A bundled board whose name was never changed is
+ * worded by resources, edited keys or not: the stored name is the shipped data's Chinese, not the
+ * user's text. A renamed board or the user's own layout keeps the name it was saved with, so no
+ * automatic name ever replaces the author's text. A null [layout] (the catalog is not read yet)
+ * keeps [shape]'s name as before.
  */
 fun layoutDisplayName(
     layout: LayoutDefinition?,
     shape: KeyboardLayoutOption,
 ): LayoutDisplayName {
     if (layout == null) return LayoutDisplayName.Worded(shape.nameRes)
-    if (layout != BuiltinLayouts.byId(layout.id)) return LayoutDisplayName.Authored(layout.name)
+    if (layout.name != BuiltinLayouts.byId(layout.id)?.name) return LayoutDisplayName.Authored(layout.name)
     bundledLayoutNameRes(layout.id)?.let { return LayoutDisplayName.Worded(it) }
     return LayoutDisplayName.Worded(shape.nameRes)
 }
@@ -84,4 +87,26 @@ fun currentMainLayout(
             registry.composition(KeyboardCompositionKey(inputMethod, shape), families).mainLayoutID,
         ) ?: return null
     return CurrentMainLayout(definition.id, layoutDisplayName(definition, KeyboardLayoutOption.fromId(shapeId)))
+}
+
+/**
+ * Names [page] in a page list. The bundled pages are code-owned and never edited, so their stored
+ * Chinese names are words of the shipped data, not of the user: the UI language words them. Every
+ * other page keeps the name it was saved with.
+ */
+fun pageDisplayName(page: KeyboardPageDefinition): LayoutDisplayName {
+    val resource =
+        when (page.id) {
+            KeyboardPagePresets.SYMBOLS_SYSTEM_ID -> R.string.page_name_symbols_system
+            KeyboardPagePresets.SYMBOLS_CATEGORIZED_ID -> R.string.page_name_symbols_categorized
+            KeyboardPagePresets.NUMERIC_AUTOMATIC_ID -> R.string.page_name_numeric_automatic
+            KeyboardPagePresets.NUMERIC_KEYPAD_ID -> R.string.page_name_numeric_keypad
+            KeyboardPagePresets.ENGLISH_QWERTY_ID -> R.string.page_name_english_qwerty
+            else -> null
+        }
+    return if (resource != null && KeyboardPagePresets.preset(page.id) != null) {
+        LayoutDisplayName.Worded(resource)
+    } else {
+        LayoutDisplayName.Authored(page.name)
+    }
 }

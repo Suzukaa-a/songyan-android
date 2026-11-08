@@ -32,6 +32,7 @@ import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.familiesOfSchemes
 import app.songyan.ime.settings.state.layoutDisplayName
+import app.songyan.ime.settings.state.pageDisplayName
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.RadioRow
@@ -102,7 +103,7 @@ fun CompositionScreen(
                 Column(modifier = Modifier.selectableGroup()) {
                     current.pages.filter { it.kind == kind }.forEach { page ->
                         RadioRow(
-                            title = page.name,
+                            title = pageDisplayName(page).text(),
                             selected = composition.pageId(kind) == page.id,
                             onClick = { viewModel.saveComposition(key, composition.withPageId(page.id, kind)) },
                         )
@@ -171,7 +172,13 @@ fun UseContentScreen(
     }
     val families = familiesOfSchemes(schemes)
     val page = if (isPage) current.page(contentId) else null
-    val name = page?.name ?: current.resolvedLayout(contentId)?.name
+    val layout = if (page == null) current.resolvedLayout(contentId) else null
+    val name =
+        when {
+            page != null -> pageDisplayName(page).text()
+            layout != null -> layoutDisplayName(layout, KeyboardLayoutOption.fromId(layout.id)).text()
+            else -> null
+        }
     if (name == null) {
         CompositionEmptyScreen(onBack, onOpenSchemes)
         return

@@ -76,6 +76,7 @@
     <string name="tryout_kind_password">密碼</string>
     <string name="tryout_hint">在這裡輸入…</string>
     <string name="tryout_note">輕觸「中/英」切換中文和英文，長按開啟鍵盤選單，可換輸入方式和鍵盤配置。其他輸入法在系統導航欄切換。</string>
+    <string name="tryout_note_japanese">輕觸「あ/A」切換日文和英文，長按開啟鍵盤選單，可換輸入方式和鍵盤配置。其他輸入法在系統導航欄切換。</string>
     <string name="tryout_needs_enable">松煙鍵盤尚未啟用，請先開啟。</string>
     <string name="tryout_needs_select">松煙還不是預設鍵盤，請先切換為松煙。</string>
     <string name="tryout_action">開啟系統設定</string>
@@ -98,6 +99,11 @@
     <string name="layout_name_cangjie26">倉頡 26 鍵</string>
     <string name="layout_name_romaji26">羅馬字 26 鍵</string>
     <string name="layout_name_kana12">假名 12 鍵</string>
+    <string name="page_name_symbols_system">預設符號頁</string>
+    <string name="page_name_symbols_categorized">分類符號</string>
+    <string name="page_name_numeric_automatic">自動 123</string>
+    <string name="page_name_numeric_keypad">數字盤 123</string>
+    <string name="page_name_english_qwerty">英文 QWERTY</string>
     <string name="layout_unavailable_note">鍵盤暫時還不能用這個佈局。</string>
 
     <!-- 輸入選項 -->

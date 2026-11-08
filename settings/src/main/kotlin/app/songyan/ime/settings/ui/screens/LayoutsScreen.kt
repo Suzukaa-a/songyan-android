@@ -45,6 +45,7 @@ import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.layoutDisplayName
+import app.songyan.ime.settings.state.pageDisplayName
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.LibraryEvent
 import app.songyan.ime.settings.ui.components.LoadingScreen
@@ -142,12 +143,13 @@ fun LayoutsScreen(
             current.layouts.forEach { layout ->
                 val builtIn = BuiltinLayouts.byId(layout.id) != null
                 val edited = builtIn && layout != BuiltinLayouts.byId(layout.id)
+                val layoutName = layoutDisplayName(layout, KeyboardLayoutOption.fromId(layout.id)).text()
                 ListItem(
                     modifier =
                         Modifier.clickable(onClickLabel = stringResource(R.string.layouts_action_edit)) {
                             onEdit(layout.id)
                         },
-                    headlineContent = { Text(layout.name) },
+                    headlineContent = { Text(layoutName) },
                     supportingContent = {
                         Text(
                             stringResource(
@@ -161,14 +163,14 @@ fun LayoutsScreen(
                     },
                     trailingContent = {
                         LayoutMenu(
-                            name = layout.name,
+                            name = layoutName,
                             canEdit = true,
                             canCopy = true,
                             canDelete = !builtIn,
                             canRestore = edited,
                             onUse = { onUse(layout.id) },
                             onEdit = { onEdit(layout.id) },
-                            onCopy = { viewModel.duplicateLayout(layout.id, layout.name + copySuffix) },
+                            onCopy = { viewModel.duplicateLayout(layout.id, layoutName + copySuffix) },
                             onExport = {
                                 exportId = layout.id
                                 exporter.launch(viewModel.exportFileName(layout.id))
@@ -313,8 +315,9 @@ fun PagesScreen(
                 current.pages.filter { it.kind == kind }.forEach { page ->
                     val preset = isPresetPage(page)
                     val usage = keyboardUsage(current.keyboardsUsingPage(page.id), inputMethodNames, current, families)
+                    val pageName = pageDisplayName(page).text()
                     ListItem(
-                        headlineContent = { Text(page.name) },
+                        headlineContent = { Text(pageName) },
                         supportingContent = {
                             val note =
                                 stringResource(
@@ -328,13 +331,13 @@ fun PagesScreen(
                         },
                         trailingContent = {
                             PageMenu(
-                                name = page.name,
+                                name = pageName,
                                 canEdit = !preset && page.isEditablePage,
                                 canCopy = page.symbolPresentation != KeyboardSymbolPresentation.AUTOMATIC,
                                 canDelete = !preset,
                                 onUse = { onUse(page.id) },
                                 onEdit = { onEdit(page.id) },
-                                onCopy = { viewModel.duplicatePage(page.id, page.name + copySuffix) },
+                                onCopy = { viewModel.duplicatePage(page.id, pageName + copySuffix) },
                                 onDelete = { deleting = page },
                             )
                         },

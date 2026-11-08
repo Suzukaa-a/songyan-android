@@ -76,6 +76,7 @@
     <string name="tryout_kind_password">密码</string>
     <string name="tryout_hint">在这里输入…</string>
     <string name="tryout_note">点按「中/英」切换中文和英文，长按打开键盘菜单，可换输入方式和键盘布局。其他输入法在系统导航栏切换。</string>
+    <string name="tryout_note_japanese">点按「あ/A」切换日文和英文，长按打开键盘菜单，可换输入方式和键盘布局。其他输入法在系统导航栏切换。</string>
     <string name="tryout_needs_enable">松烟键盘尚未启用，请先开启。</string>
     <string name="tryout_needs_select">松烟还不是默认键盘，请先切换为松烟。</string>
     <string name="tryout_action">打开系统设置</string>
@@ -98,6 +99,11 @@
     <string name="layout_name_cangjie26">仓颉 26 键</string>
     <string name="layout_name_romaji26">罗马字 26 键</string>
     <string name="layout_name_kana12">假名 12 键</string>
+    <string name="page_name_symbols_system">默认符号页</string>
+    <string name="page_name_symbols_categorized">分类符号</string>
+    <string name="page_name_numeric_automatic">自动 123</string>
+    <string name="page_name_numeric_keypad">数字盘 123</string>
+    <string name="page_name_english_qwerty">英文 QWERTY</string>
     <string name="layout_unavailable_note">键盘暂时还不能用这个布局。</string>
 
     <!-- 输入选项 -->

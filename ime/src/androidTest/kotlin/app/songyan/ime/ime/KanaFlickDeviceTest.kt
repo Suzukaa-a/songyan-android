@@ -9,8 +9,10 @@ import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.kana12.Kana12Layout
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
@@ -86,6 +88,17 @@ class KanaFlickDeviceTest {
             host.assertComposed("っ")
             host.tapModifier()
             host.assertComposed("づ")
+        }
+
+    @Test
+    fun theFourthRailKeyIsNumbersWhileTheSystemSwitchIsHidden() =
+        withKagiroi("rail-numbers") { host ->
+            host.startKana()
+            val index = host.numbersKeyIndex()
+            assertTrue("the kana rail drew no numbers key without the system switch", index >= 0)
+            assertFalse("the system switch is hidden", host.hasControl(ControlKey.GLOBE))
+            host.tapKey(index)
+            assertTrue(host.await { host.main2 { host.controller.page } == KeyboardPageKind.NUMERIC })
         }
 
     @Test
@@ -168,6 +181,13 @@ class KanaFlickDeviceTest {
         assertTrue("no kana row '" + rowId + "' on the drawn board: " + rows, index >= 0)
         return index
     }
+
+    /** The virtual index of the numbers key, or -1 when none is drawn. */
+    private fun FeatureHost.numbersKeyIndex(): Int =
+        main2 {
+            val view = find(KeyboardView::class.java)
+            view.keys.indexOfFirst { it.action.pageSwitchTarget == LayoutPageTarget.NUMERIC }
+        }
 
     /** The virtual index of the 小゛゜ key. */
     private fun FeatureHost.modifierIndex(): Int {

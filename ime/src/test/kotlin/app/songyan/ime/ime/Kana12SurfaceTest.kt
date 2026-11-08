@@ -191,4 +191,23 @@ class Kana12SurfaceTest {
         assertEquals(false, isKana12KeyFace(LayoutAction.cursorLeft))
         assertEquals(false, isKana12KeyFace(LayoutAction(LayoutActionKind.BACKSPACE)))
     }
+
+    @Test
+    fun `a hidden system switch becomes the numbers key in its own slot`() {
+        val surface = Kana12Surface.of(definition()) ?: error("the board was not recognized")
+        val rail = kana12LeadingRail(surface.leading, showsGlobe = false)
+        assertEquals(surface.leading.size, rail.size)
+        val numbers = rail.last()
+        assertEquals(LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC), numbers.action)
+        assertEquals(LayoutKeyTitleMode.AUTOMATIC, numbers.titleMode)
+        assertEquals(surface.leading.last().widthWeight, numbers.widthWeight, 0.0)
+        assertEquals(surface.leading.dropLast(1), rail.dropLast(1))
+        assertNull(kana12Intent(numbers.action))
+    }
+
+    @Test
+    fun `a shown system switch leaves the rail alone`() {
+        val surface = Kana12Surface.of(definition()) ?: error("the board was not recognized")
+        assertEquals(surface.leading, kana12LeadingRail(surface.leading, showsGlobe = true))
+    }
 }

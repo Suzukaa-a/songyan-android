@@ -5,6 +5,7 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutKeyTitleMode
 import app.songyan.ime.layout.LayoutPageTarget
 
 /**
@@ -91,6 +92,33 @@ internal fun kana12GridRowId(key: LayoutKey): String? {
     val text = key.action.value ?: return null
     return Kana12Rows.all.firstOrNull { row -> row.center == text }?.id
 }
+
+/**
+ * The leading rail as drawn. The system switch key only shows when the user asked for it; without
+ * it the slot becomes the numbers key instead of a hole or a stretched neighbour, because the kana
+ * board has no digits of its own.
+ */
+internal fun kana12LeadingRail(
+    leading: List<LayoutKey>,
+    showsGlobe: Boolean,
+): List<LayoutKey> =
+    if (showsGlobe) {
+        leading
+    } else {
+        leading.map { key ->
+            if (key.action.type == LayoutActionKind.GLOBE) {
+                key.copy(
+                    label = "123",
+                    secondaryLabel = null,
+                    action = LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC),
+                    longPress = null,
+                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                )
+            } else {
+                key
+            }
+        }
+    }
 
 /**
  * What [action] means on the twelve-key surface, or null when the surface does not own it and the

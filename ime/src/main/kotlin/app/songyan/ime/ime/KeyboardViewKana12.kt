@@ -6,7 +6,6 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.view.accessibility.AccessibilityNodeInfo
 import app.songyan.ime.layout.LayoutAction
-import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutKey
 import kotlin.math.roundToInt
@@ -252,8 +251,7 @@ internal fun KeyboardView.rebuildKana12(surface: Kana12Surface) {
     val widthDp = (frame.width / density).toDouble()
     val heightDp = keyAreaHeightDp(heightRows).toDouble()
     if (widthDp <= 0.0 || heightDp <= 0.0) return
-    // The system switch key only shows when the user asked for it, as on every other page.
-    val leading = surface.leading.filterNot { !showsGlobe && it.action.type == LayoutActionKind.GLOBE }
+    val leading = kana12LeadingRail(surface.leading, showsGlobe)
     val trailing = surface.trailing
     val geometry =
         Kana12Geometry.resolve(

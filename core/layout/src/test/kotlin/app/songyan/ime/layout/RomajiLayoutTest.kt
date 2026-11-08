@@ -150,7 +150,6 @@ class RomajiLayoutTest {
         assertNull(LayoutBottomRow.authored(layout))
         assertNull(LayoutBottomRow.authored(BuiltinLayouts.qwerty26))
         assertNotNull(LayoutBottomRow.authored(BuiltinLayouts.zhuyin41))
-        assertNotNull(LayoutBottomRow.authored(BuiltinLayouts.cangjie26))
     }
 
     @Test

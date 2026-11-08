@@ -128,9 +128,9 @@ class SchemePadPagesTest {
         val lastRow = definition.rows[2].keys
         assertEquals(LayoutActionKind.SHIFT, lastRow.first().action.type)
         assertEquals(LayoutActionKind.BACKSPACE, lastRow.last().action.type)
-        // Its authored footer opens 123 and keeps the engine space, without a second Delete.
+        // The same footer as every other 26-key board: the marks bracket the space bar, no second Delete.
         assertEquals(
-            listOf("🌐", "123", "中/英", "空格", "⏎"),
+            listOf("🌐", "123", "中/英", "，", "空格", "。", "⏎"),
             definition.rows
                 .last()
                 .keys

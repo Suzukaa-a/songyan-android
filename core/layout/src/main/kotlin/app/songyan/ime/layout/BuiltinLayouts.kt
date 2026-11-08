@@ -91,7 +91,8 @@ object BuiltinLayouts {
     /**
      * The cangjie pad: the 26-key arrangement keeps its positions, the main cap shows the radical and
      * the corner badge shows the letter the engine actually reads. A radical cap is a face, never a
-     * literal, so tapping spells a code instead of committing a character.
+     * literal, so tapping spells a code instead of committing a character. The last row is the 26-key
+     * stand-in, so the keyboard draws the same footer as every other 26-key board.
      */
     val cangjie26: LayoutDefinition
         get() =
@@ -104,7 +105,7 @@ object BuiltinLayouts {
                         radicalRow("手田水口廿卜山戈人心", "qwertyuiop"),
                         radicalRow("日尸木火土竹十大中", "asdfghjkl"),
                         radicalRow("重難金女月弓一", "zxcvbnm"),
-                    ) + listOf(cangjieControlRow()),
+                    ) + listOf(controls),
             )
 
     /**
@@ -538,21 +539,6 @@ object BuiltinLayouts {
                 automaticKey("中/英", LayoutAction.languageSwitch()),
                 automaticKey("空格", LayoutAction(LayoutActionKind.SPACE), width = 4.0),
                 automaticKey("⌫", LayoutAction(LayoutActionKind.BACKSPACE)),
-                automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER)),
-            ),
-        )
-
-    /**
-     * The cangjie pad's footer. It has no Delete: the 26-key shell draws Delete itself at the end of
-     * the last letter row, and a second one here would be drawn twice.
-     */
-    private fun cangjieControlRow(): LayoutRow =
-        LayoutRow(
-            listOf(
-                automaticKey("🌐", LayoutAction(LayoutActionKind.GLOBE)),
-                automaticKey("123", LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC)),
-                automaticKey("中/英", LayoutAction.languageSwitch()),
-                automaticKey("空格", LayoutAction(LayoutActionKind.SPACE), width = 4.0),
                 automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER)),
             ),
         )

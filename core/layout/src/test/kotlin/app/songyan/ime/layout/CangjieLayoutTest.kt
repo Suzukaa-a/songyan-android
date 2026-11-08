@@ -71,30 +71,14 @@ class CangjieLayoutTest {
     }
 
     /**
-     * The zhuyin pad's control row minus Delete: the 26-key shell already draws Delete at the end of
-     * the last letter row, so the data must not add a second one.
+     * The board had its own footer without the marks either side of the space bar, so it looked
+     * unlike every other 26-key board. It now uses the 26-key stand-in, which the keyboard replaces
+     * with the same footer it draws on the others.
      */
     @Test
-    fun theFooterOpensTheNumericPageWithoutASecondDelete() {
-        val footer = layout.rows.last()
-        assertEquals(
-            listOf(
-                LayoutAction(LayoutActionKind.GLOBE),
-                LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC),
-                LayoutAction.languageSwitch(),
-                LayoutAction(LayoutActionKind.SPACE),
-                LayoutAction(LayoutActionKind.ENTER),
-            ),
-            footer.keys.map { it.action },
-        )
-        assertEquals(listOf("🌐", "123", "中/英", "空格", "⏎"), footer.keys.map { it.label })
-        assertEquals(4.0, footer.keys[3].widthWeight, 0.0001)
-        assertTrue(footer.keys.none { it.action.type == LayoutActionKind.BACKSPACE })
-        for (key in footer.keys) {
-            assertEquals(key.label, LayoutKeyTitleMode.AUTOMATIC, key.titleMode)
-        }
-        assertEquals(layout.rows.lastIndex, LayoutBottomRow.index(layout))
-        assertEquals(footer.keys, LayoutBottomRow.authored(layout))
+    fun theControlRowIsTheStandInSoTheKeyboardDrawsItsOwnFooter() {
+        assertEquals(BuiltinLayouts.qwerty26.rows.last(), layout.rows.last())
+        assertNull(LayoutBottomRow.authored(layout))
     }
 
     @Test

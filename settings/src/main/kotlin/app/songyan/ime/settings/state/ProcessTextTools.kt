@@ -3,8 +3,9 @@ package app.songyan.ime.settings.state
 import android.graphics.drawable.Drawable
 
 /**
- * One app installed on this device that handles text through [android.content.Intent.ACTION_PROCESS_TEXT],
- * as the keyboard tools page lists it: the icon and the name the system shows for it.
+ * One app installed on this device that handles text through [android.content.Intent.ACTION_PROCESS_TEXT]
+ * (or turns speech into text, in the speech list), as the keyboard tools page lists it: the icon and
+ * the name the system shows for it.
  */
 data class ProcessTextApp(
     /** The activity that handles the intent, flattened as package/class. */
@@ -38,6 +39,19 @@ interface ProcessTextToolSource {
 
 /** Process-wide holder of the app-provided source, like [SettingsAppStateHolder]. */
 object ProcessTextToolHolder {
+    @Volatile
+    private var installed: ProcessTextToolSource? = null
+
+    val current: ProcessTextToolSource?
+        get() = installed
+
+    fun install(source: ProcessTextToolSource) {
+        installed = source
+    }
+}
+
+/** Process-wide holder of the speech recognizers' source; the same shape as [ProcessTextToolSource]. */
+object SpeechToolHolder {
     @Volatile
     private var installed: ProcessTextToolSource? = null
 

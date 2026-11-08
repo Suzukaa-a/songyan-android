@@ -8,6 +8,7 @@ import app.songyan.ime.ime.tools.KeyboardToolApp
 import app.songyan.ime.ime.tools.KeyboardToolSourceKind
 import app.songyan.ime.ime.tools.KeyboardToolText
 import app.songyan.ime.ime.tools.KeyboardToolsProcessText
+import app.songyan.ime.keyboard.engine.InputLanguage
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -20,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 class ProcessTextToolGateway(
     context: Context,
     private val enabled: ProcessTextToolApps,
+    private val speech: ProcessTextToolApps,
 ) : KeyboardToolsProcessText {
     private val appContext = context.applicationContext
 
@@ -33,6 +35,24 @@ class ProcessTextToolGateway(
             emptyList()
         }
 
+    override suspend fun speechApps(): List<KeyboardToolApp> =
+        try {
+            speech.enabledApps().map { app -> KeyboardToolApp(app.component, app.label) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+    override fun openSpeech(
+        appId: String,
+        label: String,
+        inputLanguage: InputLanguage,
+    ): Boolean {
+        val component = ComponentName.unflattenFromString(appId) ?: return false
+        return ProcessTextRelay.requestSpeech(appContext, component, label, speechLanguageTag(inputLanguage))
+    }
+
     override fun open(
         appId: String,
         label: String,
@@ -42,10 +62,15 @@ class ProcessTextToolGateway(
         val kind =
             when (source.kind) {
                 KeyboardToolSourceKind.SELECTION -> ProcessTextKind.SELECTION
-                KeyboardToolSourceKind.PARAGRAPH -> ProcessTextKind.CURSOR
+                KeyboardToolSourceKind.FIELD -> ProcessTextKind.FIELD
                 KeyboardToolSourceKind.CLIPBOARD -> ProcessTextKind.CLIPBOARD
             }
-        return ProcessTextRelay.request(appContext, component, label, ProcessTextSource(source.text, kind))
+        return ProcessTextRelay.request(
+            appContext,
+            component,
+            label,
+            ProcessTextSource(source.text, kind, source.caret),
+        )
     }
 
     override fun pending(): KeyboardToolAnswer? =
@@ -68,3 +93,14 @@ class ProcessTextToolGateway(
 
     override fun dismiss() = ProcessTextRelay.dismissPending()
 }
+
+/**
+ * The language a recognizer is asked for: the script-neutral Chinese tags recognizers know, since
+ * most of them do not accept `zh-Hans` or `zh-Hant`.
+ */
+internal fun speechLanguageTag(language: InputLanguage): String =
+    when (language) {
+        InputLanguage.ZH_HANS -> "zh-CN"
+        InputLanguage.ZH_HANT -> "zh-TW"
+        InputLanguage.JA -> "ja-JP"
+    }

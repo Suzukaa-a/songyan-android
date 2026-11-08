@@ -3,9 +3,9 @@
     <!-- 键盘工具：工具栏入口与处理已有文字的工具面板 -->
     <string name="ime_tools_title">工具</string>
     <string name="ime_tools_source_selection">选中文字</string>
-    <string name="ime_tools_source_paragraph">光标前</string>
+    <string name="ime_tools_source_field">整个输入框</string>
     <string name="ime_tools_source_clipboard">剪贴板</string>
-    <string name="ime_tools_source_none">没有可以处理的文字。先选中一段文字，或把光标放在文字后面。</string>
+    <string name="ime_tools_source_none">没有可以处理的文字。先输入文字，或选中一段文字。</string>
     <string name="ime_tools_source_label">原文：%1$s</string>
     <string name="ime_tools_result_label">结果：%1$s</string>
     <string name="ime_tools_loading">正在读取工具…</string>

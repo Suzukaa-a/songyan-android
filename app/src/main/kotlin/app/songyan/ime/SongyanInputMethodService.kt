@@ -100,7 +100,7 @@ private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
 private const val TAG = "SongyanIme"
 
-/** How much of the field a tool may be handed: a paragraph, not the whole document. */
+/** How much of the field a tool may be handed: the selection or the whole field, never more than this. */
 private const val MAX_PROCESS_TEXT = 1000
 
 class SongyanInputMethodService : InputMethodService() {
@@ -275,7 +275,12 @@ class SongyanInputMethodService : InputMethodService() {
         object : ProcessTextRelay.Host {
             override fun snapshotForProcessText(source: ProcessTextSource?): ProcessTextRequest? {
                 val info = inputBinding ?: return null
-                if (policy.privateInput || editor.composing) return null
+                if (policy.privateInput) return null
+                // A speech app is handed no text; only the editor its transcript goes back to matters.
+                if (source?.kind == ProcessTextKind.NONE) {
+                    return ProcessTextRequest("", info.packageName, info.fieldId, ProcessTextKind.NONE)
+                }
+                if (editor.composing) return null
                 val connection = currentInputConnection ?: return null
                 val selected = runCatching { connection.getSelectedText(0)?.toString() }.getOrNull().orEmpty()
                 val chosen =
@@ -283,31 +288,34 @@ class SongyanInputMethodService : InputMethodService() {
                         ?: if (selected.isNotEmpty()) {
                             ProcessTextSource(selected, ProcessTextKind.SELECTION)
                         } else {
-                            // Only the paragraph the caret is in; one unit past the limit tells a
-                            // paragraph that fits from one the read window cut.
-                            val paragraph =
-                                (
-                                    editor.contextBeforeCursor(
-                                        MAX_PROCESS_TEXT + 1,
-                                    ) ?: return null
-                                ).substringAfterLast('\n')
-                            ProcessTextSource(paragraph, ProcessTextKind.CURSOR)
+                            // The whole field; one unit past the limit on each side tells a field
+                            // that fits from one the read window cut.
+                            val before = editor.contextBeforeCursor(MAX_PROCESS_TEXT + 1) ?: return null
+                            val after = editor.contextAfterCursor(MAX_PROCESS_TEXT + 1) ?: return null
+                            ProcessTextSource(before + after, ProcessTextKind.FIELD, before.length)
                         }
                 // Text that cannot be handed over whole is refused, not cut silently.
                 if (chosen.text.isBlank() || chosen.text.length > MAX_PROCESS_TEXT) return null
                 val stillShown =
                     when (chosen.kind) {
                         ProcessTextKind.SELECTION -> selected == chosen.text
-                        // A paragraph is only replaced up to a bare caret, so a selection retires it.
-                        ProcessTextKind.CURSOR ->
-                            selected.isEmpty() &&
-                                runCatching { connection.getTextBeforeCursor(chosen.text.length, 0)?.toString() }
-                                    .getOrNull() == chosen.text
+                        // The field is only replaced around a bare caret, so a selection retires it.
+                        ProcessTextKind.FIELD -> fieldHolds(chosen.text, chosen.caret)
                         ProcessTextKind.CLIPBOARD -> true
+                        ProcessTextKind.NONE -> false
                     }
                 if (!stillShown) return null
-                return ProcessTextRequest(chosen.text, info.packageName, info.fieldId, chosen.kind)
+                return ProcessTextRequest(chosen.text, info.packageName, info.fieldId, chosen.kind, chosen.caret)
             }
+
+            /** The field is still exactly [text] around a bare caret that sits [caret] units in. */
+            private fun fieldHolds(
+                text: String,
+                caret: Int,
+            ): Boolean =
+                caret in 0..text.length &&
+                    runCatching { editor.holdsField(text.substring(0, caret), text.substring(caret)) }
+                        .getOrDefault(false)
 
             /** The bound editor is the one the request came from, and it may run a tool at all. */
             private fun boundTo(request: ProcessTextRequest): Boolean =
@@ -323,12 +331,10 @@ class SongyanInputMethodService : InputMethodService() {
                     ProcessTextKind.SELECTION ->
                         runCatching { connection.getSelectedText(0)?.toString() }.getOrNull() == request.text
 
-                    ProcessTextKind.CURSOR ->
-                        runCatching { connection.getSelectedText(0) }.getOrNull().isNullOrEmpty() &&
-                            runCatching { connection.getTextBeforeCursor(request.text.length, 0)?.toString() }
-                                .getOrNull() == request.text
-                    // Never in the field, so there is nothing to replace.
-                    ProcessTextKind.CLIPBOARD -> false
+                    ProcessTextKind.FIELD -> fieldHolds(request.text, request.caret)
+
+                    // Never in the field, or never any text at all, so there is nothing to replace.
+                    ProcessTextKind.CLIPBOARD, ProcessTextKind.NONE -> false
                 }
             }
 
@@ -348,8 +354,13 @@ class SongyanInputMethodService : InputMethodService() {
                 val written =
                     when (request.kind) {
                         ProcessTextKind.SELECTION -> editor.replaceSelection(request.text, text)
-                        ProcessTextKind.CURSOR -> editor.replaceBeforeCursor(request.text, text)
-                        ProcessTextKind.CLIPBOARD -> false
+                        ProcessTextKind.FIELD ->
+                            editor.replaceField(
+                                request.text.substring(0, request.caret),
+                                request.text.substring(request.caret),
+                                text,
+                            )
+                        ProcessTextKind.CLIPBOARD, ProcessTextKind.NONE -> false
                     }
                 if (!written) {
                     copyProcessText(text)

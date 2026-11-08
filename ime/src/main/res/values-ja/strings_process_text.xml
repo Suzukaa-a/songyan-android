@@ -2,6 +2,7 @@
 <resources>
     <!-- キーボードツール：テキストを渡すほかのアプリ -->
     <string name="ime_process_text_apps_section">ほかのアプリ</string>
+    <string name="ime_process_text_speech_section">音声入力</string>
     <string name="ime_process_text_answer_from">%1$s からの結果</string>
     <string name="ime_process_text_answer">ほかのアプリからの結果</string>
     <string name="ime_process_text_waiting">%1$s を待っています…</string>

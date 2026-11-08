@@ -17,6 +17,7 @@ import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.tools.ProcessTextToolApps
 import app.songyan.ime.tools.ProcessTextToolGateway
+import app.songyan.ime.tools.ToolAppKind
 import app.songyan.ime.tools.regex.RegexField
 import app.songyan.ime.tools.regex.RegexLimits
 import app.songyan.ime.tools.regex.RegexRun
@@ -51,6 +52,8 @@ class ImeKeyboardTools(
      */
     private val processTextApps =
         ProcessTextToolApps(appContext, storage.toolsDir)
+    private val speechApps =
+        ProcessTextToolApps(appContext, storage.toolsDir, ToolAppKind.SPEECH)
 
     val gateway: KeyboardToolsGateway =
         KeyboardToolsRuntime(
@@ -61,7 +64,7 @@ class ImeKeyboardTools(
                 },
             regex = boundedRegex(),
             interfaceLanguageTags = { interfaceLanguageTags() },
-            processTextGateway = ProcessTextToolGateway(appContext, processTextApps),
+            processTextGateway = ProcessTextToolGateway(appContext, processTextApps, speechApps),
         )
 
     /** The tools' editor side over the input method's own connection, policy and clipboard. */

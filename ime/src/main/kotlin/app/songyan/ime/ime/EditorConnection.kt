@@ -467,6 +467,50 @@ class EditorConnection(
     }
 
     /**
+     * Replaces the whole field with [replacement] in one edit, only when the editor still holds
+     * exactly [before] ahead of a bare caret and exactly [after] behind it. False leaves the editor
+     * untouched. Both reads ask one unit more than expected, so a field that has grown is not
+     * mistaken for the one the caller captured.
+     */
+    fun replaceField(
+        before: String,
+        after: String,
+        replacement: String,
+    ): Boolean {
+        val ic = connection() ?: return false
+        if (keyEventEditor || composing || (before.isEmpty() && after.isEmpty())) return false
+        ic.beginBatchEdit()
+        try {
+            if (!holdsField(ic, before, after)) return false
+            ic.deleteSurroundingText(before.length, after.length)
+            val committed = ic.commitText(replacement, 1)
+            selection.forget()
+            forgetText()
+            return committed
+        } finally {
+            ic.endBatchEdit()
+        }
+    }
+
+    /** Whether the field is exactly [before], a bare caret, then [after]. */
+    fun holdsField(
+        before: String,
+        after: String,
+    ): Boolean {
+        val ic = connection() ?: return false
+        return holdsField(ic, before, after)
+    }
+
+    private fun holdsField(
+        ic: InputConnection,
+        before: String,
+        after: String,
+    ): Boolean =
+        ic.getSelectedText(0).isNullOrEmpty() &&
+            ic.getTextBeforeCursor(before.length + 1, 0)?.toString() == before &&
+            ic.getTextAfterCursor(after.length + 1, 0)?.toString() == after
+
+    /**
      * Replaces the selected text with [replacement] in one edit, only when the editor still selects
      * exactly [expected]. False leaves the editor untouched.
      */
@@ -562,6 +606,12 @@ class EditorConnection(
     fun contextBeforeCursor(limit: Int): String? {
         val ic = connection() ?: return null
         return ic.getTextBeforeCursor(limit, 0)?.toString()
+    }
+
+    /** Up to [limit] units after the caret; null when the editor cannot say. */
+    fun contextAfterCursor(limit: Int): String? {
+        val ic = connection() ?: return null
+        return ic.getTextAfterCursor(limit, 0)?.toString()
     }
 
     /**

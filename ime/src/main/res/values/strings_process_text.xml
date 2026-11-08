@@ -2,6 +2,7 @@
 <resources>
     <!-- Keyboard tools: other apps that handle the text the panel hands them -->
     <string name="ime_process_text_apps_section">Other apps</string>
+    <string name="ime_process_text_speech_section">Voice typing</string>
     <string name="ime_process_text_answer_from">Answer from %1$s</string>
     <string name="ime_process_text_answer">Answer from another app</string>
     <string name="ime_process_text_waiting">Waiting for %1$s…</string>

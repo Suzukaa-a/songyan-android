@@ -3,9 +3,9 @@
     <!-- Keyboard tools: the idle toolbar entry and the panel that runs one tool on existing text -->
     <string name="ime_tools_title">Tools</string>
     <string name="ime_tools_source_selection">Selected text</string>
-    <string name="ime_tools_source_paragraph">Before the caret</string>
+    <string name="ime_tools_source_field">Whole field</string>
     <string name="ime_tools_source_clipboard">Clipboard</string>
-    <string name="ime_tools_source_none">No text to work on. Select some text, or put the caret after it.</string>
+    <string name="ime_tools_source_none">No text to work on. Type some text, or select some.</string>
     <string name="ime_tools_source_label">Original: %1$s</string>
     <string name="ime_tools_result_label">Result: %1$s</string>
     <string name="ime_tools_loading">Reading tools…</string>

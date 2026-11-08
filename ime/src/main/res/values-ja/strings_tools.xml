@@ -3,9 +3,9 @@
     <!-- キーボードツール：ツールバーの入口と、入力済みの文字を処理するパネル -->
     <string name="ime_tools_title">ツール</string>
     <string name="ime_tools_source_selection">選択したテキスト</string>
-    <string name="ime_tools_source_paragraph">カーソル前</string>
+    <string name="ime_tools_source_field">入力欄全体</string>
     <string name="ime_tools_source_clipboard">クリップボード</string>
-    <string name="ime_tools_source_none">処理できるテキストがありません。テキストを選択するか、カーソルを文字の後ろに置いてください。</string>
+    <string name="ime_tools_source_none">処理できるテキストがありません。テキストを入力するか、選択してください。</string>
     <string name="ime_tools_source_label">元のテキスト：%1$s</string>
     <string name="ime_tools_result_label">結果：%1$s</string>
     <string name="ime_tools_loading">ツールを読み込んでいます…</string>

@@ -298,6 +298,7 @@ class QuickContentPanels(
                     view.onChoice = { kind -> chooseSource(kind) }
                     view.onTool = { id -> run(id) }
                     view.onApp = { id, label -> runApp(id, label) }
+                    view.onSpeech = { id, label -> runSpeech(id, label) }
                     view.onReplace = { replace() }
                     view.onInsert = { insertResult() }
                     view.onCopy = { copyResult() }

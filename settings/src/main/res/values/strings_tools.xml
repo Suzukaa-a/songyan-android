@@ -2,7 +2,7 @@
 <resources>
     <!-- Keyboard tools: home entry and page -->
     <string name="row_tools_title">Keyboard tools</string>
-    <string name="row_tools_subtitle">Run a tool on the text you select</string>
+    <string name="row_tools_subtitle">Run a tool on your selection or the whole input field</string>
     <string name="tools_search_keywords">tools translation convert full width half width</string>
     <string name="tools_title">Keyboard tools</string>
     <string name="tools_section_list">Tools</string>

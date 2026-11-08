@@ -33,7 +33,7 @@ class ProcessTextToolAppsTest {
 
     private fun appsIn(directory: File): ProcessTextToolApps = ProcessTextToolApps(directory)
 
-    private fun documentFile(directory: File): File = File(directory, ProcessTextToolApps.FILE_NAME)
+    private fun documentFile(directory: File): File = File(directory, ToolAppKind.PROCESS_TEXT.fileName)
 
     private suspend fun failureOf(block: suspend () -> Unit): Throwable =
         try {

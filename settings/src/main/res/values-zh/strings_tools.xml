@@ -2,7 +2,7 @@
 <resources>
     <!-- 键盘工具：首页入口与页面 -->
     <string name="row_tools_title">键盘工具</string>
-    <string name="row_tools_subtitle">用选中的文字运行工具</string>
+    <string name="row_tools_subtitle">对选中的文字或整个输入框运行工具</string>
     <string name="tools_search_keywords">工具 翻译 转换 繁简 全角 半角</string>
     <string name="tools_title">键盘工具</string>
     <string name="tools_section_list">工具</string>

@@ -42,10 +42,12 @@ class ProcessTextToolDeviceTest {
     private val device = UiDevice.getInstance(instrumentation)
     private val testPackage = instrumentation.context.packageName
     private lateinit var apps: ProcessTextToolApps
+    private lateinit var speechApps: ProcessTextToolApps
 
     private var previousIme: String? = null
     private var previousClipboard: ClipData? = null
     private var previousEnabled: Set<String> = emptySet()
+    private var previousSpeechEnabled: Set<String> = emptySet()
     private var wasEnabled = false
 
     @Before
@@ -72,6 +74,10 @@ class ProcessTextToolDeviceTest {
         previousEnabled = runBlocking { apps.enabled() }
         // Every case starts with none of the stand-in apps turned on, the way a fresh install is.
         clearEnabled()
+        val toolsDir = File(context.filesDir, ToolStore.DIRECTORY_NAME)
+        speechApps = ProcessTextToolApps(context, toolsDir, ToolAppKind.SPEECH)
+        previousSpeechEnabled = runBlocking { speechApps.enabled() }
+        clearSpeechEnabled()
     }
 
     @After
@@ -82,6 +88,13 @@ class ProcessTextToolDeviceTest {
             for (activity in listOf(FakeProcessTextActivity::class.java, CancelledProcessTextActivity::class.java)) {
                 val component = componentOf(activity).flattenToString()
                 if (component in previousEnabled) runBlocking { apps.setEnabled(component, true) }
+            }
+        }
+        if (::speechApps.isInitialized) {
+            clearSpeechEnabled()
+            for (activity in SPEECH_APPS) {
+                val component = componentOf(activity).flattenToString()
+                if (component in previousSpeechEnabled) runBlocking { speechApps.setEnabled(component, true) }
             }
         }
         previousClipboard?.let { clipboard().setPrimaryClip(it) } ?: clipboard().clearPrimaryClip()
@@ -225,6 +238,97 @@ class ProcessTextToolDeviceTest {
         assertNull("something was copied from a password field", clipboardText())
     }
 
+    /** A speech app is a tool of its own: it is listed only once the user turns it on. */
+    @Test
+    fun aSpeechAppIsListedOnlyAfterTheUserTurnsItOn() {
+        openHost()
+        openToolsPanel(ProcessTextHostActivity.FIRST_TEXT)
+        assertTrue(
+            "the tool list never loaded: " + imeLabels(),
+            await { imeLabels().any { it in builtinToolLabels() } },
+        )
+        assertFalse(
+            "a speech app the user never turned on was listed",
+            imeLabels().contains(labelOf(FakeSpeechActivity::class.java)),
+        )
+
+        enableSpeech(FakeSpeechActivity::class.java)
+        tapImeLabel(context.getString(ImeR.string.ime_panel_close))
+        assertTrue(
+            "the panel did not close",
+            await(5_000) { findImeLabel(context.getString(ImeR.string.ime_panel_close)) == null },
+        )
+
+        openToolsPanel(ProcessTextHostActivity.FIRST_TEXT, labelOf(FakeSpeechActivity::class.java))
+    }
+
+    /**
+     * A speech app needs no source text. Its first recognition is only previewed; the one way to
+     * write it is inserting it at the caret, and nothing is written before the user asks.
+     */
+    @Test
+    fun aTranscriptIsPreviewedAndOnlyInsertedWhenTheUserChoosesIt() {
+        enableSpeech(FakeSpeechActivity::class.java)
+        openHost(identify = true)
+        openToolsPanel(ProcessTextHostActivity.FIRST_TEXT, labelOf(FakeSpeechActivity::class.java))
+        tapImeLabel(labelOf(FakeSpeechActivity::class.java))
+
+        val preview = context.getString(ImeR.string.ime_tools_result_label, FakeSpeechActivity.TRANSCRIPT)
+        requireNotNull(awaitImeLabel(preview)) { "the transcript was never previewed: " + imeLabels() }
+        assertEquals(
+            "the transcript was written without the user inserting it",
+            ProcessTextHostActivity.FIRST_TEXT,
+            hostText(0),
+        )
+        assertNull("the transcript was copied without being chosen", clipboardText())
+        assertNull(
+            "a transcript offered to replace text it never came from",
+            findImeLabel(context.getString(ImeR.string.ime_tools_replace)),
+        )
+
+        tapImeLabel(context.getString(ImeR.string.ime_tools_insert))
+        assertTrue(
+            "the transcript was not inserted at the caret: " + hostTexts(),
+            await { hostText(0) == ProcessTextHostActivity.FIRST_TEXT + FakeSpeechActivity.TRANSCRIPT },
+        )
+        assertNull("the transcript still waits after it was inserted", main2 { ProcessTextRelay.pendingResult() })
+    }
+
+    /** The request carries a free-form model and the input language, and nothing else. */
+    @Test
+    fun theRecognizerIsAskedForFreeFormTextInTheInputLanguageOnly() {
+        enableSpeech(EchoSpeechActivity::class.java)
+        openHost(identify = true)
+        openToolsPanel(ProcessTextHostActivity.FIRST_TEXT, labelOf(EchoSpeechActivity::class.java))
+        tapImeLabel(labelOf(EchoSpeechActivity::class.java))
+
+        // The language is the keyboard's current input language, in the tag form recognizers know.
+        val expected =
+            listOf("zh-CN", "zh-TW", "ja-JP").map {
+                context.getString(ImeR.string.ime_tools_result_label, "model=free_form;lang=$it;extras=2")
+            }
+        assertTrue(
+            "the request was not echoed as expected: " + imeLabels(),
+            await { expected.any { findImeLabel(it) != null } },
+        )
+    }
+
+    /** Speech apps are tools too: a password field offers none of them. */
+    @Test
+    fun aSpeechAppIsHiddenInPasswordFields() {
+        enableSpeech(FakeSpeechActivity::class.java)
+        openHost(password = true)
+        requireNotNull(awaitKeyboardShown()) { "the keyboard did not appear: " + imeLabels() }
+        assertNull(
+            "the tools entry is offered in a password field",
+            findImeLabel(context.getString(ImeR.string.ime_tools_title)),
+        )
+        assertNull(
+            "a speech request was prepared in a password field",
+            main2 { ProcessTextRelay.pendingResult() },
+        )
+    }
+
     private fun componentOf(activity: Class<*>): ComponentName = ComponentName(testPackage, activity.name)
 
     private fun labelOf(activity: Class<*>): String {
@@ -246,6 +350,16 @@ class ProcessTextToolDeviceTest {
 
     private fun enable(activity: Class<*>) {
         runBlocking { apps.setEnabled(componentOf(activity).flattenToString(), true) }
+    }
+
+    private fun enableSpeech(activity: Class<*>) {
+        runBlocking { speechApps.setEnabled(componentOf(activity).flattenToString(), true) }
+    }
+
+    private fun clearSpeechEnabled() {
+        for (activity in SPEECH_APPS) {
+            runBlocking { speechApps.setEnabled(componentOf(activity).flattenToString(), false) }
+        }
     }
 
     private fun clearEnabled() {
@@ -478,6 +592,9 @@ class ProcessTextToolDeviceTest {
         const val EDIT_TEXT_CLASS = "android.widget.EditText"
         const val TIMEOUT_MS = 20_000L
         const val POLL_MS = 100L
+
+        /** The stand-in speech apps; each is off when a case starts. */
+        val SPEECH_APPS: List<Class<*>> = listOf(FakeSpeechActivity::class.java, EchoSpeechActivity::class.java)
 
         /** Every stand-in text app this test may turn on; each is off when a case starts. */
         val STAND_IN_APPS: List<Class<*>> =

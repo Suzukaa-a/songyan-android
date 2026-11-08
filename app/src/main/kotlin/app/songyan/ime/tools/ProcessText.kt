@@ -5,25 +5,31 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Build
+import android.speech.RecognizerIntent
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 
-/** What a tool was handed: the selected text, or the text before the caret. */
+/** What a tool was handed: the selected text, the whole field, the clipboard, or nothing. */
 enum class ProcessTextKind {
-    /** The text before the caret, from the start of its line. */
-    CURSOR,
+    /** The whole input field, the text before and after a bare caret. */
+    FIELD,
 
     /** The text the user selected. */
     SELECTION,
 
     /** The clipboard: it is not in the field, so an answer is only ever inserted or copied. */
     CLIPBOARD,
+
+    /** No source text: the app produces the text (speech recognition), so an answer is only inserted. */
+    NONE,
 }
 
 /** The text the user picked for a tool, before the editor it came from is attached. */
 data class ProcessTextSource(
     val text: String,
     val kind: ProcessTextKind,
+    /** For [ProcessTextKind.FIELD]: how much of [text] lies before the caret. */
+    val caret: Int = 0,
 )
 
 /** The text a tool was handed, and the editor it came from. */
@@ -31,7 +37,9 @@ data class ProcessTextRequest(
     val text: String,
     val packageName: String?,
     val fieldId: Int,
-    val kind: ProcessTextKind = ProcessTextKind.CURSOR,
+    val kind: ProcessTextKind = ProcessTextKind.FIELD,
+    /** For [ProcessTextKind.FIELD]: how much of [text] lies before the caret. */
+    val caret: Int = 0,
 )
 
 /** A tool's answer, still waiting for the user to put it into a field. */
@@ -44,7 +52,7 @@ data class ProcessTextResult(
 
 /** What happened to a tool's answer. */
 enum class ProcessTextOutcome {
-    /** Put into the field the text came from, replacing the same selection or text before the caret. */
+    /** Put into the field the text came from, replacing the same selection or the whole field. */
     REPLACED,
 
     /** Copied to the clipboard: the field could not be confirmed, or its text had changed. */
@@ -82,24 +90,64 @@ object ProcessTextTargets {
      * permission this app holds, since anything else would fail to start later. The manifest query
      * is what makes the other packages visible at all.
      */
-    fun available(context: Context): List<ResolveInfo> =
-        query(context).filter { info ->
-            val activity = info.activityInfo ?: return@filter false
-            if (!activity.exported) return@filter false
-            val permission = activity.permission
-            permission.isNullOrEmpty() ||
-                context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-        }
+    fun available(context: Context): List<ResolveInfo> = launchableActivities(context, intent(""))
+}
 
-    private fun query(context: Context): List<ResolveInfo> {
-        val manager = context.packageManager
-        val intent = intent("")
-        return if (Build.VERSION.SDK_INT >= 33) {
-            manager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0L))
-        } else {
-            @Suppress("DEPRECATION")
-            manager.queryIntentActivities(intent, 0)
+/**
+ * The ACTION_RECOGNIZE_SPEECH intent speech apps answer. The request carries only what a free-form
+ * dictation needs: the input language is the one thing the keyboard knows that the app cannot.
+ */
+object SpeechTargets {
+    /** What a speech app receives; [language] is a BCP-47 tag such as zh-CN, or null to leave it to the app. */
+    fun intent(language: String?): Intent =
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .also { if (language != null) it.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language) }
+
+    /** The speech apps that can actually be opened; same rule as [ProcessTextTargets.available]. */
+    fun available(context: Context): List<ResolveInfo> = launchableActivities(context, intent(null))
+
+    /** The first recognition of an answer, which every recognizer orders best first; null when it has none. */
+    fun transcript(data: Intent?): String? =
+        try {
+            data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull { it.isNotBlank() }
+        } catch (_: RuntimeException) {
+            null
         }
+}
+
+private fun launchableActivities(
+    context: Context,
+    intent: Intent,
+): List<ResolveInfo> =
+    filterLaunchable(queryActivities(context, intent)) { permission ->
+        context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+/** Exported activities whose permission, if any, [holds] says this app holds. */
+internal fun filterLaunchable(
+    candidates: List<ResolveInfo>,
+    holds: (String) -> Boolean,
+): List<ResolveInfo> =
+    candidates.filter { info ->
+        val activity = info.activityInfo ?: return@filter false
+        if (!activity.exported) return@filter false
+        val permission = activity.permission
+        permission.isNullOrEmpty() || holds(permission)
+    }
+
+private fun queryActivities(
+    context: Context,
+    intent: Intent,
+): List<ResolveInfo> {
+    val manager = context.packageManager
+    return if (Build.VERSION.SDK_INT >= 33) {
+        manager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0L))
+    } else {
+        @Suppress("DEPRECATION")
+        manager.queryIntentActivities(intent, 0)
     }
 }
 

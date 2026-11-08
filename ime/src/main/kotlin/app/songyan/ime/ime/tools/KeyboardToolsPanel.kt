@@ -32,6 +32,11 @@ private sealed interface KeyboardToolsCell {
         val app: KeyboardToolApp,
     ) : KeyboardToolsCell
 
+    /** One speech app the user turned on; it needs no source text. */
+    data class Speech(
+        val app: KeyboardToolApp,
+    ) : KeyboardToolsCell
+
     /** What the tool, or the other app, produced. */
     data class Result(
         val text: String,
@@ -48,9 +53,9 @@ private sealed interface KeyboardToolsCell {
 
 /** Everything the panel draws, pushed by the session. */
 internal data class KeyboardToolsPanelState(
-    val kind: KeyboardToolSourceKind = KeyboardToolSourceKind.PARAGRAPH,
+    val kind: KeyboardToolSourceKind = KeyboardToolSourceKind.FIELD,
     val selectionAvailable: Boolean = false,
-    val paragraphAvailable: Boolean = false,
+    val fieldAvailable: Boolean = false,
     val clipboardAvailable: Boolean = false,
     val source: KeyboardToolText? = null,
     /** Null while the list is still loading. */
@@ -59,6 +64,8 @@ internal data class KeyboardToolsPanelState(
     /** The other apps the user turned on; null while they load or when there is no relay. */
     val apps: List<KeyboardToolApp>? = null,
     val appsUnavailable: Boolean = false,
+    /** The speech apps the user turned on; null while they load or when there is no relay. */
+    val speechApps: List<KeyboardToolApp>? = null,
     val selectedTool: String? = null,
     val running: Boolean = false,
     val result: String? = null,
@@ -93,6 +100,9 @@ internal class KeyboardToolsPanel(
 
     /** One other app was tapped: hand it the current source. */
     var onApp: (String, String) -> Unit = { _, _ -> }
+
+    /** One speech app was tapped: start it for the editor in front. */
+    var onSpeech: (String, String) -> Unit = { _, _ -> }
 
     /** Write the result over the source text. */
     var onReplace: () -> Unit = {}
@@ -173,7 +183,11 @@ internal class KeyboardToolsPanel(
     override fun cellEnabled(index: Int): Boolean =
         when (val cell = cells.getOrNull(index)) {
             is KeyboardToolsCell.Choice -> cell.enabled
-            is KeyboardToolsCell.Tool, is KeyboardToolsCell.App, is KeyboardToolsCell.Manage -> true
+            is KeyboardToolsCell.Tool,
+            is KeyboardToolsCell.App,
+            is KeyboardToolsCell.Speech,
+            is KeyboardToolsCell.Manage,
+            -> true
             else -> false
         }
 
@@ -192,6 +206,7 @@ internal class KeyboardToolsPanel(
             is KeyboardToolsCell.Choice -> context.getString(choiceLabel(cell.kind))
             is KeyboardToolsCell.Tool -> cell.tool.label
             is KeyboardToolsCell.App -> cell.app.label
+            is KeyboardToolsCell.Speech -> cell.app.label
             is KeyboardToolsCell.Result -> context.getString(R.string.ime_tools_result_label, cell.text)
             is KeyboardToolsCell.Message -> cell.text
             is KeyboardToolsCell.Manage -> context.getString(R.string.ime_tools_manage)
@@ -203,6 +218,7 @@ internal class KeyboardToolsPanel(
             is KeyboardToolsCell.Choice -> onChoice(cell.kind)
             is KeyboardToolsCell.Tool -> onTool(cell.tool.id)
             is KeyboardToolsCell.App -> onApp(cell.app.id, cell.app.label)
+            is KeyboardToolsCell.Speech -> onSpeech(cell.app.id, cell.app.label)
             is KeyboardToolsCell.Manage -> onManage()
             else -> Unit
         }
@@ -238,6 +254,7 @@ internal class KeyboardToolsPanel(
                 is KeyboardToolsCell.Choice,
                 is KeyboardToolsCell.Tool,
                 is KeyboardToolsCell.App,
+                is KeyboardToolsCell.Speech,
                 is KeyboardToolsCell.Manage,
                 -> {
                     paint.color = if (selected) palette.candidateSelectedBackground else palette.control
@@ -295,7 +312,7 @@ internal class KeyboardToolsPanel(
                 return@buildList
             }
             add(KeyboardToolsCell.Choice(KeyboardToolSourceKind.SELECTION, value.selectionAvailable))
-            add(KeyboardToolsCell.Choice(KeyboardToolSourceKind.PARAGRAPH, value.paragraphAvailable))
+            add(KeyboardToolsCell.Choice(KeyboardToolSourceKind.FIELD, value.fieldAvailable))
             add(KeyboardToolsCell.Choice(KeyboardToolSourceKind.CLIPBOARD, value.clipboardAvailable))
             val tools = value.tools
             when {
@@ -318,6 +335,11 @@ internal class KeyboardToolsPanel(
                     apps.forEach { add(KeyboardToolsCell.App(it)) }
                 }
             }
+            val speech = value.speechApps
+            if (!speech.isNullOrEmpty()) {
+                add(KeyboardToolsCell.Message(context.getString(R.string.ime_process_text_speech_section)))
+                speech.forEach { add(KeyboardToolsCell.Speech(it)) }
+            }
             value.waitingFor?.let {
                 add(KeyboardToolsCell.Message(context.getString(R.string.ime_process_text_waiting, it)))
             }
@@ -336,7 +358,7 @@ internal class KeyboardToolsPanel(
     private fun choiceLabel(kind: KeyboardToolSourceKind): Int =
         when (kind) {
             KeyboardToolSourceKind.SELECTION -> R.string.ime_tools_source_selection
-            KeyboardToolSourceKind.PARAGRAPH -> R.string.ime_tools_source_paragraph
+            KeyboardToolSourceKind.FIELD -> R.string.ime_tools_source_field
             KeyboardToolSourceKind.CLIPBOARD -> R.string.ime_tools_source_clipboard
         }
 

@@ -2,7 +2,7 @@
 <resources>
     <!-- 鍵盤工具：首頁入口與頁面 -->
     <string name="row_tools_title">鍵盤工具</string>
-    <string name="row_tools_subtitle">用選中的文字執行工具</string>
+    <string name="row_tools_subtitle">對選中的文字或整個輸入框執行工具</string>
     <string name="tools_search_keywords">工具 翻譯 轉換 繁簡 全形 半形</string>
     <string name="tools_title">鍵盤工具</string>
     <string name="tools_section_list">工具</string>

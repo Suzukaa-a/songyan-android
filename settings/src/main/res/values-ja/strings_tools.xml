@@ -1,7 +1,7 @@
 <resources>
     <!-- キーボードツール：ホームの入口とページ -->
     <string name="row_tools_title">キーボードツール</string>
-    <string name="row_tools_subtitle">選択したテキストにツールを実行します</string>
+    <string name="row_tools_subtitle">選択したテキストまたは入力欄全体にツールを実行します</string>
     <string name="tools_search_keywords">ツール 翻訳 変換 全角 半角</string>
     <string name="tools_title">キーボードツール</string>
     <string name="tools_section_list">ツール</string>

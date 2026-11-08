@@ -20,8 +20,8 @@ enum class KeyboardToolSourceKind {
     /** The text the user selected. */
     SELECTION,
 
-    /** The paragraph the caret is in, from its start to the caret. */
-    PARAGRAPH,
+    /** The whole input field: the text before and after the caret, when nothing is selected. */
+    FIELD,
 
     /** What the clipboard holds; the user picked it explicitly. */
     CLIPBOARD,
@@ -31,6 +31,8 @@ enum class KeyboardToolSourceKind {
 data class KeyboardToolText(
     val text: String,
     val kind: KeyboardToolSourceKind,
+    /** For [KeyboardToolSourceKind.FIELD]: how much of [text] lies before the caret; 0 otherwise. */
+    val caret: Int = 0,
 )
 
 /** One tool the panel lists and the toolbar may pin. */
@@ -94,7 +96,10 @@ sealed interface KeyboardToolList {
     data object Unavailable : KeyboardToolList
 }
 
-/** One other app the user turned on: an ACTION_PROCESS_TEXT handler the panel lists. */
+/**
+ * One other app the user turned on, as the panel lists it: an ACTION_PROCESS_TEXT handler, or a
+ * speech recognizer in the speech list.
+ */
 data class KeyboardToolApp(
     /** The flattened activity component; the app opens it, the panel only names it. */
     val id: String,
@@ -142,6 +147,20 @@ interface KeyboardToolsProcessText {
         label: String,
         source: KeyboardToolText,
     ): Boolean
+
+    /** The enabled speech recognizers, in label order; they produce text and need no source. */
+    suspend fun speechApps(): List<KeyboardToolApp> = emptyList()
+
+    /**
+     * Starts the speech app [appId] for the editor in front; false when this editor may not run a
+     * tool or the app could not be opened. Its transcript comes back as an answer that can only be
+     * inserted or copied.
+     */
+    fun openSpeech(
+        appId: String,
+        label: String,
+        inputLanguage: InputLanguage,
+    ): Boolean = false
 
     /** The answer waiting for the user; null while the other app is open or when it returned nothing. */
     fun pending(): KeyboardToolAnswer?

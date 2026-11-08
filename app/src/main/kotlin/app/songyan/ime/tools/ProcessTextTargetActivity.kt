@@ -17,6 +17,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 class ProcessTextTargetActivity : ComponentActivity() {
     private var delivered = false
 
+    private val speech: Boolean get() = intent.getBooleanExtra(EXTRA_SPEECH, false)
+
     private val launcher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             deliver(intent.getStringExtra(EXTRA_TOKEN).orEmpty(), answerOf(result))
@@ -30,8 +32,16 @@ class ProcessTextTargetActivity : ComponentActivity() {
         val token = intent.getStringExtra(EXTRA_TOKEN)
         val text = intent.getStringExtra(EXTRA_TEXT)
         val target = intent.getStringExtra(EXTRA_TARGET)?.let(ComponentName::unflattenFromString)
-        if (token.isNullOrEmpty() || text == null || target == null) return deliver(token.orEmpty(), null)
-        val outbound = ProcessTextTargets.intent(text).setComponent(target)
+        // A speech request carries no text; every other request must.
+        if (token.isNullOrEmpty() || target == null || (!speech && text == null)) {
+            return deliver(token.orEmpty(), null)
+        }
+        val outbound =
+            if (speech) {
+                SpeechTargets.intent(intent.getStringExtra(EXTRA_LANGUAGE))
+            } else {
+                ProcessTextTargets.intent(text.orEmpty())
+            }.setComponent(target)
         try {
             launcher.launch(outbound)
         } catch (_: ActivityNotFoundException) {
@@ -45,6 +55,7 @@ class ProcessTextTargetActivity : ComponentActivity() {
     /** The opened app's result is a trust boundary: a malformed answer counts as none. */
     private fun answerOf(result: ActivityResult): String? {
         if (result.resultCode != RESULT_OK) return null
+        if (speech) return SpeechTargets.transcript(result.data)
         val data = result.data ?: return null
         return try {
             data.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
@@ -80,5 +91,7 @@ class ProcessTextTargetActivity : ComponentActivity() {
         const val EXTRA_TOKEN: String = "app.songyan.ime.tools.extra.PROCESS_TEXT_TOKEN"
         const val EXTRA_TEXT: String = "app.songyan.ime.tools.extra.PROCESS_TEXT"
         const val EXTRA_TARGET: String = "app.songyan.ime.tools.extra.PROCESS_TEXT_TARGET"
+        const val EXTRA_SPEECH: String = "app.songyan.ime.tools.extra.SPEECH"
+        const val EXTRA_LANGUAGE: String = "app.songyan.ime.tools.extra.SPEECH_LANGUAGE"
     }
 }

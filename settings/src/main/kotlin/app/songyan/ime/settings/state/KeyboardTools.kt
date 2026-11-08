@@ -315,6 +315,11 @@ data class KeyboardToolsUiState(
     val processTextEnabled: Set<String> = emptySet(),
     /** The apps that handle text could not be read, so the section says why. */
     val processTextUnavailable: Boolean = false,
+    /** The speech recognizers on this device; null while loading or when there is no source. */
+    val speechApps: List<ProcessTextApp>? = null,
+    /** The speech recognizers the user turned on; none is on by default. */
+    val speechEnabled: Set<String> = emptySet(),
+    val speechUnavailable: Boolean = false,
 ) {
     val pinnedCount: Int
         get() = tools.count { it.metadata.pinned }

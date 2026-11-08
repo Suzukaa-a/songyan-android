@@ -10,12 +10,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Other apps that take text through ACTION_PROCESS_TEXT. Android 11+ hides them from this
-         app's package queries without this declaration. -->
+    <!-- Other apps that take text through ACTION_PROCESS_TEXT or turn speech into text through
+         ACTION_RECOGNIZE_SPEECH. Android 11+ hides them from this app's package queries without
+         these declarations. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
         </intent>
     </queries>
 

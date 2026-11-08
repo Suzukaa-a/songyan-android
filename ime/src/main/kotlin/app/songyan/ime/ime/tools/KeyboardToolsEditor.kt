@@ -17,8 +17,12 @@ interface KeyboardToolsEditor {
     /** The selected text, or null when nothing is selected or this editor may not run tools. */
     fun selection(): KeyboardToolText?
 
-    /** The paragraph the caret is in, from its start to the caret; null when it is empty. */
-    fun paragraph(): KeyboardToolText?
+    /**
+     * The whole input field, text before and after the caret; null while text is
+     * selected (the selection is the source then), when the field is blank, or when it is over the
+     * limit.
+     */
+    fun field(): KeyboardToolText?
 
     /** What the clipboard holds, bounded like any other source; null when empty or unreadable. */
     fun clipboard(): String?
@@ -39,10 +43,13 @@ interface KeyboardToolsEditor {
 /**
  * [KeyboardToolsEditor] over the keyboard's single editor connection.
  *
- * The rules are the tool rules: only the selection or the paragraph before the caret is read, never
- * the rest of the field; nothing is read in a private editor (a password field or one that asked for
- * no personalized learning); and a replacement is only written when the same editor still shows
- * exactly the text the tool was handed, because the user may have typed meanwhile.
+ * The rules are the tool rules: the source is the selection, or the whole field when nothing is
+ * selected, and a field over the limit is refused; nothing is read in a private editor (a password
+ * field or one that asked for no personalized learning); and a replacement is only written when the
+ * same editor still shows exactly the text the tool was handed, because the user may have typed
+ * meanwhile. The field is read with the text before and after the caret rather than extracted text:
+ * many editors answer no extracted-text request, and the two halves are what the replacement
+ * deletes around the caret.
  */
 class EditorConnectionKeyboardTools(
     private val editor: EditorConnection,
@@ -54,6 +61,7 @@ class EditorConnectionKeyboardTools(
     private class Captured(
         val kind: KeyboardToolSourceKind,
         val text: String,
+        val caret: Int,
         val packageName: String?,
         val fieldId: Int,
     )
@@ -69,19 +77,20 @@ class EditorConnectionKeyboardTools(
                 ?.toString()
                 .orEmpty()
         if (selected.isEmpty() || selected.length > TOOL_TEXT_LIMIT) return null
-        return capture(KeyboardToolSourceKind.SELECTION, selected)
+        return capture(KeyboardToolSourceKind.SELECTION, selected, 0)
     }
 
-    override fun paragraph(): KeyboardToolText? {
+    override fun field(): KeyboardToolText? {
         if (!mayRead()) return null
-        // A paragraph is what a bare caret is in: the text after the last line break before it. With
-        // a selection there is no caret to replace up to, so the selection is the only source.
+        // With a selection there is no bare caret to replace around, so the selection is the only
+        // source.
         if (!editor.connection()?.getSelectedText(0).isNullOrEmpty()) return null
-        // One unit past the limit tells a paragraph that fits from one the read window cut.
+        // One unit past the limit on each side tells a field that fits from one the read cut.
         val before = editor.contextBeforeCursor(TOOL_TEXT_LIMIT + 1) ?: return null
-        val paragraph = before.substringAfterLast('\n')
-        if (paragraph.isBlank() || paragraph.length > TOOL_TEXT_LIMIT) return null
-        return capture(KeyboardToolSourceKind.PARAGRAPH, paragraph)
+        val after = editor.contextAfterCursor(TOOL_TEXT_LIMIT + 1) ?: return null
+        val text = before + after
+        if (text.isBlank() || text.length > TOOL_TEXT_LIMIT) return null
+        return capture(KeyboardToolSourceKind.FIELD, text, before.length)
     }
 
     override fun clipboard(): String? {
@@ -109,13 +118,16 @@ class EditorConnectionKeyboardTools(
         text: String,
     ): Boolean {
         val expected = captured ?: return false
-        if (expected.kind != source.kind || expected.text != source.text) return false
+        if (expected.kind != source.kind || expected.text != source.text || expected.caret != source.caret) {
+            return false
+        }
         val current = info() ?: return false
         if (current.packageName != expected.packageName || current.fieldId != expected.fieldId) return false
         if (!mayRead()) return false
         return when (source.kind) {
             KeyboardToolSourceKind.SELECTION -> editor.replaceSelection(source.text, text)
-            KeyboardToolSourceKind.PARAGRAPH -> editor.replaceBeforeCursor(source.text, text)
+            KeyboardToolSourceKind.FIELD ->
+                editor.replaceField(source.text.substring(0, source.caret), source.text.substring(source.caret), text)
             // A clipboard source never came from the editor, so it is only ever inserted or copied.
             KeyboardToolSourceKind.CLIPBOARD -> false
         }
@@ -136,17 +148,18 @@ class EditorConnectionKeyboardTools(
     private fun capture(
         kind: KeyboardToolSourceKind,
         text: String,
+        caret: Int,
     ): KeyboardToolText {
         val current = info()
-        captured = Captured(kind, text, current?.packageName, current?.fieldId ?: 0)
-        return KeyboardToolText(text, kind)
+        captured = Captured(kind, text, caret, current?.packageName, current?.fieldId ?: 0)
+        return KeyboardToolText(text, kind, caret)
     }
 
     companion object {
         /**
-         * How much text a tool may be handed: one paragraph or one selection, never the document.
-         * The panel shows the text it will process, so a longer source is refused rather than cut
-         * silently; selecting less is the user's own way to narrow it.
+         * How much text a tool may be handed: one selection or one input field. The panel shows the
+         * text it will process, so a longer source is refused rather than cut silently; selecting
+         * less is the user's own way to narrow it.
          */
         const val TOOL_TEXT_LIMIT: Int = 1_000
     }

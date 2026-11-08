@@ -23,7 +23,8 @@ object ProcessTextRelay {
         /**
          * The text and editor to hand out; null when this editor may not run a tool or [source] is
          * no longer what the editor shows. Without a source the selection is used, else the
-         * paragraph before the caret, as the tools panel itself chooses.
+         * whole field, as the tools panel itself chooses. A [ProcessTextKind.NONE] source asks only
+         * for the editor.
          */
         fun snapshotForProcessText(source: ProcessTextSource? = null): ProcessTextRequest?
 
@@ -71,11 +72,39 @@ object ProcessTextRelay {
         target: ComponentName,
         /** The app's own name, so the preview can say which app answered. */
         targetLabel: String? = null,
-        /** The text the user picked; null hands over the selection, else the paragraph. */
+        /** The text the user picked; null hands over the selection, else the whole field. */
         source: ProcessTextSource? = null,
     ): Boolean {
-        val host = host ?: return false
-        val request = host.snapshotForProcessText(source) ?: return false
+        val request = host?.snapshotForProcessText(source) ?: return false
+        return start(context, target, targetLabel, request) {
+            it.putExtra(ProcessTextTargetActivity.EXTRA_TEXT, request.text)
+        }
+    }
+
+    /**
+     * Starts the relay for a speech app. It needs no source text, only the editor the transcript
+     * will be inserted into; [language] is a BCP-47 tag or null.
+     */
+    fun requestSpeech(
+        context: Context,
+        target: ComponentName,
+        targetLabel: String? = null,
+        language: String? = null,
+    ): Boolean {
+        val request = host?.snapshotForProcessText(ProcessTextSource("", ProcessTextKind.NONE)) ?: return false
+        return start(context, target, targetLabel, request) {
+            it.putExtra(ProcessTextTargetActivity.EXTRA_SPEECH, true)
+            if (language != null) it.putExtra(ProcessTextTargetActivity.EXTRA_LANGUAGE, language)
+        }
+    }
+
+    private fun start(
+        context: Context,
+        target: ComponentName,
+        targetLabel: String?,
+        request: ProcessTextRequest,
+        extras: (Intent) -> Unit,
+    ): Boolean {
         val token = session.start(request, targetLabel) ?: return false
         // A relay left from a cancelled request must not stay behind while this one runs.
         ProcessTextTargetActivity.cancelOpen()
@@ -87,8 +116,8 @@ object ProcessTextRelay {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                 .putExtra(ProcessTextTargetActivity.EXTRA_TOKEN, token)
-                .putExtra(ProcessTextTargetActivity.EXTRA_TEXT, request.text)
                 .putExtra(ProcessTextTargetActivity.EXTRA_TARGET, target.flattenToString())
+                .also(extras)
         return try {
             context.startActivity(outbound)
             true

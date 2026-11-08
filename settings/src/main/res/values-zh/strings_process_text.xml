@@ -2,8 +2,13 @@
 <resources>
     <!-- 键盘工具：可以把文字交给的其他 App -->
     <string name="tools_process_text_section">其他 App</string>
-    <string name="tools_process_text_body">打开一个 App，就能在键盘上把选中的文字交给它处理。返回的内容只会先预览，你选「替换」或「插入」后才会写入。</string>
+    <string name="tools_process_text_body">打开一个 App，就能在键盘上把选中的文字或整个输入框的文字交给它处理。返回的内容只会先预览，你选「替换」或「插入」后才会写入。</string>
     <string name="tools_process_text_switch">使用 %1$s</string>
     <string name="tools_process_text_empty">这台设备上没有能处理文字的 App。</string>
     <string name="tools_process_text_unavailable">读不到能处理文字的 App。</string>
+    <string name="tools_speech_section">语音输入</string>
+    <string name="tools_speech_body">打开一个语音 App，就能在键盘上用语音输入文字。识别出的文字只会先预览，你选「插入」后才会写入。</string>
+    <string name="tools_speech_switch">使用 %1$s</string>
+    <string name="tools_speech_empty">这台设备上没有语音输入 App。</string>
+    <string name="tools_speech_unavailable">读不到语音输入 App。</string>
 </resources>

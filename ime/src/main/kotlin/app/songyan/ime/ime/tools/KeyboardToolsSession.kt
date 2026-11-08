@@ -14,8 +14,8 @@ import kotlinx.coroutines.launch
  * writes stay in one place. Three rules shape it:
  *
  * - A tool converts text that is already in the field. The source is captured when the panel opens
- *   and handed to the tool; the user may switch between the selection, the paragraph before the caret
- *   and the clipboard before choosing a tool.
+ *   and handed to the tool; the user may switch between the selection, the whole field and the
+ *   clipboard before choosing a tool.
  * - The result is only written on an explicit action. "Replace" re-reads the source first: when the
  *   text changed while the panel was open, the result is inserted at the caret instead of overwriting
  *   text the user never asked to replace.
@@ -43,13 +43,14 @@ internal class KeyboardToolsSession(
     private val dismiss: () -> Unit,
 ) {
     private var selection: KeyboardToolText? = null
-    private var paragraph: KeyboardToolText? = null
+    private var field: KeyboardToolText? = null
     private var clipboard: String? = null
-    private var kind = KeyboardToolSourceKind.PARAGRAPH
+    private var kind = KeyboardToolSourceKind.FIELD
     private var tools: List<KeyboardTool>? = null
     private var toolsUnavailable = false
     private var apps: List<KeyboardToolApp>? = null
     private var appsUnavailable = false
+    private var speechApps: List<KeyboardToolApp>? = null
     private var selectedTool: String? = null
     private var running = false
     private var result: String? = null
@@ -95,12 +96,12 @@ internal class KeyboardToolsSession(
         runGeneration++
         loading?.cancel()
         selection = editor.selection()
-        paragraph = editor.paragraph()
+        field = editor.field()
         clipboard = editor.clipboard()
         kind =
             when {
                 selection != null -> KeyboardToolSourceKind.SELECTION
-                paragraph != null -> KeyboardToolSourceKind.PARAGRAPH
+                field != null -> KeyboardToolSourceKind.FIELD
                 clipboard != null -> KeyboardToolSourceKind.CLIPBOARD
                 else -> KeyboardToolSourceKind.SELECTION
             }
@@ -108,6 +109,7 @@ internal class KeyboardToolsSession(
         toolsUnavailable = false
         apps = null
         appsUnavailable = false
+        speechApps = null
         selectedTool = null
         running = false
         result = null
@@ -130,6 +132,14 @@ internal class KeyboardToolsSession(
                             throw cancelled
                         } catch (_: Exception) {
                             appsUnavailable = true
+                            emptyList()
+                        }
+                    speechApps =
+                        try {
+                            processText.speechApps()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
                             emptyList()
                         }
                 }
@@ -230,6 +240,31 @@ internal class KeyboardToolsSession(
         push()
     }
 
+    /**
+     * Starts the speech app [appId]. It needs no source text: the transcript comes back through the
+     * relay as an answer the user can only insert or copy.
+     */
+    fun runSpeech(
+        appId: String,
+        label: String,
+    ) {
+        if (running) return
+        val processText = gateway.processText ?: return
+        appFailed = null
+        waitingFor = null
+        answer = null
+        result = null
+        truncated = false
+        failure = null
+        copied = false
+        if (processText.openSpeech(appId, label, inputLanguage())) {
+            waitingFor = label
+        } else {
+            appFailed = label
+        }
+        push()
+    }
+
     /** Writes the result over the source, or inserts it when the source is no longer the same. */
     fun replace() {
         if (running) return
@@ -245,10 +280,10 @@ internal class KeyboardToolsSession(
         val now =
             when (kind) {
                 KeyboardToolSourceKind.SELECTION -> editor.selection()
-                KeyboardToolSourceKind.PARAGRAPH -> editor.paragraph()
+                KeyboardToolSourceKind.FIELD -> editor.field()
                 KeyboardToolSourceKind.CLIPBOARD -> null
             }
-        if (now == null || now.text != source.text) {
+        if (now == null || now.text != source.text || now.caret != source.caret) {
             insert(text)
             return
         }
@@ -308,7 +343,7 @@ internal class KeyboardToolsSession(
     private fun currentSource(): KeyboardToolText? =
         when (kind) {
             KeyboardToolSourceKind.SELECTION -> selection
-            KeyboardToolSourceKind.PARAGRAPH -> paragraph
+            KeyboardToolSourceKind.FIELD -> field
             KeyboardToolSourceKind.CLIPBOARD ->
                 clipboard?.let { KeyboardToolText(it, KeyboardToolSourceKind.CLIPBOARD) }
         }
@@ -318,13 +353,14 @@ internal class KeyboardToolsSession(
             KeyboardToolsPanelState(
                 kind = kind,
                 selectionAvailable = selection != null,
-                paragraphAvailable = paragraph != null,
+                fieldAvailable = field != null,
                 clipboardAvailable = clipboard != null,
                 source = currentSource(),
                 tools = tools,
                 toolsUnavailable = toolsUnavailable,
                 apps = apps,
                 appsUnavailable = appsUnavailable,
+                speechApps = speechApps,
                 selectedTool = selectedTool,
                 running = running,
                 result = result,

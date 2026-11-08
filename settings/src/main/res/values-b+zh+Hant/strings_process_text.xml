@@ -2,8 +2,13 @@
 <resources>
     <!-- 鍵盤工具：可以把文字交給的其他 App -->
     <string name="tools_process_text_section">其他 App</string>
-    <string name="tools_process_text_body">開啟一個 App，就能在鍵盤上把選中的文字交給它處理。返回的內容只會先預覽，你選「取代」或「插入」後才會寫入。</string>
+    <string name="tools_process_text_body">開啟一個 App，就能在鍵盤上把選中的文字或整個輸入框的文字交給它處理。返回的內容只會先預覽，你選「取代」或「插入」後才會寫入。</string>
     <string name="tools_process_text_switch">使用 %1$s</string>
     <string name="tools_process_text_empty">這臺裝置上沒有能處理文字的 App。</string>
     <string name="tools_process_text_unavailable">讀不到能處理文字的 App。</string>
+    <string name="tools_speech_section">語音輸入</string>
+    <string name="tools_speech_body">開啟一個語音 App，就能在鍵盤上用語音輸入文字。識別出的文字只會先預覽，你選「插入」後才會寫入。</string>
+    <string name="tools_speech_switch">使用 %1$s</string>
+    <string name="tools_speech_empty">這臺裝置上沒有語音輸入 App。</string>
+    <string name="tools_speech_unavailable">讀不到語音輸入 App。</string>
 </resources>

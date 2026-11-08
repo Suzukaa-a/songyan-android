@@ -22,8 +22,20 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
+/** The two kinds of other app the keyboard tools can open; each keeps its own enabled list. */
+enum class ToolAppKind(
+    val fileName: String,
+) {
+    /** Apps that transform text handed to them (ACTION_PROCESS_TEXT). */
+    PROCESS_TEXT("process-text.json"),
+
+    /** Apps that turn speech into text (ACTION_RECOGNIZE_SPEECH); they are handed no text. */
+    SPEECH("speech-apps.json"),
+}
+
 /**
- * The other apps this app may hand text to, and the ones the user turned on.
+ * The other apps this app may hand text to (or, for [ToolAppKind.SPEECH], take speech from), and the
+ * ones the user turned on.
  *
  * The list is the same query the relay launches an app with, so settings never offers an app the
  * keyboard would then fail to open. The enabled activities are one small JSON document beside the
@@ -38,20 +50,25 @@ class ProcessTextToolApps private constructor(
     private val directory: File,
     /** Null only in the constructor below that takes no context, which never lists the apps. */
     private val appContext: Context?,
+    private val kind: ToolAppKind,
 ) : ProcessTextToolSource {
     constructor(
         context: Context,
         directory: File,
-    ) : this(directory, context.applicationContext)
+        kind: ToolAppKind = ToolAppKind.PROCESS_TEXT,
+    ) : this(directory, context.applicationContext, kind)
 
     /**
      * Opens the enabled list on its own, which is file IO and needs no context; listing the apps
      * needs one, so [available] refuses instead of guessing. The keyboard and settings always pass
      * a context.
      */
-    internal constructor(directory: File) : this(directory, null)
+    internal constructor(
+        directory: File,
+        kind: ToolAppKind = ToolAppKind.PROCESS_TEXT,
+    ) : this(directory, null, kind)
 
-    private val file: File get() = File(directory, FILE_NAME)
+    private val file: File get() = File(directory, kind.fileName)
 
     override suspend fun available(): List<ProcessTextApp> =
         withContext(Dispatchers.IO) { availableNow(withIcons = true) }
@@ -86,8 +103,12 @@ class ProcessTextToolApps private constructor(
     private fun availableNow(withIcons: Boolean): List<ProcessTextApp> {
         val context = requireNotNull(appContext) { "listing the apps needs a context" }
         val manager = context.packageManager
-        return ProcessTextTargets
-            .available(context)
+        val handlers =
+            when (kind) {
+                ToolAppKind.PROCESS_TEXT -> ProcessTextTargets.available(context)
+                ToolAppKind.SPEECH -> SpeechTargets.available(context)
+            }
+        return handlers
             .mapNotNull { info ->
                 val activity = info.activityInfo ?: return@mapNotNull null
                 val component = ComponentName(activity.packageName, activity.name).flattenToString()
@@ -166,9 +187,6 @@ class ProcessTextToolApps private constructor(
     }
 
     companion object {
-        /** The enabled list inside the tools directory, beside the definitions and their index. */
-        const val FILE_NAME: String = "process-text.json"
-
         /** The only document version this build reads and writes. */
         private const val FORMAT_VERSION: Int = 1
 

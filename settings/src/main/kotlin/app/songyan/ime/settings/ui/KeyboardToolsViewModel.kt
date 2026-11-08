@@ -19,9 +19,11 @@ import app.songyan.ime.content.ToolStoreError
 import app.songyan.ime.settings.state.IncomingToolHolder
 import app.songyan.ime.settings.state.KeyboardToolsMessage
 import app.songyan.ime.settings.state.KeyboardToolsUiState
+import app.songyan.ime.settings.state.ProcessTextApp
 import app.songyan.ime.settings.state.ProcessTextToolHolder
 import app.songyan.ime.settings.state.ProcessTextToolSource
 import app.songyan.ime.settings.state.SettingsAppStateHolder
+import app.songyan.ime.settings.state.SpeechToolHolder
 import app.songyan.ime.settings.state.ToolDraft
 import app.songyan.ime.settings.state.ToolEditorState
 import app.songyan.ime.settings.state.ToolProblem
@@ -52,6 +54,8 @@ class KeyboardToolsViewModel(
     private val application: Application,
     /** The other apps that handle text; null when this build has no source installed. */
     private val processTextSource: () -> ProcessTextToolSource? = { ProcessTextToolHolder.current },
+    /** The speech recognizers; null when this build has no source installed. */
+    private val speechSource: () -> ProcessTextToolSource? = { SpeechToolHolder.current },
     /**
      * Resolved on first use rather than in the constructor: reading `filesDir` touches the file
      * system, and this view model is built on the main thread.
@@ -95,6 +99,7 @@ class KeyboardToolsViewModel(
             )
         }
         loadProcessText()
+        loadSpeech()
         return true
     }
 
@@ -106,14 +111,42 @@ class KeyboardToolsViewModel(
      */
     private suspend fun loadProcessText() {
         val source = processTextSource() ?: return
+        val list = readApps(source)
+        mutable.update {
+            if (list == null) {
+                it.copy(processTextUnavailable = true)
+            } else {
+                it.copy(
+                    processTextApps = list.first,
+                    processTextEnabled = list.second,
+                    processTextUnavailable = false,
+                )
+            }
+        }
+    }
+
+    /** The speech recognizers, read the same way as the other apps. */
+    private suspend fun loadSpeech() {
+        val source = speechSource() ?: return
+        val list = readApps(source)
+        mutable.update {
+            if (list == null) {
+                it.copy(speechUnavailable = true)
+            } else {
+                it.copy(speechApps = list.first, speechEnabled = list.second, speechUnavailable = false)
+            }
+        }
+    }
+
+    /** The listed apps and the enabled components; null when the apps could not be listed at all. */
+    private suspend fun readApps(source: ProcessTextToolSource): Pair<List<ProcessTextApp>, Set<String>>? {
         val apps =
             try {
                 withContext(Dispatchers.IO) { source.available() }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                mutable.update { it.copy(processTextUnavailable = true) }
-                return
+                return null
             }
         val enabled =
             try {
@@ -123,13 +156,7 @@ class KeyboardToolsViewModel(
             } catch (_: Exception) {
                 emptySet()
             }
-        mutable.update {
-            it.copy(
-                processTextApps = apps,
-                processTextEnabled = enabled,
-                processTextUnavailable = false,
-            )
-        }
+        return apps to enabled
     }
 
     /** Turns one app's text handling on or off; the keyboard reads the same list on its next panel. */
@@ -138,17 +165,35 @@ class KeyboardToolsViewModel(
         enabled: Boolean,
     ) {
         viewModelScope.launch {
-            val source = processTextSource() ?: return@launch
-            val components =
-                try {
-                    withContext(Dispatchers.IO) { source.setEnabled(component, enabled) }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    report(ToolProblem.StorageUnavailable)
-                    return@launch
-                }
+            val components = writeEnabled(processTextSource(), component, enabled) ?: return@launch
             mutable.update { it.copy(processTextEnabled = components) }
+        }
+    }
+
+    /** Turns one speech recognizer on or off. */
+    fun setSpeechEnabled(
+        component: String,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launch {
+            val components = writeEnabled(speechSource(), component, enabled) ?: return@launch
+            mutable.update { it.copy(speechEnabled = components) }
+        }
+    }
+
+    private suspend fun writeEnabled(
+        source: ProcessTextToolSource?,
+        component: String,
+        enabled: Boolean,
+    ): Set<String>? {
+        if (source == null) return null
+        return try {
+            withContext(Dispatchers.IO) { source.setEnabled(component, enabled) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            report(ToolProblem.StorageUnavailable)
+            null
         }
     }
 

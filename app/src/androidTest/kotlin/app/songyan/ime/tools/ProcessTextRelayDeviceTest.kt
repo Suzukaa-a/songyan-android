@@ -93,6 +93,8 @@ class ProcessTextRelayDeviceTest {
                 shell("dumpsys activity activities | grep -E 'ProcessTextTargetActivity|FakeProcessText' | head -8"),
             )
         assertEquals("HELLO WORLD", pending.text)
+        assertEquals("a bare caret hands over the whole field", ProcessTextKind.FIELD, pending.request.kind)
+        assertEquals(ProcessTextHostActivity.FIRST_TEXT.length, pending.request.caret)
         requireNotNull(awaitKeyboardShown()) { "the keyboard did not come back" }
         assertEquals("an answer must not write itself", ProcessTextHostActivity.FIRST_TEXT, hostText(0))
         assertNull("the answer was copied without being applied", clipboardText())
@@ -103,7 +105,31 @@ class ProcessTextRelayDeviceTest {
         assertEquals("the input scheme changed", schema, first(app().keyboardPreferences.activeSchemaId))
     }
 
-    /** Only the selected word is replaced in place, not the whole paragraph before the caret. */
+    /**
+     * A speech app is handed no text: the transcript is held in the relay, and applying it never
+     * writes over the field, because nothing in the field is its source.
+     */
+    @Test
+    fun aTranscriptNeverReplacesTheField() {
+        openHost(identify = true)
+        val target = ComponentName(testPackage, FakeSpeechActivity::class.java.name)
+
+        assertTrue(
+            "the speech app was refused",
+            main2 { ProcessTextRelay.requestSpeech(context, target, language = "zh-CN") },
+        )
+        val pending = requireNotNull(awaitPending()) { "no transcript came back" }
+        assertEquals(FakeSpeechActivity.TRANSCRIPT, pending.text)
+        assertEquals("", pending.request.text)
+        assertEquals(ProcessTextKind.NONE, pending.request.kind)
+        requireNotNull(awaitKeyboardShown()) { "the keyboard did not come back" }
+        assertFalse("a transcript may be replaced over text", main2 { ProcessTextRelay.canApplyPending() })
+
+        assertEquals(ProcessTextOutcome.COPIED, main2 { ProcessTextRelay.applyPending() })
+        assertEquals("the field was written to", ProcessTextHostActivity.FIRST_TEXT, hostText(0))
+    }
+
+    /** Only the selected word is replaced in place, not the whole field around it. */
     @Test
     fun aSelectedTextIsReplacedInPlace() {
         openHost(identify = true)

@@ -177,7 +177,7 @@ class ToolRunner(
      * Validates [definition], then runs its steps in order.
      *
      * Validation runs again here so an in-memory model cannot bypass the file format's rules.
-     * [input] is the selected text, or the paragraph before the cursor, already bounded by the
+     * [input] is the selected text, or the whole input field, already bounded by the
      * caller's own selection rules.
      */
     suspend fun run(

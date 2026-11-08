@@ -2,6 +2,7 @@ package app.songyan.ime.settings.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -87,6 +89,12 @@ fun processTextSwitchTag(component: String): String = "process-text-enabled-" + 
 
 /** Test tag of one other app's row. */
 fun processTextRowTag(component: String): String = "process-text-row-" + component
+
+/** Test tag of one speech app's switch. */
+fun speechSwitchTag(component: String): String = "speech-enabled-" + component
+
+/** Test tag of one speech app's row. */
+fun speechRowTag(component: String): String = "speech-row-" + component
 
 /**
  * 键盘工具: the tools the keyboard offers, with enable, pin-to-toolbar, order, delete-with-undo,
@@ -282,31 +290,20 @@ fun KeyboardToolsScreen(
                 )
             }
 
-            val processTextApps = state.processTextApps
-            if (processTextApps != null) {
-                item { SectionHeader(stringResource(R.string.tools_process_text_section)) }
-                item {
-                    SectionDescription(stringResource(R.string.tools_process_text_body))
-                }
-                when {
-                    state.processTextUnavailable ->
-                        item { SectionDescription(stringResource(R.string.tools_process_text_unavailable)) }
-
-                    processTextApps.isEmpty() ->
-                        item { SectionDescription(stringResource(R.string.tools_process_text_empty)) }
-
-                    else ->
-                        items(processTextApps, key = { "process-text-" + it.component }) { app ->
-                            ProcessTextAppListItem(
-                                app = app,
-                                enabled = app.component in state.processTextEnabled,
-                                onEnabledChange = { enabled ->
-                                    viewModel.setProcessTextEnabled(app.component, enabled)
-                                },
-                            )
-                        }
-                }
-            }
+            otherAppsSection(
+                apps = state.processTextApps,
+                unavailable = state.processTextUnavailable,
+                enabledComponents = state.processTextEnabled,
+                strings = OtherAppsStrings.PROCESS_TEXT,
+                onEnabledChange = viewModel::setProcessTextEnabled,
+            )
+            otherAppsSection(
+                apps = state.speechApps,
+                unavailable = state.speechUnavailable,
+                enabledComponents = state.speechEnabled,
+                strings = OtherAppsStrings.SPEECH,
+                onEnabledChange = viewModel::setSpeechEnabled,
+            )
 
             item { SectionHeader(stringResource(R.string.tools_section_manage)) }
             item {
@@ -462,6 +459,69 @@ private fun SectionDescription(text: String) {
     )
 }
 
+/** The copy and test tags of one list of other apps; the two lists differ only in these. */
+private enum class OtherAppsStrings(
+    @StringRes val section: Int,
+    @StringRes val body: Int,
+    @StringRes val switchLabel: Int,
+    @StringRes val empty: Int,
+    @StringRes val unavailable: Int,
+    val switchTag: (String) -> String,
+    val rowTag: (String) -> String,
+) {
+    PROCESS_TEXT(
+        R.string.tools_process_text_section,
+        R.string.tools_process_text_body,
+        R.string.tools_process_text_switch,
+        R.string.tools_process_text_empty,
+        R.string.tools_process_text_unavailable,
+        ::processTextSwitchTag,
+        ::processTextRowTag,
+    ),
+    SPEECH(
+        R.string.tools_speech_section,
+        R.string.tools_speech_body,
+        R.string.tools_speech_switch,
+        R.string.tools_speech_empty,
+        R.string.tools_speech_unavailable,
+        ::speechSwitchTag,
+        ::speechRowTag,
+    ),
+}
+
+/**
+ * A section of other apps the user may turn on. Left out while [apps] is null (loading, or a build
+ * without the source); none is on by default.
+ */
+private fun LazyListScope.otherAppsSection(
+    apps: List<ProcessTextApp>?,
+    unavailable: Boolean,
+    enabledComponents: Set<String>,
+    strings: OtherAppsStrings,
+    onEnabledChange: (String, Boolean) -> Unit,
+) {
+    if (apps == null) return
+    item(key = "section-" + strings.name) { SectionHeader(stringResource(strings.section)) }
+    item(key = "body-" + strings.name) { SectionDescription(stringResource(strings.body)) }
+    when {
+        unavailable ->
+            item(key = "unavailable-" + strings.name) { SectionDescription(stringResource(strings.unavailable)) }
+
+        apps.isEmpty() ->
+            item(key = "empty-" + strings.name) { SectionDescription(stringResource(strings.empty)) }
+
+        else ->
+            items(apps, key = { strings.name + "-" + it.component }) { app ->
+                ProcessTextAppListItem(
+                    app = app,
+                    strings = strings,
+                    enabled = app.component in enabledComponents,
+                    onEnabledChange = { enabled -> onEnabledChange(app.component, enabled) },
+                )
+            }
+    }
+}
+
 /**
  * One other app: its icon, its name and the switch that lists it in the keyboard's tools panel.
  *
@@ -471,6 +531,7 @@ private fun SectionDescription(text: String) {
 @Composable
 private fun ProcessTextAppListItem(
     app: ProcessTextApp,
+    strings: OtherAppsStrings,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
 ) {
@@ -483,7 +544,7 @@ private fun ProcessTextAppListItem(
                 runCatching { drawable.toBitmap(pixels, pixels).asImageBitmap() }.getOrNull()
             }
         }
-    val switchLabel = stringResource(R.string.tools_process_text_switch, app.label)
+    val switchLabel = stringResource(strings.switchLabel, app.label)
     ListItem(
         headlineContent = { Text(app.label) },
         leadingContent = {
@@ -499,11 +560,11 @@ private fun ProcessTextAppListItem(
                 onCheckedChange = onEnabledChange,
                 modifier =
                     Modifier
-                        .testTag(processTextSwitchTag(app.component))
+                        .testTag(strings.switchTag(app.component))
                         .semantics { contentDescription = switchLabel },
             )
         },
-        modifier = Modifier.testTag(processTextRowTag(app.component)),
+        modifier = Modifier.testTag(strings.rowTag(app.component)),
     )
 }
 

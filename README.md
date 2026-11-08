@@ -26,7 +26,7 @@ schemes and data formats, with a keyboard and settings app designed for Android.
   and split layouts. Appearance and layout files are interchangeable with the iOS app.
 - Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar
   models and per-component Lua toggles.
-- Keyboard tools that work on one piece of text: the selection, the paragraph before the caret or
+- Keyboard tools that work on one piece of text: the selection, the whole input field or
   the clipboard. Three examples ship (script conversion, full/half width, letter case), and you can
   import, copy, edit and export your own. On Android you can also hand the text to another app that
   handles text; its answer is shown first and only you apply it.
@@ -114,7 +114,7 @@ Songyan collects no personal data and sends nothing to its developers or to anyo
   to: downloading an input scheme, dictionary or model, or importing from a link you enter. Those
   requests go to the site that hosts the file (for example GitHub), which sees your IP address as
   with any download; nothing about you or your typing is sent.
-- Keyboard tools work only on the text you choose: the selection, the paragraph before the caret or
+- Keyboard tools work only on the text you choose: the selection, the whole input field or
   the clipboard. They run on your device and send nothing. When you hand text to another app, that
   app processes it and its own policy applies.
 - Password fields and fields that ask for no personalized learning are never learned from, and

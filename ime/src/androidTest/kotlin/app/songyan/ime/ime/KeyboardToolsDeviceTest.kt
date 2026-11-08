@@ -53,20 +53,37 @@ class KeyboardToolsDeviceTest {
         }
 
     @Test
-    fun withoutSelectionTheParagraphBeforeTheCursorIsUsed() =
+    fun withoutSelectionTheWholeFieldIsUsed() =
         withToolsHost { host, _, _ ->
             host.start()
             host.enableTraditional()
-            // No selection: the tool is handed the paragraph before the caret.
+            // No selection: the tool is handed the whole field.
             host.setText("你好世界软件")
             host.openTools()
             assertTrue(
-                "the paragraph was not shown as the source",
+                "the field was not shown as the source",
                 host.toolLabels().any { it.contains("你好世界软件") },
             )
             host.runTool(expected = "你好世界軟體")
             host.tapToolAction(R.string.ime_tools_replace)
             host.assertText("你好世界軟體")
+        }
+
+    /** The caret sits in the middle: text before and after it is one source and is replaced whole. */
+    @Test
+    fun textAfterTheCursorIsPartOfTheFieldAndIsReplacedWithIt() =
+        withToolsHost { host, _, _ ->
+            host.start()
+            host.enableTraditional()
+            host.setText("前面软件\n后面软件", 4)
+            host.openTools()
+            assertTrue(
+                "the text after the caret was not shown as the source",
+                host.toolLabels().any { it.contains("后面软件") },
+            )
+            host.runTool(expected = "前面軟體\n後面軟體")
+            host.tapToolAction(R.string.ime_tools_replace)
+            host.assertText("前面軟體\n後面軟體")
         }
 
     @Test
@@ -85,33 +102,37 @@ class KeyboardToolsDeviceTest {
         }
 
     /**
-     * A paragraph is what precedes a bare caret. Once text is selected it is neither offered nor
-     * replaced: deleting before the selection and then typing would also overwrite the selection.
+     * The whole field is what a bare caret works on. Once text is selected it is neither offered nor
+     * replaced: deleting around the selection and then typing would also overwrite the selection.
      */
     @Test
-    fun aSelectionKeepsTheParagraphFromBeingReplaced() =
+    fun aSelectionKeepsTheFieldFromBeingReplaced() =
         withToolsHost { host, _, _ ->
             host.start()
             val tools = requireNotNull(host.toolsEditor)
             host.setText("你好世界", 2)
-            val paragraph = requireNotNull(host.main2 { tools.paragraph() }) { "no paragraph before a bare caret" }
+            val field = requireNotNull(host.main2 { tools.field() }) { "no field source for a bare caret" }
+            assertEquals(2, field.caret)
             host.setText("你好世界", 2, 4)
-            assertNull("a paragraph was offered over a selection", host.main2 { tools.paragraph() })
-            assertFalse("a paragraph was replaced over a selection", host.main2 { tools.replace(paragraph, "X") })
+            assertNull("the field was offered over a selection", host.main2 { tools.field() })
+            assertFalse("the field was replaced over a selection", host.main2 { tools.replace(field, "X") })
             assertEquals("你好世界", host.text())
         }
 
-    /** A paragraph longer than a tool may take is refused whole, never cut to its last part. */
+    /** A field longer than a tool may take is refused whole, never cut. */
     @Test
-    fun aParagraphOverTheLimitIsNotOffered() =
+    fun aFieldOverTheLimitIsNotOffered() =
         withToolsHost { host, _, _ ->
             host.start()
             val tools = requireNotNull(host.toolsEditor)
             val limit = EditorConnectionKeyboardTools.TOOL_TEXT_LIMIT
-            host.setText("前\n" + "字".repeat(limit))
-            assertEquals("字".repeat(limit), host.main2 { tools.paragraph() }?.text)
+            host.setText("字".repeat(limit))
+            assertEquals("字".repeat(limit), host.main2 { tools.field() }?.text)
             host.setText("😀" + "字".repeat(limit - 1))
-            assertNull("an over-long paragraph was cut instead of refused", host.main2 { tools.paragraph() })
+            assertNull("an over-long field was cut instead of refused", host.main2 { tools.field() })
+            // Text after the caret counts toward the limit too.
+            host.setText("字".repeat(limit) + "字", limit / 2)
+            assertNull("the text after the caret was left out of the limit", host.main2 { tools.field() })
         }
 
     @Test

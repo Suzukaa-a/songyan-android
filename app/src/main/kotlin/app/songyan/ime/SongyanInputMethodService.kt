@@ -90,6 +90,10 @@ import kotlinx.coroutines.withContext
 
 /** How long a first deployment may take before the engine notice offers the settings path. */
 private const val SETTINGS_ACTION_DELAY_MS = 2_000L
+
+// A switch to a stored package is ready in about 150 ms; only one that takes clearly longer
+// (a package rebuilt after an update) says it is preparing, instead of flashing the notice.
+private const val SWITCH_NOTICE_GRACE_MS = 300L
 private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
 
@@ -261,6 +265,9 @@ class SongyanInputMethodService : InputMethodService() {
      */
     private var switchingSource = false
 
+    /** The switch outlasted [SWITCH_NOTICE_GRACE_MS], so the keyboard says it is preparing. */
+    private var switchSlow = false
+
     private var switchJob: Job? = null
 
     /** The system asked for the keyboard to carry its own input method switcher (API 35+). */
@@ -381,7 +388,10 @@ class SongyanInputMethodService : InputMethodService() {
                             override fun onState(state: EngineRuntimeState) {
                                 runtimeState = state
                                 renderRuntimeState()
-                                if (state == EngineRuntimeState.READY) refreshOtherInputMethods()
+                                if (state == EngineRuntimeState.READY) {
+                                    controller?.settleSwitch()
+                                    refreshOtherInputMethods()
+                                }
                             }
 
                             override fun onEngine(backend: EngineBackend) {
@@ -451,13 +461,29 @@ class SongyanInputMethodService : InputMethodService() {
         mainHandler.removeCallbacks(showSettingsAction)
         // The settings path always works: starting the :deploy service from the IME process can be
         // rejected by background foreground-service restrictions on Android 12+.
-        if (runtimeState != EngineRuntimeState.PREPARING) switchingSource = false
+        if (runtimeState != EngineRuntimeState.PREPARING) endSwitch()
         if (runtimeState == EngineRuntimeState.READY) {
             settingsOffered = false
         } else if (runtimeState == EngineRuntimeState.PREPARING && !settingsOffered && !switchingSource) {
             mainHandler.postDelayed(showSettingsAction, SETTINGS_ACTION_DELAY_MS)
         }
-        controller?.setEngineNotice(engineNoticeFor(runtimeState, settingsOffered))
+        val quietSwitch = switchingSource && !switchSlow && runtimeState == EngineRuntimeState.PREPARING
+        controller?.setEngineNotice(if (quietSwitch) null else engineNoticeFor(runtimeState, settingsOffered))
+    }
+
+    private val showSwitchPreparing =
+        Runnable {
+            if (switchingSource) {
+                switchSlow = true
+                runtimeState = EngineRuntimeState.PREPARING
+                renderRuntimeState()
+            }
+        }
+
+    private fun endSwitch() {
+        mainHandler.removeCallbacks(showSwitchPreparing)
+        switchingSource = false
+        switchSlow = false
     }
 
     /** A slow first deployment should offer the settings path, not only a retry button. */
@@ -508,9 +534,10 @@ class SongyanInputMethodService : InputMethodService() {
 
     /**
      * The user picked another package's input method in the menu: its choice is saved for the
-     * reconciliation that follows, then the deploy process activates the package. The keyboard says
-     * it is preparing from the tap on, since the old keys would type into the input method the user
-     * just left, and the new keys fade in the moment the package is ready
+     * reconciliation that follows, then the deploy process activates the package. The old keys fade
+     * out at once, since they would type into the input method the user just left; the new keys fade
+     * in the moment the package is ready, and only a wait past [SWITCH_NOTICE_GRACE_MS] says the
+     * keyboard is preparing
      * (see [ImeEngineRuntime.allowNextSwapWhileShown]). A switch that fails leaves the running
      * engine, which never stopped, back on screen.
      */
@@ -522,9 +549,9 @@ class SongyanInputMethodService : InputMethodService() {
         val app = application as SongyanApplication
         val requestId = DeployContract.newRequestId()
         switchRequestId = requestId
+        endSwitch()
         switchingSource = true
-        runtimeState = EngineRuntimeState.PREPARING
-        renderRuntimeState()
+        mainHandler.postDelayed(showSwitchPreparing, SWITCH_NOTICE_GRACE_MS)
         switchJob?.cancel()
         switchJob =
             scope.launch {
@@ -540,6 +567,7 @@ class SongyanInputMethodService : InputMethodService() {
     private fun abandonSwitch() {
         val running = runtime ?: return
         running.allowNextSwapWhileShown(false)
+        endSwitch()
         controller?.cancelPendingSwitch()
         if (running.isRunning && runtimeState == EngineRuntimeState.PREPARING) {
             runtimeState = EngineRuntimeState.READY

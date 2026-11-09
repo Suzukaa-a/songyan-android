@@ -248,6 +248,8 @@ internal suspend fun KeyboardController.applyPreferenceChange() {
  * ones the user hid in settings; the ones in use are always there so the menu shows where you are.
  */
 internal fun KeyboardController.syncMenu() {
+    // The menu covering a switch to another package holds still; it is redrawn once it closes.
+    if (announceWhenReady && menuOpen) return
     val engine = session?.engine ?: pendingBackend
     // A layout's generated companion runs as its own schema but is not an input method to pick.
     val companions =

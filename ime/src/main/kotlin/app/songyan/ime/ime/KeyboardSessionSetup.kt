@@ -56,10 +56,7 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     updateSwipe(active)
     syncMenu()
     // The new package may arrive while the keyboard is closed; it is named when the keys show.
-    if (announceWhenReady && windowShown) {
-        announceWhenReady = false
-        announceSwitch()
-    }
+    if (announceWhenReady && windowShown) finishSwitch()
     render()
     ImePerf.ready()
     while (heldKeys.isNotEmpty() && ready) {
@@ -208,12 +205,24 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
  */
 private suspend fun KeyboardController.switchToOtherPackage(method: OtherInputMethod) {
     val settled = confirmComposition()
-    closeKeyboardMenu()
-    render()
-    if (settled) {
-        announceWhenReady = true
-        callbacks.switchSource(method.sourceId, method.schemaId)
+    if (!settled) {
+        closeKeyboardMenu()
+        render()
+        return
     }
+    // The menu stays up, its new choice lit, until the new keys can fade in in its place: closing
+    // it first would show the old keys only to take them away again.
+    announceWhenReady = true
+    menu.markPicked(method.menuId)
+    callbacks.switchSource(method.sourceId, method.schemaId)
+}
+
+/** Another package's engine is ready and shown: the menu gives way to its keys. */
+internal fun KeyboardController.finishSwitch() {
+    announceWhenReady = false
+    closeKeyboardMenu()
+    syncMenu()
+    announceSwitch()
 }
 
 /**
@@ -237,7 +246,8 @@ internal fun KeyboardController.announceSwitch(named: Boolean = true) {
     // A plain animator, not the view's: it runs even while the view is detached (the notice of
     // another package arrives with its engine), so the keys never stay faint.
     switchFade =
-        ValueAnimator.ofFloat(minOf(keyboard.alpha, ImeMotion.SWITCH_FROM_ALPHA), 1f).apply {
+        // Keys uncovered by the preparing notice are hidden already and fade in from there.
+        ValueAnimator.ofFloat(if (keyboard.alpha < 1f) keyboard.alpha else ImeMotion.SWITCH_FROM_ALPHA, 1f).apply {
             duration = ImeMotion.SWITCH_MS
             interpolator = ImeMotion.standard
             addUpdateListener { keyboard.alpha = it.animatedValue as Float }

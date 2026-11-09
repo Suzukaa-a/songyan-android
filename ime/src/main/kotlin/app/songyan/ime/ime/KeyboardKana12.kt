@@ -43,7 +43,7 @@ private const val NANOS_PER_SECOND = 1_000_000_000.0
  * instead of letting them type romaji into a Chinese composition.
  */
 internal fun KeyboardController.kana12Ready(): Boolean {
-    if (retired || engineNotice != null || policy.ascii || privateDirectInput) return false
+    if (retired || engineNotice != null || announceWhenReady || policy.ascii || privateDirectInput) return false
     val active = session?.takeIf { ready } ?: return false
     if (active.mode != InputMode.CHINESE) return false
     return kana12Scheme()

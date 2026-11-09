@@ -190,7 +190,16 @@ class ImeEngineRuntime(
     private suspend fun reload() {
         if (closed) return
         val active = withContext(ioDispatcher) { publisher.readActive() }
-        if (handle != null && active != null && active.generation == loadedGeneration) return
+        if (handle != null && active != null && active.generation == loadedGeneration) {
+            // A requested switch that ended where it started still has to end on screen.
+            withContext(mainDispatcher) {
+                if (swapWhileShownOnce) {
+                    swapWhileShownOnce = false
+                    callbacks.onState(EngineRuntimeState.READY)
+                }
+            }
+            return
+        }
         startIfNeeded(active)
     }
 

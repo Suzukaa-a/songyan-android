@@ -167,6 +167,11 @@ internal class KeyboardSwitcherPanel(
         }
     }
 
+    /** Lights [menuId] at once while the input method it names gets ready; [update] settles it. */
+    fun markPicked(menuId: String) {
+        for ((id, view) in schemaChips) style(view, id == menuId)
+    }
+
     /**
      * Opening the menu shows the selected chips. A row keeps the offset of the last visit, which
      * could leave another input method where the selected one was and put it under the finger.

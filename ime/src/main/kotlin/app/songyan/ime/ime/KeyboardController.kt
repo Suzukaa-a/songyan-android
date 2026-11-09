@@ -425,6 +425,18 @@ class KeyboardController(
     /** The switch to another package did not happen: nothing will arrive to announce. */
     fun cancelPendingSwitch() {
         announceWhenReady = false
+        switchFade?.cancel()
+        keyboard.alpha = 1f
+        closeKeyboardMenu()
+        render()
+    }
+
+    /** The engine is ready: a pending switch that kept the running engine shows its keys again. */
+    fun settleSwitch() {
+        if (announceWhenReady && ready && windowShown) {
+            finishSwitch()
+            render()
+        }
     }
 
     /** Another package was picked: its keyboard is announced once its engine is ready and shown. */
@@ -640,8 +652,9 @@ class KeyboardController(
         t9FirstKey: Boolean = false,
         pressAt: Double = kana12Now(),
     ) {
-        // No engine, no typing: a press here would reach the editor as raw text.
-        if (engineNotice != null) return
+        // No engine, no typing: a press here would reach the editor as raw text. Nor while another
+        // package's input method is on its way: the keys on screen would type into the old one.
+        if (engineNotice != null || announceWhenReady) return
         if (retired) {
             if (action.type == LayoutActionKind.BACKSPACE) {
                 BackspaceTrace.record(BackspaceTrace.Event.DROPPED_KEYBOARD_RETIRED)
@@ -660,7 +673,7 @@ class KeyboardController(
         backspace: Boolean = false,
         press: suspend () -> Unit,
     ) {
-        if (retired || engineNotice != null) return
+        if (retired || engineNotice != null || announceWhenReady) return
         val epoch = keyEpoch
         operations.trySend(ANY_GENERATION to { runOrHold(backspace, epoch, press) })
     }
@@ -675,7 +688,7 @@ class KeyboardController(
         stillHeld: () -> Boolean,
         step: suspend () -> Unit,
     ) {
-        if (retired || engineNotice != null) return
+        if (retired || engineNotice != null || announceWhenReady) return
         val epoch = keyEpoch
         val stepOp: suspend () -> Unit = {
             if (!retired && ready && epoch == keyEpoch && stillHeld()) step()
@@ -772,7 +785,8 @@ class KeyboardController(
         session = null
         mergedSwipe = null
         privateDirectInput = false
-        closeKeyboardMenu()
+        // A requested switch keeps the menu up over the keys until the new ones fade in.
+        if (!announceWhenReady) closeKeyboardMenu()
         callbacks.preedit("", InputLanguage.ZH_HANS)
         render()
     }
@@ -947,8 +961,7 @@ class KeyboardController(
         syncBand()
         // Another package's engine may have arrived while the keyboard was closed.
         if (announceWhenReady && ready) {
-            announceWhenReady = false
-            announceSwitch()
+            finishSwitch()
             render()
         }
     }

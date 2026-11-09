@@ -252,6 +252,9 @@ class DeployWorker private constructor(
         app.sendBroadcast(
             Intent(DeployContract.ACTION_DEPLOY_FINISHED)
                 .setPackage(app.packageName)
+                // The keyboard may be waiting on screen for this; the background queue held it
+                // about half a second.
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                 .putExtra(DeployContract.EXTRA_REQUEST_ID, requestId)
                 .putExtra(DeployContract.EXTRA_MODE, mode.wireName)
                 .putExtra(DeployContract.EXTRA_SUCCESS, status.state == RequestState.SUCCEEDED)

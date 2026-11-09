@@ -466,6 +466,40 @@ class ImeEngineRuntimeTest {
         }
 
     @Test
+    fun aRequestedSwitchThatEndsOnTheRunningGenerationStillReportsReady() =
+        runBlocking {
+            val storage = storageWithPublishedGeneration()
+            val created = java.util.Collections.synchronizedList(mutableListOf<File>())
+            val callbacks = RecordingCallbacks()
+            val runtime =
+                ImeEngineRuntime(
+                    storage = storage,
+                    publisher = GenerationPublisher(storage),
+                    deployStatus = DeployStatusStore(storage),
+                    factory = countingFactory(created),
+                    appName = "rime.songyan",
+                    appVersion = "test/1",
+                    callbacks = callbacks,
+                    requestFirstDeploy = { },
+                    ioDispatcher = Dispatchers.Default,
+                    mainDispatcher = Dispatchers.Default,
+                )
+            runtime.setInputViewShown(true)
+            runtime.ensureStarted()
+            withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
+
+            runtime.allowNextSwapWhileShown()
+            runtime.refreshIfChanged()
+            withTimeout(10_000) { while (callbacks.ready.get() < 2) delay(10) }
+            assertEquals("no engine was replaced", 1, created.size)
+
+            runtime.refreshIfChanged()
+            delay(300)
+            assertEquals("an unrequested check reports nothing", 2, callbacks.ready.get())
+            runtime.close()
+        }
+
+    @Test
     fun anImportedGenerationWhoseStartsKeptDyingIsNotStartedAndTheBuiltInSourceIsRequested() =
         runBlocking {
             val storage = storageWithPublishedGeneration()

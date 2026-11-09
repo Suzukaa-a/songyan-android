@@ -29,16 +29,16 @@ class SwitchNoticeDeviceTest {
             host.start()
             host.awaitIdle()
             val usual = spaceFace(host)
-            assertTrue("starting the keyboard is not a switch", !usual.contains(" · "))
+            assertTrue("starting the keyboard is not a switch", usual != "松烟拼音")
 
             host.main { host.controller.menu.onSchema("notice_probe") }
             assertTrue(host.await { host.main2 { host.controller.schemaId } == "notice_probe" })
-            assertTrue(host.await { spaceFace(host).startsWith("通知探针 · ") })
+            assertTrue(host.await { spaceFace(host) == "通知探针" })
 
             // A composition takes the space bar back: it names what space does next.
             host.type("ni")
             assertTrue(host.await { "你" in host.barLabels() })
-            assertTrue(host.await { !spaceFace(host).contains(" · ") })
+            assertTrue(host.await { spaceFace(host) != "通知探针" })
 
             SystemClock.sleep(SWITCH_NOTICE_MS + 500)
             host.tapBar("你")
@@ -48,20 +48,22 @@ class SwitchNoticeDeviceTest {
 
             host.main { host.controller.menu.onSchema("songyan_quanpin") }
             assertTrue(host.await { host.main2 { host.controller.schemaId } == "songyan_quanpin" })
-            assertTrue(host.await { spaceFace(host).contains(" · ") })
-            val qwerty = spaceFace(host)
-            // A layout switch names the new layout, too.
+            val named = spaceFace(host)
+            assertTrue(named, named != usual)
+            SystemClock.sleep(SWITCH_NOTICE_MS + 500)
+            assertTrue(host.await { spaceFace(host) == usual })
+
+            // A layout switch shows in its keys; the input method is not named again.
             host.main { host.controller.menu.onLayout(KeyboardLayoutKind.MERGED14) }
             assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.MERGED14 })
-            assertTrue(host.await { spaceFace(host).contains(" · ") && spaceFace(host) != qwerty })
-            SystemClock.sleep(SWITCH_NOTICE_MS + 500)
-            assertTrue(host.await { !spaceFace(host).contains(" · ") })
+            host.awaitIdle()
+            assertTrue(spaceFace(host) != named)
 
             // Picking the running input method again switches nothing, so nothing is announced.
             host.main { host.controller.menu.onSchema("songyan_quanpin") }
             host.awaitIdle()
-            assertTrue(!spaceFace(host).contains(" · "))
-            assertEquals(1f, host.main2 { host.controller.keyboard.alpha })
+            assertTrue(spaceFace(host) != named)
+            assertTrue(host.await { host.main2 { host.controller.keyboard.alpha } == 1f })
         } finally {
             host.close()
             runBlocking { host.backend.shutdown() }

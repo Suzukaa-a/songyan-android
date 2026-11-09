@@ -52,8 +52,6 @@
     <string name="ime_toolbar_switch_input_method">切换输入法</string>
     <string name="ime_toolbar_voice_input">语音输入</string>
     <string name="ime_menu_switch_package">切换到%1$s的%2$s</string>
-    <string name="ime_switching_package">正在切换到%1$s…</string>
-    <string name="ime_switch_package_later">%1$s还在准备，下次打开键盘时换上。</string>
     <string name="ime_menu_switch_previous">上一个输入法</string>
     <string name="ime_menu_pick_input_method">选择输入法</string>
     <string name="ime_menu_voice_input">语音输入</string>

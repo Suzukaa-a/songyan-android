@@ -84,8 +84,6 @@
     <string name="ime_toolbar_switch_input_method">Switch input method</string>
     <string name="ime_toolbar_voice_input">Voice input</string>
     <string name="ime_menu_switch_package">Switch to %2$s in %1$s</string>
-    <string name="ime_switching_package">Switching to %1$s…</string>
-    <string name="ime_switch_package_later">%1$s is still getting ready. The keyboard switches to it the next time it opens.</string>
     <string name="ime_menu_switch_previous">Previous input method</string>
     <string name="ime_menu_pick_input_method">Choose input method</string>
     <string name="ime_menu_voice_input">Voice input</string>

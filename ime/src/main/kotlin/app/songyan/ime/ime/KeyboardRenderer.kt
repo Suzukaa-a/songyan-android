@@ -91,7 +91,7 @@ internal fun KeyboardController.render() {
             composing = visible.isComposing && keyNames.spaceFollowsComposition(language),
             mainLayoutId = mainDefinition().id,
             // A composition takes the space bar back: it names what space does next.
-            switchNotice = if (switchNotice && !visible.isComposing) menu.currentTitle() else null,
+            switchNotice = if (switchNotice && !visible.isComposing) menu.currentSchemaLabel() else null,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF

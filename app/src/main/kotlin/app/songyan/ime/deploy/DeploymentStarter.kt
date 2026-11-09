@@ -65,17 +65,19 @@ object DeploymentStarter {
     /**
      * Makes [sourceId] the active source, reusing its stored generation when one is current. The
      * deploy process broadcasts when done. Returns false when Android refused to start the service,
-     * so the caller can leave the keyboard on the current engine.
+     * so the caller can leave the keyboard on the current engine. The finish broadcast carries
+     * [requestId].
      */
     fun requestActivate(
         context: Context,
         sourceId: String,
+        requestId: String = DeployContract.newRequestId(),
     ): Boolean =
         start(
             context,
             DeployContract.intent(
                 context,
-                DeployRequest(DeployContract.newRequestId(), DeployMode.ACTIVATE_SOURCE, sourceId = sourceId),
+                DeployRequest(requestId, DeployMode.ACTIVATE_SOURCE, sourceId = sourceId),
             ),
         )
 

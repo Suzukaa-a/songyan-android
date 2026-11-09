@@ -18,7 +18,6 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.LinearLayout
-import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
@@ -88,7 +87,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import app.songyan.ime.ime.R as ImeR
 
 /** How long a first deployment may take before the engine notice offers the settings path. */
 private const val SETTINGS_ACTION_DELAY_MS = 2_000L
@@ -96,7 +94,6 @@ private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
 
 // Long enough for a stored generation to be swapped in, deploy process start included.
-private const val SWITCH_WAIT_MS = 5_000L
 private const val TAG = "SongyanIme"
 
 class SongyanInputMethodService : InputMethodService() {
@@ -254,6 +251,16 @@ class SongyanInputMethodService : InputMethodService() {
     private var settingsOffered = false
     private var otherInputMethods: List<OtherInputMethod> = emptyList()
     private var otherMethodsJob: Job? = null
+
+    /** The activation the keyboard menu asked for, until its finish broadcast arrives. */
+    private var switchRequestId: String? = null
+
+    /**
+     * The keyboard prepares the input method the user picked in its menu. A failure brings the old
+     * keyboard back, so the settings path is not offered meanwhile.
+     */
+    private var switchingSource = false
+
     private var switchJob: Job? = null
 
     /** The system asked for the keyboard to carry its own input method switcher (API 35+). */
@@ -300,6 +307,11 @@ class SongyanInputMethodService : InputMethodService() {
                 if (intent.action ==
                     DeployContract.ACTION_DEPLOY_FINISHED
                 ) {
+                    val requestId = intent.getStringExtra(DeployContract.EXTRA_REQUEST_ID)
+                    if (requestId != null && requestId == switchRequestId) {
+                        switchRequestId = null
+                        if (!intent.getBooleanExtra(DeployContract.EXTRA_SUCCESS, false)) abandonSwitch()
+                    }
                     // Deferred by the runtime while the keys are on screen; repeated broadcasts are no-ops.
                     runtime?.refreshIfChanged()
                     refreshOtherInputMethods()
@@ -439,9 +451,10 @@ class SongyanInputMethodService : InputMethodService() {
         mainHandler.removeCallbacks(showSettingsAction)
         // The settings path always works: starting the :deploy service from the IME process can be
         // rejected by background foreground-service restrictions on Android 12+.
+        if (runtimeState != EngineRuntimeState.PREPARING) switchingSource = false
         if (runtimeState == EngineRuntimeState.READY) {
             settingsOffered = false
-        } else if (runtimeState == EngineRuntimeState.PREPARING && !settingsOffered) {
+        } else if (runtimeState == EngineRuntimeState.PREPARING && !settingsOffered && !switchingSource) {
             mainHandler.postDelayed(showSettingsAction, SETTINGS_ACTION_DELAY_MS)
         }
         controller?.setEngineNotice(engineNoticeFor(runtimeState, settingsOffered))
@@ -495,11 +508,11 @@ class SongyanInputMethodService : InputMethodService() {
 
     /**
      * The user picked another package's input method in the menu: its choice is saved for the
-     * reconciliation that follows, then the deploy process activates the package. The keys stay
-     * usable meanwhile. A stored generation is a pointer swap, so the runtime may swap engines while
-     * the keys are shown for [SWITCH_WAIT_MS]; a package that has to be built again takes longer,
-     * and swapping under the user's fingers then would cut into what they type, so it waits for the
-     * keyboard to close like any other new generation.
+     * reconciliation that follows, then the deploy process activates the package. The keyboard says
+     * it is preparing from the tap on, since the old keys would type into the input method the user
+     * just left, and the new keys fade in the moment the package is ready
+     * (see [ImeEngineRuntime.allowNextSwapWhileShown]). A switch that fails leaves the running
+     * engine, which never stopped, back on screen.
      */
     private fun switchSource(
         sourceId: String,
@@ -507,30 +520,31 @@ class SongyanInputMethodService : InputMethodService() {
     ) {
         val running = runtime ?: return
         val app = application as SongyanApplication
-        val name = otherInputMethods.firstOrNull { it.sourceId == sourceId && it.schemaId == schemaId }?.name
-        // A toast, not the candidate bar: the bar is hidden behind the idle toolbar at this point.
-        name?.let { Toast.makeText(this, getString(ImeR.string.ime_switching_package, it), Toast.LENGTH_SHORT).show() }
+        val requestId = DeployContract.newRequestId()
+        switchRequestId = requestId
+        switchingSource = true
+        runtimeState = EngineRuntimeState.PREPARING
+        renderRuntimeState()
         switchJob?.cancel()
         switchJob =
             scope.launch {
                 withContext(Dispatchers.IO) { app.keyboardPreferences.requestInputMethod(sourceId, schemaId) }
                 running.allowNextSwapWhileShown()
-                if (!DeploymentStarter.requestActivate(this@SongyanInputMethodService, sourceId)) {
-                    running.allowNextSwapWhileShown(false)
-                    return@launch
-                }
-                delay(SWITCH_WAIT_MS)
-                running.allowNextSwapWhileShown(false)
-                val switched =
-                    withContext(Dispatchers.IO) {
-                        GenerationPublisher(app.storage).readActive()?.sourceId ==
-                            sourceId
-                    }
-                if (!switched && name != null) {
-                    val later = getString(ImeR.string.ime_switch_package_later, name)
-                    Toast.makeText(this@SongyanInputMethodService, later, Toast.LENGTH_LONG).show()
+                if (!DeploymentStarter.requestActivate(this@SongyanInputMethodService, sourceId, requestId)) {
+                    switchRequestId = null
+                    abandonSwitch()
                 }
             }
+    }
+
+    private fun abandonSwitch() {
+        val running = runtime ?: return
+        running.allowNextSwapWhileShown(false)
+        controller?.cancelPendingSwitch()
+        if (running.isRunning && runtimeState == EngineRuntimeState.PREPARING) {
+            runtimeState = EngineRuntimeState.READY
+            renderRuntimeState()
+        }
     }
 
     private fun retryEngine() {

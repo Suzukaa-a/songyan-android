@@ -161,9 +161,9 @@ class ImeEngineRuntime(
 
     /**
      * Main thread only. The user asked for another package from the keyboard menu: the next swap
-     * proceeds while the input view is shown, because the composition was settled before asking and
-     * waiting for a hide would leave the old package's keys on screen. One-shot; pass false to take
-     * it back when the request could not be sent or the window for an immediate swap has passed.
+     * proceeds while the input view is shown, however long the package takes to get ready: the
+     * keyboard already shows that it is preparing, and nothing can be typed under that notice.
+     * One-shot; pass false to take it back when the switch did not happen.
      */
     fun allowNextSwapWhileShown(allow: Boolean = true) {
         swapWhileShownOnce = allow

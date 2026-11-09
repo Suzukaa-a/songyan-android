@@ -134,7 +134,7 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
     }
     syncMenu()
     closeKeyboardMenu()
-    if (accepted && kind != before) announceSwitch()
+    if (accepted && kind != before) announceSwitch(named = false)
     render()
 }
 
@@ -151,7 +151,7 @@ internal suspend fun KeyboardController.chooseBoard(boardId: String) {
         return
     }
     chooseLayout(KeyboardLayoutKind.QWERTY26)
-    announceSwitch()
+    announceSwitch(named = false)
     render()
 }
 
@@ -217,15 +217,18 @@ private suspend fun KeyboardController.switchToOtherPackage(method: OtherInputMe
 }
 
 /**
- * The user switched input method, layout or board: the new keys fade in and the space bar names
- * the keyboard for [SWITCH_NOTICE_MS], so the switch shows where the eyes already are. The fade
- * only changes opacity, so a key pressed during it lands as usual; with animations off the keys
- * simply appear.
+ * The user switched input method, layout or board: the new keys fade in, and when the input method
+ * changed ([named]) the space bar names it for [SWITCH_NOTICE_MS], so the switch shows where the
+ * eyes already are. A new layout shows in its keys; naming the unchanged input method adds nothing.
+ * The fade only changes opacity, so a key pressed during it lands as usual; with animations off
+ * the keys simply appear.
  */
-internal fun KeyboardController.announceSwitch() {
-    switchNotice = true
-    noticeTimer.removeCallbacks(endSwitchNotice)
-    noticeTimer.postDelayed(endSwitchNotice, SWITCH_NOTICE_MS)
+internal fun KeyboardController.announceSwitch(named: Boolean = true) {
+    if (named) {
+        switchNotice = true
+        noticeTimer.removeCallbacks(endSwitchNotice)
+        noticeTimer.postDelayed(endSwitchNotice, SWITCH_NOTICE_MS)
+    }
     switchFade?.cancel()
     if (!ImeMotion.enabled) {
         keyboard.alpha = 1f
@@ -234,7 +237,7 @@ internal fun KeyboardController.announceSwitch() {
     // A plain animator, not the view's: it runs even while the view is detached (the notice of
     // another package arrives with its engine), so the keys never stay faint.
     switchFade =
-        ValueAnimator.ofFloat(ImeMotion.SWITCH_FROM_ALPHA, 1f).apply {
+        ValueAnimator.ofFloat(minOf(keyboard.alpha, ImeMotion.SWITCH_FROM_ALPHA), 1f).apply {
             duration = ImeMotion.SWITCH_MS
             interpolator = ImeMotion.standard
             addUpdateListener { keyboard.alpha = it.animatedValue as Float }

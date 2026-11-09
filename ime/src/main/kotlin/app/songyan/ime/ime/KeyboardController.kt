@@ -168,6 +168,12 @@ class KeyboardController(
         if (retired || value == engineNotice) return
         val wasShowing = engineNotice != null
         engineNotice = value
+        // The keys of a requested switch stay hidden until the new session draws them and fades
+        // them in: until then they are the old input method's.
+        if (value == null && wasShowing && announceWhenReady && ImeMotion.enabled) {
+            switchFade?.cancel()
+            keyboard.alpha = 0f
+        }
         if (value != null) refreshInputMethodOptions()
         if (wasShowing != (value != null)) closeAll()
         syncToolbar()
@@ -415,6 +421,11 @@ class KeyboardController(
 
     /** The space bar names the keyboard the user just switched to; see [announceSwitch]. */
     internal var switchNotice = false
+
+    /** The switch to another package did not happen: nothing will arrive to announce. */
+    fun cancelPendingSwitch() {
+        announceWhenReady = false
+    }
 
     /** Another package was picked: its keyboard is announced once its engine is ready and shown. */
     internal var announceWhenReady = false

@@ -197,6 +197,7 @@
 | `core/rime/src/main/assets/rime/` | 内置输入方案（`builtin/`）、prelude、OpenCC 数据与许可（同步自 iOS）。`prelude/README.md`、`prelude/PROVENANCE.md` 是随 prelude 同步来的数据文件（说明该数据集的来源），不是本项目文档，不要在这里修改 |
 | `app/src/main/assets/rime/starter/` | Android 额外打包的起步词库行（CC-CEDICT 读音、rime-essay 词频，多音字按 Unihan kHanyuPinlu 分配各读音的词频；由 [generate-starter-dict.py](../scripts/generate-starter-dict.py) 生成，输入与用法见脚本头；随 `songyan_basic.dict.yaml` 合并，许可见同目录 `NOTICE.md`），以及生成词库的许可文本 |
 | `core/layout/src/main/resources/layouts/` | 八种示例布局 JSON（同步自 iOS）：26 / 14 / 18 / 9 键加上 `zhuyin41`、`cangjie26`、`romaji26`、`kana12` |
+| `core/layout/src/main/resources/layouts/retired/builtin-layouts.json` | 内置布局的历史版本（同步自 iOS，由 iOS 的 `Tools/Layouts/gen_retired_layouts.py` 从 git 历史生成）；解码已存的布局目录时，等于某个历史版本的内置布局换成当前版本 |
 | `core/rime/src/androidTest/assets/engine-fixtures/traditional/playback_cases.json`、`japanese/playback_cases.json` | 从 iOS 同步的真实引擎回放：繁体方案与日语的候选顺序、预编辑、原生命名按键、开关与上屏期望 |
 | `core/appearance/src/test/resources/ios-interop/`、`core/layout/src/test/resources/ios-interop/` | iOS 自己的编码器写出的外观、皮肤、候选栏、布局（注音 41 键、仓颉 26 键、罗马字 26 键、自定义 26 键、带自己拆分排列的 26 键与自定义九键）与目录样本（生成物，不是同步文件；`scripts/ios-interop.sh <ios 仓库> export <目录>` 重新生成，Swift 驱动在 `scripts/ios-interop/`） |
 | `core/content/src/main/resources/default-symbols.json` | 默认符号库（同步自 iOS） |

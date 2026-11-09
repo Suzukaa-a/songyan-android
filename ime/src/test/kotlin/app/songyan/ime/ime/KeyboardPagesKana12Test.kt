@@ -23,17 +23,19 @@ class KeyboardPagesKana12Test {
         KeyboardLayoutCatalog.install(LayoutRegistry.create())
     }
 
-    private fun config(english: Boolean = false) =
-        KeyboardPages.Config(
-            layout = KeyboardLayoutKind.QWERTY26,
-            englishDirectInput = english,
-            symbolMarksAscii = false,
-            languageSwitch = true,
-            lettersReachable = true,
-            catalogRevision = KeyboardLayoutCatalog.snapshot.value.revision,
-            pairing = KeyboardComposition(mainLayoutID = "kana12"),
-            inputLanguage = InputLanguage.JA,
-        )
+    private fun config(
+        english: Boolean = false,
+        mainLayoutID: String = "kana12",
+    ) = KeyboardPages.Config(
+        layout = KeyboardLayoutKind.QWERTY26,
+        englishDirectInput = english,
+        symbolMarksAscii = false,
+        languageSwitch = true,
+        lettersReachable = true,
+        catalogRevision = KeyboardLayoutCatalog.snapshot.value.revision,
+        pairing = KeyboardComposition(mainLayoutID = mainLayoutID),
+        inputLanguage = InputLanguage.JA,
+    )
 
     @Test
     fun canonicalKanaKeepsFourRowsAndItsOwnSideControls() {
@@ -43,6 +45,16 @@ class KeyboardPagesKana12Test {
         val surface = Kana12Surface.of(page) ?: error("the canonical board must reach the kana renderer")
         assertEquals(12, surface.gridKeys.size)
         assertEquals(3, surface.trailing.size)
+    }
+
+    @Test
+    fun aCopiedKanaBoardKeepsItsGridAndSideControls() {
+        val copy = BuiltinLayouts.kana12.copy(id = "my-kana", name = "My kana")
+        KeyboardLayoutCatalog.install(LayoutRegistry.create(layouts = BuiltinLayouts.all + copy))
+        val page = KeyboardPages.definition(null, config(mainLayoutID = "my-kana"))
+        assertEquals(copy.rows, page.rows)
+        val surface = Kana12Surface.of(page, copy) ?: error("a copy must reach the kana renderer")
+        assertEquals(12, surface.gridKeys.size)
     }
 
     @Test

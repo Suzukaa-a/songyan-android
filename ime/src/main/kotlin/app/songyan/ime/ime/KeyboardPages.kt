@@ -442,6 +442,9 @@ internal object KeyboardPages {
         }
     }
 
+    /** The twelve-key kana board, the built-in one or a copy: it draws its own rails and footer. */
+    private fun isKanaBoard(main: LayoutDefinition): Boolean = Kana12Surface.of(main) != null
+
     /**
      * The letters page: the chosen Chinese layout (or the English QWERTY page) with Shift and Delete
      * folded into the last letter row where the shape carries them, then the footer row (see
@@ -449,7 +452,7 @@ internal object KeyboardPages {
      */
     private fun letters(config: Config): BuiltPage {
         val main = mainLayout(config)
-        val kanaBoard = !config.englishDirectInput && config.field == FieldKind.TEXT && main == BuiltinLayouts.kana12
+        val kanaBoard = !config.englishDirectInput && config.field == FieldKind.TEXT && isKanaBoard(main)
         val authoredEnglish =
             if (config.englishDirectInput) {
                 chosenPage(
@@ -665,7 +668,7 @@ internal object KeyboardPages {
         main: LayoutDefinition,
         footer: List<LayoutKey>,
     ): Boolean {
-        if (main == BuiltinLayouts.kana12) return false
+        if (isKanaBoard(main)) return false
         val bottom = LayoutBottomRow.index(main)
         val letters = main.rows.filterIndexed { index, _ -> index != bottom }
         if (letters.size < 4) return true

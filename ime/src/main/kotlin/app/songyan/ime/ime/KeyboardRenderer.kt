@@ -146,8 +146,8 @@ internal fun KeyboardController.render() {
         // technology scroll the choices the three slots do not show.
         val railFirst = T9RailPolicy.clampScroll(items.size, railScroll)
         val railWindow = T9RailPolicy.window(items, railScroll)
-        // A password field's pages share its taller key area; the shell stretches into it.
-        keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
+        // The shell draws no digit row of a password field, so it keeps its own height.
+        keyboard.extraRows = 0
         keyboard.syllableHints = emptyMap()
         keyboard.updatePhone(
             config =
@@ -192,7 +192,9 @@ internal fun KeyboardController.render() {
     } else {
         clearRail()
     }
-    keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
+    // Only the letter page of a password field draws the digit row; 123 and symbols keep their
+    // own height instead of stretching four rows into five.
+    keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD && currentPage == null) 1 else 0
     keyboard.syllableHints =
         if (currentPage == null && active?.mode == InputMode.CHINESE) {
             KeyboardPages.syllableHints(config, shuangpinHints)

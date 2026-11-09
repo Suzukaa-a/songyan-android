@@ -310,8 +310,8 @@ class KeyboardView(
 
     /**
      * Rows added on top of the usual four: a password field's digit row gets room of its own
-     * instead of squeezing the letter rows. Every page of that field keeps the taller height, so
-     * switching to symbols never resizes the window.
+     * instead of squeezing the letter rows. Only that page is taller; 123 and symbols keep their
+     * own height rather than stretching their keys.
      */
     var extraRows: Int = 0
         set(value) {
@@ -320,10 +320,7 @@ class KeyboardView(
             requestLayout()
         }
 
-    /**
-     * The rows the key area is tall. A field's extra row holds for every page of it, the shells
-     * included, so switching pages never moves the window or leaves a blank band under the keys.
-     */
+    /** The rows the key area is tall. */
     internal val heightRows: Int get() = PHONE_ROWS + extraRows
 
     /** A shell of placed keys: the nine-key shell or a dial pad. [key] identifies it for equality. */

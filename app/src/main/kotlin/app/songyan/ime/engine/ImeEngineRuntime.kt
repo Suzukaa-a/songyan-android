@@ -172,11 +172,21 @@ class ImeEngineRuntime(
     /** True while a published generation waits for the input view to close; for tests. */
     val isSwapDeferred: Boolean get() = swapDeferred
 
-    private fun reloadLater() {
+    /**
+     * The switch the user asked for has been carried out by the deploy process: like
+     * [refreshIfChanged], and when the running generation is still the active one (the switch
+     * ended where it started) it reports [EngineRuntimeState.READY] so the keyboard comes back.
+     * Only the finished request may say so: an earlier check still sees the old generation.
+     */
+    fun refreshAfterRequestedSwitch() {
+        reloadLater(settlesSwitch = true)
+    }
+
+    private fun reloadLater(settlesSwitch: Boolean = false) {
         if (closed) return
         scope.launch {
             try {
-                ownership.withLock { reload() }
+                ownership.withLock { reload(settlesSwitch) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -187,11 +197,12 @@ class ImeEngineRuntime(
     }
 
     /** Waits for any in-flight start, then starts only when the running engine is out of date. */
-    private suspend fun reload() {
+    private suspend fun reload(settlesSwitch: Boolean = false) {
         if (closed) return
         val active = withContext(ioDispatcher) { publisher.readActive() }
         if (handle != null && active != null && active.generation == loadedGeneration) {
             // A requested switch that ended where it started still has to end on screen.
+            if (!settlesSwitch) return
             withContext(mainDispatcher) {
                 if (swapWhileShownOnce) {
                     swapWhileShownOnce = false

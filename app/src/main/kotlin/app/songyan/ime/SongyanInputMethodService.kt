@@ -315,12 +315,13 @@ class SongyanInputMethodService : InputMethodService() {
                     DeployContract.ACTION_DEPLOY_FINISHED
                 ) {
                     val requestId = intent.getStringExtra(DeployContract.EXTRA_REQUEST_ID)
-                    if (requestId != null && requestId == switchRequestId) {
+                    val switched = requestId != null && requestId == switchRequestId
+                    if (switched) {
                         switchRequestId = null
                         if (!intent.getBooleanExtra(DeployContract.EXTRA_SUCCESS, false)) abandonSwitch()
                     }
                     // Deferred by the runtime while the keys are on screen; repeated broadcasts are no-ops.
-                    runtime?.refreshIfChanged()
+                    if (switched) runtime?.refreshAfterRequestedSwitch() else runtime?.refreshIfChanged()
                     refreshOtherInputMethods()
                 }
             }

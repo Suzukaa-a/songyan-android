@@ -489,13 +489,18 @@ class ImeEngineRuntimeTest {
             withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
 
             runtime.allowNextSwapWhileShown()
+            // The keyboard reopened while the deploy process still works on the switch.
             runtime.refreshIfChanged()
+            delay(300)
+            assertEquals("a check before the request finished ends nothing", 1, callbacks.ready.get())
+
+            runtime.refreshAfterRequestedSwitch()
             withTimeout(10_000) { while (callbacks.ready.get() < 2) delay(10) }
             assertEquals("no engine was replaced", 1, created.size)
 
-            runtime.refreshIfChanged()
+            runtime.refreshAfterRequestedSwitch()
             delay(300)
-            assertEquals("an unrequested check reports nothing", 2, callbacks.ready.get())
+            assertEquals("the switch ends once", 2, callbacks.ready.get())
             runtime.close()
         }
 

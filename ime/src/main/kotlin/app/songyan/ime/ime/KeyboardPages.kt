@@ -854,10 +854,8 @@ internal object KeyboardPages {
     )
 
     /**
-     * The letters footer: `123 | 中/英 | 空格 | ，| 回车`. The punctuation key right of the space bar
-     * types the comma and long-presses into the full stop and the other sentence marks, so there is
-     * no second mark key and the space bar stays centred. The marks follow the language (`，` in
-     * Chinese, `,` in English). An email field keeps `@` beside 123 (it has no 中/英) and a `.` key
+     * The letters footer: `123 | 中/英 | ，| 空格 | 。| 回车` in a text field, the marks following the
+     * language (`, .` in English). An email field keeps `@` beside 123 (it has no 中/英) and a `.` key
      * right of the space bar; a URL field has `.` there with `/` in its long press, or beside 123
      * when it has no 中/英. An editor that forces ASCII has no 中/英 key, and its page key takes
      * that share.
@@ -870,7 +868,7 @@ internal object KeyboardPages {
                 FieldKind.URL -> markKey("/")
                 else -> null
             }
-        val side = spaceSideMarks(config)
+        val side = spaceSideMarks(config, config.englishDirectInput)
         val punctuation =
             when {
                 side != null -> side.second
@@ -948,11 +946,16 @@ internal object KeyboardPages {
         }
 
     /**
-     * The comma left of the space bar and the full stop right of it of the native footer, for the
-     * script language. Null keeps the ASCII/field-specific single mark.
+     * The comma left of the space bar and the full stop right of it, in the marks of [ascii] or the
+     * script language. Both languages keep this shape, so 中/英 changes the marks and never moves a
+     * key. Null keeps the field-specific single mark of a URL or email field.
      */
-    private fun spaceSideMarks(config: Config): Pair<LayoutKey, LayoutKey>? {
-        if (config.englishDirectInput || config.symbolMarksAscii || config.field != FieldKind.TEXT) return null
+    private fun spaceSideMarks(
+        config: Config,
+        ascii: Boolean,
+    ): Pair<LayoutKey, LayoutKey>? {
+        if (config.field != FieldKind.TEXT) return null
+        if (ascii) return markKey(",", listOf("'", ";", ":")) to markKey(".", listOf("?", "!", "…"))
         val japanese = config.inputLanguage == InputLanguage.JA
         val comma = if (japanese) "、" else "，"
         // The full stop has its own key, so each long press holds the marks of its kind: the pauses
@@ -962,9 +965,9 @@ internal object KeyboardPages {
         return markKey(comma, pauses) to markKey("。", ends)
     }
 
-    /** The 123 page footer: `返回 | 中/英 | 空格 | ，| 回车`; the symbol switch opens the third row. */
+    /** The 123 page footer: `返回 | 中/英 | ，| 空格 | 。| 回车`; the symbol switch opens the third row. */
     private fun numericFooter(config: Config): List<LayoutKey> {
-        val side = spaceSideMarks(config)
+        val side = spaceSideMarks(config, config.symbolMarksAscii)
         return footer(
             page =
                 footerKey(
@@ -986,12 +989,12 @@ internal object KeyboardPages {
     const val SYMBOL_PANEL_MODE = "symbolPanel"
 
     /**
-     * The symbol page footer: `返回 | 中/英 | 空格 | 更多 | 回车`. The page already types every mark, so
+     * The symbol page footer: `返回 | 中/英 | ，| 空格 | 更多 | 回车`. The page already types every mark, so
      * the full stop's place goes to 更多 and the row keeps the letters footer's shape; the 123 switch
      * is in the third row.
      */
     private fun symbolsFooter(config: Config): List<LayoutKey> {
-        val side = spaceSideMarks(config)
+        val side = spaceSideMarks(config, config.symbolMarksAscii)
         return footer(
             page =
                 footerKey(

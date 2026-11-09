@@ -151,7 +151,7 @@ class KeyboardPagesTest {
                     .keys
             assertEquals(
                 if (ascii) {
-                    listOf("返回", "中/英", "空格", ",", "⏎")
+                    listOf("返回", "中/英", ",", "空格", ".", "⏎")
                 } else {
                     listOf("返回", "中/英", "，", "空格", "。", "⏎")
                 },
@@ -316,7 +316,7 @@ class KeyboardPagesTest {
             listOf("、", "。"),
             marks(letters.copy(inputLanguage = app.songyan.ime.keyboard.engine.InputLanguage.JA)),
         )
-        assertEquals(listOf(","), marks(letters.copy(englishDirectInput = true)))
+        assertEquals(listOf(",", "."), marks(letters.copy(englishDirectInput = true)))
         val email = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL)
         assertEquals(listOf("@", "."), marks(email))
         val url = letters.copy(englishDirectInput = true, field = FieldKind.URL)
@@ -336,6 +336,26 @@ class KeyboardPagesTest {
                     LayoutActionKind.LANGUAGE_SWITCH
             },
         )
+    }
+
+    /** 中/英 changes the marks beside the space bar, never a key's place or width. */
+    @Test
+    fun theLanguageKeyNeverMovesAFooterKey() {
+        fun widths(
+            config: KeyboardPages.Config,
+            page: KeyboardPageKind?,
+        ) = KeyboardPages
+            .definition(page, config)
+            .rows
+            .last()
+            .keys
+            .map { it.width }
+        for (base in listOf(letters, letters.copy(inputLanguage = app.songyan.ime.keyboard.engine.InputLanguage.JA))) {
+            assertEquals(widths(base, null), widths(base.copy(englishDirectInput = true), null))
+            for (page in listOf(KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS)) {
+                assertEquals("$page", widths(base, page), widths(base.copy(symbolMarksAscii = true), page))
+            }
+        }
     }
 
     /** The keys left of the space bar weigh what the keys right of it weigh, whatever the editor drops. */

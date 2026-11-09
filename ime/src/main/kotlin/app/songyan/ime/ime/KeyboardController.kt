@@ -416,7 +416,7 @@ class KeyboardController(
     /** The space bar names the keyboard the user just switched to; see [announceSwitch]. */
     internal var switchNotice = false
 
-    /** Another package was picked: its keyboard is announced once its engine is ready. */
+    /** Another package was picked: its keyboard is announced once its engine is ready and shown. */
     internal var announceWhenReady = false
     internal val noticeTimer = Handler(Looper.getMainLooper())
     internal var switchFade: ValueAnimator? = null
@@ -924,7 +924,7 @@ class KeyboardController(
         }
     }
 
-    private var windowShown = false
+    internal var windowShown = false
 
     /**
      * The keyboard is on screen for the current editor. Only now is the clipboard looked at for the
@@ -934,6 +934,12 @@ class KeyboardController(
         windowShown = true
         copiedChipSource?.onInputStarted(policy.privateInput)
         syncBand()
+        // Another package's engine may have arrived while the keyboard was closed.
+        if (announceWhenReady && ready) {
+            announceWhenReady = false
+            announceSwitch()
+            render()
+        }
     }
 
     /** The keyboard window went away: the chip and the inline suggestions go with it. */

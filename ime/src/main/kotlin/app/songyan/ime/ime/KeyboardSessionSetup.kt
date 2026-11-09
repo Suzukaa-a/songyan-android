@@ -55,7 +55,8 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     }
     updateSwipe(active)
     syncMenu()
-    if (announceWhenReady) {
+    // The new package may arrive while the keyboard is closed; it is named when the keys show.
+    if (announceWhenReady && windowShown) {
         announceWhenReady = false
         announceSwitch()
     }

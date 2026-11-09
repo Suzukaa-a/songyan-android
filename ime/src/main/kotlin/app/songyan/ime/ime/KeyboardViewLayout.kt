@@ -33,7 +33,10 @@ internal fun KeyboardView.face(
     if (key.titleMode == LayoutKeyTitleMode.CUSTOM) return key.label
     return when (key.action.type) {
         LayoutActionKind.SPACE ->
-            if (spoken) context.getString(R.string.ime_space) else keyNames.space(faces.language, faces.composing)
+            when {
+                spoken -> context.getString(R.string.ime_space)
+                else -> faces.switchNotice ?: keyNames.space(faces.language, faces.composing)
+            }
         LayoutActionKind.BACKSPACE ->
             if (spoken) context.getString(R.string.ime_delete) else names.getString(R.string.ime_glyph_delete)
         LayoutActionKind.ENTER -> if (spoken) keyNames.spokenEnter(context, actionLabel) else actionLabel

@@ -1,6 +1,9 @@
 package app.songyan.ime.ime
 
+import android.animation.ValueAnimator
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
@@ -409,6 +412,23 @@ class KeyboardController(
 
     /** The symbol page stays open after a symbol is typed (the corner lock); stored by the user. */
     internal var symbolLock = false
+
+    /** The space bar names the keyboard the user just switched to; see [announceSwitch]. */
+    internal var switchNotice = false
+
+    /** Another package was picked: its keyboard is announced once its engine is ready. */
+    internal var announceWhenReady = false
+    internal val noticeTimer = Handler(Looper.getMainLooper())
+    internal var switchFade: ValueAnimator? = null
+    internal val endSwitchNotice =
+        Runnable {
+            // Cleared here, not in the queued render: a render dropped for a newer editor must not
+            // leave the name on the space bar.
+            if (switchNotice) {
+                switchNotice = false
+                enqueue { render() }
+            }
+        }
 
     /** The dial pad of a number editor is showing, and the candidate bar is gone with it. */
     internal var dialPadShown = false
@@ -1074,6 +1094,8 @@ class KeyboardController(
 
     fun retire() {
         retired = true
+        noticeTimer.removeCallbacks(endSwitchNotice)
+        switchFade?.cancel()
         copiedChipSource?.stop()
         feedback.close()
         generation++

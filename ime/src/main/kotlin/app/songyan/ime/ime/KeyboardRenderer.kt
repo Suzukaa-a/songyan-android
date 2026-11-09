@@ -90,6 +90,8 @@ internal fun KeyboardController.render() {
             // otherwise every word would relabel the whole page twice for nothing.
             composing = visible.isComposing && keyNames.spaceFollowsComposition(language),
             mainLayoutId = mainDefinition().id,
+            // A composition takes the space bar back: it names what space does next.
+            switchNotice = if (switchNotice && !visible.isComposing) menu.currentTitle() else null,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF
@@ -164,7 +166,7 @@ internal fun KeyboardController.render() {
                         PhoneKeypadLayout.Labels(
                             page = names.getString(R.string.ime_numbers),
                             language = keyNames.languageKeyDrawn(language) ?: "中/英",
-                            space = keyNames.space(language, visible.isComposing),
+                            space = faces.switchNotice ?: keyNames.space(language, visible.isComposing),
                             symbols = keyNames.symbolPageDrawn(language),
                             back = keyNames.returnToLettersDrawn(language, english),
                             zero = "0",

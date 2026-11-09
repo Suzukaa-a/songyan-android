@@ -201,6 +201,13 @@ internal class KeyboardSwitcherPanel(
 
     fun selectLayout(kind: KeyboardLayoutKind) = update(currentSchema, kind)
 
+    /** The running keyboard as the menu names it: `input method · layout`. */
+    fun currentTitle(): String {
+        val layout =
+            layoutChips.firstOrNull { isSelected(it.first) }?.first?.let(::layoutLabel) ?: layoutLabel(currentLayout)
+        return "${schemaLabel(currentSchema)} · $layout"
+    }
+
     /**
      * The input methods the menu offers, in order, as (id, engine name); the chips are rebuilt only
      * when the list changes. A bundled one keeps its translated name. [others] are the entries that

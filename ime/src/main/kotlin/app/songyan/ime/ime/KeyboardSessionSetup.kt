@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.animation.ValueAnimator
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
@@ -54,6 +55,10 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     }
     updateSwipe(active)
     syncMenu()
+    if (announceWhenReady) {
+        announceWhenReady = false
+        announceSwitch()
+    }
     render()
     ImePerf.ready()
     while (heldKeys.isNotEmpty() && ready) {
@@ -107,6 +112,7 @@ internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardRes
     KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters)
 
 internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
+    val before = layoutKind
     val active = session
     val accepted =
         if (active != null && ready) {
@@ -127,6 +133,7 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
     }
     syncMenu()
     closeKeyboardMenu()
+    if (accepted && kind != before) announceSwitch()
     render()
 }
 
@@ -143,6 +150,8 @@ internal suspend fun KeyboardController.chooseBoard(boardId: String) {
         return
     }
     chooseLayout(KeyboardLayoutKind.QWERTY26)
+    announceSwitch()
+    render()
 }
 
 /**
@@ -161,6 +170,7 @@ internal fun KeyboardController.jumpableLayouts(): Set<KeyboardLayoutKind> {
 
 internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (target.isBlank()) return
+    val before = schemaId
     if (target.startsWith(OtherInputMethod.MENU_ID_PREFIX)) {
         otherInputMethods.firstOrNull { it.menuId == target }?.let { switchToOtherPackage(it) }
         return
@@ -186,6 +196,7 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
     }
     syncMenu()
     closeKeyboardMenu()
+    if (accepted && target != before) announceSwitch()
     render()
 }
 
@@ -198,8 +209,40 @@ private suspend fun KeyboardController.switchToOtherPackage(method: OtherInputMe
     val settled = confirmComposition()
     closeKeyboardMenu()
     render()
-    if (settled) callbacks.switchSource(method.sourceId, method.schemaId)
+    if (settled) {
+        announceWhenReady = true
+        callbacks.switchSource(method.sourceId, method.schemaId)
+    }
 }
+
+/**
+ * The user switched input method, layout or board: the new keys fade in and the space bar names
+ * the keyboard for [SWITCH_NOTICE_MS], so the switch shows where the eyes already are. The fade
+ * only changes opacity, so a key pressed during it lands as usual; with animations off the keys
+ * simply appear.
+ */
+internal fun KeyboardController.announceSwitch() {
+    switchNotice = true
+    noticeTimer.removeCallbacks(endSwitchNotice)
+    noticeTimer.postDelayed(endSwitchNotice, SWITCH_NOTICE_MS)
+    switchFade?.cancel()
+    if (!ImeMotion.enabled) {
+        keyboard.alpha = 1f
+        return
+    }
+    // A plain animator, not the view's: it runs even while the view is detached (the notice of
+    // another package arrives with its engine), so the keys never stay faint.
+    switchFade =
+        ValueAnimator.ofFloat(ImeMotion.SWITCH_FROM_ALPHA, 1f).apply {
+            duration = ImeMotion.SWITCH_MS
+            interpolator = ImeMotion.standard
+            addUpdateListener { keyboard.alpha = it.animatedValue as Float }
+            start()
+        }
+}
+
+/** How long the space bar names the keyboard after a switch; the same as on iOS. */
+internal const val SWITCH_NOTICE_MS = 2_500L
 
 internal suspend fun KeyboardController.cycleLayout() {
     val usable = jumpableLayouts()

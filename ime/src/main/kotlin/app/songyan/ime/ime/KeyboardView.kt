@@ -47,6 +47,8 @@ data class KeyboardFaces(
     val composing: Boolean = false,
     /** The main layout the keyboard draws, so a jump name can say which board its page belongs to. */
     val mainLayoutId: String? = null,
+    /** The keyboard just switched to, named on the space bar for a moment; null shows its usual face. */
+    val switchNotice: String? = null,
 )
 
 class KeyboardView(
@@ -396,14 +398,16 @@ class KeyboardView(
         faces: KeyboardFaces = KeyboardFaces(),
         swipe: MergedSwipeConfig? = null,
     ) {
-        // An opening or closing composition only renames keys; it must not solve the rows again.
+        // An opening or closing composition, or the switch notice, only renames keys; it must not
+        // solve the rows again.
         val sameKeys =
             shell == null &&
                 layout === definition &&
-                this.faces.copy(composing = faces.composing) == faces &&
+                this.faces.copy(composing = faces.composing, switchNotice = faces.switchNotice) == faces &&
                 swipeConfig === swipe
         if (sameKeys &&
             this.faces.composing == faces.composing &&
+            this.faces.switchNotice == faces.switchNotice &&
             shifted == shift &&
             capsLocked == locked &&
             actionLabel == enterLabel
@@ -415,7 +419,8 @@ class KeyboardView(
         capsLocked = locked
         actionLabel = enterLabel
         if (sameKeys) {
-            // Only the faces changed (shift, caps lock, the editor's action label, the composition):
+            // Only the faces changed (shift, caps lock, the editor's action label, the composition, the
+            // switch notice):
             // the same keys in the same places, so there is nothing to solve again.
             this.faces = faces
             applyKeyFaces()

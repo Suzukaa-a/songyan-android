@@ -318,11 +318,12 @@ class KeyboardPagesTest {
         )
         assertEquals(listOf(",", "."), marks(letters.copy(englishDirectInput = true)))
         val email = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL)
-        assertEquals(listOf("@", "."), marks(email))
+        assertEquals(listOf("@", "_", "."), marks(email))
         val url = letters.copy(englishDirectInput = true, field = FieldKind.URL)
-        assertEquals(listOf("."), marks(url))
-        val urlStop = KeyboardPages.lettersFooter(url).first { it.label == "." }
-        assertEquals("/", urlStop.longPress?.first()?.label)
+        assertEquals(listOf(":", "/"), marks(url))
+        assertEquals(listOf(":", "/"), marks(url.copy(englishDirectInput = false)))
+        val password = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.PASSWORD)
+        assertEquals(listOf("@", ",", "."), marks(password))
         // The URL field keeps its 中/英 key; an email field has none.
         assertTrue(
             KeyboardPages.definition(null, url).rows.last().keys.any {
@@ -336,6 +337,36 @@ class KeyboardPagesTest {
                     LayoutActionKind.LANGUAGE_SWITCH
             },
         )
+    }
+
+    /**
+     * A field type never moves a footer key: URL, email and password fields keep the text field's
+     * widths on every page. They used to drop the mark left of the space bar and stretch 123 (or
+     * 返回 on the 123 page) into the missing 中/英 slot.
+     */
+    @Test
+    fun everyFieldKeepsTheTextFieldsFooterWidths() {
+        fun widths(
+            config: KeyboardPages.Config,
+            page: KeyboardPageKind?,
+        ) = KeyboardPages
+            .definition(page, config)
+            .rows
+            .last()
+            .keys
+            .map { it.width }
+        val fields =
+            listOf(
+                letters.copy(englishDirectInput = true, field = FieldKind.URL),
+                letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL),
+                letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.PASSWORD),
+                letters.copy(languageSwitch = false),
+            )
+        for (page in listOf(null, KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS)) {
+            for (field in fields) {
+                assertEquals("$page ${field.field}", widths(letters, page), widths(field, page))
+            }
+        }
     }
 
     /** 中/英 changes the marks beside the space bar, never a key's place or width. */

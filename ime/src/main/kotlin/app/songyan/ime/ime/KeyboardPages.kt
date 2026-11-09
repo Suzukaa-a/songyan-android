@@ -655,20 +655,22 @@ internal object KeyboardPages {
 
     /**
      * Whether the 26-key shell folds its own Shift and Delete into the last letter row. The shipped
-     * shapes declare three letter rows, which is the shape the pair was made for; the bundled cangjie
-     * pad keeps it too even though its footer leaves Delete out. A taller pad edits through the footer
-     * it declares: the zhuyin pad's fourth encoding row would otherwise draw Delete twice and a Shift
-     * it has no use for. Anything else keeps the old behavior, so custom layouts and the shipped
-     * shapes are untouched.
+     * shapes declare three letter rows, which is the shape the pair was made for. A taller pad that
+     * declares Delete itself, in its footer or at the end of its last letter row (the zhuyin pad),
+     * edits through that key: the shell would otherwise draw Delete twice and a Shift the pad has no
+     * use for. Anything else keeps the old behavior, so custom layouts and the shipped shapes are
+     * untouched.
      */
     private fun shellEditsLastLetterRow(
         main: LayoutDefinition,
         footer: List<LayoutKey>,
     ): Boolean {
         if (main == BuiltinLayouts.kana12) return false
-        val letterRows = main.rows.size - if (LayoutBottomRow.index(main) != null) 1 else 0
-        if (letterRows < 4) return true
-        return footer.none { it.action.type == LayoutActionKind.BACKSPACE }
+        val bottom = LayoutBottomRow.index(main)
+        val letters = main.rows.filterIndexed { index, _ -> index != bottom }
+        if (letters.size < 4) return true
+        val declaresDelete = (footer + letters.last().keys).any { it.action.type == LayoutActionKind.BACKSPACE }
+        return !declaresDelete
     }
 
     /**
@@ -801,7 +803,7 @@ internal object KeyboardPages {
         const val SPACE = 4.8
         const val GLOBE = 1.0
 
-        /** The page key alone on the left (no 中/英 in this editor) keeps the left side's share. */
+        /** The second key alone on the left (letters unreachable, so no page key) keeps the left side's share. */
         const val PAGE_ALONE = PAGE + LANGUAGE
     }
 
@@ -854,30 +856,13 @@ internal object KeyboardPages {
     )
 
     /**
-     * The letters footer: `123 | 中/英 | ，| 空格 | 。| 回车` in a text field, the marks following the
-     * language (`, .` in English). An email field keeps `@` beside 123 (it has no 中/英) and a `.` key
-     * right of the space bar; a URL field has `.` there with `/` in its long press, or beside 123
-     * when it has no 中/英. An editor that forces ASCII has no 中/英 key, and its page key takes
-     * that share.
+     * The letters footer: `123 | 中/英 | ，| 空格 | 。| 回车` in every field, so a field type never moves
+     * a key. The marks follow the field: the language's comma and full stop in a text field (`, .`
+     * in English), `: /` in a URL field, `_ .` in an email field. An editor without 中/英 (email,
+     * password, a private field) puts a field mark in its place instead of stretching 123.
      */
     internal fun lettersFooter(config: Config): List<LayoutKey> {
-        val ascii = config.englishDirectInput || config.field != FieldKind.TEXT
-        val fieldMark =
-            when (config.field) {
-                FieldKind.EMAIL -> markKey("@")
-                FieldKind.URL -> markKey("/")
-                else -> null
-            }
         val side = spaceSideMarks(config, config.englishDirectInput)
-        val punctuation =
-            when {
-                side != null -> side.second
-                // A URL field keeps 中/英, so its `/` moves into the full stop's long press.
-                config.field == FieldKind.URL ->
-                    markKey(".", if (config.languageSwitch) listOf("/", ":", "-", "_") else emptyList())
-                config.field == FieldKind.EMAIL -> markKey(".")
-                else -> commaKey(ascii)
-            }
         return footer(
             page =
                 footerKey(
@@ -887,54 +872,60 @@ internal object KeyboardPages {
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             pageReachable = config.lettersReachable,
-            beside = fieldMark?.copy(width = FooterWeight.LANGUAGE),
+            beside = besideMark(config),
             languageSwitch = config.languageSwitch,
-            right = punctuation,
+            right = side.second,
             globe = config.showsGlobe,
-            spaceLeft = side?.first,
+            spaceLeft = side.first,
         )
     }
 
     /**
-     * One footer shape for every row page: `page | 中/英 | 空格 | right | 回车`. [beside] stands in
-     * for 中/英 when the editor has no language switch (the email `@`); with neither, the page key
-     * takes both shares so the space bar does not move.
+     * The key that takes 中/英's place in an editor without it: `.` in a URL field, `@` everywhere
+     * else (an email address, a user name or a password reaches for it most).
+     */
+    private fun besideMark(config: Config): LayoutKey =
+        when (config.field) {
+            FieldKind.URL -> markKey(".", listOf("-", "_"))
+            else -> markKey("@", listOf("#", "&", "*"))
+        }.copy(width = FooterWeight.LANGUAGE)
+
+    /**
+     * One footer shape for every row page: `page | 中/英 | mark | 空格 | mark | 回车`. [beside] stands in
+     * for 中/英 when the editor has no language switch; only an editor whose letters are unreachable
+     * lets the page key take both shares.
      */
     private fun footer(
         page: LayoutKey,
         pageReachable: Boolean,
-        beside: LayoutKey?,
+        beside: LayoutKey,
         languageSwitch: Boolean,
         right: LayoutKey,
         globe: Boolean,
-        spaceLeft: LayoutKey? = null,
-        spaceRight: LayoutKey? = null,
+        spaceLeft: LayoutKey,
     ): List<LayoutKey> =
         buildList {
             // The switch key takes its share from the space bar so the other keys keep their places.
             if (globe) add(GLOBE_KEY)
             val second =
-                when {
-                    languageSwitch ->
-                        footerKey(
-                            "中/英",
-                            LayoutAction.languageSwitch(),
-                            FooterWeight.LANGUAGE,
-                            titleMode = LayoutKeyTitleMode.AUTOMATIC,
-                        )
-                    else -> beside
+                if (languageSwitch) {
+                    footerKey(
+                        "中/英",
+                        LayoutAction.languageSwitch(),
+                        FooterWeight.LANGUAGE,
+                        titleMode = LayoutKeyTitleMode.AUTOMATIC,
+                    )
+                } else {
+                    beside
                 }
-            if (pageReachable) {
-                add(if (second == null) page.copy(width = FooterWeight.PAGE_ALONE) else page)
-            }
-            if (second != null) add(if (pageReachable) second else second.copy(width = FooterWeight.PAGE_ALONE))
-            if (spaceLeft != null) add(spaceLeft)
+            if (pageReachable) add(page)
+            add(if (pageReachable) second else second.copy(width = FooterWeight.PAGE_ALONE))
+            add(spaceLeft)
             add(if (globe) SPACE_KEY.copy(width = FooterWeight.SPACE - FooterWeight.GLOBE) else SPACE_KEY)
-            if (spaceRight != null) add(spaceRight)
             add(right)
-            // A mark left of the space bar is balanced by a wider Return, so the space bar stays
+            // The mark left of the space bar is balanced by a wider Return, so the space bar stays
             // centred and the marks either side of it are the same size.
-            add(if (spaceLeft != null) ENTER_KEY.copy(width = FooterWeight.ENTER + FooterWeight.MARK) else ENTER_KEY)
+            add(ENTER_KEY.copy(width = FooterWeight.ENTER + FooterWeight.MARK))
         }
 
     /** The comma key right of the space bar: the full stop first in its long press, so it is the corner hint. */
@@ -946,16 +937,23 @@ internal object KeyboardPages {
         }
 
     /**
-     * The comma left of the space bar and the full stop right of it, in the marks of [ascii] or the
-     * script language. Both languages keep this shape, so 中/英 changes the marks and never moves a
-     * key. Null keeps the field-specific single mark of a URL or email field.
+     * The marks either side of the space bar. A text field types the comma and full stop of [ascii]
+     * or the script language, so 中/英 changes the marks and never moves a key; a URL field types
+     * `:` and `/`, an email field `_` and `.`, whatever the language.
      */
     private fun spaceSideMarks(
         config: Config,
         ascii: Boolean,
-    ): Pair<LayoutKey, LayoutKey>? {
-        if (config.field != FieldKind.TEXT) return null
-        if (ascii) return markKey(",", listOf("'", ";", ":")) to markKey(".", listOf("?", "!", "…"))
+    ): Pair<LayoutKey, LayoutKey> {
+        when (config.field) {
+            FieldKind.URL -> return markKey(":", listOf(".", "-", "_", "@")) to
+                markKey("/", listOf(".", "?", "=", "&", "#"))
+            FieldKind.EMAIL -> return markKey("_", listOf("-", "+")) to markKey(".", listOf("-", "_"))
+            FieldKind.TEXT, FieldKind.PASSWORD -> Unit
+        }
+        if (ascii || config.field == FieldKind.PASSWORD) {
+            return markKey(",", listOf("'", ";", ":")) to markKey(".", listOf("?", "!", "…"))
+        }
         val japanese = config.inputLanguage == InputLanguage.JA
         val comma = if (japanese) "、" else "，"
         // The full stop has its own key, so each long press holds the marks of its kind: the pauses
@@ -977,11 +975,11 @@ internal object KeyboardPages {
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             pageReachable = true,
-            beside = null,
+            beside = besideMark(config),
             languageSwitch = config.languageSwitch,
-            right = side?.second ?: commaKey(config.symbolMarksAscii),
+            right = side.second,
             globe = config.showsGlobe,
-            spaceLeft = side?.first,
+            spaceLeft = side.first,
         )
     }
 
@@ -1004,7 +1002,7 @@ internal object KeyboardPages {
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             pageReachable = true,
-            beside = null,
+            beside = besideMark(config),
             languageSwitch = config.languageSwitch,
             right =
                 footerKey(
@@ -1014,7 +1012,7 @@ internal object KeyboardPages {
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             globe = config.showsGlobe,
-            spaceLeft = side?.first,
+            spaceLeft = side.first,
         )
     }
 

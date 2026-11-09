@@ -5,7 +5,6 @@ import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -83,7 +82,7 @@ class RomajiLayoutTest {
         assertEquals(listOf(5, 5, 4, 5), BuiltinLayouts.merged14.rows.map { it.keys.size })
         assertEquals(listOf(7, 6, 5, 5), BuiltinLayouts.merged18.rows.map { it.keys.size })
         assertEquals(listOf(3, 3, 3, 3), BuiltinLayouts.phone9.rows.map { it.keys.size })
-        assertEquals(listOf(11, 10, 10, 10, 6), BuiltinLayouts.zhuyin41.rows.map { it.keys.size })
+        assertEquals(listOf(11, 10, 10, 11, 5), BuiltinLayouts.zhuyin41.rows.map { it.keys.size })
         assertEquals(listOf(10, 9, 7, 5), BuiltinLayouts.cangjie26.rows.map { it.keys.size })
         assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.zhuyin41))
         assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.cangjie26))
@@ -149,7 +148,7 @@ class RomajiLayoutTest {
         // place the space-side marks and the automatic key names come from.
         assertNull(LayoutBottomRow.authored(layout))
         assertNull(LayoutBottomRow.authored(BuiltinLayouts.qwerty26))
-        assertNotNull(LayoutBottomRow.authored(BuiltinLayouts.zhuyin41))
+        assertNull(LayoutBottomRow.authored(BuiltinLayouts.zhuyin41))
     }
 
     @Test

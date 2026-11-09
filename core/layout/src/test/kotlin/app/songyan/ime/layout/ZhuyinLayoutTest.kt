@@ -27,7 +27,12 @@ class ZhuyinLayoutTest {
 
     private fun key(schemaID: String) = KeyboardCompositionKey(schemaID, LayoutInput.Builtin.QWERTY26)
 
-    private fun encodingKeys() = layout.rows.take(4).flatMap { it.keys }
+    /** The 41 caps of the four letter rows; the fourth row's closing Delete is not one of them. */
+    private fun encodingKeys() =
+        layout.rows.take(4).flatMap { it.keys }.filter {
+            it.action.type !=
+                LayoutActionKind.BACKSPACE
+        }
 
     @Test
     fun theIdentityTransportIsTheBundled26KeyShape() {
@@ -42,44 +47,25 @@ class ZhuyinLayoutTest {
     fun theFourEncodingRowsHoldFortyOneKeysAsElevenTenTenTen() {
         // Four encoding rows plus the shared control row every authored layout ends with.
         assertEquals(5, layout.rows.size)
-        assertEquals(listOf(11, 10, 10, 10), layout.rows.take(4).map { it.keys.size })
+        assertEquals(listOf(11, 10, 10, 11), layout.rows.take(4).map { it.keys.size })
         assertEquals(41, encodingKeys().size)
         assertEquals(41, encodingKeys().map { it.label }.toSet().size)
-        assertEquals(
-            6,
-            layout.rows
-                .last()
-                .keys.size,
-        )
     }
 
     /**
-     * The footer is authored data, not the old qwerty control row: 123 opens the numeric page, 中/英
-     * switches the input language and the space still goes through the engine. Every title is
-     * automatic so the host paints the localized names of the traditional input language.
+     * The pad had its own footer without the punctuation keys either side of the space bar, so it
+     * looked unlike every other board. The last row is now the 26-key stand-in and the keyboard
+     * draws the shared footer; Delete closes the fourth row, and the board has no Shift.
      */
     @Test
-    fun theFooterOpensTheNumericPageAndKeepsTheEngineSpace() {
-        val footer = layout.rows.last()
-        assertEquals(
-            listOf(
-                LayoutAction(LayoutActionKind.GLOBE),
-                LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC),
-                LayoutAction.languageSwitch(),
-                LayoutAction(LayoutActionKind.SPACE),
-                LayoutAction(LayoutActionKind.BACKSPACE),
-                LayoutAction(LayoutActionKind.ENTER),
-            ),
-            footer.keys.map { it.action },
-        )
-        assertEquals(listOf("🌐", "123", "中/英", "空格", "⌫", "⏎"), footer.keys.map { it.label })
-        assertEquals(4.0, footer.keys[3].widthWeight, 0.0001)
-        for (key in footer.keys) {
-            assertEquals(key.label, LayoutKeyTitleMode.AUTOMATIC, key.titleMode)
-        }
-        // The editor shows this row instead of rebuilding a default one.
+    fun theFooterIsTheBundledStandInAndDeleteClosesTheFourthRow() {
+        assertEquals(BuiltinLayouts.qwerty26.rows.last(), layout.rows.last())
         assertEquals(layout.rows.lastIndex, LayoutBottomRow.index(layout))
-        assertEquals(footer.keys, LayoutBottomRow.authored(layout))
+        assertNull(LayoutBottomRow.authored(layout))
+        val delete = layout.rows[3].keys.last()
+        assertEquals(LayoutActionKind.BACKSPACE, delete.action.type)
+        assertEquals(LayoutKeyTitleMode.AUTOMATIC, delete.titleMode)
+        assertTrue(layout.rows.flatMap { it.keys }.none { it.action.type == LayoutActionKind.SHIFT })
     }
 
     @Test
@@ -116,7 +102,7 @@ class ZhuyinLayoutTest {
         assertEquals("ㄅㄉˇˋㄓˊ˙ㄚㄞㄢㄦ", layout.rows[0].keys.joinToString("") { it.label })
         assertEquals("ㄆㄊㄍㄐㄔㄗㄧㄛㄟㄣ", layout.rows[1].keys.joinToString("") { it.label })
         assertEquals("ㄇㄋㄎㄑㄕㄘㄨㄜㄠㄤ", layout.rows[2].keys.joinToString("") { it.label })
-        assertEquals("ㄈㄌㄏㄒㄖㄙㄩㄝㄡㄥ", layout.rows[3].keys.joinToString("") { it.label })
+        assertEquals("ㄈㄌㄏㄒㄖㄙㄩㄝㄡㄥ⌫", layout.rows[3].keys.joinToString("") { it.label })
         // The tone marks travel on the same keys as on the standard Dachen pad.
         assertEquals(
             listOf("3", "4", "6", "7"),

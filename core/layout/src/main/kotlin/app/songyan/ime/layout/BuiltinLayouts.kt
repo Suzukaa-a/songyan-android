@@ -71,7 +71,9 @@ object BuiltinLayouts {
      * caps send codes too; a literal cap would commit text instead of spelling a syllable.
      *
      * It is a physical layout of one scheme family rather than a shipped key shape, so it keeps the
-     * 26-key identity transport: pairings and the family rules already speak that wire.
+     * 26-key identity transport: pairings and the family rules already speak that wire. The board has
+     * no case, so no Shift; Delete closes the fourth row so it lines up with the first. The last row
+     * is the 26-key stand-in, so the keyboard draws the same footer as every other board.
      */
     val zhuyin41: LayoutDefinition
         get() =
@@ -84,8 +86,11 @@ object BuiltinLayouts {
                         codeRow("ㄅㄉˇˋㄓˊ˙ㄚㄞㄢㄦ", "1234567890-"),
                         codeRow("ㄆㄊㄍㄐㄔㄗㄧㄛㄟㄣ", "qwertyuiop"),
                         codeRow("ㄇㄋㄎㄑㄕㄘㄨㄜㄠㄤ", "asdfghjkl;"),
-                        codeRow("ㄈㄌㄏㄒㄖㄙㄩㄝㄡㄥ", "zxcvbnm,./"),
-                    ) + listOf(zhuyinControlRow()),
+                        LayoutRow(
+                            codeRow("ㄈㄌㄏㄒㄖㄙㄩㄝㄡㄥ", "zxcvbnm,./").keys +
+                                automaticKey("⌫", LayoutAction(LayoutActionKind.BACKSPACE)),
+                        ),
+                    ) + listOf(controls),
             )
 
     /**
@@ -522,26 +527,6 @@ object BuiltinLayouts {
                     LayoutKey("⏎", action = LayoutAction(LayoutActionKind.ENTER)),
                 ),
             )
-
-    /**
-     * The authored footer of a scheme-driven pad. The Android shells draw their own control row from
-     * [KeyboardControlPolicy]; this data keeps the same keys so the layout editor, the iOS extension
-     * and the interop files agree: globe, 123, 中/英, the engine space, Delete and Return.
-     *
-     * Every key is title-automatic: the pad belongs to a traditional input language, so the host
-     * paints its localized names (for example 空白 for the space bar) instead of these authored ones.
-     */
-    private fun zhuyinControlRow(): LayoutRow =
-        LayoutRow(
-            listOf(
-                automaticKey("🌐", LayoutAction(LayoutActionKind.GLOBE)),
-                automaticKey("123", LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC)),
-                automaticKey("中/英", LayoutAction.languageSwitch()),
-                automaticKey("空格", LayoutAction(LayoutActionKind.SPACE), width = 4.0),
-                automaticKey("⌫", LayoutAction(LayoutActionKind.BACKSPACE)),
-                automaticKey("⏎", LayoutAction(LayoutActionKind.ENTER)),
-            ),
-        )
 
     /** A control key whose title the host resolves from the running input language. */
     private fun automaticKey(

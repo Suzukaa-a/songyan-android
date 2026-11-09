@@ -305,40 +305,6 @@
             "value" : "/"
           },
           "label" : "ㄥ"
-        }
-      ]
-    },
-    {
-      "keys" : [
-        {
-          "action" : {
-            "type" : "globe"
-          },
-          "label" : "🌐",
-          "titleMode" : "automatic"
-        },
-        {
-          "action" : {
-            "type" : "pageSwitch",
-            "value" : "numeric"
-          },
-          "label" : "123",
-          "titleMode" : "automatic"
-        },
-        {
-          "action" : {
-            "type" : "languageSwitch"
-          },
-          "label" : "中/英",
-          "titleMode" : "automatic"
-        },
-        {
-          "action" : {
-            "type" : "space"
-          },
-          "label" : "空格",
-          "titleMode" : "automatic",
-          "width" : 4
         },
         {
           "action" : {
@@ -346,13 +312,42 @@
           },
           "label" : "⌫",
           "titleMode" : "automatic"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "modeSwitch",
+            "value" : "nextLayout"
+          },
+          "label" : "布局"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "width" : 4
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫"
         },
         {
           "action" : {
             "type" : "enter"
           },
-          "label" : "⏎",
-          "titleMode" : "automatic"
+          "label" : "⏎"
         }
       ]
     }

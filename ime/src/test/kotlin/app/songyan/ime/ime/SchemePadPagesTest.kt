@@ -19,9 +19,9 @@ import org.junit.Test
 
 /**
  * The scheme pads draw through the ordinary rows page, so the shell must not add the editing keys a
- * pad already declares. The zhuyin pad's fourth encoding row plus its six-key footer would otherwise
- * draw Delete twice and a Shift the pad has no use for, while the cangjie pad keeps the shell's pair
- * because its footer leaves Delete out. Every shipped three-row shape keeps the shell's behavior.
+ * pad already declares. The zhuyin pad closes its fourth encoding row with Delete, so the shell would
+ * otherwise draw Delete twice and a Shift the pad has no use for, while the cangjie pad keeps the
+ * shell's pair. Every shipped three-row shape keeps the shell's behavior.
  */
 class SchemePadPagesTest {
     @Before
@@ -66,43 +66,47 @@ class SchemePadPagesTest {
         kind: LayoutActionKind,
     ) = definition.rows.flatMap { it.keys }.count { it.action.type == kind }
 
+    /**
+     * The zhuyin pad had its own footer without the marks either side of the space bar, unlike every
+     * other board. It now draws the shared footer; Delete closes its fourth row and there is no Shift.
+     */
     @Test
-    fun theZhuyinPageDrawsFourEncodingRowsAndItsSixKeyFooter() {
+    fun theZhuyinPageDrawsFourEncodingRowsAndTheSharedFooter() {
         val definition = page("bopomofo_tw")
         assertEquals(5, definition.rows.size)
-        assertEquals(listOf(11, 10, 10, 10), definition.rows.dropLast(1).map { it.keys.size })
+        assertEquals(listOf(11, 10, 10, 11), definition.rows.dropLast(1).map { it.keys.size })
         assertEquals(
-            listOf("ㄈ", "ㄌ", "ㄏ", "ㄒ", "ㄖ", "ㄙ", "ㄩ", "ㄝ", "ㄡ", "ㄥ"),
+            listOf("ㄈ", "ㄌ", "ㄏ", "ㄒ", "ㄖ", "ㄙ", "ㄩ", "ㄝ", "ㄡ", "ㄥ", "⌫"),
             definition.rows[3].keys.map { it.label },
         )
         assertEquals(
-            listOf("🌐", "123", "中/英", "空格", "⌫", "⏎"),
+            listOf("🌐", "123", "中/英", "，", "空格", "。", "⏎"),
             definition.rows
                 .last()
                 .keys
                 .map { it.label },
         )
-        // The pad has no case and declares its own Delete in the footer, so the shell adds neither.
         assertEquals(0, editingCount(definition, LayoutActionKind.SHIFT))
         assertEquals(1, editingCount(definition, LayoutActionKind.BACKSPACE))
     }
 
     @Test
-    fun theZhuyinFooterKeepsItsDeleteWhenTheGlobeKeyIsOff() {
-        val definition = page("bopomofo_tw", showsGlobe = false)
-        assertEquals(
-            listOf("123", "中/英", "空格", "⌫", "⏎"),
-            definition.rows
-                .last()
-                .keys
-                .map { it.label },
-        )
-        assertEquals(1, editingCount(definition, LayoutActionKind.BACKSPACE))
+    fun theZhuyinFooterMatchesTheCangjieFooter() {
+        for (globe in listOf(true, false)) {
+            assertEquals(
+                page("cangjie5", showsGlobe = globe).rows.last().keys,
+                page("bopomofo_tw", showsGlobe = globe).rows.last().keys,
+            )
+        }
     }
 
     @Test
     fun theZhuyinCapsStillSendTheSpellerCodesNotLiterals() {
-        val encoding = page("bopomofo_tw").rows.dropLast(1).flatMap { it.keys }
+        val encoding =
+            page("bopomofo_tw").rows.dropLast(1).flatMap { it.keys }.filter {
+                it.action.type !=
+                    LayoutActionKind.BACKSPACE
+            }
         assertEquals(41, encoding.size)
         for (key in encoding) {
             assertEquals(key.label + " sends a code", LayoutActionKind.CODE, key.action.type)
@@ -183,9 +187,9 @@ class SchemePadPagesTest {
         assertEquals(1, editingCount(definition, LayoutActionKind.BACKSPACE))
     }
 
-    /** The rule reads the pad's shape and footer, not its id: a user's copy of the zhuyin pad behaves alike. */
+    /** The rule reads the pad's rows, not its id: a user's copy of the zhuyin pad behaves alike. */
     @Test
-    fun aUserCopyOfTheZhuyinPadUsesItsDeclaredFooterToo() {
+    fun aUserCopyOfTheZhuyinPadKeepsItsOwnDelete() {
         val copy = BuiltinLayouts.zhuyin41.copyWithId("my-zhuyin", "我的注音")
         KeyboardLayoutCatalog.install(LayoutRegistry.create().install(copy.encoded()))
         KeyboardPages.trim()
@@ -195,7 +199,7 @@ class SchemePadPagesTest {
                 config(KeyboardComposition(mainLayoutID = "my-zhuyin"), showsGlobe = false),
             )
         assertEquals(5, definition.rows.size)
-        assertEquals(listOf(11, 10, 10, 10), definition.rows.dropLast(1).map { it.keys.size })
+        assertEquals(listOf(11, 10, 10, 11), definition.rows.dropLast(1).map { it.keys.size })
         assertEquals(0, editingCount(definition, LayoutActionKind.SHIFT))
         assertEquals(1, editingCount(definition, LayoutActionKind.BACKSPACE))
     }

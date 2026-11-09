@@ -4,7 +4,4 @@
     <style name="Theme.Songyan" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
-
-    <!-- The relay that starts another app for text: it shows nothing of its own. -->
-    <style name="Theme.Songyan.Translucent" parent="android:Theme.Translucent.NoTitleBar" />
 </resources>

@@ -12,16 +12,15 @@ class ToolbarActionsTest {
         hidden: Boolean = false,
         switcher: Boolean = false,
         oneHand: Boolean = true,
-        tools: Boolean = true,
-    ) = ToolbarActions.assemble(layout, hidden, switcher, oneHand, tools)
+    ) = ToolbarActions.assemble(layout, hidden, switcher, oneHand)
 
     @Test
-    fun theDefaultIsTodaysToolbarWithToolsAfterEdit() {
+    fun theDefaultIsTodaysToolbar() {
         assertEquals(
-            listOf(a.CLIPBOARD, a.INPUT_METHODS, a.EMOJI, a.EDIT, a.TOOLS, a.ONE_HAND, a.SETTINGS, a.HIDE),
+            listOf(a.CLIPBOARD, a.INPUT_METHODS, a.EMOJI, a.EDIT, a.ONE_HAND, a.SETTINGS, a.HIDE),
             assemble(),
         )
-        assertEquals(ToolbarView.DEFAULT_ACTIONS, assemble(tools = false))
+        assertEquals(ToolbarView.DEFAULT_ACTIONS, assemble())
     }
 
     @Test
@@ -31,7 +30,7 @@ class ToolbarActionsTest {
                 .withShown(ToolbarItem.CLIPBOARD, false)
                 .moveEarlier(ToolbarItem.SETTINGS)
         assertEquals(
-            listOf(a.INPUT_METHODS, a.EMOJI, a.EDIT, a.TOOLS, a.SETTINGS, a.ONE_HAND, a.HIDE),
+            listOf(a.INPUT_METHODS, a.EMOJI, a.EDIT, a.SETTINGS, a.ONE_HAND, a.HIDE),
             assemble(layout),
         )
         assertEquals(listOf(a.HIDE), assemble(layout.copy(entries = layout.entries.map { it.copy(shown = false) })))
@@ -41,7 +40,7 @@ class ToolbarActionsTest {
     fun unavailableItemsAreLeftOutAndNeverForced() {
         assertEquals(
             listOf(a.CLIPBOARD, a.INPUT_METHODS, a.EMOJI, a.EDIT, a.SETTINGS, a.HIDE),
-            assemble(oneHand = false, tools = false),
+            assemble(oneHand = false),
         )
     }
 
@@ -60,7 +59,6 @@ class ToolbarActionsTest {
     @Test
     fun onlyTheUsersChoicesMayBeDroppedForWidth() {
         assertEquals(true, a.CLIPBOARD.chosen)
-        assertEquals(true, a.TOOLS.chosen)
         assertEquals(false, a.HIDE.chosen)
         assertEquals(false, a.SWITCH_INPUT_METHOD.chosen)
         assertEquals(false, a.VOICE_INPUT.chosen)

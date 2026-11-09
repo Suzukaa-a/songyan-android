@@ -21,9 +21,6 @@ enum class QuickSetting {
     KANA12_FLICK_ONLY,
     PHRASES,
 
-    /** Leaves the panel for the settings page where keyboard tools are managed. */
-    MANAGE_TOOLS,
-
     /** A schema switch of the input method in use (traditional output, emoji, ...); one tile per switch. */
     ENGINE_OPTION,
 }
@@ -215,7 +212,6 @@ object QuickSettingsModel {
                     null
                 },
                 QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
-                QuickTile(QuickSetting.MANAGE_TOOLS, QuickTile.Kind.ACTION),
             ) +
             state.engineOptions
                 .distinctBy { it.choiceGroup.firstOrNull() ?: it.name }

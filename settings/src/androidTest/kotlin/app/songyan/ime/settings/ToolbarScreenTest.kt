@@ -73,11 +73,11 @@ class ToolbarScreenTest {
     @Test fun moveUpAndMoveDownReorderTheItems() {
         show()
         compose.onNodeWithTag(toolbarMenuTag(ToolbarItem.EDIT)).performScrollTo().performClick()
-        compose.onNodeWithText(str(R.string.tools_move_up)).performClick()
+        compose.onNodeWithText(str(R.string.toolbar_move_up)).performClick()
         compose.waitForIdle()
         assertEquals(ToolbarItem.EDIT, stored().entries[2].item)
         compose.onNodeWithTag(toolbarMenuTag(ToolbarItem.EDIT)).performScrollTo().performClick()
-        compose.onNodeWithText(str(R.string.tools_move_down)).performClick()
+        compose.onNodeWithText(str(R.string.toolbar_move_down)).performClick()
         compose.waitForIdle()
         assertEquals(ToolbarLayout.DEFAULT, stored())
     }
@@ -85,14 +85,14 @@ class ToolbarScreenTest {
     @Test fun theFirstItemCannotMoveUp() {
         show()
         compose.onNodeWithTag(toolbarMenuTag(ToolbarItem.CLIPBOARD)).performScrollTo().performClick()
-        compose.onNodeWithText(str(R.string.tools_move_up)).assertIsNotEnabled()
+        compose.onNodeWithText(str(R.string.toolbar_move_up)).assertIsNotEnabled()
     }
 
     @Test fun restoreDefaultsPutsTheOrderAndSwitchesBack() {
         show()
         compose.onNodeWithTag(toolbarSwitchTag(ToolbarItem.CLIPBOARD)).performScrollTo().performClick()
         compose.onNodeWithTag(toolbarMenuTag(ToolbarItem.SETTINGS)).performScrollTo().performClick()
-        compose.onNodeWithText(str(R.string.tools_move_up)).performClick()
+        compose.onNodeWithText(str(R.string.toolbar_move_up)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(TOOLBAR_RESET_TAG).performScrollTo().performClick()
         compose.waitForIdle()

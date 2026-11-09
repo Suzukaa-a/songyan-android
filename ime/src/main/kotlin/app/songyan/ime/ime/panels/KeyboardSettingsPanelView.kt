@@ -49,7 +49,6 @@ class KeyboardSettingsPanelView(
     var onChooseLayout: () -> Unit = {}
     var onOpenQuickContent: () -> Unit = {}
     var onOpenSettings: () -> Unit = {}
-    var onManageTools: () -> Unit = {}
 
     /** What one cell draws and does; the same shape serves a tile of the grid and an option of a page. */
     private class Cell(
@@ -176,11 +175,7 @@ class KeyboardSettingsPanelView(
                         rebuild()
                     }
                     QuickTile.Kind.ACTION ->
-                        when (tile.setting) {
-                            QuickSetting.LAYOUT -> onChooseLayout()
-                            QuickSetting.PHRASES -> onOpenQuickContent()
-                            else -> onManageTools()
-                        }
+                        if (tile.setting == QuickSetting.LAYOUT) onChooseLayout() else onOpenQuickContent()
                 }
             },
         )
@@ -246,8 +241,6 @@ class KeyboardSettingsPanelView(
             QuickSetting.KEY_HAPTICS, QuickSetting.KEY_PREVIEW, QuickSetting.KANA12_FLICK_ONLY ->
                 context.getString(if (tile.on) R.string.ime_qs_on else R.string.ime_qs_off)
             QuickSetting.PHRASES -> context.getString(R.string.ime_qs_phrases_more)
-            // An action tile names what it opens, so it has no value of its own.
-            QuickSetting.MANAGE_TOOLS -> null
         }
 
     @StringRes
@@ -262,7 +255,6 @@ class KeyboardSettingsPanelView(
             QuickSetting.KEY_PREVIEW -> R.string.ime_qs_key_preview
             QuickSetting.KANA12_FLICK_ONLY -> R.string.ime_qs_kana12_flick_only
             QuickSetting.PHRASES -> R.string.ime_qs_phrases
-            QuickSetting.MANAGE_TOOLS -> R.string.ime_tools_manage
             // A switch tile is worded by its own kind; see labelOfTile.
             QuickSetting.ENGINE_OPTION -> R.string.ime_panel_settings_title
         }
@@ -341,7 +333,6 @@ class KeyboardSettingsPanelView(
             QuickSetting.KEY_PREVIEW -> R.drawable.ic_qs_preview
             QuickSetting.KANA12_FLICK_ONLY -> R.drawable.ic_edit_left
             QuickSetting.PHRASES -> R.drawable.ic_toolbar_phrases
-            QuickSetting.MANAGE_TOOLS -> R.drawable.ic_toolbar_tools
             QuickSetting.ENGINE_OPTION -> R.drawable.ic_qs_engine_option
         }
 

@@ -118,19 +118,6 @@ class SettingsNavHostTest {
     }
 
     @Test
-    fun theKeyboardToolsRowOpensTheToolsPage() {
-        runBlocking { preferences.setOnboardingShown() }
-        show(ImeStatus(enabled = true, selected = true))
-        tap(str(R.string.row_tools_title))
-        compose.waitUntil(5_000) {
-            compose
-                .onAllNodes(hasText(str(R.string.tools_section_list)))
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
-    }
-
-    @Test
     fun aRequestFromTheKeyboardLandsOnItsPageNotOnTheGuide() {
         show(ImeStatus(enabled = false, selected = false), target = SettingsTarget.QUICK_CONTENT)
         compose.waitUntil(5_000) {

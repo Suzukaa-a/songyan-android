@@ -26,19 +26,13 @@ schemes and data formats, with a keyboard and settings app designed for Android.
   and split layouts. Appearance and layout files are interchangeable with the iOS app.
 - Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar
   models and per-component Lua toggles.
-- Keyboard tools that work on one piece of text: the selection, the whole input field or
-  the clipboard. Three examples ship (script conversion, full/half width, letter case), and you can
-  import, copy, edit and export your own. On Android you can also hand the text to another app that
-  handles text; its answer is shown first and only you apply it.
 - Symbols, phrases, clipboard history, emoji panel, and learned-data backup and merge (the backup
   format is shared with iOS).
 - Interface in English, Simplified Chinese, Traditional Chinese and Japanese.
 - Follows Android conventions: `EditorInfo` and IME actions, system input method switching,
   edge-to-edge insets, TalkBack, Material 3 settings.
 - Privacy: the input method process makes no network requests. Settings goes online only when you
-  ask it to (importing from a link, downloading a dictionary or model). Keyboard tools run on the
-  device on the text you pick. Sending text to another app shares that text with the selected app;
-  that app handles it under its own privacy policy. Password fields and fields that ask for no personalized learning are never learned
+  ask it to (importing from a link, downloading a dictionary or model). Password fields and fields that ask for no personalized learning are never learned
   from, and the clipboard is not recorded in them.
 
 ## Requirements
@@ -82,13 +76,13 @@ repository and are not edited here.
 
 | Directory | Content |
 | --- | --- |
-| `app/` | Input method service, settings entry, deployment service, engine runtime, relay for text handed to another app |
+| `app/` | Input method service, settings entry, deployment service, engine runtime |
 | `core/rime/` | Native engine build, JNI, Kotlin engine API, deployment |
 | `core/keyboard/` | Input session state machine, input language and layout-family rules, kana model, engine contract (JVM) |
 | `core/layout/` | Layout JSON models, built-in layouts, swipe and geometry (JVM) |
 | `core/candidate/` | Candidate bar models and panel geometry (JVM) |
 | `core/appearance/` | Keyboard appearance/skin models (JVM) |
-| `core/content/` | Symbols, phrases, clipboard history, keyboard tools (JVM) |
+| `core/content/` | Symbols, phrases, clipboard history (JVM) |
 | `core/packages/` | Scheme-package import, recipe and compact-schema adapters, fuzzy pinyin, typo correction, prediction, dictionary import (JVM) |
 | `ime/` | Self-drawn keyboard, candidate bar, editor bridge |
 | `settings/` | Compose Material 3 settings app |
@@ -114,9 +108,6 @@ Songyan collects no personal data and sends nothing to its developers or to anyo
   to: downloading an input scheme, dictionary or model, or importing from a link you enter. Those
   requests go to the site that hosts the file (for example GitHub), which sees your IP address as
   with any download; nothing about you or your typing is sent.
-- Keyboard tools work only on the text you choose: the selection, the whole input field or
-  the clipboard. They run on your device and send nothing. When you hand text to another app, that
-  app processes it and its own policy applies.
 - Password fields and fields that ask for no personalized learning are never learned from, and
   the clipboard is not recorded in them.
 - Android backup, when you have it on, includes the learned words, phrases, settings, layouts,

@@ -127,8 +127,6 @@ internal fun KeyboardController.wireViews() {
             FeedbackKind.TICK -> feedback.tick(keyboard)
         }
     }
-    // A pinned tool is the tools panel's one-tap entry: it opens the panel with that tool already run.
-    toolbar.onTool = { id -> openToolsPanel(id) }
     toolbar.onAction = { action ->
         when (action) {
             ToolbarView.Action.CLIPBOARD -> openClipboardPanel()
@@ -136,7 +134,6 @@ internal fun KeyboardController.wireViews() {
             ToolbarView.Action.ONE_HAND -> toggleOneHand()
             ToolbarView.Action.EMOJI -> openEmojiPanel()
             ToolbarView.Action.EDIT -> openEditPanel()
-            ToolbarView.Action.TOOLS -> openToolsPanel()
             ToolbarView.Action.SETTINGS -> openKeyboardSettingsPanel()
             ToolbarView.Action.HIDE -> callbacks.hideKeyboard()
             ToolbarView.Action.SWITCH_INPUT_METHOD -> callbacks.inputMethods.switchToOther()

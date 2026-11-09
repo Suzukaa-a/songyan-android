@@ -4,8 +4,7 @@
      it (they can be imported again). Also not in it: published Rime generations, deploy work, caches and request state (rebuildable),
      the clipboard history (private to this device), the large engine feature models (over the 25 MB cloud
      limit) and the automatic learning snapshots (the live userdb is already in). The built-in source is
-     unpacked from the app again. Keyboard tools and their metadata are small, user-authored and cannot be
-     downloaded again, so they travel in every backup. BackupRulesTest checks the paths against AppStorage. -->
+     unpacked from the app again. BackupRulesTest checks the paths against AppStorage. -->
 <full-backup-content>
     <include domain="file" path="rime/user" />
     <include domain="file" path="rime/features/settings.json" />
@@ -14,12 +13,10 @@
     <include domain="file" path="rime/config/applied" />
     <include domain="file" path="rime/config/overrides.json" />
     <include domain="file" path="content" />
-    <include domain="file" path="tools" />
     <include domain="file" path="layouts" />
     <include domain="file" path="appearance" />
     <include domain="file" path="datastore" />
     <include domain="sharedpref" path="quick_insert.xml" />
     <exclude domain="file" path="content/clipboard.json" />
     <exclude domain="file" path="content/.lock" />
-    <exclude domain="file" path="tools/.lock" />
 </full-backup-content>

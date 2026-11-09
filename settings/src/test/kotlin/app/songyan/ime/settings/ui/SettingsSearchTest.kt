@@ -70,7 +70,6 @@ class SettingsSearchTest {
                 SettingsRoutes.ONBOARDING,
                 SettingsRoutes.ABOUT,
                 SettingsRoutes.LICENSES,
-                SettingsRoutes.TOOLS,
             )
         assertTrue(SettingsSearch.entries.all { it.route in routes })
     }

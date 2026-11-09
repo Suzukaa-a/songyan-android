@@ -7,11 +7,12 @@
     <string name="toolbar_over_width">Over the width, not shown</string>
     <string name="toolbar_reset">Restore defaults</string>
     <string name="toolbar_more">More actions for %1$s</string>
+    <string name="toolbar_move_up">Move up</string>
+    <string name="toolbar_move_down">Move down</string>
     <string name="toolbar_item_clipboard">Clipboard</string>
     <string name="toolbar_item_input_methods">Keyboard menu</string>
     <string name="toolbar_item_emoji">Emoji</string>
     <string name="toolbar_item_edit">Edit</string>
-    <string name="toolbar_item_tools">Keyboard tools</string>
     <string name="toolbar_item_one_hand">One-handed mode</string>
     <string name="toolbar_item_settings">Keyboard settings</string>
 </resources>

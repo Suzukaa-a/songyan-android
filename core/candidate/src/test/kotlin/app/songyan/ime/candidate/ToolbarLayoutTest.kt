@@ -7,14 +7,13 @@ class ToolbarLayoutTest {
     private fun order(layout: ToolbarLayout) = layout.entries.map { it.item }
 
     @Test
-    fun theDefaultIsTodaysOrderWithToolsRightAfterEdit() {
+    fun theDefaultIsTodaysOrder() {
         assertEquals(
             listOf(
                 ToolbarItem.CLIPBOARD,
                 ToolbarItem.INPUT_METHODS,
                 ToolbarItem.EMOJI,
                 ToolbarItem.EDIT,
-                ToolbarItem.TOOLS,
                 ToolbarItem.ONE_HAND,
                 ToolbarItem.SETTINGS,
             ),
@@ -57,7 +56,14 @@ class ToolbarLayoutTest {
         assertEquals(listOf(ToolbarItem.SETTINGS, ToolbarItem.EDIT, ToolbarItem.CLIPBOARD), order(parsed).take(3))
         assertFalse(ToolbarItem.EDIT in parsed.shown)
         // Items the value never mentioned come back on, so an old value cannot hide a new button.
-        assertTrue(ToolbarItem.TOOLS in parsed.shown)
+        assertTrue(ToolbarItem.ONE_HAND in parsed.shown)
+    }
+
+    @Test
+    fun aStoredToolsEntryFromAnEarlierBuildIsDropped() {
+        val parsed = ToolbarLayout.parse("edit,tools,-tools,emoji")
+        assertEquals(ToolbarItem.entries.size, parsed.entries.size)
+        assertEquals(listOf(ToolbarItem.EDIT, ToolbarItem.EMOJI), order(parsed).take(2))
     }
 
     @Test

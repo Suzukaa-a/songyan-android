@@ -1,6 +1,5 @@
 package app.songyan.ime.storage
 
-import app.songyan.ime.content.ToolStore
 import java.io.File
 
 /**
@@ -102,9 +101,6 @@ class AppStorage(
     val layoutsDir: File = File(filesDir, "layouts")
     val appearanceDir: File = File(filesDir, "appearance")
     val contentDir: File = File(filesDir, "content")
-
-    /** The user's keyboard tools, shared by the keyboard and the settings app. */
-    val toolsDir: File = File(filesDir, ToolStore.DIRECTORY_NAME)
 
     fun sourceDir(sourceId: String): File = File(sourcesDir, sourceId)
 

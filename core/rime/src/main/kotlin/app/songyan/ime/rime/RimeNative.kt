@@ -273,21 +273,6 @@ internal object RimeNative {
 
     external fun nativeDeploySchema(file: String): Boolean
 
-    // ---- OpenCC text conversion (keyboard tools) --------------------------
-
-    /**
-     * Converts counted UTF-8 text; [result] holds output and diagnostic, and the return value is native status.
-     *
-     * The conversion happens on the standalone bridge, which includes no librime state, so it is
-     * safe on any background thread while the engine keeps its single-thread scheduler. The path
-     * must be absolute: OpenCC finds the dictionaries it names beside the config file.
-     */
-    external fun nativeOpenccConvert(
-        configPath: String,
-        text: String,
-        result: Array<String?>,
-    ): Int
-
     /**
      * Decodes the flat array produced by rime_jni.cc `nativeSchemaValues`.
      *

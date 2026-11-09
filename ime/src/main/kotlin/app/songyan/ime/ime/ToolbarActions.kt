@@ -16,13 +16,11 @@ internal object ToolbarActions {
         hidden: Boolean,
         switcher: Boolean,
         oneHandAvailable: Boolean,
-        toolsAvailable: Boolean,
     ): List<ToolbarView.Action> {
         if (hidden) return emptyList()
         val chosen =
             layout.shown
                 .filter { it != ToolbarItem.ONE_HAND || oneHandAvailable }
-                .filter { it != ToolbarItem.TOOLS || toolsAvailable }
                 .map { ToolbarView.Action.valueOf(it.name) }
         return chosen +
             listOfNotNull(ToolbarView.Action.SWITCH_INPUT_METHOD.takeIf { switcher }, ToolbarView.Action.HIDE)

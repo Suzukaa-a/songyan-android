@@ -10,7 +10,6 @@ enum class ToolbarItem(
     INPUT_METHODS("input_methods"),
     EMOJI("emoji"),
     EDIT("edit"),
-    TOOLS("tools"),
     ONE_HAND("one_hand"),
     SETTINGS("settings"),
 }
@@ -69,7 +68,7 @@ data class ToolbarLayout(
     fun toWire(): String = entries.joinToString(",") { (if (it.shown) "" else "-") + it.item.wire }
 
     companion object {
-        /** Today's idle toolbar: tools right after editing, nothing turned off. */
+        /** Today's idle toolbar, nothing turned off. */
         val DEFAULT: ToolbarLayout =
             ToolbarLayout(
                 listOf(
@@ -77,7 +76,6 @@ data class ToolbarLayout(
                     ToolbarItem.INPUT_METHODS,
                     ToolbarItem.EMOJI,
                     ToolbarItem.EDIT,
-                    ToolbarItem.TOOLS,
                     ToolbarItem.ONE_HAND,
                     ToolbarItem.SETTINGS,
                 ).map { Entry(it, shown = true) },
@@ -111,11 +109,6 @@ data class ToolbarLayout(
 object ToolbarCapacity {
     /** The smallest slot an icon entry keeps: a comfortable touch target, so a full toolbar drops entries instead of cramming them. */
     const val MIN_ICON_SLOT_DP: Float = 44f
-
-    /** A pinned tool's slot is its name's own width kept between these bounds. */
-    const val MIN_TOOL_DP: Float = 44f
-    const val MAX_TOOL_DP: Float = 96f
-    const val TOOL_PADDING_DP: Float = 8f
 
     /** The collapse button is always drawn and always last. */
     private const val RESERVED_SLOTS = 1

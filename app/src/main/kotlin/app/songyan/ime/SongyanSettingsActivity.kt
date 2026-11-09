@@ -13,21 +13,12 @@ import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.settings.SongyanSettingsScreen
 import app.songyan.ime.settings.state.ImeId
 import app.songyan.ime.settings.state.IncomingPackageHolder
-import app.songyan.ime.settings.state.IncomingToolHolder
 import app.songyan.ime.settings.state.SettingsAppStateHolder
-import app.songyan.ime.settings.ui.SettingsRoutes
-import app.songyan.ime.ui.ToolImportIntents
 
 /** Hosts the Compose settings UI; the IME service class is the input method this app ships. */
 class SongyanSettingsActivity : ComponentActivity() {
     /** The page the keyboard asked for, until the UI has navigated to it. */
     private var pendingTarget by mutableStateOf<SettingsTarget?>(null)
-
-    /**
-     * The page an intent named by route, for a page this build's [SettingsTarget] does not name
-     * yet; a shared or opened tool file also lands here.
-     */
-    private var pendingStartRoute by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -36,7 +27,6 @@ class SongyanSettingsActivity : ComponentActivity() {
         // start may act on its target, or every rotation would jump back to that page.
         if (savedInstanceState == null) {
             pendingTarget = targetOf(intent)
-            pendingStartRoute = startRouteOf(intent)
             IncomingPackageIntents.packageUri(intent)?.let(IncomingPackageHolder::offer)
         }
         // Opening settings is the user-visible moment where the first deployment may start.
@@ -52,8 +42,6 @@ class SongyanSettingsActivity : ComponentActivity() {
                 versionName = BuildConfig.VERSION_NAME,
                 target = pendingTarget,
                 onTargetHandled = { pendingTarget = null },
-                startRoute = pendingStartRoute,
-                onStartRouteHandled = { pendingStartRoute = null },
             )
         }
     }
@@ -62,7 +50,6 @@ class SongyanSettingsActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         pendingTarget = targetOf(intent)
-        pendingStartRoute = startRouteOf(intent)
         IncomingPackageIntents.packageUri(intent)?.let(IncomingPackageHolder::offer)
     }
 
@@ -75,16 +62,4 @@ class SongyanSettingsActivity : ComponentActivity() {
     /** The target an intent names, or null for a plain launch (launcher icon, notification). */
     private fun targetOf(intent: Intent?): SettingsTarget? =
         intent?.getStringExtra(SettingsTarget.EXTRA)?.let { SettingsTarget.fromId(it) }
-
-    /**
-     * The page an intent asks for beyond [SettingsTarget]. A tool file another app opened or
-     * shared always opens the keys-tools page, which asks before importing it; the extra route
-     * covers a host that wants that page before the target enum names it.
-     */
-    private fun startRouteOf(intent: Intent?): String? {
-        val tool = ToolImportIntents.toolUri(intent)
-        if (tool != null) IncomingToolHolder.offer(tool)
-        val requested = SettingsRoutes.routeExtraOrNull(intent?.getStringExtra(SettingsRoutes.EXTRA_ROUTE))
-        return requested ?: if (tool != null) SettingsRoutes.TOOLS else null
-    }
 }

@@ -174,5 +174,4 @@
     <string name="package_learning_gone">この学習した語はもうありません。</string>
 
     <!-- 処理結果をもとの場所に書き戻せず、クリップボードに入れたとき -->
-    <string name="process_text_copied">結果をコピーしました。必要な場所に貼り付けてください。</string>
 </resources>

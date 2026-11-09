@@ -23,12 +23,10 @@ import app.songyan.ime.settings.state.EngineFeaturesHolder
 import app.songyan.ime.settings.state.EngineOptionsHolder
 import app.songyan.ime.settings.state.LearningBackupHolder
 import app.songyan.ime.settings.state.LinkDownloadHolder
-import app.songyan.ime.settings.state.ProcessTextToolHolder
 import app.songyan.ime.settings.state.RimeConfigHolder
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SettingsAppStateHolder
 import app.songyan.ime.settings.state.SettingsPreferencesHolder
-import app.songyan.ime.settings.state.SpeechToolHolder
 import app.songyan.ime.settings.state.StoredSourcesHolder
 import app.songyan.ime.state.AppSettingsPreferences
 import app.songyan.ime.state.AppSettingsStateSource
@@ -38,8 +36,6 @@ import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceKind
-import app.songyan.ime.tools.ProcessTextToolApps
-import app.songyan.ime.tools.ToolAppKind
 import app.songyan.ime.userconfig.RimeConfigGatewayImpl
 import java.io.File
 
@@ -132,13 +128,6 @@ class SongyanApplication : Application() {
             layoutRepository
             SettingsAppStateHolder.install(AppSettingsStateSource(this, storage))
             SettingsPreferencesHolder.install(AppSettingsPreferences(this))
-            // The apps that handle text, for the keyboard tools page; the keyboard reads the same list.
-            ProcessTextToolHolder.install(
-                ProcessTextToolApps(this, storage.toolsDir),
-            )
-            SpeechToolHolder.install(
-                ProcessTextToolApps(this, storage.toolsDir, ToolAppKind.SPEECH),
-            )
             // Imports and source switches are settings actions only; the work itself (including any
             // download) runs in the :deploy process.
             DictionaryImportHolder.install(DictionaryImportGatewayImpl(this, storage))

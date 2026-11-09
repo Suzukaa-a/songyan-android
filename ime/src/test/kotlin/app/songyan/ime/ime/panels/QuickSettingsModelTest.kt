@@ -100,7 +100,6 @@ class QuickSettingsModelTest {
                 QuickSetting.KEY_HAPTICS,
                 QuickSetting.KEY_PREVIEW,
                 QuickSetting.PHRASES,
-                QuickSetting.MANAGE_TOOLS,
             ),
             QuickSettingsModel.tiles(QuickSettingsState()).map { it.setting },
         )
@@ -229,7 +228,7 @@ class QuickSettingsModelTest {
                     ),
             )
         val tiles = QuickSettingsModel.tiles(state)
-        assertEquals(QuickSetting.MANAGE_TOOLS, tiles[tiles.size - 3].setting)
+        assertEquals(QuickSetting.PHRASES, tiles[tiles.size - 3].setting)
         val (first, second) = tiles.takeLast(2)
         assertTrue(first.kind == QuickTile.Kind.TOGGLE && first.on)
         assertFalse(second.on)
@@ -253,6 +252,6 @@ class QuickSettingsModelTest {
 
     @Test
     fun anInputMethodWithoutSwitchesAddsNoTiles() {
-        assertEquals(9, QuickSettingsModel.tiles(QuickSettingsState()).size)
+        assertEquals(8, QuickSettingsModel.tiles(QuickSettingsState()).size)
     }
 }

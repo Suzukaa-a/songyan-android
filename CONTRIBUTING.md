@@ -53,7 +53,6 @@ If you cannot run a check, say so in the pull request and list what remains unve
 - When a capability cannot be proven, fail closed and fall back to native Rime behavior.
 - Follow Android conventions (official documentation, Material 3, platform behavior) over copying iOS UI.
 - Every bug fix comes with a regression test that reproduces the problem. Behavior in editors is tested with `:ime` instrumented tests against the real engine, not a stub.
-- Keyboard tool files (`*.songyantool.json`) are a format shared with the iOS app: the same file must load in both, so a change to the format lands in both repositories together.
 - The recommended catalogue's archives are pinned to upstream commits with SHA-256 digests that match the iOS catalogue; change an entry in both repositories together.
 - Documents state current facts only (no progress logs or dated notes), and paths and commands in them must exist. When you add or move a module or key file, update [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Do not commit build output, logs, backups or scratch files.
 

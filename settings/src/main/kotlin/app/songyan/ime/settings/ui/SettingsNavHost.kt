@@ -68,7 +68,6 @@ import app.songyan.ime.settings.platform.shareText
 import app.songyan.ime.settings.platform.showInputMethodPicker
 import app.songyan.ime.settings.state.DiagnosticsHolder
 import app.songyan.ime.settings.state.EngineRecoveryNotice
-import app.songyan.ime.settings.state.IncomingToolHolder
 import app.songyan.ime.settings.state.familiesOfSchemes
 import app.songyan.ime.settings.ui.components.GrammarModelActions
 import app.songyan.ime.settings.ui.components.ImportKind
@@ -83,8 +82,6 @@ import app.songyan.ime.settings.ui.screens.GrammarModelCardInput
 import app.songyan.ime.settings.ui.screens.HomeScreen
 import app.songyan.ime.settings.ui.screens.InputOptionsScreen
 import app.songyan.ime.settings.ui.screens.KeyboardMenuScreen
-import app.songyan.ime.settings.ui.screens.KeyboardToolEditorScreen
-import app.songyan.ime.settings.ui.screens.KeyboardToolsScreen
 import app.songyan.ime.settings.ui.screens.KeyboardsScreen
 import app.songyan.ime.settings.ui.screens.LayoutEditorScreen
 import app.songyan.ime.settings.ui.screens.LayoutsScreen
@@ -163,8 +160,6 @@ object SettingsRoutes {
     const val TRY_OUT = "tryOut"
     const val LEARNING = "learning"
     const val ABOUT = "about"
-    const val TOOLS = "tools"
-    const val TOOL_EDITOR = "tools/edit/{id}"
     const val RIME_FILE = "rimeFile/{key}?grammar={grammar}"
     const val LICENSES = "licenses"
     const val LICENSE_DETAIL = "licenses/{index}"
@@ -184,7 +179,6 @@ object SettingsRoutes {
             T9_SYMBOLS,
             NINE_KEY_EDITOR,
             -> KEYBOARDS
-            TOOLS, TOOL_EDITOR -> TOOLS
             SCHEME_DETAIL -> SCHEMES
             LICENSES, LICENSE_DETAIL -> ABOUT
             else -> route
@@ -207,27 +201,12 @@ object SettingsRoutes {
 
     fun pageEditor(id: String): String = "pages/edit/" + android.net.Uri.encode(id)
 
-    /** The editor for one stored tool; identifiers are URL-encoded for the same reason layouts are. */
-    fun toolEditor(id: String): String = "tools/edit/" + android.net.Uri.encode(id)
-
-    /**
-     * Intent extra a host can send to open one page before [SettingsTarget] names it. Only the
-     * keyboard-tools page is accepted; anything else still opens the home list.
-     */
-    const val EXTRA_ROUTE = "app.songyan.ime.extra.SETTINGS_ROUTE"
-
-    /** The page [route] names when this build serves it, or null for anything else. */
-    fun routeExtraOrNull(route: String?): String? = route?.takeIf { it == TOOLS }
-
     /** The page a keyboard request lands on. */
     fun of(target: SettingsTarget): String =
         when (target) {
             SettingsTarget.HOME -> HOME
             SettingsTarget.QUICK_CONTENT -> quickContent()
             SettingsTarget.ADD_PHRASE -> quickContent(addPhrase = true)
-            // A target this build predates still opens the page its id names when that page exists;
-            // anything unknown keeps the old behavior of landing on the home list.
-            else -> if (target.id == TOOLS) TOOLS else HOME
         }
 }
 
@@ -760,23 +739,6 @@ private fun NavGraphBuilder.settingsGraph(
         )
     }
 
-    composable(SettingsRoutes.TOOLS) {
-        KeyboardToolsScreen(
-            onBack = topBack(navController),
-            onEditTool = { id -> navController.navigate(SettingsRoutes.toolEditor(id)) },
-        )
-    }
-
-    composable(
-        route = SettingsRoutes.TOOL_EDITOR,
-        arguments = listOf(navArgument("id") { type = NavType.StringType }),
-    ) { entry ->
-        KeyboardToolEditorScreen(
-            toolId = entry.arguments?.getString("id").orEmpty(),
-            onBack = { navController.popBackStack() },
-        )
-    }
-
     composable(SettingsRoutes.LICENSES) {
         LicensesScreen(
             onOpen = { index -> navController.navigate(SettingsRoutes.licenseDetail(index)) },
@@ -802,10 +764,7 @@ private fun SettingsEffects(
     state: SettingsUiState,
     navController: NavHostController,
     target: SettingsTarget?,
-    incomingTool: Uri?,
-    startRoute: String?,
     onTargetHandled: () -> Unit,
-    onStartRouteHandled: () -> Unit,
 ) {
     // Read the system keyboard selection again whenever the user comes back from system
     // settings, so the home banner never keeps an outdated "not the default keyboard" state.
@@ -824,30 +783,6 @@ private fun SettingsEffects(
         }
     }
 
-    // A tool file another app opened or shared: land on the page that asks before importing it,
-    // so the sender's file is never read without the user seeing it. A route the host named is
-    // handled by the effect below, which navigates once and then clears itself.
-    LaunchedEffect(incomingTool, startRoute) {
-        if (incomingTool == null || startRoute != null) return@LaunchedEffect
-        if (navController.currentDestination?.route == SettingsRoutes.TOOLS) return@LaunchedEffect
-        val navigate = {
-            navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
-            navController.navigate(SettingsRoutes.TOOLS)
-        }
-        if (editorNavigation != null) editorNavigation.request(navigate) else navigate()
-    }
-
-    // A page a host asked for by route before SettingsTarget had a name for it.
-    LaunchedEffect(startRoute) {
-        if (startRoute != SettingsRoutes.TOOLS) return@LaunchedEffect
-        val navigate = {
-            navController.popBackStack(SettingsRoutes.HOME, inclusive = false)
-            navController.navigate(SettingsRoutes.TOOLS)
-        }
-        if (editorNavigation != null) editorNavigation.request(navigate) else navigate()
-        onStartRouteHandled()
-    }
-
     // A package another app handed over: show it on the page that asks before importing.
     LaunchedEffect(state.incomingPackage) {
         if (state.incomingPackage != null) {
@@ -861,11 +796,10 @@ private fun SettingsEffects(
 
     // First launch: the guide opens by itself once, unless the keyboard is already set up or the
     // user came here from the keyboard for something specific.
-    LaunchedEffect(state.preferencesLoaded, state.onboardingShown, target, incomingTool, startRoute) {
+    LaunchedEffect(state.preferencesLoaded, state.onboardingShown, target) {
         if (state.preferencesLoaded && !state.onboardingShown) {
             viewModel.markOnboardingShown()
-            val requestedElsewhere = target != null || incomingTool != null || startRoute != null
-            if (!requestedElsewhere && !(state.ime.enabled && state.ime.selected)) {
+            if (target == null && !(state.ime.enabled && state.ime.selected)) {
                 navController.navigate(SettingsRoutes.ONBOARDING)
             }
         }
@@ -879,16 +813,12 @@ fun SettingsNavHost(
     versionName: String?,
     target: SettingsTarget? = null,
     onTargetHandled: () -> Unit = {},
-    startRoute: String? = null,
-    onStartRouteHandled: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) = SettingsHost(
     viewModel = viewModel,
     versionName = versionName,
     target = target,
     onTargetHandled = onTargetHandled,
-    startRoute = startRoute,
-    onStartRouteHandled = onStartRouteHandled,
     adaptiveInfo =
         WindowAdaptiveInfo(
             WindowSizeClass.BREAKPOINTS_V1.computeWindowSizeClass(COMPACT_WIDTH_DP, COMPACT_HEIGHT_DP),
@@ -1051,26 +981,13 @@ fun SettingsHost(
     versionName: String?,
     target: SettingsTarget? = null,
     onTargetHandled: () -> Unit = {},
-    /** The page a host asked for by route, for a page [SettingsTarget] does not name yet. */
-    startRoute: String? = null,
-    onStartRouteHandled: () -> Unit = {},
     adaptiveInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo(),
     navController: NavHostController = rememberNavController(),
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
-    val incomingTool by IncomingToolHolder.uri.collectAsStateWithLifecycle()
     val editorNavigation = remember { EditorNavigationController() }
     CompositionLocalProvider(LocalEditorNavigationGuard provides editorNavigation) {
-        SettingsEffects(
-            viewModel = viewModel,
-            state = state.value,
-            navController = navController,
-            target = target,
-            incomingTool = incomingTool,
-            startRoute = startRoute,
-            onTargetHandled = onTargetHandled,
-            onStartRouteHandled = onStartRouteHandled,
-        )
+        SettingsEffects(viewModel, state.value, navController, target, onTargetHandled)
         SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController)
         EditorNavigationConfirmation(editorNavigation)
     }

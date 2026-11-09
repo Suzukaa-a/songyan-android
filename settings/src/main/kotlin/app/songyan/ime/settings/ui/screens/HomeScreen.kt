@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -208,13 +207,6 @@ fun HomeScreen(
                         icon = Icons.Outlined.Widgets,
                         onClick = { onOpen(SettingsRoutes.quickContent()) },
                         selected = selectedRoute == SettingsRoutes.QUICK_CONTENT,
-                    )
-                    SettingsRow(
-                        title = stringResource(R.string.row_tools_title),
-                        subtitle = stringResource(R.string.row_tools_subtitle),
-                        icon = Icons.Outlined.Build,
-                        onClick = { onOpen(SettingsRoutes.TOOLS) },
-                        selected = selectedRoute == SettingsRoutes.TOOLS,
                     )
                     SettingsRow(
                         title = stringResource(R.string.row_learning_title),

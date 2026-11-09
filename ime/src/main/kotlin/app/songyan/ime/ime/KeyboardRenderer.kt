@@ -2,7 +2,6 @@ package app.songyan.ime.ime
 
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import app.songyan.ime.candidate.ToolbarItem
 import app.songyan.ime.keyboard.display.CompositionText
 import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.display.SentenceSpelling
@@ -408,27 +407,13 @@ internal fun KeyboardController.syncToolbar() {
         }
     // One-handed mode only exists on a phone-width portrait window; elsewhere the button would do nothing.
     val oneHandAvailable = shell.isAvailable()
-    // A private field (a password, or an editor that asked for no personalized learning) offers no
-    // tools at all, neither the entry nor a pinned tool: the rule is about the field, not the tool.
-    // A hidden idle toolbar keeps its row but shows nothing, pinned tools included.
-    val showsTools = toolsAvailable && !hideIdleToolbar
     toolbar.actions =
         ToolbarActions.assemble(
             layout = toolbarLayout,
             hidden = hideIdleToolbar,
             switcher = customSwitcherRequested && options.canSwitch,
             oneHandAvailable = oneHandAvailable,
-            toolsAvailable = toolsAvailable,
         )
-    toolbar.tools =
-        if (showsTools && ToolbarItem.TOOLS in toolbarLayout.shown) {
-            keyboardTools
-                .filter { it.pinned }
-                .take(ToolbarView.MAXIMUM_PINNED_TOOLS)
-                .map { ToolbarView.PinnedTool(it.id, it.label) }
-        } else {
-            emptyList()
-        }
     menu.setInputMethodOptions(options)
     menu.setToolbarShortcuts(shown = hideIdleToolbar, oneHandAvailable = oneHandAvailable, oneHand = oneHandMode)
 }

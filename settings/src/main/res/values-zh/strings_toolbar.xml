@@ -7,11 +7,12 @@
     <string name="toolbar_over_width">超出宽度，不显示</string>
     <string name="toolbar_reset">恢复默认</string>
     <string name="toolbar_more">%1$s的更多操作</string>
+    <string name="toolbar_move_up">上移</string>
+    <string name="toolbar_move_down">下移</string>
     <string name="toolbar_item_clipboard">剪贴板</string>
     <string name="toolbar_item_input_methods">键盘菜单</string>
     <string name="toolbar_item_emoji">表情</string>
     <string name="toolbar_item_edit">编辑</string>
-    <string name="toolbar_item_tools">键盘工具</string>
     <string name="toolbar_item_one_hand">单手模式</string>
     <string name="toolbar_item_settings">键盘设置</string>
 </resources>

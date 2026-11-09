@@ -57,7 +57,6 @@ private fun itemName(item: ToolbarItem): Int =
         ToolbarItem.INPUT_METHODS -> R.string.toolbar_item_input_methods
         ToolbarItem.EMOJI -> R.string.toolbar_item_emoji
         ToolbarItem.EDIT -> R.string.toolbar_item_edit
-        ToolbarItem.TOOLS -> R.string.toolbar_item_tools
         ToolbarItem.ONE_HAND -> R.string.toolbar_item_one_hand
         ToolbarItem.SETTINGS -> R.string.toolbar_item_settings
     }
@@ -155,7 +154,7 @@ private fun ToolbarItemRow(
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.tools_move_up)) },
+                            text = { Text(stringResource(R.string.toolbar_move_up)) },
                             enabled = canMoveEarlier,
                             onClick = {
                                 menuOpen = false
@@ -163,7 +162,7 @@ private fun ToolbarItemRow(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.tools_move_down)) },
+                            text = { Text(stringResource(R.string.toolbar_move_down)) },
                             enabled = canMoveLater,
                             onClick = {
                                 menuOpen = false

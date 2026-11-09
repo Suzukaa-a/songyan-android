@@ -173,6 +173,4 @@
     <string name="package_learning_not_in_use">沒能切換到這個輸入方案，用詞記錄沒有併入。</string>
     <string name="package_learning_nothing">方案包裡的用詞記錄與它的詞庫對不上，沒有併入。</string>
     <string name="package_learning_gone">這些用詞記錄已經不在了。</string>
-
-    <string name="process_text_copied">結果已複製，請貼上到需要的位置。</string>
 </resources>

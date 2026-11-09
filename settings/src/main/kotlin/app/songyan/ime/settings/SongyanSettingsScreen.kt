@@ -28,9 +28,6 @@ fun SongyanSettingsScreen(
     versionName: String?,
     target: SettingsTarget? = null,
     onTargetHandled: () -> Unit = {},
-    /** The page a host asked for by route, for a page [SettingsTarget] does not name yet. */
-    startRoute: String? = null,
-    onStartRouteHandled: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as Application
@@ -59,8 +56,6 @@ fun SongyanSettingsScreen(
             versionName = versionName,
             target = target,
             onTargetHandled = onTargetHandled,
-            startRoute = startRoute,
-            onStartRouteHandled = onStartRouteHandled,
         )
         NotificationPrompt(
             engine = state.engine,

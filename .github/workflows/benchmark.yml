@@ -1,10 +1,12 @@
 name: Benchmark
 
-# The latency gate runs nightly and on demand rather than on every push: emulator timings are noisy,
-# and an x86_64 emulator says little about arm64 phones, so it only catches large regressions.
+# The latency gate runs for every release tag and on demand rather than on every push: emulator
+# timings are noisy, and an x86_64 emulator says little about arm64 phones, so it only catches large
+# regressions.
 on:
-  schedule:
-    - cron: "0 18 * * *"
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:

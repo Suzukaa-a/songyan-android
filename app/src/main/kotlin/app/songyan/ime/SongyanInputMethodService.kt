@@ -70,11 +70,10 @@ import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.ui.theme.ThemeMode
-import app.songyan.ime.state.BUILTIN_SCHEME_NAMES
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceCatalog
-import app.songyan.ime.storage.SourceKind
+import app.songyan.ime.storage.SwitchTargets
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -515,19 +514,16 @@ class SongyanInputMethodService : InputMethodService() {
         val catalog = SourceCatalog(storage)
         val active = GenerationPublisher(storage).readActive()?.sourceId
         val damaged = catalog.damaged().toSet()
-        return catalog
-            .list()
-            .filter { it.sourceId != active && it.sourceId !in damaged }
+        return SwitchTargets
+            .of(catalog.list(), active)
+            .filter { it.sourceId !in damaged }
             .flatMap { manifest ->
-                val builtin = manifest.kind == SourceKind.BUILTIN
-                val packageName = if (builtin) getString(R.string.source_builtin_name) else manifest.displayName
                 manifest.schemes.map {
-                    val localized = BUILTIN_SCHEME_NAMES[it.schemaId]?.takeIf { builtin }?.let(::getString)
                     OtherInputMethod(
                         manifest.sourceId,
                         it.schemaId,
-                        localized ?: it.name.ifBlank { it.schemaId },
-                        packageName,
+                        it.name.ifBlank { it.schemaId },
+                        manifest.displayName,
                     )
                 }
             }

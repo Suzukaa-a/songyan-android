@@ -43,6 +43,7 @@ import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
+import app.songyan.ime.storage.SwitchTargets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -164,8 +165,8 @@ class AppSettingsStateSource(
                     .map { sourceInfo(it, if (it.kind == SourceKind.BUILTIN) active else usable, activeSchemaId) } +
                     damaged.map(::damagedInfo),
             otherSources =
-                stored
-                    .filter { it.sourceId != active?.sourceId }
+                SwitchTargets
+                    .of(stored, active?.sourceId)
                     .map { sourceInfo(it, usable, activeSchemaId) }
                     .filter { it.usable },
         )

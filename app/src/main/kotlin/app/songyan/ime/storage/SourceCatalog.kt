@@ -22,6 +22,17 @@ object BuiltinSchemes {
     val IDS: List<String> = listOf(QUANPIN, FLYPY)
 }
 
+/**
+ * The stored sources the keyboard menu and its settings offer to switch to. The built-in source is
+ * a recovery path, not a choice: it stays out unless it is the one running.
+ */
+object SwitchTargets {
+    fun of(
+        stored: List<SourceManifest>,
+        activeSourceId: String?,
+    ): List<SourceManifest> = stored.filter { it.sourceId != activeSourceId && it.kind != SourceKind.BUILTIN }
+}
+
 /** Fresh installs wait for a scheme; existing and restored data retain the bundled recovery path. Read on IO. */
 object InputSchemeSetup {
     const val INSTALLING = ".songyan-installing"

@@ -27,6 +27,7 @@ class ExternalFixtureFilter : Filter() {
             if (arguments.getString("kagiroiFixture") == null) {
                 add(JapaneseRomajiDeviceTest::class.java.name)
                 add(KanaFlickDeviceTest::class.java.name)
+                add(JapaneseBoardMenuDeviceTest::class.java.name)
             }
         }
 

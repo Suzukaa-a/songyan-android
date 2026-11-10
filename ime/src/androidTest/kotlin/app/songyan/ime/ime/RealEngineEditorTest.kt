@@ -1589,12 +1589,8 @@ class RealEngineEditorTest {
     fun aUrlFieldStartsInEnglishAndStillSwitchesToChinese() =
         withHost { host ->
             host.start(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
-            // The slash is the first long-press choice of the full stop beside the space bar.
-            val dot = host.keyCenter(".")
-            val start = SystemClock.uptimeMillis()
-            host.main { host.touch(start, MotionEvent.ACTION_DOWN, dot) }
-            SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
-            host.main { host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, dot, downTime = start) }
+            // The URL footer puts the slash beside the space bar.
+            host.tap("/")
             host.awaitField("/")
             host.tapLanguageKey()
             host.tap("n")

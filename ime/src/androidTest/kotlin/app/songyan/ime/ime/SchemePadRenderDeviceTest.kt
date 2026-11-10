@@ -105,11 +105,12 @@ class SchemePadRenderDeviceTest {
     fun theFourRowPadDrawsItsFourEncodingRowsAndDeclaredFooter() =
         withPad(zhuyinPad()) { host ->
             val surface = surface(host)
-            assertEquals(listOf(11, 10, 10, 10, 5), surface.rows)
-            // Forty-one encoding keys send engine codes; only the footer edits.
-            assertTrue(
-                surface.keyTypes.dropLast(5).all { it == LayoutActionKind.CODE },
-            )
+            // Four encoding rows, Delete closing the fourth, then the footer every 26-key board shares.
+            assertEquals(5, surface.rows.size)
+            assertEquals(listOf(11, 10, 10, 11), surface.rows.dropLast(1))
+            // Forty-one encoding keys send engine codes.
+            assertTrue(surface.keyTypes.take(41).all { it == LayoutActionKind.CODE })
+            assertEquals(LayoutActionKind.BACKSPACE, surface.keyTypes[41])
             assertTrue(surface.keyTypes.none { it == LayoutActionKind.SHIFT })
             assertEquals(1, surface.keyTypes.count { it == LayoutActionKind.BACKSPACE })
         }
@@ -177,6 +178,7 @@ class SchemePadRenderDeviceTest {
     fun switchingPagesKeepsTheFourRowPadHeight() =
         withPad(zhuyinPad()) { host ->
             fun heightDp() = surface(host).let { it.height / it.density }
+            val letterRows = surface(host).rows
             val letters = heightDp()
             host.tapNumbersPage()
             host.awaitIdle()
@@ -204,7 +206,7 @@ class SchemePadRenderDeviceTest {
             for ((page, height) in heights) {
                 assertTrue("$page: letters $letters, page $height", abs(height - letters) <= 1f)
             }
-            assertEquals(listOf(11, 10, 10, 10, 5), surface(host).rows)
+            assertEquals(letterRows, surface(host).rows)
         }
 
     @Test
@@ -223,7 +225,9 @@ class SchemePadRenderDeviceTest {
     fun talkBackReadsTheCangjieRadicalsNotTheLetters() =
         withPad(cangjiePad()) { host ->
             val surface = surface(host)
-            assertEquals(listOf(10, 9, 9, 4), surface.rows)
+            // Three radical rows, then the footer every 26-key board shares.
+            assertEquals(4, surface.rows.size)
+            assertEquals(listOf(10, 9, 9), surface.rows.dropLast(1))
             assertEquals(1, surface.keyTypes.count { it == LayoutActionKind.SHIFT })
             assertEquals(1, surface.keyTypes.count { it == LayoutActionKind.BACKSPACE })
             val spoken = host.labelsOf(KeyboardView::class.java)

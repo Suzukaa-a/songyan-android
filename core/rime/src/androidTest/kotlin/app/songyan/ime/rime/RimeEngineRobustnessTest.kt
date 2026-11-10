@@ -4,8 +4,8 @@ import android.content.res.AssetManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.keyboard.engine.EngineBackendError
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -110,8 +110,9 @@ class RimeEngineRobustnessTest {
                 // Hold the engine thread so the commit request is queued when its caller is cancelled.
                 val hold = java.util.concurrent.CountDownLatch(1)
                 RimeDispatcher.shared().post { hold.await() }
-                val caller = launch(Dispatchers.Default) { engine.commitComposition() }
-                delay(50)
+                // Undispatched, the caller runs until its request is queued behind the hold, so the
+                // cancel always lands while the commit waits rather than before it is asked for.
+                val caller = launch(Dispatchers.Default, CoroutineStart.UNDISPATCHED) { engine.commitComposition() }
                 caller.cancel()
                 hold.countDown()
                 caller.join()

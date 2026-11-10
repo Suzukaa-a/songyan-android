@@ -27,6 +27,10 @@
     <string name="schemes_source_failed">操作没有完成，请重试。</string>
 
     <!-- 输入方案 · 文件夹、链接、推荐、更新 -->
+    <string name="schemes_add_title">添加输入方案</string>
+    <string name="schemes_add_subtitle">推荐方案、文件或链接</string>
+    <string name="schemes_add_import_section">从文件或链接导入</string>
+    <string name="schemes_add_busy">另一个下载或导入还没完成，完成后再来添加。</string>
     <string name="schemes_scheme_import_folder">导入文件夹</string>
     <string name="schemes_scheme_import_link">从链接导入</string>
     <string name="schemes_scheme_link_label">ZIP 链接或 GitHub 仓库地址</string>

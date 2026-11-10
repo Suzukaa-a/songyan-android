@@ -26,6 +26,10 @@
     <string name="schemes_source_failed">That did not finish. Try again.</string>
 
     <!-- Input schemes · folder, link, recommended, update -->
+    <string name="schemes_add_title">Add input scheme</string>
+    <string name="schemes_add_subtitle">Recommended, from a file or a link</string>
+    <string name="schemes_add_import_section">From a file or link</string>
+    <string name="schemes_add_busy">Another download or import is running. Add this one after it finishes.</string>
     <string name="schemes_scheme_import_folder">Import folder</string>
     <string name="schemes_scheme_import_link">Import from link</string>
     <string name="schemes_scheme_link_label">ZIP link or GitHub repository address</string>

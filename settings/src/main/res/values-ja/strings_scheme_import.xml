@@ -25,6 +25,10 @@
     <string name="schemes_source_failed">操作が完了しませんでした。もう一度お試しください。</string>
 
     <!-- 入力パック · フォルダ、リンク、おすすめ、更新 -->
+    <string name="schemes_add_title">入力パックを追加</string>
+    <string name="schemes_add_subtitle">おすすめ、ファイル、リンクから</string>
+    <string name="schemes_add_import_section">ファイルやリンクから</string>
+    <string name="schemes_add_busy">ほかのダウンロードやインポートが終わってから追加してください。</string>
     <string name="schemes_scheme_import_folder">フォルダをインポート</string>
     <string name="schemes_scheme_import_link">リンクからインポート</string>
     <string name="schemes_scheme_link_label">ZIP のリンクまたは GitHub リポジトリのアドレス</string>

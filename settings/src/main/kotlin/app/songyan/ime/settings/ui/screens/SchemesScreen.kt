@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,14 +45,11 @@ import androidx.compose.ui.unit.dp
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.InstalledScheme
-import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.state.StoredSourceKind
 import app.songyan.ime.settings.state.StoredSourceStatus
 import app.songyan.ime.settings.ui.DictionaryImportUiState
 import app.songyan.ime.settings.ui.EngineFeaturesUiState
-import app.songyan.ime.settings.ui.RecommendedSchemeDownloadDetails
-import app.songyan.ime.settings.ui.RecommendedSchemeSummary
 import app.songyan.ime.settings.ui.RimeConfigMessage
 import app.songyan.ime.settings.ui.RimeConfigUiState
 import app.songyan.ime.settings.ui.SchemeImportUiState
@@ -62,13 +60,12 @@ import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.ImportStatusCard
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
+import app.songyan.ime.settings.ui.components.SettingsRow
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.importCardOf
 import app.songyan.ime.settings.ui.normalizeDictionaryUrl
 import app.songyan.ime.settings.ui.normalizeSchemeUrl
-import app.songyan.ime.settings.ui.openWebPage
-import app.songyan.ime.settings.ui.recommendedSchemes
 
 /** The state and actions behind the grammar-model card. */
 data class GrammarModelCardInput(
@@ -98,8 +95,6 @@ fun SchemesScreen(
     onRemoveImportedDictionary: (String?) -> Unit,
     onDismissDictionaryImport: () -> Unit,
     schemeImport: SchemeImportUiState,
-    schemeImportAvailable: Boolean,
-    onImportScheme: (Uri) -> Unit,
     onDismissSchemeImport: () -> Unit,
     onAnswerSchemeLearning: (Boolean) -> Unit = {},
     onCancelImport: (ImportKind) -> Unit,
@@ -111,9 +106,7 @@ fun SchemesScreen(
     onOpenSource: (String) -> Unit = {},
     onDismissSourceAction: () -> Unit = {},
     stackedDictionaries: List<ImportedDictionaryInfo> = emptyList(),
-    onImportSchemeFolder: (Uri) -> Unit = {},
-    onImportSchemeFromLink: (String) -> Unit = {},
-    onImportRecommendedScheme: (RecommendedScheme) -> Unit = {},
+    onAddScheme: () -> Unit = {},
     onRestoreSource: (String) -> Unit = {},
     /** A package another app handed over; nothing is imported until the user agrees. */
     incomingPackage: Uri? = null,
@@ -149,15 +142,6 @@ fun SchemesScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
             if (uris.isNotEmpty()) onImportDictionaryFile(uris, importTarget)
         }
-    // A scheme package is a ZIP; some document providers only offer it as generic binary.
-    val schemePicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) onImportScheme(uri)
-        }
-    val folderPicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri != null) onImportSchemeFolder(uri)
-        }
     val grammarPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) grammarModel?.onImportFile?.invoke(uri)
@@ -165,11 +149,6 @@ fun SchemesScreen(
     var grammarCardDismissed by rememberSaveable { mutableStateOf(false) }
     // A new import brings its own card, even when the one before was closed.
     LaunchedEffect(schemeRunning) { if (schemeRunning) grammarCardDismissed = false }
-    var showSchemeLinkDialog by rememberSaveable { mutableStateOf(false) }
-    var schemeLinkText by rememberSaveable { mutableStateOf("") }
-    var recommendedId by rememberSaveable { mutableStateOf<String?>(null) }
-    // One order for the guide and this page: the device's own language decides it, not the app's.
-    val recommendedCatalog = recommendedSchemes()
     var showUrlDialog by rememberSaveable { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
     var confirmRemove by rememberSaveable { mutableStateOf(false) }
@@ -182,7 +161,6 @@ fun SchemesScreen(
             choosingFor = action
         }
     }
-    var acquiring by rememberSaveable(sources.isEmpty()) { mutableStateOf(sources.isEmpty()) }
     val snackbarHostState = remember { SnackbarHostState() }
     val importCard = importCardOf(dictionaryImport, schemeImport)
 
@@ -248,6 +226,26 @@ fun SchemesScreen(
                     .padding(innerPadding),
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {
+            if (importCard != null) {
+                item(key = "import_card") {
+                    ImportStatusCard(
+                        card = importCard,
+                        onCancel = { onCancelImport(importCard.kind) },
+                        onRetry = { onRetryImport(importCard.kind) },
+                        onDismiss = {
+                            if (importCard.kind ==
+                                ImportKind.DICTIONARY
+                            ) {
+                                onDismissDictionaryImport()
+                            } else {
+                                onDismissSchemeImport()
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        onAnswerOffer = onAnswerSchemeLearning,
+                    )
+                }
+            }
             if (sources.isNotEmpty()) {
                 item { SectionHeader(stringResource(R.string.schemes_sources_section)) }
                 items(sources.size, key = { "source_" + sources[it].id }) { index ->
@@ -258,6 +256,14 @@ fun SchemesScreen(
                         onOpen = { onOpenSource(source.id) },
                     )
                 }
+            }
+            item(key = "add_scheme") {
+                SettingsRow(
+                    title = stringResource(R.string.schemes_add_title),
+                    subtitle = stringResource(R.string.schemes_add_subtitle),
+                    icon = Icons.Outlined.Add,
+                    onClick = onAddScheme,
+                )
             }
             item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
             if (schemes.isEmpty()) {
@@ -280,26 +286,6 @@ fun SchemesScreen(
                     )
                 }
             }
-            if (importCard != null) {
-                item(key = "import_card") {
-                    ImportStatusCard(
-                        card = importCard,
-                        onCancel = { onCancelImport(importCard.kind) },
-                        onRetry = { onRetryImport(importCard.kind) },
-                        onDismiss = {
-                            if (importCard.kind ==
-                                ImportKind.DICTIONARY
-                            ) {
-                                onDismissDictionaryImport()
-                            } else {
-                                onDismissSchemeImport()
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        onAnswerOffer = onAnswerSchemeLearning,
-                    )
-                }
-            }
             val required = (schemeImport as? SchemeImportUiState.Succeeded)?.info?.requiredModels.orEmpty()
             if (grammarModel != null && required.isNotEmpty() && !grammarCardDismissed) {
                 item(key = "grammar_model_card") {
@@ -316,69 +302,6 @@ fun SchemesScreen(
                             ),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
-                }
-            }
-            item {
-                app.songyan.ime.settings.ui.components.SettingsRow(
-                    title = stringResource(R.string.composition_get_scheme),
-                    subtitle = null,
-                    onClick = { acquiring = !acquiring },
-                )
-            }
-            if (acquiring) {
-                item { SectionHeader(stringResource(R.string.row_schemes_title)) }
-                if (!schemeImportAvailable) {
-                    item { BodyText(stringResource(R.string.schemes_scheme_import_unavailable)) }
-                } else {
-                    item {
-                        Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 16.dp, top = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            // One deploy at a time: a dictionary import may still be running.
-                            val idle = !schemeRunning && !running
-                            Button(
-                                onClick = { schemePicker.launch(SCHEME_ARCHIVE_MIME_TYPES) },
-                                enabled = idle,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.schemes_scheme_import_file))
-                            }
-                            OutlinedButton(
-                                onClick = { folderPicker.launch(null) },
-                                enabled = idle,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.schemes_scheme_import_folder))
-                            }
-                            OutlinedButton(
-                                onClick = { showSchemeLinkDialog = true },
-                                enabled = idle,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.schemes_scheme_import_link))
-                            }
-                        }
-                    }
-                    item { BodyText(stringResource(R.string.schemes_scheme_import_note)) }
-                    item { SectionHeader(stringResource(R.string.schemes_recommended_section)) }
-                    items(
-                        recommendedCatalog.size,
-                        key = { "recommended_" + recommendedCatalog[it].id },
-                    ) {
-                        val entry = recommendedCatalog[it]
-                        ListItem(
-                            headlineContent = { Text(stringResource(entry.nameRes)) },
-                            supportingContent = { RecommendedSchemeSummary(entry) },
-                            modifier =
-                                Modifier.clickable(enabled = !schemeRunning && !running, role = Role.Button) {
-                                    recommendedId = entry.id
-                                },
-                        )
-                    }
                 }
             }
             item { SectionHeader(stringResource(R.string.schemes_dictionary_section)) }
@@ -488,53 +411,6 @@ fun SchemesScreen(
     rimeConfig.scriptConfirmation?.let { RimeScriptConfirmDialog(it, onUseRimeScripts, onCancelRimeScripts) }
     rimeConfig.overrideNotice?.let { RimeOverrideNoticeDialog(it, onDismissRimeOverrideNotice) }
 
-    if (showSchemeLinkDialog) {
-        SchemeLinkDialog(
-            url = schemeLinkText,
-            onUrlChange = { schemeLinkText = it },
-            onConfirm = {
-                onImportSchemeFromLink(schemeLinkText)
-                schemeLinkText = ""
-                showSchemeLinkDialog = false
-            },
-            onDismiss = { showSchemeLinkDialog = false },
-        )
-    }
-
-    val selected = recommendedCatalog.firstOrNull { it.id == recommendedId }
-    if (selected != null) {
-        val name = stringResource(selected.nameRes)
-        AlertDialog(
-            onDismissRequest = { recommendedId = null },
-            title = { Text(stringResource(R.string.schemes_recommended_confirm_title, name)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.schemes_recommended_confirm_body))
-                    RecommendedSchemeSummary(selected)
-                    RecommendedSchemeDownloadDetails(
-                        selected,
-                        onOpenHomepage = { openWebPage(context, it) },
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        recommendedId = null
-                        onImportRecommendedScheme(selected)
-                    },
-                ) {
-                    Text(stringResource(R.string.schemes_recommended_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { recommendedId = null }) {
-                    Text(stringResource(R.string.schemes_dictionary_cancel))
-                }
-            },
-        )
-    }
-
     if (incomingPackage != null) {
         AlertDialog(
             onDismissRequest = onDismissIncomingPackage,
@@ -643,7 +519,7 @@ private fun DictionaryTargetDialog(
 }
 
 @Composable
-private fun BodyText(text: String) {
+internal fun BodyText(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
@@ -715,7 +591,7 @@ private fun StoredSourceRow(
 }
 
 @Composable
-private fun SchemeLinkDialog(
+internal fun SchemeLinkDialog(
     url: String,
     onUrlChange: (String) -> Unit,
     onConfirm: () -> Unit,
@@ -805,4 +681,4 @@ private fun DictionaryUrlDialog(
 }
 
 /** A scheme package is a ZIP archive; some document providers expose it as generic binary only. */
-private val SCHEME_ARCHIVE_MIME_TYPES = arrayOf("application/zip", "application/octet-stream")
+internal val SCHEME_ARCHIVE_MIME_TYPES = arrayOf("application/zip", "application/octet-stream")

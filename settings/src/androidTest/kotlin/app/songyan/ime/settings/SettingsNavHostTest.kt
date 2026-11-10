@@ -93,6 +93,23 @@ class SettingsNavHostTest {
     }
 
     @Test
+    fun addingASchemeIsAPageOfItsOwn() {
+        lateinit var navigation: androidx.navigation.NavHostController
+        val model = viewModel(ImeStatus(true, true), SettingsAppState(sourcesLoaded = true))
+        compose.setContent {
+            navigation = androidx.navigation.compose.rememberNavController()
+            SongyanTheme(dynamicColor = false) {
+                SettingsNavHost(viewModel = model, versionName = "1", navController = navigation)
+            }
+        }
+        compose.runOnIdle { navigation.navigate(app.songyan.ime.settings.ui.SettingsRoutes.SCHEMES) }
+        compose.onNodeWithText(str(R.string.schemes_add_title)).performClick()
+        compose.waitForIdle()
+        assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.ADD_SCHEME, navigation.currentDestination?.route)
+        compose.onNodeWithText(str(R.string.schemes_add_title)).assertExists()
+    }
+
+    @Test
     fun theGuideOpensByItselfOnTheFirstLaunch() {
         show(ImeStatus(enabled = false, selected = false))
         compose.waitUntil(5_000) { onOnboarding() }

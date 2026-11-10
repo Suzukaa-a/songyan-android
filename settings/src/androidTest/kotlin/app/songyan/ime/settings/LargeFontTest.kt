@@ -290,8 +290,6 @@ class LargeFontTest {
                 onRemoveImportedDictionary = {},
                 onDismissDictionaryImport = {},
                 schemeImport = SchemeImportUiState.Idle,
-                schemeImportAvailable = true,
-                onImportScheme = {},
                 onDismissSchemeImport = {},
                 onCancelImport = {},
                 onRetryImport = {},

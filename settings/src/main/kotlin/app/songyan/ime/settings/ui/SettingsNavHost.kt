@@ -74,6 +74,7 @@ import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.screens.AboutScreen
+import app.songyan.ime.settings.ui.screens.AddSchemeScreen
 import app.songyan.ime.settings.ui.screens.AppearanceScreen
 import app.songyan.ime.settings.ui.screens.CandidateBarScreen
 import app.songyan.ime.settings.ui.screens.CompositionScreen
@@ -134,6 +135,7 @@ object SettingsRoutes {
     const val ONBOARDING = "onboarding"
     const val SCHEMES = "schemes"
     const val SCHEME_DETAIL = "schemes/{id}"
+    const val ADD_SCHEME = "addScheme"
     const val KEYBOARDS = "keyboards"
     const val APPEARANCE = "appearance"
     const val OPTIONS = "options"
@@ -179,7 +181,7 @@ object SettingsRoutes {
             T9_SYMBOLS,
             NINE_KEY_EDITOR,
             -> KEYBOARDS
-            SCHEME_DETAIL -> SCHEMES
+            SCHEME_DETAIL, ADD_SCHEME -> SCHEMES
             LICENSES, LICENSE_DETAIL -> ABOUT
             else -> route
         }
@@ -322,8 +324,6 @@ private fun NavGraphBuilder.settingsGraph(
             onRemoveImportedDictionary = viewModel::removeImportedDictionary,
             onDismissDictionaryImport = viewModel::dismissDictionaryImport,
             schemeImport = state.value.schemeImport,
-            schemeImportAvailable = state.value.schemeImportAvailable,
-            onImportScheme = viewModel::importScheme,
             onDismissSchemeImport = viewModel::dismissSchemeImport,
             onAnswerSchemeLearning = { accept ->
                 if (accept) viewModel.mergePackageLearning() else viewModel.declinePackageLearning()
@@ -337,9 +337,7 @@ private fun NavGraphBuilder.settingsGraph(
             onOpenSource = { id -> navController.navigate(SettingsRoutes.schemeDetail(id)) },
             onDismissSourceAction = viewModel::dismissSourceAction,
             stackedDictionaries = state.value.stackedDictionaries,
-            onImportSchemeFolder = viewModel::importSchemeFolder,
-            onImportSchemeFromLink = viewModel::importSchemeFromLink,
-            onImportRecommendedScheme = viewModel::importRecommendedScheme,
+            onAddScheme = { navController.navigate(SettingsRoutes.ADD_SCHEME) },
             onRestoreSource = viewModel::restoreSource,
             incomingPackage = state.value.incomingPackage,
             onConfirmIncomingPackage = viewModel::importIncomingPackage,
@@ -371,6 +369,21 @@ private fun NavGraphBuilder.settingsGraph(
                         ),
                     onImportFile = featuresModel::importGrammarModel,
                 ),
+        )
+    }
+
+    composable(SettingsRoutes.ADD_SCHEME) {
+        AddSchemeScreen(
+            importAvailable = state.value.schemeImportAvailable,
+            busy =
+                state.value.schemeImport is SchemeImportUiState.Running ||
+                    state.value.dictionaryImport is DictionaryImportUiState.Running,
+            onImportScheme = viewModel::importScheme,
+            onImportSchemeFolder = viewModel::importSchemeFolder,
+            onImportSchemeFromLink = viewModel::importSchemeFromLink,
+            onImportRecommendedScheme = viewModel::importRecommendedScheme,
+            onStarted = { navController.popBackStack(SettingsRoutes.SCHEMES, inclusive = false) },
+            onBack = { navController.popBackStack() },
         )
     }
 

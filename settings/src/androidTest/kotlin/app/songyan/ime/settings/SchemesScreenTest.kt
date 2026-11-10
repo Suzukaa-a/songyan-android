@@ -2,18 +2,15 @@ package app.songyan.ime.settings
 
 import android.net.Uri
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.settings.state.ImportedSchemeInfo
-import app.songyan.ime.settings.state.RecommendedSchemes
 import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.state.StoredSourceKind
 import app.songyan.ime.settings.state.StoredSourceStatus
@@ -30,7 +27,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-/** P4-1 / P4-2 on the 输入方案 page: statuses, update, undo, link import, recommended packages, shared files. */
+/** The 输入方案 page: statuses, undo, the way to add a scheme, shared files and the import card. */
 class SchemesScreenTest {
     @get:Rule
     val compose = createComposeRule()
@@ -56,8 +53,7 @@ class SchemesScreenTest {
 
     private val opened = mutableListOf<String>()
     private val restored = mutableListOf<String>()
-    private val links = mutableListOf<String>()
-    private val recommendedDownloads = mutableListOf<String>()
+    private var addOpened = 0
     private var incomingConfirmed = false
     private var incomingDismissed = false
     private val learningAnswers = mutableListOf<Boolean>()
@@ -87,8 +83,6 @@ class SchemesScreenTest {
                     onRemoveImportedDictionary = {},
                     onDismissDictionaryImport = {},
                     schemeImport = schemeImport,
-                    schemeImportAvailable = true,
-                    onImportScheme = {},
                     onDismissSchemeImport = {},
                     onCancelImport = {},
                     onRetryImport = {},
@@ -98,8 +92,7 @@ class SchemesScreenTest {
                     sourceAction = sourceAction,
                     onOpenSource = { opened += it },
                     onDismissSourceAction = {},
-                    onImportSchemeFromLink = { links += it },
-                    onImportRecommendedScheme = { recommendedDownloads += it.id },
+                    onAddScheme = { addOpened++ },
                     onRestoreSource = { restored += it },
                     incomingPackage = incoming,
                     onConfirmIncomingPackage = { incomingConfirmed = true },
@@ -169,54 +162,21 @@ class SchemesScreenTest {
     }
 
     @Test
-    fun aLinkMustBeHttpsBeforeItCanBeDownloaded() {
-        show()
-        scrollTo(str(R.string.schemes_scheme_import_link))
-        compose.onNodeWithText(str(R.string.schemes_scheme_import_link)).performClick()
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_confirm)).assertIsNotEnabled()
-
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_label)).performTextInput("http://example.com/p.zip")
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_invalid)).assertExists()
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_confirm)).assertIsNotEnabled()
+    fun theAddRowOpensThePageThatAddsASchemeWithoutAnythingUnfoldingHere() {
+        show(listOf(builtin, current))
+        compose.onNodeWithText(str(R.string.schemes_add_title)).assertIsDisplayed().performClick()
+        assertEquals(1, addOpened)
+        assertEquals(0, count(str(R.string.schemes_scheme_import_file)))
+        assertEquals(0, count(str(R.string.schemes_recommended_section)))
     }
 
     @Test
-    fun anHttpsLinkIsHandedOverOnConfirm() {
-        show()
-        scrollTo(str(R.string.schemes_scheme_import_link))
-        compose.onNodeWithText(str(R.string.schemes_scheme_import_link)).performClick()
-        compose
-            .onNodeWithText(
-                str(R.string.schemes_scheme_link_label),
-            ).performTextInput("https://github.com/iDvel/rime-ice")
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_note)).assertExists()
-        compose.onNodeWithText(str(R.string.schemes_scheme_link_confirm)).assertIsEnabled().performClick()
-        assertEquals(listOf("https://github.com/iDvel/rime-ice"), links)
-    }
-
-    @Test
-    fun aRecommendedPackageIsDownloadedFromItsPinnedArchivesAfterConfirming() {
-        show()
-        val bopomofo = RecommendedSchemes.catalog.first { it.id == "rime-bopomofo" }
-        scrollTo(str(bopomofo.nameRes))
-        compose.onNodeWithText(str(bopomofo.nameRes)).performClick()
-        compose.onNodeWithText(str(R.string.schemes_recommended_confirm_title, str(bopomofo.nameRes))).assertExists()
-        compose.onNodeWithText(str(R.string.schemes_recommended_homepage)).assertExists()
-        assertTrue("nothing is downloaded before the user confirms", recommendedDownloads.isEmpty())
-        compose.onNodeWithText(str(R.string.schemes_recommended_confirm)).performClick()
-        assertEquals(listOf("rime-bopomofo"), recommendedDownloads)
-    }
-
-    @Test
-    fun everyRecommendedPackageIsListedWithItsLicenceAndUpstreamPage() {
-        show()
-        RecommendedSchemes.catalog.forEach {
-            scrollTo(str(it.nameRes))
-            compose.onNodeWithText(str(it.nameRes)).assertExists()
-            compose.onNodeWithText(str(it.detailRes)).assertExists()
-            val licence = str(R.string.schemes_recommended_license, it.licenses.joinToString(" · "))
-            compose.onNode(hasText(licence) and hasText(str(it.nameRes))).assertExists()
-        }
+    fun aRunningImportLeadsTheListSoItIsSeenOnReturn() {
+        show(listOf(builtin, current, outdated, damaged), schemeImport = SchemeImportUiState.Running())
+        compose.onNodeWithText(str(R.string.schemes_scheme_importing)).assertIsDisplayed()
+        val card = compose.onNodeWithText(str(R.string.schemes_scheme_importing)).fetchSemanticsNode().boundsInRoot
+        val firstRow = compose.onNodeWithText(str(R.string.schemes_sources_section)).fetchSemanticsNode().boundsInRoot
+        assertTrue("the card sits above the list of schemes", card.bottom <= firstRow.top)
     }
 
     @Test
@@ -234,15 +194,6 @@ class SchemesScreenTest {
         compose.onNodeWithText(str(R.string.schemes_dictionary_cancel)).performClick()
         assertTrue(incomingDismissed)
         assertTrue(!incomingConfirmed)
-    }
-
-    @Test
-    fun folderAndFileImportsAreBothOffered() {
-        show()
-        scrollTo(str(R.string.schemes_scheme_import_file))
-        compose.onNodeWithText(str(R.string.schemes_scheme_import_file)).assertIsEnabled()
-        scrollTo(str(R.string.schemes_scheme_import_folder))
-        compose.onNodeWithText(str(R.string.schemes_scheme_import_folder)).assertIsEnabled()
     }
 
     private fun imported(inUse: Boolean) =

@@ -17,11 +17,12 @@ schemes and data formats, with a keyboard and settings app designed for Android.
 - Traditional output: the built-in schemes type Simplified, Traditional, Taiwan or Hong Kong text,
   seeded from the system language on first install and switchable per input method. Key names,
   candidate glyph forms and punctuation follow the choice.
-- Imports RIME schemes and dictionaries from files or links. A recommended catalog offers the
-  common traditional schemes — bopomofo, cangjie, quick and cantonese — as pinned upstream
-  archives, downloaded only after you confirm and listed in your language's order. Japanese input
-  comes from a kagiroi package you import; the install adds the paging and punctuation patches the
-  keyboard expects, and the app does not download Japanese data by itself.
+- Imports RIME schemes and dictionaries from files or links. A recommended catalog offers rime-ice,
+  wanxiang, bopomofo, cangjie, quick, cantonese and the Japanese kagiroi as pinned upstream
+  archives, downloaded only after you confirm and listed in your language's order. Installing
+  kagiroi adds the paging and punctuation patches the keyboard expects.
+- Press and hold 中/英 for the keyboard menu: switch input methods and boards, including the input
+  methods of your other schemes.
 - Appearance, candidate bar and key layout editors; dynamic color, one-handed mode, large-screen
   and split layouts. Appearance and layout files are interchangeable with the iOS app.
 - Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar

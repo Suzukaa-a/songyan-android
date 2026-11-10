@@ -21,9 +21,9 @@
     <string name="ime_panel_open_settings">Open Songyan settings</string>
 
     <!-- Keyboard settings panel -->
-    <string name="ime_qs_one_hand">One-handed mode</string>
-    <string name="ime_qs_key_height">Keyboard height</string>
-    <string name="ime_qs_layout">Keyboard layout</string>
+    <string name="ime_qs_one_hand">One-handed</string>
+    <string name="ime_qs_key_height">Height</string>
+    <string name="ime_qs_layout">Layout</string>
     <string name="ime_qs_appearance">Light or dark</string>
     <string name="ime_qs_key_sound">Key sound</string>
     <string name="ime_qs_key_haptics">Key vibration</string>

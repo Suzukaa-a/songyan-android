@@ -28,6 +28,9 @@ private const val TILE_INSET_DP = 4f
 private const val ICON_DP = 24f
 private const val OPTION_ICON_DP = 32f
 private const val LABEL_SP = 13f
+
+/** A page's labels shrink this far, together, to stay on one line before any of them wraps. */
+private const val MIN_LABEL_SP = 11.5f
 private const val VALUE_SP = 11.5f
 private const val SLASH_DP = 2f
 private const val DISABLED_ALPHA = 0.45f
@@ -76,6 +79,17 @@ class KeyboardSettingsPanelView(
     private var switchesStart = -1
     private val icons = HashMap<Int, PanelIcon>()
 
+    /** How a page sets its labels: one size and one reserved line count for every tile. */
+    private class LabelFit(
+        val room: Float,
+        val tileHeight: Float,
+        val sizePx: Float,
+        val lines: List<List<String>>,
+        val reserved: Int,
+    )
+
+    private var labelFit: LabelFit? = null
+
     override val titleText: String
         get() =
             openSetting?.let {
@@ -118,6 +132,7 @@ class KeyboardSettingsPanelView(
                 }
             }
         cells = if (open == null) tiles.map(::tileCell) else open.options.map { optionCell(open.setting, it) }
+        labelFit = null
         switchesStart = if (open == null) tiles.indexOfFirst { it.setting == QuickSetting.ENGINE_OPTION } else -1
         resetScroll()
         invalidate()
@@ -428,21 +443,19 @@ class KeyboardSettingsPanelView(
         val room = rect.width() - 8f * density
 
         paint.textAlign = Paint.Align.CENTER
-        paint.textSize = LABEL_SP * textScale
         // textScale already carries the density: text sizes are pixels.
-        val labelHeight = LABEL_SP * textScale
-        val valueHeight = if (item.value != null) VALUE_SP * textScale else 0f
+        val valueHeight = if (cells.any { it.value != null }) VALUE_SP * textScale else 0f
         // The tallest icon of the page sets the block, so labels of one row share a baseline.
         val iconBlock = cells.maxOf { it.iconDp } * density
         val gap = 6f * density
-
-        fun blockHeight(lines: Int) = iconBlock + gap + labelHeight * LINE_SPACING * lines + valueHeight * LINE_SPACING
-        // A long name takes a second line when the tile has the height for it, else it is cut short.
-        val fits = blockHeight(2) <= rect.height() - 2f * density
-        val lines = wrapLabel(item.label, room, mayWrap = fits)
-        // Every tile of the page reserves the tallest label, so the icons of a row stay level.
-        val reserved = if (fits) cells.maxOf { wrapLabel(it.label, room, mayWrap = true).size } else 1
-        val top = (rect.centerY() - blockHeight(reserved) / 2f).coerceAtLeast(rect.top)
+        val fit = labelFit(room, rect.height(), iconBlock + gap + valueHeight * LINE_SPACING)
+        val labelHeight = fit.sizePx
+        val lines = fit.lines[index]
+        val top =
+            (
+                rect.centerY() -
+                    (iconBlock + gap + labelHeight * LINE_SPACING * fit.reserved + valueHeight * LINE_SPACING) / 2f
+            ).coerceAtLeast(rect.top)
         val iconCentre = top + iconBlock / 2f
         icon(item.icon).draw(canvas, rect.centerX(), iconCentre, item.iconDp * density, withAlpha(textColor, fade))
         if (item.struck) {
@@ -455,11 +468,16 @@ class KeyboardSettingsPanelView(
         }
         paint.color = withAlpha(textColor, fade)
         paint.isFakeBoldText = item.checked
-        var baseline = top + iconBlock + gap + labelHeight * 0.85f
+        paint.textSize = labelHeight
+        // A one-line label sits in the middle of the lines the page reserves, so every value of a row
+        // shares one baseline.
+        val labelTop = top + iconBlock + gap
+        var baseline = labelTop + labelHeight * LINE_SPACING * (fit.reserved - lines.size) / 2f + labelHeight * 0.85f
         for (line in lines) {
             canvas.drawText(line, rect.centerX(), baseline, paint)
             baseline += labelHeight * LINE_SPACING
         }
+        baseline = labelTop + labelHeight * LINE_SPACING * fit.reserved + labelHeight * 0.85f
         paint.isFakeBoldText = false
         if (item.checked) {
             drawCheck(
@@ -478,22 +496,44 @@ class KeyboardSettingsPanelView(
         paint.textAlign = Paint.Align.LEFT
     }
 
-    /** One line when it fits; a long name without a value may take a second one, otherwise it is cut short. */
-    private fun wrapLabel(
-        name: String,
+    /**
+     * The page's labels: the largest size down to [MIN_LABEL_SP] at which every label holds one line;
+     * when one still does not, the natural size with long labels on two even lines, if the tile has the
+     * height for them, else cut short.
+     */
+    private fun labelFit(
         room: Float,
-        mayWrap: Boolean,
-    ): List<String> {
-        val label = name
-        if (paint.measureText(label) <= room) return listOf(label)
-        if (!mayWrap) return listOf(PanelText.ellipsize(label, room.coerceAtLeast(1f)) { paint.measureText(it) })
-        var split = label.length
-        while (split > 1 && paint.measureText(label, 0, split) > room) split--
-        // Break between words when the name has any; names without spaces (Chinese) break anywhere.
-        val space = label.lastIndexOf(' ', split)
-        if (space > 0) split = space + 1
-        val rest = PanelText.ellipsize(label.substring(split).trim(), room.coerceAtLeast(1f)) { paint.measureText(it) }
-        return listOf(label.substring(0, split).trim(), rest)
+        tileHeight: Float,
+        otherBlocks: Float,
+    ): LabelFit {
+        labelFit?.takeIf { it.room == room && it.tileHeight == tileHeight }?.let { return it }
+
+        fun widest(sizePx: Float): Float {
+            paint.textSize = sizePx
+            return cells.maxOfOrNull { paint.measureText(it.label) } ?: 0f
+        }
+        val natural = LABEL_SP * textScale
+        val smallest = MIN_LABEL_SP * textScale
+        val shrunk = PanelText.fitSize(natural, smallest, room) { widest(it) }
+        val fit =
+            if (widest(shrunk) <= room) {
+                LabelFit(room, tileHeight, shrunk, cells.map { listOf(it.label) }, 1)
+            } else {
+                paint.textSize = natural
+                val measure = { text: String -> paint.measureText(text) }
+                val twoFit = otherBlocks + natural * LINE_SPACING * 2 <= tileHeight - 2f * density
+                val lines =
+                    cells.map {
+                        if (twoFit) {
+                            PanelText.twoLines(it.label, room, measure)
+                        } else {
+                            listOf(PanelText.ellipsize(it.label, room.coerceAtLeast(1f), measure))
+                        }
+                    }
+                LabelFit(room, tileHeight, natural, lines, lines.maxOf { it.size })
+            }
+        labelFit = fit
+        return fit
     }
 
     private fun drawCheck(

@@ -21,14 +21,14 @@
 
     <!-- キーボード設定パネル -->
     <string name="ime_qs_one_hand">片手モード</string>
-    <string name="ime_qs_key_height">キーボードの高さ</string>
+    <string name="ime_qs_key_height">高さ</string>
     <string name="ime_qs_layout">キー配列</string>
     <string name="ime_qs_appearance">ライト／ダーク</string>
     <string name="ime_qs_key_sound">キー操作音</string>
     <string name="ime_qs_key_haptics">キー操作の振動</string>
     <string name="ime_qs_phrases">定型文</string>
     <string name="ime_qs_phrases_more">とクリップボード</string>
-    <string name="ime_qs_key_preview">キーのプレビュー</string>
+    <string name="ime_qs_key_preview">プレビュー</string>
     <string name="ime_qs_on">オン</string>
     <string name="ime_qs_off">オフ</string>
     <string name="ime_qs_engine_section">入力方式のオプション</string>

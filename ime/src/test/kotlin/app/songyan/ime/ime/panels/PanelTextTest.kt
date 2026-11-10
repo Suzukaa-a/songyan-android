@@ -58,4 +58,37 @@ class PanelTextTest {
     fun emptyTextStaysEmpty() {
         assertEquals("", PanelText.ellipsize("", 20f) { measure(it, 13f) })
     }
+
+    @Test
+    fun aLabelThatFitsStaysOnOneLine() {
+        assertEquals(listOf("Layout"), PanelText.twoLines("Layout", 100f) { measure(it, 10f) })
+    }
+
+    @Test
+    fun wordsBreakWhereTheTwoLinesComeOutMostEven() {
+        // "Emoji" | "candidates" is 50 | 100 px; no other break exists, and both fit 110 px.
+        assertEquals(
+            listOf("Emoji", "candidates"),
+            PanelText.twoLines("Emoji candidates", 110f) { measure(it, 10f) },
+        )
+        // Of "Key" | "vibration test" and "Key vibration" | "test", the second is the more even.
+        assertEquals(
+            listOf("Key vibration", "test"),
+            PanelText.twoLines("Key vibration test", 140f) { measure(it, 10f) },
+        )
+    }
+
+    @Test
+    fun cjkBreaksInTheMiddleButNeverBeforeALongVowelMark() {
+        assertEquals(listOf("キーの", "プレビュー"), PanelText.twoLines("キーのプレビュー", 60f) { measure(it, 10f) })
+        // An even split of 片手モード would put ー first on the second line.
+        assertEquals(listOf("片手", "モード"), PanelText.twoLines("片手モード", 40f) { measure(it, 10f) })
+    }
+
+    @Test
+    fun aLabelTooLongForTwoLinesEllipsizesTheSecond() {
+        val lines = PanelText.twoLines("abcdefghij", 40f) { measure(it, 10f) }
+        assertEquals("abcd", lines[0])
+        assertTrue(lines[1].endsWith("\u2026"))
+    }
 }

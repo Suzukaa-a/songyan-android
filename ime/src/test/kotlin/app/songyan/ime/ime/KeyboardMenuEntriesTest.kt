@@ -22,6 +22,17 @@ class KeyboardMenuEntriesTest {
         )
     }
 
+    /** Japanese types on romaji and kana boards; hiding one in settings drops its chip, never the one drawn. */
+    @Test
+    fun aHiddenBoardLeavesTheMenuUnlessTheKeyboardDrawsIt() {
+        val boards = listOf("romaji26", "kana12")
+        assertEquals(boards, KeyboardMenuEntries.boards(boards, emptySet(), "romaji26"))
+        assertEquals(listOf("romaji26"), KeyboardMenuEntries.boards(boards, setOf("kana12"), "romaji26"))
+        assertEquals(boards, KeyboardMenuEntries.boards(boards, setOf("kana12"), "kana12"))
+        // A hidden shape id never matches a board.
+        assertEquals(boards, KeyboardMenuEntries.boards(boards, setOf("qwerty26"), "romaji26"))
+    }
+
     @Test
     fun theInputMethodInUseStaysEvenWhenHidden() {
         val shown = KeyboardMenuEntries.schemas(ice, setOf("rime_ice", "double_pinyin"), setOf("rime_ice"))

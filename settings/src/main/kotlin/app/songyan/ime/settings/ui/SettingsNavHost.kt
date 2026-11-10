@@ -627,6 +627,17 @@ private fun NavGraphBuilder.settingsGraph(
             inUseSchemeId = state.value.inUseSchemeId,
             layoutId = state.value.layoutId,
             otherSources = state.value.otherSources,
+            sourceName =
+                state.value.sources
+                    .firstOrNull { it.inUse }
+                    ?.name,
+            mainLayout = state.value.mainLayout,
+            supportedLayouts = state.value.inUseScheme?.supportedLayouts,
+            boards =
+                state.value.inUseScheme
+                    ?.family
+                    ?.let(InputLayoutPolicy::boardsOf)
+                    .orEmpty(),
             onBack = { navController.popBackStack() },
         )
     }

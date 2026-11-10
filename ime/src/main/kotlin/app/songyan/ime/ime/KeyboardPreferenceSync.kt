@@ -270,7 +270,8 @@ internal fun KeyboardController.syncMenu() {
     menu.setSchemas(own + others.map { it.menuId to it.label }, others.associate { it.menuId to it.method })
     val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts())
     menu.setLayoutNames(layoutNamesByKind())
-    menu.setLayouts(offered, layoutBoards(), mainDefinition().id)
+    val main = mainDefinition().id
+    menu.setLayouts(offered, KeyboardMenuEntries.boards(layoutBoards(), menuHiddenLayouts, main), main)
     menu.update(schemaId, layoutKind)
 }
 
@@ -344,6 +345,16 @@ internal object KeyboardMenuEntries {
         KeyboardLayoutKind.entries.filter {
             (it.wire !in hidden || it == current) && (it in usable || it == current)
         }
+
+    /**
+     * The physical [boards] the menu offers: the ones the user hid in settings (by board id) are
+     * dropped, except the one the keyboard draws, so the menu still shows where it is.
+     */
+    fun boards(
+        boards: List<String>,
+        hidden: Set<String>,
+        mainLayoutId: String?,
+    ): List<String> = boards.filter { it !in hidden || it == mainLayoutId }
 
     /**
      * One chip of the layout row: a shape, and the physical board it stands for when the input

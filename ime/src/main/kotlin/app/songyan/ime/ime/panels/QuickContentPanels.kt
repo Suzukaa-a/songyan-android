@@ -4,6 +4,7 @@ import android.content.Context
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.EditAction
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardPageCategory
 import app.songyan.ime.layout.LayoutAction
@@ -40,7 +41,7 @@ private val <T> Lazy<T>.initializedValue: T?
  * quick insert closes it. The settings panel stays open while settings change.
  */
 class QuickContentPanels(
-    context: Context,
+    private val context: Context,
     private val host: QuickContentHost,
     private val scope: CoroutineScope,
     private val dataSource: QuickContentPanelDataSource,
@@ -56,6 +57,8 @@ class QuickContentPanels(
         val enterLabel: String,
         /** The everyday marks the pairing reaches nowhere else; the built-in 常用 lists them first. */
         val leadingMarks: List<String> = emptyList(),
+        /** The schemas input language: the built-in 常用 adds the marks Japanese needs. */
+        val inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     )
 
     interface Callbacks {
@@ -464,7 +467,7 @@ class QuickContentPanels(
         val phraseView = phrases.initializedValue
         when {
             symbolView != null && panel === symbolView ->
-                symbolView.update(loaded.catalog, loaded.recentSymbols)
+                symbolView.update(loaded.catalog, loaded.recentSymbols, loaded.builtinCatalog)
             phraseView != null && panel === phraseView ->
                 phraseView.update(
                     loaded.phrases.map { it.text },
@@ -486,13 +489,36 @@ class QuickContentPanels(
                     loaded.catalog.orderedCategories.map { category ->
                         SymbolPageCategories.LibrarySet(
                             category.id,
-                            category.name,
+                            SymbolCategoryTitles.catalogTitle(
+                                authorName = category.name,
+                                id = category.id,
+                                builtinCatalog = loaded.builtinCatalog,
+                                lookup = context::getString,
+                            ),
                             loaded.catalog.itemsIn(category.id).map { it.text },
                         )
                     },
                     request.leadingMarks,
+                    request.inputLanguage,
                 )
-        panel.update(categories, request.asciiMarks, reopen = symbolPageFresh)
+        // Only a page derived from built-in data has built-in tab titles; a saved page keeps the
+        // names its author gave it, even when it started as a copy of the built-in one.
+        val titled =
+            if (request.categories == null) {
+                categories.map { category ->
+                    category.withName(
+                        SymbolCategoryTitles.pageTitle(
+                            authorName = category.name,
+                            id = category.id,
+                            builtinPage = true,
+                            lookup = context::getString,
+                        ),
+                    )
+                }
+            } else {
+                categories
+            }
+        panel.update(titled, request.asciiMarks, reopen = symbolPageFresh)
         symbolPageFresh = false
     }
 }

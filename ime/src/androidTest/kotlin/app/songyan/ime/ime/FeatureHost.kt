@@ -1,5 +1,6 @@
 package app.songyan.ime.ime
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.Rect
@@ -18,7 +19,12 @@ import app.songyan.ime.content.CommonPhrase
 import app.songyan.ime.content.SymbolCatalog
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
+import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
+import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.rime.EngineOptionPreferences
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
@@ -187,10 +193,23 @@ private class Recording(
     }
 }
 
+/** A keyboard control key by what it does, independent of the face the input language gives it. */
+internal enum class ControlKey {
+    SPACE,
+    DELETE,
+    ENTER,
+    SHIFT,
+    GLOBE,
+    LANGUAGE_TOGGLE,
+    RETURN_TO_LETTERS,
+    CLEAR_INPUT,
+}
+
 /** An editor, the keyboard over the real engine and the editor wiring the input method service uses. */
 internal class FeatureHost(
     val backend: EngineBackend,
     layout: String = "qwerty26",
+    schemaID: String = "",
 ) {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val context: Context = instrumentation.targetContext
@@ -210,6 +229,12 @@ internal class FeatureHost(
     var chips = false
     var chipTtlMs = ToolbarChipPolicy.DEFAULT_TTL_MS
     private var hostWidth = 0
+
+    /** The app's quick-insert seam; null leaves the rows the panel has without it. */
+    @Volatile var quickInsert: QuickInsertHost? = null
+
+    /** The window the keyboard surface lives in, once [attachTo] was called. */
+    private var attachedWindow: Activity? = null
 
     /** Clipboard history as the panel stored it; off like a fresh install. */
     @Volatile var clipboardEnabled = false
@@ -279,6 +304,7 @@ internal class FeatureHost(
     val keyHeightFlow = MutableStateFlow("standard")
     val colorModeFlow = MutableStateFlow("system")
     val hideToolbarFlow = MutableStateFlow(false)
+    val toolbarLayoutFlow = MutableStateFlow("")
     val bottomGapFlow = MutableStateFlow(0)
     val longPressFlow = MutableStateFlow<Int?>(null)
     val switchKeyFlow = MutableStateFlow(false)
@@ -315,7 +341,7 @@ internal class FeatureHost(
     private val preferences =
         object : KeyboardPreferencesSource {
             override val layoutId = MutableStateFlow(layout)
-            override val activeSchemaId = MutableStateFlow("")
+            override val activeSchemaId = MutableStateFlow(schemaID)
             override val oneHand = oneHandFlow
             override val keyHeight = keyHeightFlow
             override val bottomGapDp = bottomGapFlow
@@ -326,6 +352,7 @@ internal class FeatureHost(
             override val t9QuickSymbols = quickSymbolsFlow
             override val colorMode = colorModeFlow
             override val hideIdleToolbar = hideToolbarFlow
+            override val toolbarLayout = toolbarLayoutFlow
             override val menuHiddenLayouts = hiddenLayoutsFlow
 
             override suspend fun setOneHand(value: String) {
@@ -346,6 +373,27 @@ internal class FeatureHost(
 
             override suspend fun setActiveSchemaId(id: String) {
                 activeSchemaId.value = id
+            }
+
+            // The app stores the edit and publishes the catalog to the keyboard; the host publishes directly.
+            override suspend fun setMainLayout(
+                schemaId: String,
+                families: app.songyan.ime.keyboard.engine.LayoutFamilyContext,
+                boardId: String,
+            ): Boolean {
+                val key =
+                    app.songyan.ime.layout.KeyboardCompositionKey(
+                        schemaId,
+                        app.songyan.ime.layout.LayoutInput.Builtin.QWERTY26,
+                    )
+                val registry = KeyboardLayoutCatalog.snapshot.value.registry
+                KeyboardLayoutCatalog.install(
+                    registry.withComposition(
+                        registry.composition(key, families).withMainLayoutId(boardId),
+                        key.rawValue,
+                    ),
+                )
+                return true
             }
         }
 
@@ -407,6 +455,7 @@ internal class FeatureHost(
                     ),
                     preferences,
                     quickContentDataSource = data,
+                    quickInsert = quickInsert,
                     copiedChipSource =
                         if (chips) {
                             CopiedChipSource(
@@ -430,11 +479,33 @@ internal class FeatureHost(
     }
 
     fun relayout() {
+        // An attached surface is laid out by its window; measuring it by hand would fight it.
+        if (attachedWindow != null) return
         controller.view.measure(
             View.MeasureSpec.makeMeasureSpec(hostWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(4000, View.MeasureSpec.AT_MOST),
         )
         controller.view.layout(0, 0, hostWidth, controller.view.measuredHeight)
+    }
+
+    /**
+     * Shows the keyboard in [activity]'s window. Accessibility clients — UiAutomation among them —
+     * only read a view tree attached to a window, and a view only announces a changed subtree from
+     * one, so a test of what a screen reader reads must attach before it opens a panel.
+     */
+    fun attachTo(activity: Activity) {
+        attachedWindow = activity
+        main { activity.setContentView(controller.view) }
+        assertTrue(
+            "the window never laid the keyboard surface out",
+            await {
+                main2 {
+                    controller.view.isAttachedToWindow &&
+                        controller.view.width > 0 &&
+                        controller.view.height > 0
+                }
+            },
+        )
     }
 
     fun text(): String = main2 { field.text.toString() }
@@ -473,6 +544,137 @@ internal class FeatureHost(
     }
 
     fun tapBar(label: String) = tap(label, CandidateBarView::class.java)
+
+    /**
+     * The virtual index of the first drawn key whose stable action matches [match]; -1 when the
+     * action is not on screen. Keys are located by what they do, never by their current face: the
+     * automatic key names follow the schema's input language, not the app UI language.
+     */
+    fun actionIndex(match: (LayoutAction) -> Boolean): Int =
+        main2 {
+            val view = find(KeyboardView::class.java)
+            view.keys.indexOfFirst { match(it.action) }
+        }
+
+    fun hasAction(match: (LayoutAction) -> Boolean): Boolean = actionIndex(match) >= 0
+
+    /** The real bounds of the first key whose action matches [match]. */
+    fun actionBounds(match: (LayoutAction) -> Boolean): Rect =
+        main2 {
+            val view = find(KeyboardView::class.java)
+            val index = view.keys.indexOfFirst { match(it.action) }
+            assertTrue("no key matching the action among ${view.keys.map { it.action }}", index >= 0)
+            Rect().also { view.accessibilityNodeProvider.createAccessibilityNodeInfo(index)!!.getBoundsInParent(it) }
+        }
+
+    /** The real bounds of every key whose action matches [match], in draw order. */
+    fun actionBoundsOf(match: (LayoutAction) -> Boolean): List<KeyBounds> =
+        main2 {
+            val view = find(KeyboardView::class.java)
+            view.keys.indices
+                .filter { match(view.keys[it].action) }
+                .map { view.bounds[it] }
+        }
+
+    fun tapAction(match: (LayoutAction) -> Boolean) {
+        main {
+            val view = find(KeyboardView::class.java)
+            val index = view.keys.indexOfFirst { match(it.action) }
+            assertTrue("no key matching the action among ${view.keys.map { it.action }}", index >= 0)
+            assertTrue(view.accessibilityNodeProvider.performAction(index, AccessibilityNodeInfo.ACTION_CLICK, null))
+        }
+        awaitIdle()
+    }
+
+    fun tapAction(
+        kind: LayoutActionKind,
+        value: String? = null,
+    ) = tapAction { it.type == kind && (value == null || it.value == value) }
+
+    /** Taps the page switch key for [target] (123 / symbols / letters). */
+    fun tapPage(target: LayoutPageTarget) = tapAction { it.pageSwitchTarget == target }
+
+    fun tapNumbersPage() = tapPage(LayoutPageTarget.NUMERIC)
+
+    fun tapSymbolsPage() = tapPage(LayoutPageTarget.SYMBOLS)
+
+    fun tapControl(control: ControlKey) = tapAction(controlMatch(control))
+
+    fun hasControl(control: ControlKey): Boolean = hasAction(controlMatch(control))
+
+    fun controlBounds(control: ControlKey): Rect = actionBounds(controlMatch(control))
+
+    fun <R> holdControl(
+        control: ControlKey,
+        holdMs: Long,
+        observe: () -> R,
+    ): R = holdAction(controlMatch(control), holdMs, observe)
+
+    /** Holds the first key whose action matches [match], reads [observe] while down, then lifts it. */
+    fun <R> holdAction(
+        match: (LayoutAction) -> Boolean,
+        holdMs: Long,
+        observe: () -> R,
+    ): R {
+        var center = 0f to 0f
+        main {
+            val view = find(KeyboardView::class.java)
+            val index = view.keys.indexOfFirst { match(it.action) }
+            assertTrue("no key matching the action among ${view.keys.map { it.action }}", index >= 0)
+            center = keyCenter(view, index)
+        }
+        val start = SystemClock.uptimeMillis()
+        main { touch(KeyboardView::class.java, start, MotionEvent.ACTION_DOWN, center, start) }
+        SystemClock.sleep(holdMs)
+        val seen = main2(observe)
+        main { touch(KeyboardView::class.java, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
+        awaitIdle()
+        return seen
+    }
+
+    /** Holds the first key whose action matches [match] past the long-press time, then lifts it. */
+    fun longPressAction(match: (LayoutAction) -> Boolean) {
+        var center = 0f to 0f
+        main {
+            val view = find(KeyboardView::class.java)
+            val index = view.keys.indexOfFirst { match(it.action) }
+            assertTrue("no key matching the action among ${view.keys.map { it.action }}", index >= 0)
+            center = keyCenter(view, index)
+        }
+        val start = SystemClock.uptimeMillis()
+        main { touch(KeyboardView::class.java, start, MotionEvent.ACTION_DOWN, center, start) }
+        SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
+        main { touch(KeyboardView::class.java, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, center, start) }
+        awaitIdle()
+    }
+
+    fun longPressControl(control: ControlKey) = longPressAction(controlMatch(control))
+
+    private fun controlMatch(control: ControlKey): (LayoutAction) -> Boolean =
+        when (control) {
+            ControlKey.SPACE -> { action -> action.type == LayoutActionKind.SPACE }
+            ControlKey.DELETE -> { action -> action.type == LayoutActionKind.BACKSPACE }
+            ControlKey.ENTER -> { action -> action.type == LayoutActionKind.ENTER }
+            ControlKey.SHIFT -> { action -> action.type == LayoutActionKind.SHIFT }
+            ControlKey.GLOBE -> { action -> action.type == LayoutActionKind.GLOBE }
+            ControlKey.LANGUAGE_TOGGLE ->
+                { action -> action.type == LayoutActionKind.LANGUAGE_SWITCH && action.value == null }
+            ControlKey.RETURN_TO_LETTERS ->
+                { action ->
+                    action.pageSwitchTarget == LayoutPageTarget.LETTERS ||
+                        action.languageSwitchBehavior == LayoutLanguageSwitchBehavior.LETTERS
+                }
+            ControlKey.CLEAR_INPUT -> { action -> action.type == LayoutActionKind.CLEAR_INPUT }
+        }
+
+    private fun keyCenter(
+        view: KeyboardView,
+        index: Int,
+    ): Pair<Float, Float> {
+        val bounds = Rect()
+        view.accessibilityNodeProvider.createAccessibilityNodeInfo(index)!!.getBoundsInParent(bounds)
+        return bounds.exactCenterX() to bounds.exactCenterY()
+    }
 
     fun tapToolbar(label: String) = tap(label, ToolbarView::class.java)
 

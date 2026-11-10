@@ -47,7 +47,7 @@ class KeypadSymbolSwitchDeviceTest {
         val host = FeatureHost(engine.backend(), "qwerty26")
         try {
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             assertTrue(
                 host.labelsOf(KeyboardView::class.java).toString(),
@@ -63,12 +63,12 @@ class KeypadSymbolSwitchDeviceTest {
     @Test
     fun theRowShapedSymbolPageOpensTypesAndReturnsToLetters() =
         withKeypadPairedTo(KeyboardPagePresets.symbolsSystem.id) { host ->
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             val marks = host.labelsOf(KeyboardView::class.java)
             assertTrue(marks.toString(), "9" !in marks)
             // The pad lacks the 123 page's everyday marks, so the symbol page opens on them first.
-            host.tap(host.string(R.string.ime_open_more_symbols))
+            host.tapSymbolsPage()
             host.awaitIdle()
             host.tap("\$")
             host.assertText("\$")
@@ -85,7 +85,7 @@ class KeypadSymbolSwitchDeviceTest {
     @Test
     fun theCategorizedSymbolPageOpensTypesAndReturnsToThePad() =
         withKeypadPairedTo(KeyboardPagePresets.symbolsCategorized.id) { host ->
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             assertTrue(host.await { host.findOrNull(SymbolPagePanelView::class.java) != null })
             host.tap(host.string(R.string.ime_open_numbers_page), SymbolPagePanelView::class.java)
@@ -94,7 +94,7 @@ class KeypadSymbolSwitchDeviceTest {
                 host.labelsOf(KeyboardView::class.java).toString(),
                 "9" in host.labelsOf(KeyboardView::class.java),
             )
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapSymbolsPage()
             host.awaitIdle()
             host.tap("#", SymbolPagePanelView::class.java)
             host.assertText("#")

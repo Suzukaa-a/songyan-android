@@ -60,12 +60,24 @@ object DeploymentStarter {
     }
 
     /** Makes the built-in source active, reusing its generation when one is current (crash-loop fallback). */
-    fun requestActivateBuiltin(context: Context) =
+    fun requestActivateBuiltin(context: Context) = requestActivate(context, SourceIds.BUILTIN)
+
+    /**
+     * Makes [sourceId] the active source, reusing its stored generation when one is current. The
+     * deploy process broadcasts when done. Returns false when Android refused to start the service,
+     * so the caller can leave the keyboard on the current engine. The finish broadcast carries
+     * [requestId].
+     */
+    fun requestActivate(
+        context: Context,
+        sourceId: String,
+        requestId: String = DeployContract.newRequestId(),
+    ): Boolean =
         start(
             context,
             DeployContract.intent(
                 context,
-                DeployRequest(DeployContract.newRequestId(), DeployMode.ACTIVATE_SOURCE, sourceId = SourceIds.BUILTIN),
+                DeployRequest(requestId, DeployMode.ACTIVATE_SOURCE, sourceId = sourceId),
             ),
         )
 
@@ -77,14 +89,13 @@ object DeploymentStarter {
         context: Context,
         intent: Intent,
         jobFallback: Boolean = false,
-    ) {
+    ): Boolean =
         runCatching {
             ContextCompat.startForegroundService(context, intent)
         }.onFailure {
             Log.e(TAG, "cannot start deploy service", it)
             if (jobFallback) DeployJobService.schedule(context)
-        }
-    }
+        }.isSuccess
 
     /**
      * Safe to call from the main thread: the readiness check runs on IO. A generation still missing

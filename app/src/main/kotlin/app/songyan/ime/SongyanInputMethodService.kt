@@ -54,17 +54,27 @@ import app.songyan.ime.ime.KeyboardController
 import app.songyan.ime.ime.KeyboardGeometry
 import app.songyan.ime.ime.KeyboardPalette
 import app.songyan.ime.ime.KeyboardPreferencesSource
+import app.songyan.ime.ime.OtherInputMethod
 import app.songyan.ime.ime.keyboardCallbacks
 import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.keyboard.support.SettingsTarget
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
+import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.ui.theme.ThemeMode
+import app.songyan.ime.state.BUILTIN_SCHEME_NAMES
+import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
+import app.songyan.ime.storage.SourceCatalog
+import app.songyan.ime.storage.SourceKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,8 +90,14 @@ import kotlinx.coroutines.withContext
 
 /** How long a first deployment may take before the engine notice offers the settings path. */
 private const val SETTINGS_ACTION_DELAY_MS = 2_000L
+
+// A switch to a stored package is ready in about 150 ms; only one that takes clearly longer
+// (a package rebuilt after an update) says it is preparing, instead of flashing the notice.
+private const val SWITCH_NOTICE_GRACE_MS = 300L
 private const val NO_INPUT = -1
 private const val SNAPSHOT_QUIET_MS = 5_000L
+
+// Long enough for a stored generation to be swapped in, deploy process start included.
 private const val TAG = "SongyanIme"
 
 class SongyanInputMethodService : InputMethodService() {
@@ -105,6 +121,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val keyFlickDirection = store.keyFlickDirection
             override val doubleSpacePeriod = store.doubleSpacePeriod
             override val hideIdleToolbar = store.hideIdleToolbar
+            override val toolbarLayout = store.toolbarLayout
             override val releaseHaptic = store.releaseHaptic
             override val oneHand = store.oneHand
             override val widePosition = store.widePositionPercent
@@ -148,12 +165,32 @@ class SongyanInputMethodService : InputMethodService() {
 
             override suspend fun setSymbolLock(value: Boolean) = store.setSymbolLock(value)
 
+            override val kana12FlickOnly = store.kana12FlickOnly
+
+            override suspend fun setKana12FlickOnly(value: Boolean) = store.setKana12FlickOnly(value)
+
             override val candidateTextSize = store.candidateTextSize
             override val keyFeedback = store.keyFeedback
 
             override suspend fun setLayoutId(id: String) = store.setLayoutId(id)
 
             override suspend fun setActiveSchemaId(id: String) = store.setActiveSchemaId(id)
+
+            // The same catalog edit the settings app makes; it publishes to the keyboard's catalog.
+            override suspend fun setMainLayout(
+                schemaId: String,
+                families: LayoutFamilyContext,
+                boardId: String,
+            ): Boolean =
+                withContext(Dispatchers.IO) {
+                    val key = KeyboardCompositionKey(schemaId, LayoutInput.Builtin.QWERTY26)
+                    (application as SongyanApplication).layoutRepository.edit { registry ->
+                        registry.withComposition(
+                            registry.composition(key, families).withMainLayoutId(boardId),
+                            key.rawValue,
+                        )
+                    } is LayoutEditResult.Saved
+                }
         }
     }
 
@@ -216,6 +253,22 @@ class SongyanInputMethodService : InputMethodService() {
     private var runtime: ImeEngineRuntime? = null
     private var runtimeState = EngineRuntimeState.NO_PUBLICATION
     private var settingsOffered = false
+    private var otherInputMethods: List<OtherInputMethod> = emptyList()
+    private var otherMethodsJob: Job? = null
+
+    /** The activation the keyboard menu asked for, until its finish broadcast arrives. */
+    private var switchRequestId: String? = null
+
+    /**
+     * The keyboard prepares the input method the user picked in its menu. A failure brings the old
+     * keyboard back, so the settings path is not offered meanwhile.
+     */
+    private var switchingSource = false
+
+    /** The switch outlasted [SWITCH_NOTICE_GRACE_MS], so the keyboard says it is preparing. */
+    private var switchSlow = false
+
+    private var switchJob: Job? = null
 
     /** The system asked for the keyboard to carry its own input method switcher (API 35+). */
     private var customSwitcherRequested = false
@@ -261,8 +314,15 @@ class SongyanInputMethodService : InputMethodService() {
                 if (intent.action ==
                     DeployContract.ACTION_DEPLOY_FINISHED
                 ) {
+                    val requestId = intent.getStringExtra(DeployContract.EXTRA_REQUEST_ID)
+                    val switched = requestId != null && requestId == switchRequestId
+                    if (switched) {
+                        switchRequestId = null
+                        if (!intent.getBooleanExtra(DeployContract.EXTRA_SUCCESS, false)) abandonSwitch()
+                    }
                     // Deferred by the runtime while the keys are on screen; repeated broadcasts are no-ops.
-                    runtime?.refreshIfChanged()
+                    if (switched) runtime?.refreshAfterRequestedSwitch() else runtime?.refreshIfChanged()
+                    refreshOtherInputMethods()
                 }
             }
         }
@@ -329,6 +389,10 @@ class SongyanInputMethodService : InputMethodService() {
                             override fun onState(state: EngineRuntimeState) {
                                 runtimeState = state
                                 renderRuntimeState()
+                                if (state == EngineRuntimeState.READY) {
+                                    controller?.settleSwitch()
+                                    refreshOtherInputMethods()
+                                }
                             }
 
                             override fun onEngine(backend: EngineBackend) {
@@ -374,6 +438,8 @@ class SongyanInputMethodService : InputMethodService() {
                     confirmComposition = { confirmCompositionForInsert() },
                     insert = { text -> commitQuickText(text) },
                     onChange = { controller?.onTextInserted() },
+                    // Dates follow the input language, so the text matches what the user types.
+                    inputLanguage = { controller?.inputLanguage ?: InputLanguage.ZH_HANS },
                 )
         }
         clipboardRecorder.start()
@@ -396,12 +462,29 @@ class SongyanInputMethodService : InputMethodService() {
         mainHandler.removeCallbacks(showSettingsAction)
         // The settings path always works: starting the :deploy service from the IME process can be
         // rejected by background foreground-service restrictions on Android 12+.
+        if (runtimeState != EngineRuntimeState.PREPARING) endSwitch()
         if (runtimeState == EngineRuntimeState.READY) {
             settingsOffered = false
-        } else if (runtimeState == EngineRuntimeState.PREPARING && !settingsOffered) {
+        } else if (runtimeState == EngineRuntimeState.PREPARING && !settingsOffered && !switchingSource) {
             mainHandler.postDelayed(showSettingsAction, SETTINGS_ACTION_DELAY_MS)
         }
-        controller?.setEngineNotice(engineNoticeFor(runtimeState, settingsOffered))
+        val quietSwitch = switchingSource && !switchSlow && runtimeState == EngineRuntimeState.PREPARING
+        controller?.setEngineNotice(if (quietSwitch) null else engineNoticeFor(runtimeState, settingsOffered))
+    }
+
+    private val showSwitchPreparing =
+        Runnable {
+            if (switchingSource) {
+                switchSlow = true
+                runtimeState = EngineRuntimeState.PREPARING
+                renderRuntimeState()
+            }
+        }
+
+    private fun endSwitch() {
+        mainHandler.removeCallbacks(showSwitchPreparing)
+        switchingSource = false
+        switchSlow = false
     }
 
     /** A slow first deployment should offer the settings path, not only a retry button. */
@@ -412,6 +495,86 @@ class SongyanInputMethodService : InputMethodService() {
                 renderRuntimeState()
             }
         }
+
+    /**
+     * The input methods of the other stored packages, for the keyboard menu. Read on IO: the catalog
+     * lists the sources directory and reads each manifest. Cheap enough to repeat on every show.
+     */
+    private fun refreshOtherInputMethods() {
+        val storage = (application as SongyanApplication).storage
+        otherMethodsJob?.cancel()
+        otherMethodsJob =
+            scope.launch {
+                val methods = withContext(Dispatchers.IO) { readOtherInputMethods(storage) }
+                otherInputMethods = methods
+                controller?.setOtherInputMethods(methods)
+            }
+    }
+
+    private fun readOtherInputMethods(storage: AppStorage): List<OtherInputMethod> {
+        val catalog = SourceCatalog(storage)
+        val active = GenerationPublisher(storage).readActive()?.sourceId
+        val damaged = catalog.damaged().toSet()
+        return catalog
+            .list()
+            .filter { it.sourceId != active && it.sourceId !in damaged }
+            .flatMap { manifest ->
+                val builtin = manifest.kind == SourceKind.BUILTIN
+                val packageName = if (builtin) getString(R.string.source_builtin_name) else manifest.displayName
+                manifest.schemes.map {
+                    val localized = BUILTIN_SCHEME_NAMES[it.schemaId]?.takeIf { builtin }?.let(::getString)
+                    OtherInputMethod(
+                        manifest.sourceId,
+                        it.schemaId,
+                        localized ?: it.name.ifBlank { it.schemaId },
+                        packageName,
+                    )
+                }
+            }
+    }
+
+    /**
+     * The user picked another package's input method in the menu: its choice is saved for the
+     * reconciliation that follows, then the deploy process activates the package. The old keys fade
+     * out at once, since they would type into the input method the user just left; the new keys fade
+     * in the moment the package is ready, and only a wait past [SWITCH_NOTICE_GRACE_MS] says the
+     * keyboard is preparing
+     * (see [ImeEngineRuntime.allowNextSwapWhileShown]). A switch that fails leaves the running
+     * engine, which never stopped, back on screen.
+     */
+    private fun switchSource(
+        sourceId: String,
+        schemaId: String,
+    ) {
+        val running = runtime ?: return
+        val app = application as SongyanApplication
+        val requestId = DeployContract.newRequestId()
+        switchRequestId = requestId
+        endSwitch()
+        switchingSource = true
+        mainHandler.postDelayed(showSwitchPreparing, SWITCH_NOTICE_GRACE_MS)
+        switchJob?.cancel()
+        switchJob =
+            scope.launch {
+                withContext(Dispatchers.IO) { app.keyboardPreferences.requestInputMethod(sourceId, schemaId) }
+                running.allowNextSwapWhileShown()
+                if (!DeploymentStarter.requestActivate(this@SongyanInputMethodService, sourceId, requestId)) {
+                    switchRequestId = null
+                    abandonSwitch()
+                }
+            }
+    }
+
+    private fun abandonSwitch() {
+        val running = runtime ?: return
+        running.allowNextSwapWhileShown(false)
+        endSwitch()
+        controller?.cancelPendingSwitch()
+        if (running.isRunning && runtimeState == EngineRuntimeState.PREPARING) {
+            runtimeState = EngineRuntimeState.READY
+            renderRuntimeState()
+        }
+    }
 
     private fun retryEngine() {
         runtimeState = EngineRuntimeState.PREPARING
@@ -469,6 +632,7 @@ class SongyanInputMethodService : InputMethodService() {
                             EngineNoticeAction.SETTINGS -> openSongyanSettings()
                         }
                     },
+                    switchSource = { sourceId, schemaId -> switchSource(sourceId, schemaId) },
                 ),
                 preferences,
                 quickContentDataSource = panelDataSource,
@@ -478,6 +642,7 @@ class SongyanInputMethodService : InputMethodService() {
         controller?.retire()
         controller = pad
         pad.setCustomSwitcherRequested(customSwitcherRequested)
+        pad.setOtherInputMethods(otherInputMethods)
         controllerInput = NO_INPUT
         val palette = KeyboardPalette.from(this)
         val container =
@@ -618,6 +783,7 @@ class SongyanInputMethodService : InputMethodService() {
         viewOwners.show()
         runtime?.setInputViewShown(true)
         runtime?.refreshIfChanged()
+        refreshOtherInputMethods()
         applyPolicy(EditorPolicy.from(info))
         // The keyboard window lives across shows: re-resolve the palette here so a change made in
         // settings (appearance, dynamic colour, light/dark) is in effect on the next show. The

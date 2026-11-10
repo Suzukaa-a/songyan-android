@@ -57,7 +57,7 @@ class QuarantineRestoreDeviceTest {
                     runner = RimeBindings.deployRunner(),
                     appName = RimeBindings.APP_NAME,
                     stamp = BuildStamps.current(context),
-                ).ensureDeployed().getOrThrow()
+                ).deployBuiltin().getOrThrow()
             val service =
                 LearningBackupService(
                     storage = storage,

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">松煙</string>
+    <string name="ime_name">松煙キーボード</string>
+
+    <!-- 入力パックの準備中に出す通知 -->
+    <string name="deploy_channel_name">入力パックの準備</string>
+    <string name="deploy_channel_description">初回の使用、更新、入力パックのインポート時に進捗を表示します。</string>
+    <string name="deploy_notification_title">入力パックを準備しています</string>
+    <string name="deploy_notification_text">準備が終わるとキーボードを使えます。</string>
+    <string name="deploy_notification_failed">入力パックの準備に失敗しました。タップして松煙を開き、やり直してください。</string>
+    <string name="deploy_notification_done">入力パックの準備ができました。</string>
+    <string name="deploy_notification_dictionary_title">辞書をインポートしています</string>
+    <string name="deploy_notification_dictionary_text">終わるとキーボードが自動で使います。</string>
+    <string name="deploy_notification_scheme_title">入力パックをインポートしています</string>
+    <string name="deploy_notification_scheme_text">終わるとキーボードが自動で使います。</string>
+
+    <string name="import_cancelled">インポートをキャンセルしました。</string>
+    <string name="import_path_separator">、</string>
+
+    <!-- インポートした辞書：結果（設定の「入力パック」に表示） -->
+    <string name="dictionary_import_error_unsupported_file">ここにインポートできるのは .dict.yaml の辞書ファイルだけです。</string>
+    <string name="dictionary_import_error_encoding">この辞書の文字を読み取れません。UTF-8 で保存してからやり直してください。</string>
+    <string name="dictionary_import_error_too_large">ファイルが大きすぎます。上限は %s です。</string>
+    <string name="dictionary_import_error_too_many_files">一度にインポートできる辞書ファイルは 128 個までです。</string>
+    <string name="dictionary_import_error_duplicate_file">同じ名前の辞書ファイルを 2 つ選んでいます。</string>
+    <string name="dictionary_import_error_too_many_entries">辞書の見出し語が 200 万件を超えています。</string>
+    <string name="dictionary_import_error_empty">辞書に見出し語がありません。</string>
+    <string name="dictionary_import_error_format">この辞書の形式には対応していません。</string>
+    <string name="dictionary_import_error_missing_dependencies">参照している辞書がありません：%s。まとめて選んでください。</string>
+    <string name="dictionary_import_error_dependency_cycle">これらの辞書は互いに参照しているため、インポートできません。</string>
+    <string name="dictionary_import_error_unreferenced_file">これらのファイルはインポートする辞書と関係ありません：%s。</string>
+    <string name="dictionary_import_error_template">この辞書は現在のバージョンの松煙では使えません。更新してからやり直してください。</string>
+    <string name="dictionary_import_error_staging">インポートが完了しませんでした。やり直してください。</string>
+    <string name="dictionary_import_error_read">この辞書ファイルを読み取れません。</string>
+    <string name="dictionary_import_error_url">https:// で始まるリンクを入力してください。</string>
+    <string name="dictionary_import_error_url_file">リンクは .dict.yaml ファイルを直接指している必要があります。</string>
+    <string name="dictionary_import_error_download">辞書をダウンロードできませんでした。ネットワークを確認してやり直してください。</string>
+    <string name="dictionary_import_error_download_timeout">ダウンロードに時間がかかりすぎたため停止しました。ネットワークを確認してやり直してください。</string>
+    <string name="dictionary_import_error_redirects">リンクのリダイレクトが多すぎます。別のリンクを使ってください。</string>
+    <string name="dictionary_import_error_insecure_redirect">リンクが安全でない http アドレスに転送されました。別のリンクを使ってください。</string>
+    <string name="dictionary_import_error_deploy">辞書のインポートに失敗しました。やり直してください。</string>
+    <string name="dictionary_import_error_deploy_unavailable">前のインポートを処理中です。終わってからやり直してください。</string>
+    <string name="dictionary_import_error_timeout">インポートに時間がかかりすぎたため停止しました。やり直してください。</string>
+    <string name="dictionary_import_error_remove">辞書の削除が完了しませんでした。しばらくしてからやり直してください。</string>
+
+    <!-- インポートした入力パック：結果（設定の「入力パック」に表示） -->
+    <string name="scheme_import_error_not_a_package">ここにインポートできるのは .zip 形式の入力パックだけです。</string>
+    <string name="scheme_import_error_name_encoding">アーカイブ内のファイル名が UTF-8 ではありません。OS 標準の圧縮ツールで圧縮し直してからやり直してください。</string>
+    <string name="scheme_import_error_too_large">ファイルが大きすぎます。上限は %s です。</string>
+    <string name="scheme_import_error_too_many_files">アーカイブ内のファイルが多すぎます。上限は 2000 個です。</string>
+    <string name="scheme_import_error_unsafe_files">アーカイブに安全でないファイルパスが含まれています。別のファイルを使ってください。</string>
+    <string name="scheme_import_error_user_data">アーカイブに学習データ（.userdb）が含まれています。取り除いてからやり直してください。</string>
+    <string name="scheme_import_error_missing_scheme">このファイルには使える入力方式がありません。</string>
+    <string name="scheme_import_error_invalid_scheme">入力パックの設定ファイルに誤りがあります。内容を確認してください。</string>
+    <string name="scheme_import_error_encoding">入力パックに UTF-8 でないファイルがあります。</string>
+    <string name="scheme_import_error_missing_dependency">入力パックに次のファイルがありません：%s。</string>
+    <string name="scheme_import_error_checksum">ダウンロードしたファイルが、この入力パックの記録された照合値と一致しないため、何もインストールしていません。</string>
+    <string name="scheme_import_error_conflicting_files">この入力パックの 2 つのアーカイブが、同じ名前で内容の違うファイルを提供しています：%s。どちらか一方だけを残してください。</string>
+    <string name="scheme_import_error_invalid_model">入力パックの文法モデルは使えません。</string>
+    <string name="scheme_import_error_builtin_customization">この入力パックは松煙標準の入力方式を変更するため、対応していません。</string>
+    <string name="scheme_import_error_read">このファイルを読み取れません。</string>
+    <string name="scheme_import_error_staging">インポートが完了しませんでした。やり直してください。</string>
+    <string name="scheme_import_error_deploy_unavailable">前のインポートを処理中です。終わってからやり直してください。</string>
+    <string name="scheme_import_error_deploy">入力パックのインポートに失敗しました。やり直してください。</string>
+    <string name="scheme_import_error_timeout">インポートに時間がかかりすぎたため停止しました。やり直してください。</string>
+
+    <!-- 保存済みの入力パック（設定の「入力パック」） -->
+    <string name="source_builtin_name">松煙内蔵</string>
+    <string name="source_error_activate">この入力パックに切り替えられませんでした。やり直してください。</string>
+    <string name="source_error_delete">この入力パックを削除できませんでした。やり直してください。</string>
+
+    <!-- 設定：内蔵の入力パックとキーボードの名前 -->
+    <string name="scheme_builtin_quanpin">内蔵全拼</string>
+    <string name="scheme_builtin_flypy">内蔵小鶴双拼</string>
+    <string name="keyboard_input_method_pinyin">ピンイン</string>
+    <string name="keyboard_layout_14">14 キー</string>
+    <string name="keyboard_layout_18">18 キー</string>
+    <string name="keyboard_layout_9">9 キー</string>
+    <string name="keyboard_layout_26">26 キー</string>
+    <string name="keyboard_layout_zhuyin41">注音 41キー</string>
+    <string name="keyboard_layout_cangjie26">倉頡 26キー</string>
+    <string name="keyboard_layout_romaji26">ローマ字 26キー</string>
+
+    <string name="dictionary_import_error_row">「%1$s」の %2$d 行目の列数が正しくありません。</string>
+    <string name="dictionary_import_error_word">「%1$s」の %2$d 行目に、漢字でない見出し語があります。</string>
+    <string name="dictionary_import_error_syllable_count">「%1$s」の %2$d 行目で、ピンインの数と文字数が一致しません。</string>
+    <string name="dictionary_import_error_syllable_unknown">「%1$s」の %2$d 行目に読み取れないピンインがあります。</string>
+    <string name="dictionary_import_error_weight">「%1$s」の %2$d 行目の重みが有効な数値ではありません。</string>
+    <string name="dictionary_import_error_row_unknown">辞書に読み取れない見出し語があります。</string>
+    <string name="dictionary_import_error_download_host">このリンクのホストが見つかりません。リンクを確認してください。</string>
+    <string name="dictionary_import_error_download_offline">ネットワークに接続されていません。ネットワークを確認してやり直してください。</string>
+    <string name="dictionary_import_error_download_server">サーバーでエラーが発生しました（%1$s）。しばらくしてからやり直してください。</string>
+    <string name="dictionary_import_error_download_not_found">このリンクにファイルはありません。</string>
+    <string name="dictionary_import_error_target">この入力パックには辞書を追加できません。別の入力パックを選んでください。</string>
+    <string name="scheme_import_error_dictionary_stack">このパッケージの新しいバージョンには、インポートした辞書を追加できません。辞書を削除してから、もう一度インポートしてください。</string>
+    <string name="scheme_import_error_keyboard_companion">この入力パックは 14 キー、18 キー、9 キーでは使えないため、インポートしませんでした。設定ファイルを確認してください。</string>
+    <string name="features_error_prediction_file">選んだファイルは有効な予測変換辞書（predict.db）ではありません。</string>
+    <string name="features_error_grammar_file">選んだファイルは使える文法モデル（.gram）ではありません。</string>
+    <string name="features_error_too_large">ファイルが大きすぎます。上限は 512 MB です。</string>
+    <string name="features_error_read">選んだファイルを開けませんでした。もう一度選んでください。</string>
+    <string name="features_error_save">保存できませんでした。やり直してください。</string>
+    <string name="deploy_notification_download_title">ダウンロードしています</string>
+    <string name="deploy_notification_download_text">ダウンロードが終わると保存されます。</string>
+    <string name="learning_backup_file_name">松煙-学習バックアップ-%1$s.json</string>
+    <string name="learning_safety_file_name">松煙-統合前バックアップ-%1$s.json</string>
+    <string name="learning_error_no_source">使用中の入力パックがまだありません。</string>
+    <string name="learning_error_nothing">使用中の入力パックはまだ語を学習していません。</string>
+    <string name="learning_error_backup">学習データを読み取れませんでした。やり直してください。</string>
+    <string name="learning_error_no_safety_backup">統合前のバックアップはまだありません。</string>
+    <string name="learning_error_write">ファイルを保存できませんでした。保存先をもう一度選んでください。</string>
+    <string name="learning_error_read">選んだファイルを読み取れませんでした。もう一度選んでください。</string>
+    <string name="learning_error_invalid">このファイルは松煙の学習バックアップではないか、壊れています。何も変更していません。</string>
+    <string name="learning_error_other_source">このバックアップは別の入力パックのものなので、使用中の入力パックには統合できません。何も変更していません。</string>
+    <string name="learning_error_safety">現在の学習データを先に保存できなかったため、統合は始まっていません。</string>
+    <string name="learning_error_merge">統合が完了しませんでした。学習データは変わっていません。やり直してください。</string>
+    <string name="learning_error_quarantine_gone">この学習データはもうありません。</string>
+    <string name="learning_error_quarantine_unreadable">この学習データは安全に読み取れないため、そのまま残しています。何も変更していません。</string>
+    <string name="learning_error_quarantine_not_in_use">このデータの入力パックを先に使ってから、復元してください。何も変更していません。</string>
+    <string name="learning_error_quarantine_empty">この学習データに復元できる語はありません。</string>
+    <string name="learning_error_delete">削除できませんでした。やり直してください。</string>
+    <string name="learning_error_too_large">選んだファイルが多すぎるか大きすぎます。数回に分けてインポートしてください。何も変更していません。</string>
+    <string name="learning_files_none_found">選んだ場所に Rime の辞書ファイルはありません。</string>
+    <string name="learning_files_merge">%1$s（%2$s）は「%3$s」に統合されます。</string>
+    <string name="learning_files_merged">%1$s（%2$s）を統合しました。</string>
+    <string name="learning_files_nothing">選んだファイルに統合できる辞書はありません。何も変更していません。</string>
+    <string name="learning_files_skipped_header">次のファイルは統合されません：</string>
+    <string name="learning_files_skip_invalid">%1$s：Rime の辞書ファイルではないか、壊れています</string>
+    <string name="learning_files_skip_too_large">%1$s：ファイルが大きすぎます</string>
+    <string name="learning_files_skip_empty">%1$s：語が入っていません</string>
+    <string name="learning_files_skip_not_installed">%1$s：使用中の入力パックではこの辞書を使いません</string>
+    <string name="learning_files_other_scheme_hint">これらの辞書が別の入力パックのものなら、先に「マイキーボード」でその入力パックを使ってから、もう一度インポートしてください。</string>
+    <plurals name="learning_files_dictionaries">
+        <item quantity="other">%d 個の辞書</item>
+    </plurals>
+    <plurals name="learning_files_entries">
+        <item quantity="other">%s 項目</item>
+    </plurals>
+    <plurals name="learning_files_not_merged">
+        <item quantity="other">ほかに %d 個のファイルは統合されませんでした。</item>
+    </plurals>
+    <string name="scheme_import_error_link_not_zip">リンクが ZIP ファイルを指していません。ZIP のダウンロードリンクか GitHub リポジトリのアドレスを入力してください。</string>
+    <string name="scheme_update_error_missing">更新する入力パックはもうありません。</string>
+    <string name="source_error_restore">この入力パックを復元できませんでした。</string>
+    <string name="source_damaged_name">壊れた入力パック</string>
+    <!-- アプリのファイルにある Rime 設定フォルダと、適用時に出すメッセージ -->
+    <string name="rime_config_root_title">松煙 Rime 設定</string>
+    <string name="rime_config_folder_edit">マイ設定</string>
+    <string name="rime_config_folder_active">使用中：%1$s</string>
+    <string name="rime_config_folder_active_none">使用中</string>
+    <string name="rime_config_folder_sources">すべての入力パック</string>
+    <string name="rime_editor_unsafe_reference">このファイルには設定の外を指す記述があるため、保存しませんでした。</string>
+    <string name="rime_config_error_many">ファイルが多すぎるため、変更は適用されませんでした。置けるファイルは 100 個までです。</string>
+    <string name="rime_config_error_detail">「%1$s」：%2$s</string>
+    <string name="rime_config_error_deploy">変更を反映できなかったため、キーボードは前の設定のままです。最近変更したファイルを確認してから、やり直してください。</string>
+    <string name="rime_config_error_unavailable">今は変更を適用できません。しばらくしてからやり直してください。</string>
+    <string name="rime_config_skipped">この設定は使用中の入力パックに合わないため、パックはもとの設定のまま使われます。</string>
+    <string name="rime_config_refused_read_only">このフォルダは読み取り専用です。ファイルを「マイ設定」に置いてから、松煙の設定で「変更を適用」をタップしてください。</string>
+    <string name="rime_config_refused_folder">「マイ設定」に置けるのは、スクリプト用の lua フォルダ 1 つだけです。ほかのファイルは直接置いてください。</string>
+    <string name="rime_config_refused_type">「%1$s」はここに置けません。「マイ設定」は .yaml と .txt ファイルを受け付けます。</string>
+    <string name="rime_config_refused_script_type">「%1$s」はここに置けません。このフォルダは .lua ファイルを受け付けます。</string>
+    <string name="rime_config_refused_large">「%1$s」は大きすぎるため、ここでは編集できません。1 ファイルあたり 4 MB までです。</string>
+    <!-- 新しい設定ファイルの先頭に置くコメント行。ファイルの内容であり、画面の文言ではない -->
+    <string name="rime_config_template_hint">patch の下に変更したい内容を書いてから、松煙で「変更を適用」をタップしてください。</string>
+    <string name="rime_config_template_example">例：1 ページに候補を 7 個表示する</string>
+    <string name="rime_config_script_taken">入力パックに「%1$s」という名前のスクリプトがすでにあります。別の名前を付けてください。</string>
+    <string name="rime_config_script_template_hint">設定ファイルに lua_filter@*%1$s と書くと使われます（lua_translator、lua_processor、lua_segmentor も使えます）。</string>
+    <string name="rime_config_grammar_example_new">文法モデルのパラメータ例です（行頭の # を外すと有効になります）：</string>
+    <string name="rime_config_grammar_example_under">文法モデルのパラメータ例です（行頭の # を外すと有効になります。これらの行は上の patch: の下に置きます）：</string>
+    <string name="rime_config_grammar_example_empty">文法モデルのパラメータ例です（上の patch: {} を patch: に変えてから、行頭の # を外すと有効になります）：</string>
+    <string name="package_learning_failed">パッケージはインポートしましたが、学習した語は統合されませんでした。学習データは変わっていません。</string>
+    <string name="package_learning_not_in_use">この入力パックに切り替えられなかったため、学習した語は統合されませんでした。</string>
+    <string name="package_learning_nothing">パッケージの学習した語がその辞書と一致しないため、統合しませんでした。</string>
+    <string name="package_learning_gone">この学習した語はもうありません。</string>
+
+    <!-- 処理結果をもとの場所に書き戻せず、クリップボードに入れたとき -->
+</resources>

@@ -1,0 +1,265 @@
+{
+  "id" : "cangjie26",
+  "input" : {
+    "builtinLayout" : "qwerty26"
+  },
+  "name" : "仓颉 26 键",
+  "rows" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "q"
+          },
+          "label" : "手",
+          "secondaryLabel" : "Q"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "w"
+          },
+          "label" : "田",
+          "secondaryLabel" : "W"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "e"
+          },
+          "label" : "水",
+          "secondaryLabel" : "E"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "r"
+          },
+          "label" : "口",
+          "secondaryLabel" : "R"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "t"
+          },
+          "label" : "廿",
+          "secondaryLabel" : "T"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "y"
+          },
+          "label" : "卜",
+          "secondaryLabel" : "Y"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "u"
+          },
+          "label" : "山",
+          "secondaryLabel" : "U"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "i"
+          },
+          "label" : "戈",
+          "secondaryLabel" : "I"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "o"
+          },
+          "label" : "人",
+          "secondaryLabel" : "O"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "p"
+          },
+          "label" : "心",
+          "secondaryLabel" : "P"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "a"
+          },
+          "label" : "日",
+          "secondaryLabel" : "A"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "s"
+          },
+          "label" : "尸",
+          "secondaryLabel" : "S"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "d"
+          },
+          "label" : "木",
+          "secondaryLabel" : "D"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "f"
+          },
+          "label" : "火",
+          "secondaryLabel" : "F"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "g"
+          },
+          "label" : "土",
+          "secondaryLabel" : "G"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "h"
+          },
+          "label" : "竹",
+          "secondaryLabel" : "H"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "j"
+          },
+          "label" : "十",
+          "secondaryLabel" : "J"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "k"
+          },
+          "label" : "大",
+          "secondaryLabel" : "K"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "l"
+          },
+          "label" : "中",
+          "secondaryLabel" : "L"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "z"
+          },
+          "label" : "重",
+          "secondaryLabel" : "Z"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "x"
+          },
+          "label" : "難",
+          "secondaryLabel" : "X"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "c"
+          },
+          "label" : "金",
+          "secondaryLabel" : "C"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "v"
+          },
+          "label" : "女",
+          "secondaryLabel" : "V"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "b"
+          },
+          "label" : "月",
+          "secondaryLabel" : "B"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "n"
+          },
+          "label" : "弓",
+          "secondaryLabel" : "N"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "m"
+          },
+          "label" : "一",
+          "secondaryLabel" : "M"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "modeSwitch",
+            "value" : "nextLayout"
+          },
+          "label" : "布局"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "width" : 4
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫"
+        },
+        {
+          "action" : {
+            "type" : "enter"
+          },
+          "label" : "⏎"
+        }
+      ]
+    }
+  ]
+}

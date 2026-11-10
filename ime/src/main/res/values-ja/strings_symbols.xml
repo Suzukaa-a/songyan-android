@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 組み込みの記号ライブラリの分類と組み込みの記号ページの分類 -->
+    <string name="ime_symbol_category_math">数学記号</string>
+    <string name="ime_symbol_category_numbers">番号</string>
+    <string name="ime_symbol_category_arrows">矢印</string>
+    <string name="ime_symbol_category_units">単位</string>
+    <string name="ime_symbol_category_currency">通貨</string>
+    <string name="ime_symbol_category_shapes">図形</string>
+    <string name="ime_symbol_category_letters">ギリシャ文字</string>
+    <string name="ime_symbol_category_special">その他</string>
+    <string name="ime_symbol_category_kaomoji">顔文字</string>
+    <string name="ime_symbol_category_punctuation">句読点</string>
+
+    <string name="ime_symbol_page_common">よく使う</string>
+    <string name="ime_symbol_page_recent">履歴</string>
+    <string name="ime_symbol_page_chinese">中国語</string>
+    <string name="ime_symbol_page_english">英語</string>
+    <string name="ime_symbol_page_brackets">かっこ</string>
+</resources>

@@ -112,11 +112,12 @@ class QuickContentRepository(
     /** The catalog plus recent symbols; a corrupt custom catalog falls back to the bundled one. */
     suspend fun loadSymbols(): SymbolPanelData =
         withContext(io) {
-            val catalog = symbolCatalog.loadActive { mutableError.value = it.code }
+            val loaded = symbolCatalog.loadActiveWithSource { mutableError.value = it.code }
             SymbolPanelData(
-                catalog = catalog,
+                catalog = loaded.catalog,
                 recents = recentSymbols.read { mutableError.value = it.code },
-                customCatalog = symbolCatalog.hasCustomCatalog,
+                // The actual source, not whether a file exists: a corrupt import shows the bundled catalog.
+                customCatalog = loaded.source == SymbolCatalogSource.CUSTOM,
             )
         }
 

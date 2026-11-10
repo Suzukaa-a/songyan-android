@@ -35,7 +35,7 @@ class OnboardingScreenTest {
                     onTyped = {},
                     onBack = {},
                     downloadAvailable = true,
-                    onDownload = { downloads += it },
+                    onDownload = { downloads += it.id },
                 )
             }
         }
@@ -56,7 +56,7 @@ class OnboardingScreenTest {
             listOf(
                 app.songyan.ime.settings.state.RecommendedSchemes.catalog
                     .first()
-                    .url,
+                    .id,
             ),
             downloads,
         )

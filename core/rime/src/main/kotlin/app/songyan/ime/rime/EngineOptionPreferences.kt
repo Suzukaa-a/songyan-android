@@ -29,6 +29,14 @@ class EngineOptionPreferences(
         }
     }
 
+    /**
+     * Whether a value was ever saved for [option]'s record, readable or not. A choice this build's
+     * switch cannot read back (an older switch's boolean, a state a later version added) is still
+     * the user's and must not be replaced by a default; [read] keeps answering what the engine can
+     * apply, so callers deciding whether to write a first default use this instead.
+     */
+    fun hasStoredValue(option: EngineOptionDescriptor): Boolean = fileOf(option).isFile
+
     @Throws(IOException::class)
     fun write(
         option: EngineOptionDescriptor,

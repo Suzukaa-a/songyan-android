@@ -30,7 +30,14 @@ while read -r ios_path android_path; do
   if [[ "$ios_path" == */ ]]; then
     [[ -d "$src" ]] || { echo "missing directory: $src" >&2; exit 1; }
     mkdir -p "$dst"
-    rsync -a --delete --exclude '__pycache__' --exclude '.DS_Store' "$src" "$dst"
+    # A dry run finds obsolete destinations without permanently removing local files.
+    preview=$(rsync -ani --delete --exclude '__pycache__' --exclude '.DS_Store' "$src" "$dst")
+    if [[ "$preview" == *"*deleting "* ]]; then
+      echo "move obsolete synchronized files to Trash, then run sync again:" >&2
+      printf '%s\n' "$preview" >&2
+      exit 1
+    fi
+    rsync -a --exclude '__pycache__' --exclude '.DS_Store' "$src" "$dst"
   else
     [[ -f "$src" ]] || { echo "missing file: $src" >&2; exit 1; }
     mkdir -p "$(dirname "$dst")"

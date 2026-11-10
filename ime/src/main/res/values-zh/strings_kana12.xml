@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kana gesture preference; key faces follow the input language. -->
+    <string name="ime_qs_kana12_flick_only">只用滑动</string>
+    <string name="ime_layout_kana12">假名 12 键</string>
+</resources>

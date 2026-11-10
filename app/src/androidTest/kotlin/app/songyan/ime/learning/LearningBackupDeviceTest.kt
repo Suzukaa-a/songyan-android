@@ -60,7 +60,7 @@ class LearningBackupDeviceTest {
                     runner = RimeBindings.deployRunner(),
                     appName = RimeBindings.APP_NAME,
                     stamp = BuildStamps.current(context),
-                ).ensureDeployed().getOrThrow()
+                ).deployBuiltin().getOrThrow()
             service =
                 LearningBackupService(
                     storage = storage,

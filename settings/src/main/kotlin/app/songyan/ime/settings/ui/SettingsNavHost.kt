@@ -56,6 +56,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.settings.R
@@ -65,6 +68,7 @@ import app.songyan.ime.settings.platform.shareText
 import app.songyan.ime.settings.platform.showInputMethodPicker
 import app.songyan.ime.settings.state.DiagnosticsHolder
 import app.songyan.ime.settings.state.EngineRecoveryNotice
+import app.songyan.ime.settings.state.familiesOfSchemes
 import app.songyan.ime.settings.ui.components.GrammarModelActions
 import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.LoadingScreen
@@ -92,6 +96,7 @@ import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
 import app.songyan.ime.settings.ui.screens.SchemeDetailScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
+import app.songyan.ime.settings.ui.screens.ToolbarScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
 import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
@@ -134,6 +139,7 @@ object SettingsRoutes {
     const val OPTIONS = "options"
     const val FEATURES = "features"
     const val CANDIDATE_BAR = "candidateBar"
+    const val TOOLBAR = "toolbar"
     const val SHUANGPIN = "shuangpinHints"
     const val T9_SYMBOLS = "t9QuickSymbols"
     const val NINE_KEY_EDITOR = "nineKeyEditor"
@@ -162,7 +168,7 @@ object SettingsRoutes {
     fun topLevelOf(route: String?): String? =
         when (route) {
             null, HOME -> null
-            FEATURES, CANDIDATE_BAR, SHUANGPIN -> OPTIONS
+            FEATURES, CANDIDATE_BAR, TOOLBAR, SHUANGPIN -> OPTIONS
             LAYOUTS,
             LAYOUT_EDITOR,
             PAGES,
@@ -273,7 +279,7 @@ private fun NavGraphBuilder.settingsGraph(
             onBack = topBack(navController),
             schemeImport = state.value.schemeImport,
             downloadAvailable = state.value.schemeImportAvailable,
-            onDownload = viewModel::importSchemeFromLink,
+            onDownload = viewModel::importRecommendedScheme,
             onOtherSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
             onCancelDownload = viewModel::cancelSchemeImport,
             onRetryDownload = viewModel::retrySchemeImport,
@@ -333,6 +339,7 @@ private fun NavGraphBuilder.settingsGraph(
             stackedDictionaries = state.value.stackedDictionaries,
             onImportSchemeFolder = viewModel::importSchemeFolder,
             onImportSchemeFromLink = viewModel::importSchemeFromLink,
+            onImportRecommendedScheme = viewModel::importRecommendedScheme,
             onRestoreSource = viewModel::restoreSource,
             incomingPackage = state.value.incomingPackage,
             onConfirmIncomingPackage = viewModel::importIncomingPackage,
@@ -401,7 +408,15 @@ private fun NavGraphBuilder.settingsGraph(
             KeyboardsScreen(
                 inputMethodName = state.value.inUseScheme?.name,
                 layoutId = state.value.layoutId,
+                mainLayout = state.value.mainLayout,
+                supportedLayouts = state.value.inUseScheme?.supportedLayouts,
                 onSelectLayout = viewModel::selectLayout,
+                boards =
+                    state.value.inUseScheme
+                        ?.family
+                        ?.let(InputLayoutPolicy::boardsOf)
+                        .orEmpty(),
+                onSelectBoard = viewModel::selectBoard,
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
                 onOpenComposition = { navController.navigate(SettingsRoutes.COMPOSITION) },
@@ -468,6 +483,7 @@ private fun NavGraphBuilder.settingsGraph(
             onEdit = { id -> navController.navigate(SettingsRoutes.pageEditor(id)) },
             onUse = { id -> navController.navigate(SettingsRoutes.useContent(id, page = true)) },
             inputMethodNames = BuiltinTemplateSchemas.NAMES + state.value.schemes.associate { it.id to it.name },
+            families = familiesOfSchemes(state.value.schemes),
         )
     }
 
@@ -517,11 +533,17 @@ private fun NavGraphBuilder.settingsGraph(
         } else {
             CompositionScreen(
                 key = key,
+                families =
+                    state.value.inUseScheme?.let { LayoutFamilyContext.of(it.id to it.family) }
+                        ?: LayoutFamilyContext.UNKNOWN,
                 keyboardName =
                     stringResource(
                         R.string.keyboard_title,
                         state.value.inUseScheme?.name ?: key.inputMethodId,
-                        stringResource(state.value.currentLayout.nameRes),
+                        state.value.mainLayout
+                            ?.displayName
+                            ?.text()
+                            ?: stringResource(state.value.currentLayout.nameRes),
                     ),
                 onBack = { navController.popBackStack() },
             )
@@ -565,6 +587,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onBack = topBack(navController),
                 onOpenFeatures = { navController.navigate(SettingsRoutes.FEATURES) },
                 onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
+                onOpenToolbar = { navController.navigate(SettingsRoutes.TOOLBAR) },
                 onOpenShuangpinHints = { navController.navigate(SettingsRoutes.SHUANGPIN) },
             )
         }
@@ -594,11 +617,16 @@ private fun NavGraphBuilder.settingsGraph(
         )
     }
 
+    composable(SettingsRoutes.TOOLBAR) {
+        ToolbarScreen(onBack = { navController.popBackStack() })
+    }
+
     composable(SettingsRoutes.KEYBOARD_MENU) {
         KeyboardMenuScreen(
             schemes = state.value.schemes,
             inUseSchemeId = state.value.inUseSchemeId,
             layoutId = state.value.layoutId,
+            otherSources = state.value.otherSources,
             onBack = { navController.popBackStack() },
         )
     }
@@ -621,7 +649,10 @@ private fun NavGraphBuilder.settingsGraph(
             if (!state.value.sourcesLoaded && state.value.inUseSchemeId == null) return@LaunchedEffect
             val catalog = registry ?: return@LaunchedEffect
             val key = compositionKeyOf(state.value.inUseSchemeId, "phone9")
-            val paired = key?.let { catalog.resolvedLayout(catalog.composition(it).mainLayoutID) }
+            val families =
+                state.value.inUseScheme?.let { LayoutFamilyContext.of(it.id to it.family) }
+                    ?: LayoutFamilyContext.UNKNOWN
+            val paired = key?.let { catalog.resolvedLayout(catalog.composition(it, families).mainLayoutID) }
             val id =
                 paired
                     ?.takeIf {
@@ -668,6 +699,7 @@ private fun NavGraphBuilder.settingsGraph(
         val openFailed = stringResource(R.string.settings_open_failed)
         TryOutScreen(
             ime = state.value.ime,
+            japanese = state.value.inUseScheme?.family == InputSchemeFamily.JAPANESE,
             onTyped = viewModel::onTypedInTryOut,
             onEnableIme = {
                 if (openInputMethodSettings(context) == SystemAction.FAILED) {

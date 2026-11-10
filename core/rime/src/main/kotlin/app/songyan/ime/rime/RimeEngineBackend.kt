@@ -14,6 +14,8 @@ import app.songyan.ime.keyboard.engine.EngineBackendKind
 import app.songyan.ime.keyboard.engine.EngineOptionDescriptor
 import app.songyan.ime.keyboard.engine.EngineOptionState
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.engine.ReadingCandidate
@@ -99,11 +101,15 @@ class RimeEngineBackend(
      */
     override suspend fun spellerAlphabet(schemaID: String): String? {
         if (schemaID.isEmpty()) return null
-        alphabetCache[schemaID]?.let { return it }
-        val value = catchingNonCancellation { engine.schemaValue(schemaID, "speller/alphabet") }.getOrNull()
-        if (value.isNullOrEmpty()) return null
+        // A schema without an alphabet is remembered too (as ""), so the list refresh does not reopen
+        // its config every time; a failed read is not, so the next refresh tries again.
+        alphabetCache[schemaID]?.let { return it.ifEmpty { null } }
+        val value =
+            catchingNonCancellation { engine.schemaValue(schemaID, "speller/alphabet") }
+                .getOrElse { return null }
+                .orEmpty()
         alphabetCache[schemaID] = value
-        return value
+        return value.ifEmpty { null }
     }
 
     override suspend fun processKey(keyValue: String): EngineSnapshot {
@@ -117,8 +123,10 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             }
-        val snapshot = publish(result.snapshot)
-        if (result.consumed || result.snapshot.isComposing) return snapshot
+        val next =
+            if (keyValue == EngineBackend.SPACE_KEY) commitFullyConfirmedZhuyin(result.snapshot) else result.snapshot
+        val snapshot = publish(next)
+        if (result.consumed || next.isComposing) return snapshot
         if (snapshot.committed.isNotEmpty()) {
             // A capital the speller refused: the editor confirmed the composition and handed the
             // letter back, so it is typed right after what was confirmed.
@@ -134,6 +142,32 @@ class RimeEngineBackend(
         return snapshot.copy(committed = literal)
     }
 
+    /**
+     * Moves the composition caret with librime's own Left / Right keysyms.
+     *
+     * The key is built here instead of going through [RimeKey.fromKeyValue], so no front-end string
+     * ever turns into a text key: a backend that cannot move the caret keeps the interface's null
+     * default and the caller leaves the composition untouched.
+     */
+    override suspend fun moveCompositionCaret(offset: Int): EngineSnapshot? {
+        val steps = if (offset < 0) -offset else offset
+        if (steps == 0) return currentSnapshot()
+        if (!currentSnapshot().isComposing) return null
+        val key = RimeKey(if (offset < 0) RimeKeyCode.LEFT else RimeKeyCode.RIGHT)
+        var latest: RimeSnapshot? = null
+        var remaining = steps
+        while (remaining > 0) {
+            latest =
+                try {
+                    engine.processKey(key).snapshot
+                } catch (e: RimeException) {
+                    throw e.asBackendError()
+                }
+            remaining--
+        }
+        return publish(latest ?: return null)
+    }
+
     /** What an unconsumed key types; control keys other than Return type nothing. */
     private fun literalForUnconsumed(keyValue: String): String? =
         when {
@@ -141,6 +175,23 @@ class RimeEngineBackend(
             keyValue.length == 1 && keyValue[0].code >= 0x20 && keyValue[0].code != 0x7F -> keyValue
             else -> null
         }
+
+    private suspend fun commitFullyConfirmedZhuyin(snapshot: RimeSnapshot): RimeSnapshot {
+        if (snapshot.isAsciiMode ||
+            snapshot.commitText.isNotEmpty() ||
+            InputLayoutPolicy.familyOf(snapshot.schemaId, alphabetCache[snapshot.schemaId].orEmpty()) !=
+            InputSchemeFamily.ZHUYIN ||
+            !snapshot.mapped(spelling = "", hidesNumericTransportCode = false).isFullyConfirmedComposition
+        ) {
+            return snapshot
+        }
+        // Another Space reopens a confirmed selection in fluency_editor.
+        return try {
+            engine.commitComposition().snapshot
+        } catch (error: RimeException) {
+            throw error.asBackendError()
+        }
+    }
 
     override suspend fun cancelComposition(): EngineSnapshot {
         // Clearing a prediction directly lets the predictor recreate it from commit history.
@@ -173,7 +224,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        return publish(snapshot)
+        return publish(commitFullyConfirmedZhuyin(snapshot))
     }
 
     override suspend fun selectCandidateAbsolute(index: Int): EngineSnapshot {
@@ -183,7 +234,7 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: throw EngineBackendError.OperationFailed("candidate refused: $index")
-        return publish(snapshot)
+        return publish(commitFullyConfirmedZhuyin(snapshot))
     }
 
     override suspend fun deleteCandidate(index: Int): EngineSnapshot? {
@@ -512,10 +563,13 @@ class RimeEngineBackend(
         }
 
     private suspend fun refreshSchemas() {
+        // The declared alphabet is part of what the list must carry: layout availability reads it to
+        // place an id the language table cannot name. [spellerAlphabet] caches each value, and this
+        // runs at setup and on a schema switch only, so the key path never asks for it.
         schemas =
-            engine.schemas().map { schema ->
-                KeyboardSchemaDescriptor(id = schema.id, name = schema.name)
-            }
+            SchemaDescriptors.withDeclaredAlphabets(
+                engine.schemas().map { schema -> KeyboardSchemaDescriptor(id = schema.id, name = schema.name) },
+            ) { schemaID -> spellerAlphabet(schemaID) }
     }
 
     private suspend fun readEngineSnapshot(): EngineSnapshot = publish(engine.readSnapshot())

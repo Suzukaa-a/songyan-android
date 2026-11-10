@@ -7,6 +7,8 @@ import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.display.SentenceSpelling
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
@@ -34,6 +36,10 @@ internal fun KeyboardController.render() {
         }
     val marked = compositionText(active, snapshot)
     lastMarked = marked
+    // The cached profile of the running scheme decides the glyph forms of the bar, the keys and
+    // the composing text; it is read once here and never recomputed on the key path.
+    val language = active?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    candidates.language = language
     // A chosen reading narrows what the bar lists to the real candidates that read that way.
     candidatesFiltered = readingFilterShowing(active)
     // Only the engine's own menu is read further page by page; suggestions and a reading filter's
@@ -51,7 +57,7 @@ internal fun KeyboardController.render() {
     if (dispatchGeneration == generation &&
         active != null
     ) {
-        callbacks.preedit(if (snapshot.isComposing) marked else "")
+        callbacks.preedit(if (snapshot.isComposing) marked else "", language)
     }
     val english = englishInput
     val currentPage = if (policy.numeric) KeyboardPageKind.NUMERIC else page
@@ -60,7 +66,7 @@ internal fun KeyboardController.render() {
     val config =
         KeyboardPages.Config(
             catalogRevision = catalog.revision,
-            pairing = catalog.registry.composition(compositionKey()),
+            pairing = catalog.registry.composition(compositionKey(), layoutFamilies()),
             layout = layoutKind,
             englishDirectInput = english,
             symbolMarksAscii = marksAscii,
@@ -70,6 +76,7 @@ internal fun KeyboardController.render() {
             showsGlobe = showsSwitchKey,
             jumpLayouts = jumpableLayouts(),
             everydayMarksPage = everydayMarksPage,
+            inputLanguage = language,
         )
     val faces =
         KeyboardFaces(
@@ -78,6 +85,13 @@ internal fun KeyboardController.render() {
             symbolMarksAscii = marksAscii,
             phone = layoutKind == KeyboardLayoutKind.PHONE9,
             symbolLocked = symbolLock,
+            language = language,
+            // Only a language whose space key names the open composition tells the faces about it:
+            // otherwise every word would relabel the whole page twice for nothing.
+            composing = visible.isComposing && keyNames.spaceFollowsComposition(language),
+            mainLayoutId = mainDefinition().id,
+            // A composition takes the space bar back: it names what space does next.
+            switchNotice = if (switchNotice && !visible.isComposing) menu.currentSchemaLabel() else null,
         )
     val shiftState = active?.shiftState
     val shiftActive = shiftState != null && shiftState != ShiftState.OFF
@@ -122,14 +136,18 @@ internal fun KeyboardController.render() {
         PhoneKeypadLayout.cyclesFirstKey(phoneDefinition)
     if (phoneShell) {
         val names = keyNames.chinese()
-        val railWindow =
+        val items =
             if (currentPage == null && snapshot.isComposing) {
-                T9RailPolicy.window(railItems(), railScroll)
+                railItems()
             } else {
                 emptyList()
             }
-        // A password field's pages share its taller key area; the shell stretches into it.
-        keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
+        // The window is all the view draws; the full count and the first shown index let assistive
+        // technology scroll the choices the three slots do not show.
+        val railFirst = T9RailPolicy.clampScroll(items.size, railScroll)
+        val railWindow = T9RailPolicy.window(items, railScroll)
+        // The shell draws no digit row of a password field, so it keeps its own height.
+        keyboard.extraRows = 0
         keyboard.syllableHints = emptyMap()
         keyboard.updatePhone(
             config =
@@ -146,16 +164,11 @@ internal fun KeyboardController.render() {
                     showsGlobe = showsSwitchKey,
                     labels =
                         PhoneKeypadLayout.Labels(
-                            page = context.getString(R.string.ime_numbers),
-                            language = "中/英",
-                            space = names.getString(R.string.ime_space),
-                            symbols = names.getString(R.string.ime_symbols),
-                            back =
-                                if (english) {
-                                    context.getString(R.string.ime_back)
-                                } else {
-                                    context.getString(R.string.ime_back_chinese)
-                                },
+                            page = names.getString(R.string.ime_numbers),
+                            language = keyNames.languageKeyDrawn(language) ?: "中/英",
+                            space = faces.switchNotice ?: keyNames.space(language, visible.isComposing),
+                            symbols = keyNames.symbolPageDrawn(language),
+                            back = keyNames.returnToLettersDrawn(language, english),
                             zero = "0",
                             enter = enterLabel(),
                             clear = names.getString(R.string.ime_clear),
@@ -168,6 +181,8 @@ internal fun KeyboardController.render() {
             faces = faces,
             railChoices = railWindow.map { it.label },
             railSelected = railWindow.count { it.selected },
+            railChoiceCount = items.size,
+            railChoiceFirst = railFirst,
         )
         if (phoneDefinition != null) scheduleReadingRail(active, snapshot) else clearRail()
         return
@@ -177,7 +192,9 @@ internal fun KeyboardController.render() {
     } else {
         clearRail()
     }
-    keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD) 1 else 0
+    // Only the letter page of a password field draws the digit row; 123 and symbols keep their
+    // own height instead of stretching four rows into five.
+    keyboard.extraRows = if (policy.fieldKind == FieldKind.PASSWORD && currentPage == null) 1 else 0
     keyboard.syllableHints =
         if (currentPage == null && active?.mode == InputMode.CHINESE) {
             KeyboardPages.syllableHints(config, shuangpinHints)
@@ -271,20 +288,27 @@ internal class MainDefinitionMemo(
     val revision: Long,
     val kind: KeyboardLayoutKind,
     val schemaId: String,
+    val family: InputSchemeFamily,
     val definition: LayoutDefinition,
 )
 
 /** The main layout the keyboard draws: the pairing's choice, or the bundled preset of this shape. */
 internal fun KeyboardController.mainDefinition(): LayoutDefinition {
     val snapshot = KeyboardLayoutCatalog.snapshot.value
+    val families = layoutFamilies()
+    val family = families.familyOf(schemaId)
     mainDefinitionMemo
-        ?.takeIf { it.revision == snapshot.revision && it.kind == layoutKind && it.schemaId == schemaId }
-        ?.let { return it.definition }
+        ?.takeIf {
+            it.revision == snapshot.revision &&
+                it.kind == layoutKind &&
+                it.schemaId == schemaId &&
+                it.family == family
+        }?.let { return it.definition }
     val registry = snapshot.registry
     val resolved =
-        registry.resolvedLayout(registry.composition(compositionKey()).mainLayoutID)
+        registry.resolvedLayout(registry.composition(compositionKey(), families).mainLayoutID)
             ?: builtinDefinition(layoutKind)
-    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, resolved)
+    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, family, resolved)
     return resolved
 }
 
@@ -297,8 +321,15 @@ internal fun KeyboardController.builtinDefinition(kind: KeyboardLayoutKind) =
     }
 
 /** The editor's own action label wins: it is the string the editor will act on. */
-internal fun KeyboardController.enterLabel(): String =
-    policy.customActionLabel ?: keyNames.chinese().getString(enterKeyLabelRes(policy.action))
+internal fun KeyboardController.enterLabel(): String {
+    val language = session?.inputLanguage?.language ?: InputLanguage.ZH_HANS
+    policy.customActionLabel?.let { return it }
+    // While a composition is open some languages name the confirmation instead of the action.
+    if (session?.snapshot?.isComposing == true) {
+        keyNames.enterComposing(language)?.let { return it }
+    }
+    return keyNames.enterAction(language, enterKeyLabelRes(policy.action))
+}
 
 /**
  * The localized face of the Enter key for an [EditorInfo.IME_MASK_ACTION] action.
@@ -381,21 +412,12 @@ internal fun KeyboardController.syncToolbar() {
     // One-handed mode only exists on a phone-width portrait window; elsewhere the button would do nothing.
     val oneHandAvailable = shell.isAvailable()
     toolbar.actions =
-        if (hideIdleToolbar) {
-            emptyList()
-        } else if (customSwitcherRequested && options.canSwitch) {
-            ToolbarView.DEFAULT_ACTIONS.flatMap { action ->
-                if (action ==
-                    ToolbarView.Action.HIDE
-                ) {
-                    listOf(ToolbarView.Action.SWITCH_INPUT_METHOD, action)
-                } else {
-                    listOf(action)
-                }
-            }
-        } else {
-            ToolbarView.DEFAULT_ACTIONS
-        }.filter { it != ToolbarView.Action.ONE_HAND || oneHandAvailable }
+        ToolbarActions.assemble(
+            layout = toolbarLayout,
+            hidden = hideIdleToolbar,
+            switcher = customSwitcherRequested && options.canSwitch,
+            oneHandAvailable = oneHandAvailable,
+        )
     menu.setInputMethodOptions(options)
     menu.setToolbarShortcuts(shown = hideIdleToolbar, oneHandAvailable = oneHandAvailable, oneHand = oneHandMode)
 }

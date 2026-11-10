@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardCompositionKey
@@ -40,9 +41,11 @@ import app.songyan.ime.layout.KeyboardPageDefinition
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.KeyboardSymbolPresentation
 import app.songyan.ime.layout.LayoutDefinition
-import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.KeyboardLayoutOption
+import app.songyan.ime.settings.state.layoutDisplayName
+import app.songyan.ime.settings.state.pageDisplayName
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.LibraryEvent
 import app.songyan.ime.settings.ui.components.LoadingScreen
@@ -51,6 +54,7 @@ import app.songyan.ime.settings.ui.components.SettingsRow
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.SwitchRow
 import app.songyan.ime.settings.ui.isEditablePage
+import app.songyan.ime.settings.ui.text
 
 /** The sentence that reports what a library action did. */
 @Composable
@@ -139,12 +143,13 @@ fun LayoutsScreen(
             current.layouts.forEach { layout ->
                 val builtIn = BuiltinLayouts.byId(layout.id) != null
                 val edited = builtIn && layout != BuiltinLayouts.byId(layout.id)
+                val layoutName = layoutDisplayName(layout, KeyboardLayoutOption.fromId(layout.id)).text()
                 ListItem(
                     modifier =
                         Modifier.clickable(onClickLabel = stringResource(R.string.layouts_action_edit)) {
                             onEdit(layout.id)
                         },
-                    headlineContent = { Text(layout.name) },
+                    headlineContent = { Text(layoutName) },
                     supportingContent = {
                         Text(
                             stringResource(
@@ -158,14 +163,14 @@ fun LayoutsScreen(
                     },
                     trailingContent = {
                         LayoutMenu(
-                            name = layout.name,
+                            name = layoutName,
                             canEdit = true,
                             canCopy = true,
                             canDelete = !builtIn,
                             canRestore = edited,
                             onUse = { onUse(layout.id) },
                             onEdit = { onEdit(layout.id) },
-                            onCopy = { viewModel.duplicateLayout(layout.id, layout.name + copySuffix) },
+                            onCopy = { viewModel.duplicateLayout(layout.id, layoutName + copySuffix) },
                             onExport = {
                                 exportId = layout.id
                                 exporter.launch(viewModel.exportFileName(layout.id))
@@ -274,6 +279,8 @@ fun PagesScreen(
     onEdit: (String) -> Unit,
     /** Names of the input methods a pairing may belong to, by id; one without a name is named by its layout. */
     inputMethodNames: Map<String, String> = BuiltinTemplateSchemas.NAMES,
+    /** The families the settings app state already resolved; unknown ids keep the id-only rule. */
+    families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
     onUse: (String) -> Unit = {},
     viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
 ) {
@@ -307,9 +314,10 @@ fun PagesScreen(
                 SectionHeader(stringResource(pageKindLabel(kind)))
                 current.pages.filter { it.kind == kind }.forEach { page ->
                     val preset = isPresetPage(page)
-                    val usage = keyboardUsage(current.keyboardsUsingPage(page.id), inputMethodNames)
+                    val usage = keyboardUsage(current.keyboardsUsingPage(page.id), inputMethodNames, current, families)
+                    val pageName = pageDisplayName(page).text()
                     ListItem(
-                        headlineContent = { Text(page.name) },
+                        headlineContent = { Text(pageName) },
                         supportingContent = {
                             val note =
                                 stringResource(
@@ -323,13 +331,13 @@ fun PagesScreen(
                         },
                         trailingContent = {
                             PageMenu(
-                                name = page.name,
+                                name = pageName,
                                 canEdit = !preset && page.isEditablePage,
                                 canCopy = page.symbolPresentation != KeyboardSymbolPresentation.AUTOMATIC,
                                 canDelete = !preset,
                                 onUse = { onUse(page.id) },
                                 onEdit = { onEdit(page.id) },
-                                onCopy = { viewModel.duplicatePage(page.id, page.name + copySuffix) },
+                                onCopy = { viewModel.duplicatePage(page.id, pageName + copySuffix) },
                                 onDelete = { deleting = page },
                             )
                         },
@@ -341,7 +349,7 @@ fun PagesScreen(
     deleting?.let { page ->
         // A page some keyboard still uses cannot go; the dialog says which keyboards, since the
         // pairing screen only shows the keyboard in use.
-        val usage = keyboardUsage(current.keyboardsUsingPage(page.id), inputMethodNames)
+        val usage = keyboardUsage(current.keyboardsUsingPage(page.id), inputMethodNames, current, families)
         if (usage != null) {
             AlertDialog(
                 onDismissRequest = { deleting = null },
@@ -379,9 +387,14 @@ fun PagesScreen(
 private fun keyboardUsage(
     keys: List<KeyboardCompositionKey>,
     inputMethodNames: Map<String, String>,
+    registry: LayoutRegistry,
+    families: LayoutFamilyContext,
 ): String? {
     val first = keys.firstOrNull() ?: return null
-    val layout = stringResource(layoutNameRes(first.layout))
+    val shape = KeyboardLayoutOption.fromId(first.layout.wire)
+    // A keyboard that draws a physical board is named by that board, not by the shape it shares.
+    val mainLayout = registry.resolvedLayout(registry.composition(first, families).mainLayoutID)
+    val layout = layoutDisplayName(mainLayout, shape).text()
     val title =
         inputMethodNames[first.inputMethodId]?.let { stringResource(R.string.keyboard_title, it, layout) } ?: layout
     return if (keys.size == 1) {
@@ -390,9 +403,6 @@ private fun keyboardUsage(
         stringResource(R.string.pages_used_by_many, title, keys.size)
     }
 }
-
-private fun layoutNameRes(layout: LayoutInput.Builtin): Int =
-    KeyboardLayoutOption.entries.firstOrNull { it.id == layout.wire }?.nameRes ?: R.string.layout_name_26
 
 private fun isPresetPage(page: KeyboardPageDefinition): Boolean =
     app.songyan.ime.layout.KeyboardPagePresets.all

@@ -90,6 +90,7 @@ object SettingsSearch {
                 R.string.candidate_bar_hide_toolbar_title,
                 R.string.candidate_bar_title,
             ),
+            SearchEntry(SettingsRoutes.TOOLBAR, R.string.toolbar_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.FEATURES, R.string.features_typo_title, R.string.features_title),
             SearchEntry(SettingsRoutes.FEATURES, R.string.features_fuzzy_title, R.string.features_title),
             SearchEntry(SettingsRoutes.FEATURES, R.string.features_prediction_title, R.string.features_title),

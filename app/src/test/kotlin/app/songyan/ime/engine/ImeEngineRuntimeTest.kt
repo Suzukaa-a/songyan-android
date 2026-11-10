@@ -428,6 +428,83 @@ class ImeEngineRuntimeTest {
         }
 
     @Test
+    fun aRequestedSwapProceedsWhileTheKeysAreShownOnceAndLaterOnesStillWait() =
+        runBlocking {
+            val storage = storageWithPublishedGeneration()
+            val created = java.util.Collections.synchronizedList(mutableListOf<File>())
+            val callbacks = RecordingCallbacks()
+            val runtime =
+                ImeEngineRuntime(
+                    storage = storage,
+                    publisher = GenerationPublisher(storage),
+                    deployStatus = DeployStatusStore(storage),
+                    factory = countingFactory(created),
+                    appName = "rime.songyan",
+                    appVersion = "test/1",
+                    callbacks = callbacks,
+                    requestFirstDeploy = { },
+                    ioDispatcher = Dispatchers.Default,
+                    mainDispatcher = Dispatchers.Default,
+                )
+            runtime.setInputViewShown(true)
+            runtime.ensureStarted()
+            withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
+
+            runtime.allowNextSwapWhileShown()
+            publishNext(storage, "2000-songyan-builtin-ffff")
+            runtime.refreshIfChanged()
+            withTimeout(10_000) { while (callbacks.ready.get() < 2) delay(10) }
+            assertEquals("2000-songyan-builtin-ffff", created.last().name)
+            assertFalse(runtime.isSwapDeferred)
+
+            publishNext(storage, "3000-songyan-builtin-eeee")
+            runtime.refreshIfChanged()
+            delay(300)
+            assertEquals("the permission was used up", 2, created.size)
+            assertTrue(runtime.isSwapDeferred)
+            runtime.close()
+        }
+
+    @Test
+    fun aRequestedSwitchThatEndsOnTheRunningGenerationStillReportsReady() =
+        runBlocking {
+            val storage = storageWithPublishedGeneration()
+            val created = java.util.Collections.synchronizedList(mutableListOf<File>())
+            val callbacks = RecordingCallbacks()
+            val runtime =
+                ImeEngineRuntime(
+                    storage = storage,
+                    publisher = GenerationPublisher(storage),
+                    deployStatus = DeployStatusStore(storage),
+                    factory = countingFactory(created),
+                    appName = "rime.songyan",
+                    appVersion = "test/1",
+                    callbacks = callbacks,
+                    requestFirstDeploy = { },
+                    ioDispatcher = Dispatchers.Default,
+                    mainDispatcher = Dispatchers.Default,
+                )
+            runtime.setInputViewShown(true)
+            runtime.ensureStarted()
+            withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
+
+            runtime.allowNextSwapWhileShown()
+            // The keyboard reopened while the deploy process still works on the switch.
+            runtime.refreshIfChanged()
+            delay(300)
+            assertEquals("a check before the request finished ends nothing", 1, callbacks.ready.get())
+
+            runtime.refreshAfterRequestedSwitch()
+            withTimeout(10_000) { while (callbacks.ready.get() < 2) delay(10) }
+            assertEquals("no engine was replaced", 1, created.size)
+
+            runtime.refreshAfterRequestedSwitch()
+            delay(300)
+            assertEquals("the switch ends once", 2, callbacks.ready.get())
+            runtime.close()
+        }
+
+    @Test
     fun anImportedGenerationWhoseStartsKeptDyingIsNotStartedAndTheBuiltInSourceIsRequested() =
         runBlocking {
             val storage = storageWithPublishedGeneration()

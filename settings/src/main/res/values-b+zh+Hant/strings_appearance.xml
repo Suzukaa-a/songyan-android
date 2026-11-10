@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">鍵盤外觀</string>
+
+    <string name="appearance_section_theme">深淺色</string>
+    <string name="appearance_theme_system">跟隨系統</string>
+    <string name="appearance_theme_light">淺色</string>
+    <string name="appearance_theme_dark">深色</string>
+
+    <string name="appearance_dynamic_title">跟隨桌布</string>
+
+    <string name="appearance_section_palette">鍵盤配色</string>
+    <string name="appearance_unavailable">暫時讀不到外觀列表，鍵盤仍使用預設外觀。</string>
+    <string name="appearance_apply_failed">無法應用這個外觀。</string>
+
+    <string name="appearance_name_songyan">松煙墨韻</string>
+    <string name="appearance_name_ink">墨夜</string>
+    <string name="appearance_name_bamboo">青竹</string>
+    <string name="appearance_name_paper">暖紙</string>
+    <string name="appearance_name_galaxy">星河</string>
+    <string name="appearance_name_dusk">薄暮</string>
+    <string name="appearance_name_system">系統預設</string>
+</resources>

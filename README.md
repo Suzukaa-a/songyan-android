@@ -11,19 +11,29 @@ schemes and data formats, with a keyboard and settings app designed for Android.
 
 - RIME engine (librime 1.17) with the `lua`, `octagram` (grammar model) and `predict` plugins and
   the nine-key processor, built from source for Android and linked into one native library.
-- Four built-in keyboard layouts: 26, 14, 18 and 9 keys.
+- Eight built-in keyboard layouts: 26, 14, 18 and 9 keys, plus the Dachen zhuyin (41-key), cangjie
+  (26-key, also used for quick), Japanese romaji (26-key) and Japanese kana (12-key) boards. A
+  scheme's own key map decides which boards it is offered on.
+- Traditional output: the built-in schemes type Simplified, Traditional, Taiwan or Hong Kong text,
+  seeded from the system language on first install and switchable per input method. Key names,
+  candidate glyph forms and punctuation follow the choice.
+- Imports RIME schemes and dictionaries from files or links. A recommended catalog offers the
+  common traditional schemes — bopomofo, cangjie, quick and cantonese — as pinned upstream
+  archives, downloaded only after you confirm and listed in your language's order. Japanese input
+  comes from a kagiroi package you import; the install adds the paging and punctuation patches the
+  keyboard expects, and the app does not download Japanese data by itself.
 - Appearance, candidate bar and key layout editors; dynamic color, one-handed mode, large-screen
   and split layouts. Appearance and layout files are interchangeable with the iOS app.
 - Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar
   models and per-component Lua toggles.
 - Symbols, phrases, clipboard history, emoji panel, and learned-data backup and merge (the backup
   format is shared with iOS).
+- Interface in English, Simplified Chinese, Traditional Chinese and Japanese.
 - Follows Android conventions: `EditorInfo` and IME actions, system input method switching,
   edge-to-edge insets, TalkBack, Material 3 settings.
 - Privacy: the input method process makes no network requests. Settings goes online only when you
-  ask it to (importing from a link, downloading a dictionary or model). Password fields and
-  fields that ask for no personalized learning are never learned from, and the clipboard is not
-  recorded in them.
+  ask it to (importing from a link, downloading a dictionary or model). Password fields and fields that ask for no personalized learning are never learned
+  from, and the clipboard is not recorded in them.
 
 ## Requirements
 
@@ -68,7 +78,7 @@ repository and are not edited here.
 | --- | --- |
 | `app/` | Input method service, settings entry, deployment service, engine runtime |
 | `core/rime/` | Native engine build, JNI, Kotlin engine API, deployment |
-| `core/keyboard/` | Input session state machine and engine contract (JVM) |
+| `core/keyboard/` | Input session state machine, input language and layout-family rules, kana model, engine contract (JVM) |
 | `core/layout/` | Layout JSON models, built-in layouts, swipe and geometry (JVM) |
 | `core/candidate/` | Candidate bar models and panel geometry (JVM) |
 | `core/appearance/` | Keyboard appearance/skin models (JVM) |

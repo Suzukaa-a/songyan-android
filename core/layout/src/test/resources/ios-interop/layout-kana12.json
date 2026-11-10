@@ -1,0 +1,172 @@
+{
+  "auxiliaryAreas" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "cursorLeft"
+          },
+          "label" : "←"
+        },
+        {
+          "action" : {
+            "type" : "pageSwitch",
+            "value" : "symbols"
+          },
+          "label" : "記号",
+          "titleMode" : "automatic"
+        },
+        {
+          "action" : {
+            "type" : "languageSwitch"
+          },
+          "label" : "あ/A",
+          "titleMode" : "automatic"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐",
+          "titleMode" : "automatic"
+        }
+      ],
+      "position" : "leading",
+      "role" : "editing"
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫",
+          "titleMode" : "automatic"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "titleMode" : "automatic"
+        },
+        {
+          "action" : {
+            "type" : "enter"
+          },
+          "label" : "⏎",
+          "titleMode" : "automatic",
+          "width" : 2
+        }
+      ],
+      "position" : "trailing",
+      "role" : "editing"
+    }
+  ],
+  "id" : "kana12",
+  "input" : {
+    "builtinLayout" : "qwerty26"
+  },
+  "name" : "假名 12 键",
+  "rows" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "a"
+          },
+          "label" : "あ"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ka"
+          },
+          "label" : "か"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "sa"
+          },
+          "label" : "さ"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ta"
+          },
+          "label" : "た"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "na"
+          },
+          "label" : "な"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ha"
+          },
+          "label" : "は"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ma"
+          },
+          "label" : "ま"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ya"
+          },
+          "label" : "や"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "ra"
+          },
+          "label" : "ら"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "kanaModifier"
+          },
+          "label" : "小゛゜"
+        },
+        {
+          "action" : {
+            "type" : "kana",
+            "value" : "wa"
+          },
+          "label" : "わ"
+        },
+        {
+          "action" : {
+            "type" : "literal",
+            "value" : "、"
+          },
+          "label" : "、。?!"
+        }
+      ]
+    }
+  ]
+}

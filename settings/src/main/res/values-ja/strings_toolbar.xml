@@ -1,0 +1,18 @@
+<resources>
+    <!-- ツールバー：待機中のツールバーに表示するボタンと順番 -->
+    <string name="toolbar_title">ツールバー</string>
+    <string name="toolbar_entry_subtitle">表示するボタンと順番を選びます</string>
+    <string name="toolbar_body">オフにしたボタンはツールバーに表示されません。キーボードを閉じるボタンは常に右端に固定されます。</string>
+    <string name="toolbar_limit">この端末のツールバーには最大 %1$d 個まで表示されます</string>
+    <string name="toolbar_over_width">幅を超えるため表示されません</string>
+    <string name="toolbar_reset">初期設定に戻す</string>
+    <string name="toolbar_more">%1$sのその他の操作</string>
+    <string name="toolbar_move_up">上へ移動</string>
+    <string name="toolbar_move_down">下へ移動</string>
+    <string name="toolbar_item_clipboard">クリップボード</string>
+    <string name="toolbar_item_input_methods">キーボードメニュー</string>
+    <string name="toolbar_item_emoji">絵文字</string>
+    <string name="toolbar_item_edit">編集</string>
+    <string name="toolbar_item_one_hand">片手モード</string>
+    <string name="toolbar_item_settings">キーボード設定</string>
+</resources>

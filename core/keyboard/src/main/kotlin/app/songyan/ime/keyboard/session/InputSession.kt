@@ -8,7 +8,11 @@ import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.EngineBackendError
 import app.songyan.ime.keyboard.engine.EngineOptionState
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.keyboard.engine.InputLanguageProfile
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyAction
@@ -53,6 +57,39 @@ class InputSession(
 
     var options: List<EngineOptionState> = emptyList()
         internal set
+
+    /**
+     * Cached input language of the source schema. It is recomputed only when the schema or a
+     * declared script switch changes, so drawing a key never queries the engine for it.
+     */
+    var inputLanguage: InputLanguageProfile =
+        InputLanguageProfile(InputLanguage.ZH_HANS, InputSchemeFamily.GENERIC)
+        internal set
+
+    /** The schema and declared script conversion [inputLanguage] was derived from. */
+    internal var inputLanguageSource: String? = null
+
+    private var familyContextKey: Pair<String, InputSchemeFamily>? = null
+    private var familyContextValue: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN
+
+    /**
+     * The families this session already resolved, for layout selection. Reading the cached profile
+     * keeps schema resolution and the engine alphabet off the key path; the same schema and family
+     * hand back the same context, so drawing a key allocates nothing.
+     */
+    fun layoutFamilyContext(): LayoutFamilyContext {
+        val family = inputLanguage.family
+        familyContextKey?.let { if (it.first == selectedSchemaID && it.second == family) return familyContextValue }
+        val context = LayoutFamilyContext.of(selectedSchemaID to family)
+        familyContextKey = selectedSchemaID to family
+        familyContextValue = context
+        return context
+    }
+
+    internal var inputLanguageConversion: String? = null
+
+    /** `speller/alphabet` read once per source schema; an empty entry is a failed read (fail closed). */
+    internal val alphabetCache = mutableMapOf<String, String>()
 
     /**
      * Real engine-state version, incremented on every [apply]. The host uses it as part of the
@@ -181,10 +218,13 @@ class InputSession(
                 throw error
             } catch (error: Exception) {
                 options = emptyList()
+                // The scheme may have changed under the failed read: its family must not outlive it.
+                refreshInputLanguage()
                 onError?.invoke(error)
                 onUpdate?.invoke()
                 return
             }
+        refreshInputLanguage()
         onUpdate?.invoke()
     }
 
@@ -317,6 +357,12 @@ class InputSession(
     suspend fun revalidateCurrentSchema() = revalidateCurrentSchemaImpl()
 
     /**
+     * Repairs a running layout the current schema's family cannot use, keeping the schema. Called on
+     * editor start, where a stored pair can match the preference and still be a forbidden one.
+     */
+    suspend fun repairFamilyLayout() = repairFamilyLayoutImpl()
+
+    /**
      * User-requested resource/layout transitions must call this before teardown. A failed or partial
      * confirmation keeps the current composition and rejects the transition. Compact spelling is off
      * while the composition is confirmed.
@@ -400,10 +446,12 @@ class InputSession(
                 }
 
                 KeyAction.Space ->
-                    if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
-                        commitComposition()
-                    } else {
-                        apply(engine.processKey(EngineBackend.SPACE_KEY))
+                    when {
+                        // Space can be a first-tone code rather than a candidate choice.
+                        inputLanguage.family == InputSchemeFamily.ZHUYIN && !snapshot.isAsciiMode ->
+                            apply(engine.processKey(EngineBackend.SPACE_KEY))
+                        snapshot.isComposing && confirmationTarget?.invoke() != null -> commitComposition()
+                        else -> apply(engine.processKey(EngineBackend.SPACE_KEY))
                     }
                 KeyAction.Backspace -> {
                     var next = engine.processKey(EngineBackend.BACKSPACE_KEY)
@@ -416,7 +464,10 @@ class InputSession(
                     apply(next)
                 }
                 KeyAction.Enter ->
-                    if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
+                    if (inputLanguage.family == InputSchemeFamily.JAPANESE && !snapshot.isAsciiMode) {
+                        // The scheme's Return binding commits kana, independently of the candidate filter.
+                        apply(engine.processKey(EngineBackend.RETURN_KEY))
+                    } else if (snapshot.isComposing && confirmationTarget?.invoke() != null) {
                         commitComposition()
                     } else if (snapshot.isComposing && (compactSpellingLayout || numericTransportLayout)) {
                         // The raw input of a folded or numeric layout is key codes, not letters, so
@@ -557,6 +608,30 @@ class InputSession(
             if (!commitComposition()) return
         }
         onMoveCursor?.invoke(offset)
+    }
+
+    /**
+     * Moves the engine's composition caret by [offset] characters without confirming anything.
+     *
+     * This is the composition caret, not the editor's: nothing is committed and no text is typed.
+     * Returns whether the caret really moved; false when idle, when the backend cannot move the
+     * caret natively (the default), or when the engine reported the same caret position afterwards.
+     */
+    suspend fun moveCompositionCaret(offset: Int): Boolean {
+        if (!inputAvailable() || offset == 0) return false
+        if (!snapshot.isComposing) return false
+        val before = snapshot.preeditCaretByte
+        val moved =
+            try {
+                engine.moveCompositionCaret(offset)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                onError?.invoke(error)
+                return false
+            } ?: return false
+        apply(moved)
+        return snapshot.isComposing && snapshot.preeditCaretByte != before
     }
 
     /**

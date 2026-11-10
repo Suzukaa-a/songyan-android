@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">Songyan</string>
     <string name="ime_name">Songyan</string>
-    <string name="subtype_pinyin">Pinyin</string>
+    <!-- The system words the subtype by its locale; the input method in use can be any language. -->
+    <string name="subtype_locale" translatable="false">%s</string>
 
     <!-- Deploy process foreground notification. -->
     <string name="deploy_channel_name">Input scheme setup</string>
@@ -54,6 +55,8 @@
     <string name="scheme_import_error_invalid_scheme">A configuration file of the input scheme is invalid. Check its contents.</string>
     <string name="scheme_import_error_encoding">A file of the input scheme is not UTF-8 text.</string>
     <string name="scheme_import_error_missing_dependency">The input scheme is missing these files: %s.</string>
+    <string name="scheme_import_error_checksum">The downloaded file does not match the checksum this scheme was published with, so nothing was installed.</string>
+    <string name="scheme_import_error_conflicting_files">Two archives in this scheme provide different versions of these files: %s. Keep only one of them.</string>
     <string name="scheme_import_error_invalid_model">The grammar model of the input scheme cannot be used.</string>
     <string name="scheme_import_error_builtin_customization">This input scheme changes Songyan\'s own input methods, which is not supported.</string>
     <string name="scheme_import_error_read">This file cannot be read.</string>
@@ -66,13 +69,16 @@
     <string name="source_error_activate">Could not switch to this input scheme. Try again.</string>
     <string name="source_error_delete">Could not delete this input scheme. Try again.</string>
 
-    <string name="scheme_builtin_quanpin">Full Pinyin</string>
-    <string name="scheme_builtin_flypy">Xiaohe Shuangpin</string>
+    <string name="scheme_builtin_quanpin">Built-in Full Pinyin</string>
+    <string name="scheme_builtin_flypy">Built-in Xiaohe Shuangpin</string>
     <string name="keyboard_input_method_pinyin">Pinyin</string>
     <string name="keyboard_layout_14">14-key</string>
     <string name="keyboard_layout_18">18-key</string>
     <string name="keyboard_layout_9">9-key</string>
     <string name="keyboard_layout_26">26-key</string>
+    <string name="keyboard_layout_zhuyin41">Zhuyin 41 keys</string>
+    <string name="keyboard_layout_cangjie26">Cangjie 26 keys</string>
+    <string name="keyboard_layout_romaji26">Romaji 26 keys</string>
 
     <string name="dictionary_import_error_row">Line %2$d of %1$s doesn\'t have the expected columns.</string>
     <string name="dictionary_import_error_word">Line %2$d of %1$s has an entry that isn\'t Chinese characters.</string>

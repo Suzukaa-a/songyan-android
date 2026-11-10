@@ -20,7 +20,9 @@ import kotlin.math.roundToInt
 /**
  * Letters, 123 and symbols of one field are one height: the window's top (and so the app's ime
  * inset) stays where it is while the user switches pages, and every page's keys reach the bottom
- * of that height instead of leaving a blank band under a shorter page. Over the shipped engine.
+ * of that height instead of leaving a blank band under a shorter page. The password letter page is
+ * the exception: its digit row makes it one row taller, and the other pages keep their own height
+ * rather than stretch. Over the shipped engine.
  */
 @RunWith(Parameterized::class)
 class KeyboardHeightStableDeviceTest(
@@ -37,15 +39,6 @@ class KeyboardHeightStableDeviceTest(
             val keys = host.findOrNull(KeyboardView::class.java)?.bounds.orEmpty()
             host.controller.view.measuredHeight to keys.maxOfOrNull { it.bottom.roundToInt() }
         }
-
-    private fun tapFirst(
-        host: FeatureHost,
-        vararg labels: String,
-    ) {
-        val shown = host.labelsOf(KeyboardView::class.java)
-        host.tap(requireNotNull(labels.firstOrNull { it in shown }) { "none of ${labels.toList()} in $shown" })
-        host.awaitIdle()
-    }
 
     @After
     fun restoreTheBundledCatalog() {
@@ -78,21 +71,29 @@ class KeyboardHeightStableDeviceTest(
         try {
             host.start(inputType = inputType)
             if (english) {
-                host.tap(host.string(R.string.ime_language_to_english))
+                host.tapControl(ControlKey.LANGUAGE_TOGGLE)
                 host.awaitIdle()
             }
             val letters = heightNow(host)
-            val numbersLabel = host.string(R.string.ime_open_numbers_page)
-            val symbolsLabel = host.string(R.string.ime_open_symbols_page)
-            val lettersLabel = host.string(R.string.ime_return_to_letters)
-            tapFirst(host, numbersLabel)
+            host.tapNumbersPage()
             val numbers = heightNow(host)
-            tapFirst(host, symbolsLabel, host.string(R.string.ime_symbols))
+            host.tapSymbolsPage()
             val symbols = heightNow(host)
             // A nine-key symbol page is a panel that has its own way back; the rows pages return here.
-            if (host.labelsOf(KeyboardView::class.java).isNotEmpty()) tapFirst(host, numbersLabel, lettersLabel)
+            if (host.labelsOf(KeyboardView::class.java).isNotEmpty()) host.tapControl(ControlKey.RETURN_TO_LETTERS)
             val back = heightNow(host)
             val pages = listOf(numbers, symbols, back)
+            if (fieldName == "password") {
+                // Only the password letter page draws a digit row; 123 and symbols keep their own
+                // height instead of stretching four rows into five.
+                val where2 = "$where: letters $letters, 123 $numbers, symbols $symbols, back $back"
+                assertTrue(where2, numbers.first < letters.first && symbols.first == numbers.first)
+                // The nine-key symbol panel has no row keys and stays open; the row pages return.
+                val symbolRows = symbols.second ?: return
+                assertTrue(where2, back.first == letters.first)
+                assertTrue(where2, abs(requireNotNull(numbers.second) - symbolRows) <= 1)
+                return
+            }
             assertTrue(
                 "$where: letters $letters, 123 $numbers, symbols $symbols, back $back",
                 pages.all { it.first == letters.first },

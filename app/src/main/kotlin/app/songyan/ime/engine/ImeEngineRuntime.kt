@@ -130,6 +130,7 @@ class ImeEngineRuntime(
     /** A newer generation is published but waits until the input view is gone. */
     @Volatile
     private var swapDeferred = false
+    private var swapWhileShownOnce = false
 
     val isRunning: Boolean get() = handle != null
 
@@ -158,14 +159,34 @@ class ImeEngineRuntime(
         if (!shown && swapDeferred) reloadLater()
     }
 
+    /**
+     * Main thread only. The user asked for another package from the keyboard menu: the next swap
+     * proceeds while the input view is shown, however long the package takes to get ready: the
+     * keyboard already shows that it is preparing, and nothing can be typed under that notice.
+     * One-shot; pass false to take it back when the switch did not happen.
+     */
+    fun allowNextSwapWhileShown(allow: Boolean = true) {
+        swapWhileShownOnce = allow
+    }
+
     /** True while a published generation waits for the input view to close; for tests. */
     val isSwapDeferred: Boolean get() = swapDeferred
 
-    private fun reloadLater() {
+    /**
+     * The switch the user asked for has been carried out by the deploy process: like
+     * [refreshIfChanged], and when the running generation is still the active one (the switch
+     * ended where it started) it reports [EngineRuntimeState.READY] so the keyboard comes back.
+     * Only the finished request may say so: an earlier check still sees the old generation.
+     */
+    fun refreshAfterRequestedSwitch() {
+        reloadLater(settlesSwitch = true)
+    }
+
+    private fun reloadLater(settlesSwitch: Boolean = false) {
         if (closed) return
         scope.launch {
             try {
-                ownership.withLock { reload() }
+                ownership.withLock { reload(settlesSwitch) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -176,10 +197,20 @@ class ImeEngineRuntime(
     }
 
     /** Waits for any in-flight start, then starts only when the running engine is out of date. */
-    private suspend fun reload() {
+    private suspend fun reload(settlesSwitch: Boolean = false) {
         if (closed) return
         val active = withContext(ioDispatcher) { publisher.readActive() }
-        if (handle != null && active != null && active.generation == loadedGeneration) return
+        if (handle != null && active != null && active.generation == loadedGeneration) {
+            // A requested switch that ended where it started still has to end on screen.
+            if (!settlesSwitch) return
+            withContext(mainDispatcher) {
+                if (swapWhileShownOnce) {
+                    swapWhileShownOnce = false
+                    callbacks.onState(EngineRuntimeState.READY)
+                }
+            }
+            return
+        }
         startIfNeeded(active)
     }
 
@@ -219,12 +250,13 @@ class ImeEngineRuntime(
         val swapping = handle != null
         val proceed =
             withContext(mainDispatcher) {
-                if (swapping && inputViewShown) {
+                if (swapping && inputViewShown && !swapWhileShownOnce) {
                     // Set here, not after the hop: [setInputViewShown] runs on this thread too, so a
                     // hide that follows always sees the deferral and reloads.
                     swapDeferred = true
                     false
                 } else {
+                    swapWhileShownOnce = false
                     callbacks.onState(EngineRuntimeState.PREPARING)
                     true
                 }

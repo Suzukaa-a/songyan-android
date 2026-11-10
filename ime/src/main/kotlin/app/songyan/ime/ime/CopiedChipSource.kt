@@ -91,13 +91,7 @@ class CopiedChipSource(
 
     private fun observe(description: ClipDescription?): ClipObservation {
         if (description == null) return ClipObservation(false, false, false, 0L)
-        val extras = description.extras
-        val sensitive =
-            extras != null &&
-                (
-                    extras.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE, false) ||
-                        extras.getBoolean(LEGACY_SENSITIVE, false)
-                )
+        val sensitive = description.isSensitiveClip()
         return ClipObservation(
             available = true,
             textMimeType = description.hasMimeType("text/plain") || description.hasMimeType("text/html"),
@@ -112,9 +106,13 @@ class CopiedChipSource(
             val clip = clipboard?.primaryClip
             if (clip == null || clip.itemCount == 0) null else clip.getItemAt(0).text?.toString()
         }.getOrNull()
-
-    private companion object {
-        /** Pre-API 33 spelling of [ClipDescription.EXTRA_IS_SENSITIVE]. */
-        const val LEGACY_SENSITIVE = "android.content.extra.IS_SENSITIVE"
-    }
 }
+
+/** The host flagged the clip with `EXTRA_IS_SENSITIVE` (or its pre-API 33 spelling); its content is never read. */
+internal fun ClipDescription.isSensitiveClip(): Boolean {
+    val extras = extras ?: return false
+    return extras.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE, false) || extras.getBoolean(LEGACY_SENSITIVE, false)
+}
+
+/** Pre-API 33 spelling of [ClipDescription.EXTRA_IS_SENSITIVE]. */
+private const val LEGACY_SENSITIVE = "android.content.extra.IS_SENSITIVE"

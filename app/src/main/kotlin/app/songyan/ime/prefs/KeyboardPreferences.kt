@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -122,6 +123,9 @@ class KeyboardPreferences(
             .orDefaultsOnIoError()
             .map { it[KEY_MENU_HIDDEN_SCHEMAS].orEmpty() }
             .distinctUntilChanged()
+            // Every collector brings the mirror up to date, including for choices made before it existed.
+            .onEach { mirrorMenuHiddenSchemas(it) }
+            .flowOn(Dispatchers.IO)
 
     /** Wire ids of the layouts the user took out of the keyboard menu. */
     val menuHiddenLayouts: Flow<Set<String>> =
@@ -132,6 +136,20 @@ class KeyboardPreferences(
 
     suspend fun setMenuHiddenSchemas(ids: Set<String>) {
         appContext.keyboardDataStore.edit { it[KEY_MENU_HIDDEN_SCHEMAS] = ids }
+        withContext(Dispatchers.IO) { mirrorMenuHiddenSchemas(ids) }
+    }
+
+    /** The deploy process cannot read the preferences; see [AppStorage.menuHiddenSchemasFile]. Off the main thread. */
+    private fun mirrorMenuHiddenSchemas(ids: Set<String>) {
+        runCatching {
+            val file = AppStorage(appContext.filesDir).menuHiddenSchemasFile
+            val text = ids.sorted().joinToString("\n")
+            if (file.isFile && file.readText() == text) return
+            file.parentFile?.mkdirs()
+            val temp = File(file.parentFile, file.name + ".tmp")
+            temp.writeText(text)
+            if (!temp.renameTo(file)) temp.delete()
+        }.onFailure { Log.w(TAG, "cannot mirror the hidden input methods", it) }
     }
 
     suspend fun setMenuHiddenLayouts(ids: Set<String>) {
@@ -291,6 +309,20 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_HIDE_IDLE_TOOLBAR] = value }
     }
 
+    /** The idle toolbar's entries (the wire form of the core toolbar layout); empty until the user changes them. */
+    val toolbarLayout: Flow<String> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_TOOLBAR_LAYOUT].orEmpty() }
+            .distinctUntilChanged()
+
+    /** Null returns to the default entries. */
+    suspend fun setToolbarLayout(wire: String?) {
+        appContext.keyboardDataStore.edit {
+            if (wire == null) it.remove(KEY_TOOLBAR_LAYOUT) else it[KEY_TOOLBAR_LAYOUT] = wire
+        }
+    }
+
     /** A second haptic tick on key release; off by default because some systems answer a press twice. */
     val releaseHaptic: Flow<Boolean> =
         appContext.keyboardDataStore.data
@@ -307,6 +339,20 @@ class KeyboardPreferences(
 
     suspend fun setSymbolLock(value: Boolean) {
         appContext.keyboardDataStore.edit { it[KEY_SYMBOL_LOCK] = value }
+    }
+
+    /**
+     * The Japanese twelve-key keys only flick: a repeated tap types the row's next kana instead of
+     * cycling the row. Off by default, which keeps the reference keyboard's tap cycle.
+     */
+    val kana12FlickOnly: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_KANA12_FLICK_ONLY] ?: false }
+            .distinctUntilChanged()
+
+    suspend fun setKana12FlickOnly(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_KANA12_FLICK_ONLY] = value }
     }
 
     suspend fun setKeyHeight(value: String) {
@@ -380,6 +426,7 @@ class KeyboardPreferences(
         namespace: String,
         primarySchemaId: String,
         schemaIds: List<String>,
+        sourceId: String = "",
     ) {
         val updated =
             appContext.keyboardDataStore.edit { prefs ->
@@ -391,12 +438,29 @@ class KeyboardPreferences(
                         namespace = namespace,
                         primarySchemaId = primarySchemaId,
                         schemaIds = schemaIds,
+                        sourceId = sourceId,
+                        request = InputMethodRequest.decode(prefs[KEY_REQUESTED_INPUT_METHOD]),
                     )
+                // Honoured or superseded: either way this reconcile settles the request.
+                prefs.remove(KEY_REQUESTED_INPUT_METHOD)
                 prefs[KEY_ACTIVE_SCHEMA] = chosen
                 prefs[KEY_RECONCILED_GENERATION] = generation
                 prefs[KEY_RECONCILED_NAMESPACE] = namespace
             }
         updated[KEY_ACTIVE_SCHEMA]?.let { mirrorActiveSchema(it) }
+    }
+
+    /**
+     * The keyboard menu switched to another package: the next generation of [sourceId] starts on
+     * [schemaId] instead of the package's primary input method. Settled by [reconcileSchema].
+     */
+    suspend fun requestInputMethod(
+        sourceId: String,
+        schemaId: String,
+    ) {
+        appContext.keyboardDataStore.edit {
+            it[KEY_REQUESTED_INPUT_METHOD] = InputMethodRequest(sourceId, schemaId).encode()
+        }
     }
 
     suspend fun setCandidateTextSize(value: String) {
@@ -469,12 +533,14 @@ class KeyboardPreferences(
         private val KEY_WIDE_POSITION_CUSTOM = intPreferencesKey("wide_position_custom")
         private val KEY_SPLIT_MODE = stringPreferencesKey("split_mode")
         private val KEY_SHUANGPIN_HINTS = stringPreferencesKey("shuangpin_hints")
+        private val KEY_TOOLBAR_LAYOUT = stringPreferencesKey("toolbar_layout")
         private val KEY_T9_QUICK_SYMBOLS = stringPreferencesKey("t9_quick_symbols")
         private val KEY_MENU_HIDDEN_SCHEMAS = stringSetPreferencesKey("menu_hidden_schemas")
         private val KEY_MENU_HIDDEN_LAYOUTS = stringSetPreferencesKey("menu_hidden_layouts")
         private val KEY_READING_PLACEMENT = stringPreferencesKey("reading_placement")
         private val KEY_LAYOUT_ID = stringPreferencesKey("layout_id")
         private val KEY_SYMBOL_LOCK = booleanPreferencesKey("symbol_lock")
+        private val KEY_KANA12_FLICK_ONLY = booleanPreferencesKey("kana12_flick_only")
         private val KEY_HEIGHT = stringPreferencesKey("key_height")
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
@@ -498,6 +564,28 @@ class KeyboardPreferences(
         private val KEY_ACTIVE_SCHEMA = stringPreferencesKey("active_schema_id")
         private val KEY_RECONCILED_GENERATION = stringPreferencesKey("reconciled_generation")
         private val KEY_RECONCILED_NAMESPACE = stringPreferencesKey("reconciled_namespace")
+        private val KEY_REQUESTED_INPUT_METHOD = stringPreferencesKey("requested_input_method")
+    }
+}
+
+/** An input method of a specific package that the user picked from the keyboard menu. */
+data class InputMethodRequest(
+    val sourceId: String,
+    val schemaId: String,
+) {
+    fun encode(): String = "$sourceId\t$schemaId"
+
+    companion object {
+        fun decode(value: String?): InputMethodRequest? {
+            val parts = value?.split('\t') ?: return null
+            return if (parts.size == 2 &&
+                parts.all { it.isNotEmpty() }
+            ) {
+                InputMethodRequest(parts[0], parts[1])
+            } else {
+                null
+            }
+        }
     }
 }
 
@@ -509,7 +597,10 @@ object SchemaReconciliation {
         namespace: String,
         primarySchemaId: String,
         schemaIds: List<String>,
+        sourceId: String = "",
+        request: InputMethodRequest? = null,
     ): String {
+        if (request != null && request.sourceId == sourceId && request.schemaId in schemaIds) return request.schemaId
         // Switching to another scheme package (or back to the built-in one) starts on its primary
         // input method; within the same family the user's choice stays while it still exists.
         if (previousNamespace != null && previousNamespace != namespace) return primarySchemaId
@@ -527,4 +618,5 @@ suspend fun KeyboardPreferences.reconcileWith(record: app.songyan.ime.storage.Pu
                 .namespace(record.sourceId),
         primarySchemaId = record.schemaId,
         schemaIds = record.schemaIds,
+        sourceId = record.sourceId,
     )

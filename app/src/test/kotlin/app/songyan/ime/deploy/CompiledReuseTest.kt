@@ -24,6 +24,21 @@ class CompiledReuseTest {
     ) = File(dir, name).also { it.writeText(text) }
 
     @Test
+    fun aCompiledOnlyPackageSeedsItsTablesWithoutTextDictionaries() {
+        val packaged = File(source, "build").also { it.mkdirs() }
+        val names = setOf("words.table.bin", "words.reverse.bin", "japanese.prism.bin")
+        names.forEach { write(packaged, it) }
+        write(packaged, "japanese.schema.yaml")
+
+        val copied = CompiledReuse.seed(packaged, listOf(source), build)
+
+        assertEquals(names, copied.toSet())
+        assertEquals(names, build.list()!!.toSet())
+        File(build, "words.table.bin").writeText("rebuilt")
+        assertEquals("words.table.bin", File(packaged, "words.table.bin").readText())
+    }
+
+    @Test
     fun theDictionariesOfTheSourceAndEveryPrismAreSeeded() {
         write(source, "rime_ice.dict.yaml")
         write(work, "stacked.dict.yaml")

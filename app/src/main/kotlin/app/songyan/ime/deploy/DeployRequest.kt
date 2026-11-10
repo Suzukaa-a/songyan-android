@@ -1,5 +1,16 @@
 package app.songyan.ime.deploy
 
+/**
+ * One pinned archive of a recommended package: where to download it and the SHA-256 its bytes must
+ * have. [bytes] is the catalogue's size hint, used for the download progress; the digest, never the
+ * size, decides whether the archive is the one the catalogue names.
+ */
+data class PinnedArchive(
+    val url: String,
+    val sha256: String,
+    val bytes: Long = 0,
+)
+
 /** What the :deploy process should do for one request. */
 enum class DeployMode(
     val wireName: String,
@@ -76,6 +87,18 @@ data class DeployRequest(
     val url: String? = null,
     /** The most [DeployMode.DOWNLOAD_FILE] may fetch, when the caller wants less than a model file. */
     val maxBytes: Long? = null,
+    /**
+     * The pinned archives of a recommended entry, the entry package first. Empty for a link the user
+     * typed: that one is downloaded without a digest, because the user chose the link itself.
+     */
+    val archives: List<PinnedArchive> = emptyList(),
+    /** Picked ZIPs the settings process already staged in the request's incoming directory, entry first. */
+    val packageFiles: List<String> = emptyList(),
+    /**
+     * Input methods a recommended entry offers. Empty keeps whatever the package's own
+     * default.yaml lists; a package without one would otherwise offer every root schema it ships.
+     */
+    val advertisedSchemas: List<String> = emptyList(),
 ) {
     /**
      * Whether running this request right after [earlier] would redo the same work: identical
@@ -91,8 +114,42 @@ data class DeployRequest(
 
     companion object {
         private val REQUEST_ID = Regex("^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+        private val SHA256 = Regex("[0-9a-f]{64}")
+        private val SCHEMA_ID = Regex("[A-Za-z0-9_.-]+")
+        private val PACKAGE_FILE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 
         fun isValidRequestId(value: String?): Boolean = value != null && REQUEST_ID.matches(value)
+
+        /** The pinned archives as one line per archive ("url", digest and size in tab-separated columns). */
+        fun archiveExtra(archives: List<PinnedArchive>): String =
+            archives.joinToString("\n") { it.url + "\t" + it.sha256 + "\t" + it.bytes }
+
+        /** Decodes [DeployContract.EXTRA_ARCHIVES]; empty when absent, null when the value is malformed. */
+        private fun pinnedArchives(stringExtra: (String) -> String?): List<PinnedArchive>? {
+            val raw = stringExtra(DeployContract.EXTRA_ARCHIVES)?.takeIf { it.isNotBlank() } ?: return emptyList()
+            val decoded = ArrayList<PinnedArchive>()
+            for (line in raw.split('\n')) {
+                val columns = line.split('\t')
+                if (columns.size != 3) return null
+                val url = columns[0]
+                if (!url.startsWith("https://") || url.any { it.isWhitespace() }) return null
+                if (!SHA256.matches(columns[1])) return null
+                val bytes = columns[2].toLongOrNull()?.takeIf { it >= 0 } ?: return null
+                decoded += PinnedArchive(url, columns[1], bytes)
+            }
+            return decoded
+        }
+
+        /** A newline-separated list of values matching [pattern]; empty when absent, null when invalid. */
+        private fun lines(
+            stringExtra: (String) -> String?,
+            name: String,
+            pattern: Regex,
+        ): List<String>? {
+            val raw = stringExtra(name)?.takeIf { it.isNotBlank() } ?: return emptyList()
+            val values = raw.split('\n')
+            return values.takeIf { list -> list.all { pattern.matches(it) } }
+        }
 
         private fun target(stringExtra: (String) -> String?): String? =
             stringExtra(DeployContract.EXTRA_SOURCE_ID)?.takeIf { it.isNotBlank() }
@@ -110,10 +167,16 @@ data class DeployRequest(
         ): DeployRequest? {
             if (!isValidRequestId(requestId)) return null
             val id = requestId!!
+            val pinnedArchives = pinnedArchives(stringExtra) ?: return null
+            val advertised = lines(stringExtra, DeployContract.EXTRA_SCHEMA_IDS, SCHEMA_ID) ?: return null
             return when (val parsed = DeployMode.fromWire(mode) ?: return null) {
                 DeployMode.BUILTIN -> DeployRequest(id, parsed, force = force)
+                DeployMode.IMPORT_SCHEME -> {
+                    val packageFiles =
+                        lines(stringExtra, DeployContract.EXTRA_PACKAGE_FILES, PACKAGE_FILE_NAME) ?: return null
+                    DeployRequest(id, parsed, packageFiles = packageFiles, advertisedSchemas = advertised)
+                }
                 DeployMode.REDEPLOY_ACTIVE,
-                DeployMode.IMPORT_SCHEME,
                 DeployMode.COMPLETE_COMPANIONS,
                 DeployMode.APPLY_USER_CONFIG,
                 -> DeployRequest(id, parsed)
@@ -128,10 +191,18 @@ data class DeployRequest(
                             DeployRequest(id, parsed, url = url, maxBytes = limit)
                         }
 
-                DeployMode.IMPORT_SCHEME_URL ->
-                    stringExtra(DeployContract.EXTRA_URL)
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { DeployRequest(id, parsed, sourceId = target(stringExtra), url = it) }
+                DeployMode.IMPORT_SCHEME_URL -> {
+                    val url = stringExtra(DeployContract.EXTRA_URL)?.takeIf { it.isNotBlank() }
+                    if (url == null && pinnedArchives.isEmpty()) return null
+                    DeployRequest(
+                        id,
+                        parsed,
+                        sourceId = target(stringExtra),
+                        url = url,
+                        archives = pinnedArchives,
+                        advertisedSchemas = advertised,
+                    )
+                }
 
                 DeployMode.IMPORT_DICTIONARY_URL ->
                     stringExtra(DeployContract.EXTRA_URL)
@@ -183,6 +254,10 @@ class DeployQueue {
     }
 
     val size: Int get() = pending.size
+
+    /** Every waiting request id of [mode], merged ones included. */
+    fun waiting(mode: DeployMode): List<String> =
+        pending.filter { it.mode == mode }.flatMap { listOf(it.requestId) + merged[it.requestId].orEmpty() }
 
     /** Whether [requestId] still waits, on its own or merged into a queued rebuild. */
     fun contains(requestId: String): Boolean =

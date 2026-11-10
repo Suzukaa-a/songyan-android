@@ -14,6 +14,44 @@ import java.util.zip.CRC32
 
 class SchemePackageImportTest {
     @Test
+    fun importsADirectoryQualifiedLuaComponent() {
+        val prepared =
+            prepare(
+                zip(
+                    "japanese.schema.yaml" to
+                        (
+                            String(schema("japanese")) +
+                                "engine:\n  translators:\n    - lua_translator@*kagiroi/kagiroi_translator\n"
+                        ).toByteArray(),
+                    "lua/kagiroi/kagiroi_translator.lua" to "return {}\n".toByteArray(),
+                ),
+            )
+        assertTrue(File(prepared.root, "lua/kagiroi/kagiroi_translator.lua").isFile)
+    }
+
+    @Test
+    fun importsCompiledTablesWithoutRequiringTheTextDictionary() {
+        val binaries =
+            mapOf(
+                "build/words.table.bin" to byteArrayOf(1, 2, 3),
+                "build/words.reverse.bin" to byteArrayOf(4, 5),
+                "build/japanese.prism.bin" to byteArrayOf(6, 7),
+            )
+        val prepared =
+            prepare(
+                zip(
+                    "japanese.schema.yaml" to schema("japanese", dictionary = "words"),
+                    *binaries.toList().toTypedArray(),
+                ),
+            )
+        assertEquals(listOf("japanese"), prepared.schemaIds)
+        for ((path, bytes) in binaries) {
+            assertTrue(path, File(prepared.root, path).readBytes().contentEquals(bytes))
+        }
+        assertTrue(prepared.skippedFiles.isEmpty())
+    }
+
+    @Test
     fun importsAGithubRepositoryArchiveWithFinderMetadata() {
         val prepared = prepare(zip(*wrapped("rime-ice-main", realisticPackage()), *finderMetadata("rime-ice-main")))
 
@@ -396,6 +434,93 @@ class SchemePackageImportTest {
         assertEquals(listOf("double_pinyin"), prepared.schemaIds)
     }
 
+    @Test
+    fun fakeRequiresInCommentsAndStringsAreNotDependencies() {
+        // Only a real call names a dependency: comments and string literals are plain text, however
+        // much they look like Lua code.
+        val helper =
+            """
+            -- require("fake/line-comment")
+            --[[ require("fake/long-comment") ]]
+            --[=[ require("fake/long-bracket-comment") ]=]
+            --[==[ require("fake/level-two-comment") ]==]
+            local text = "require('fake/normal-string')"
+            local escaped = "an escaped quote \"require('fake/escaped-string')\""
+            local long = [[require("fake/long-string")]]
+            local longer = [=[require("fake/long-bracket-string")]=]
+            local longest = [==[require("fake/level-two-string")]==]
+            return {}
+            """.trimIndent()
+        val prepared = prepare(zip(*luaPackage(helper)))
+
+        assertEquals(listOf("lexing"), prepared.schemaIds)
+    }
+
+    @Test
+    fun aRealRequireWrittenAroundCommentsWhitespaceAndParenthesesResolves() {
+        val helper =
+            """
+            local first = require --[[ between ]] ( "lexing/first" )
+            local second = require
+              ( 'lexing/second' )
+            local third = require --[=[ bracket ]=] ( "lexing/second" )
+            return { first, second, third }
+            """.trimIndent()
+        val prepared = prepare(zip(*luaPackage(helper)))
+
+        assertEquals(listOf("lexing"), prepared.schemaIds)
+    }
+
+    @Test
+    fun aRealRequireWrittenAroundCommentsStillFailsTheImportWhenMissing() {
+        // The closure must not depend on the call being on one line or on the comment being short.
+        val helper =
+            """
+            local block = require --[[ between ]] ( "lexing/missing-block" )
+            local line = require -- between
+              ( "lexing/missing-line" )
+            return { block, line }
+            """.trimIndent()
+        val error =
+            assertReason(SchemePackageImportError.Reason.MISSING_DEPENDENCY) {
+                prepare(zip(*luaPackage(helper)))
+            }
+
+        assertTrue("block in " + error.message, "lua/lexing/missing-block.lua" in error.paths)
+        assertTrue("line in " + error.message, "lua/lexing/missing-line.lua" in error.paths)
+    }
+
+    @Test
+    fun aStringWithDashesAndAShortCommentDoNotSwallowARealRequire() {
+        // "--" inside a string is data, and "--[" after it opens an ordinary short comment rather
+        // than a long one, so the next require is still a dependency.
+        val helper =
+            """
+            local separator = "--"
+            --[ require("fake/not-a-long-comment")
+            local missing = require("lexing/missing-after-string")
+            return { separator, missing }
+            """.trimIndent()
+        val error =
+            assertReason(SchemePackageImportError.Reason.MISSING_DEPENDENCY) {
+                prepare(zip(*luaPackage(helper)))
+            }
+
+        assertEquals(listOf("lua/lexing/missing-after-string.lua"), error.paths)
+    }
+
+    @Test
+    fun aModulePathThatLeavesLuaIsStillRefused() {
+        val helper =
+            """
+            local escaped = require("../escape")
+            return { escaped }
+            """.trimIndent()
+        assertReason(SchemePackageImportError.Reason.UNSAFE_PATH) {
+            prepare(zip(*luaPackage(helper)))
+        }
+    }
+
     private fun prepare(
         archive: ByteArray,
         limits: SchemePackageLimits = SchemePackageLimits(),
@@ -496,6 +621,23 @@ class SchemePackageImportTest {
             "schema:\n  schema_id: $id\n  name: $id\n" +
                 (if (dictionary != null) "translator:\n  dictionary: $dictionary\n" else "")
         ).toByteArray()
+
+    /**
+     * One listed schema that mounts a Lua component, so the helper module is read as source, plus the
+     * two real modules the lexing tests resolve.
+     */
+    private fun luaPackage(helper: String): Array<Pair<String, ByteArray>> =
+        arrayOf(
+            "default.yaml" to "schema_list:\n  - schema: lexing\n".toByteArray(),
+            "lexing.schema.yaml" to
+                (
+                    "schema:\n  schema_id: lexing\n  name: Lexing\n" +
+                        "engine:\n  translators:\n    - lua_translator@*lexing/helper\n"
+                ).toByteArray(),
+            "lua/lexing/helper.lua" to helper.toByteArray(),
+            "lua/lexing/first.lua" to "return {}\n".toByteArray(),
+            "lua/lexing/second.lua" to "return {}\n".toByteArray(),
+        )
 
     private fun dictionaryFile(
         name: String,

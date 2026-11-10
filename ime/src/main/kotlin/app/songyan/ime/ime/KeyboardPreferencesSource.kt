@@ -2,6 +2,8 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarLayout
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +40,9 @@ interface KeyboardPreferencesSource {
 
     /** Whether the idle candidate row hides its toolbar; the menu then carries its entries. */
     val hideIdleToolbar: Flow<Boolean> get() = flowOf(false)
+
+    /** [ToolbarLayout.toWire]: the idle toolbar's entries in order; empty is the default. */
+    val toolbarLayout: Flow<String> get() = flowOf("")
 
     /** A second haptic tick when a key is released. */
     val releaseHaptic: Flow<Boolean> get() = flowOf(false)
@@ -79,6 +84,17 @@ interface KeyboardPreferencesSource {
 
     suspend fun setActiveSchemaId(id: String)
 
+    /**
+     * Saves [boardId] as the main layout of the pairing for [schemaId] on the identity (26-key) shape,
+     * off the main thread; true when it was stored. The owner publishes the stored catalog to
+     * [KeyboardLayoutCatalog], which is what redraws the keyboard.
+     */
+    suspend fun setMainLayout(
+        schemaId: String,
+        families: LayoutFamilyContext,
+        boardId: String,
+    ): Boolean = false
+
     suspend fun setOneHand(value: String) = Unit
 
     suspend fun setKeyHeight(value: String) = Unit
@@ -93,4 +109,12 @@ interface KeyboardPreferencesSource {
     val symbolLock: Flow<Boolean> get() = flowOf(false)
 
     suspend fun setSymbolLock(value: Boolean) = Unit
+
+    /**
+     * The Japanese twelve-key keys only flick: a repeated tap types the row's next kana instead of
+     * cycling the row. Off by default, which keeps the reference keyboard's tap cycle.
+     */
+    val kana12FlickOnly: Flow<Boolean> get() = flowOf(false)
+
+    suspend fun setKana12FlickOnly(value: Boolean) = Unit
 }

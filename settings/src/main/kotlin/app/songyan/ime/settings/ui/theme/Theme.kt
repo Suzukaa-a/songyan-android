@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -145,6 +146,17 @@ val SongyanShapes =
     )
 
 /**
+ * Strict CJK line breaking: the default lets a line start with ー or a small kana
+ * (「デフォルト キ／ーボード」), which Japanese typesetting forbids. Chinese text is unaffected.
+ */
+private val StrictLineBreak =
+    LineBreak(
+        strategy = LineBreak.Strategy.Simple,
+        strictness = LineBreak.Strictness.Strict,
+        wordBreak = LineBreak.WordBreak.Default,
+    )
+
+/**
  * Typography tuned for Chinese glyphs: zero letter spacing (Latin negative tracking makes CJK
  * strokes touch) and line heights that leave headroom so OEM fonts are not clipped.
  */
@@ -157,6 +169,7 @@ val SongyanTypography =
                 fontSize = 57.sp,
                 lineHeight = 64.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         displayMedium =
             TextStyle(
@@ -165,6 +178,7 @@ val SongyanTypography =
                 fontSize = 45.sp,
                 lineHeight = 52.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         displaySmall =
             TextStyle(
@@ -173,6 +187,7 @@ val SongyanTypography =
                 fontSize = 36.sp,
                 lineHeight = 44.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         headlineLarge =
             TextStyle(
@@ -181,6 +196,7 @@ val SongyanTypography =
                 fontSize = 32.sp,
                 lineHeight = 40.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         headlineMedium =
             TextStyle(
@@ -189,6 +205,7 @@ val SongyanTypography =
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         headlineSmall =
             TextStyle(
@@ -197,6 +214,7 @@ val SongyanTypography =
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         titleLarge =
             TextStyle(
@@ -205,6 +223,7 @@ val SongyanTypography =
                 fontSize = 22.sp,
                 lineHeight = 28.sp,
                 letterSpacing = 0.sp,
+                lineBreak = StrictLineBreak,
             ),
         titleMedium =
             TextStyle(
@@ -213,6 +232,7 @@ val SongyanTypography =
                 fontSize = 16.sp,
                 lineHeight = 24.sp,
                 letterSpacing = 0.1.sp,
+                lineBreak = StrictLineBreak,
             ),
         titleSmall =
             TextStyle(
@@ -221,6 +241,7 @@ val SongyanTypography =
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.1.sp,
+                lineBreak = StrictLineBreak,
             ),
         bodyLarge =
             TextStyle(
@@ -229,6 +250,7 @@ val SongyanTypography =
                 fontSize = 16.sp,
                 lineHeight = 24.sp,
                 letterSpacing = 0.15.sp,
+                lineBreak = StrictLineBreak,
             ),
         bodyMedium =
             TextStyle(
@@ -237,6 +259,7 @@ val SongyanTypography =
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.2.sp,
+                lineBreak = StrictLineBreak,
             ),
         bodySmall =
             TextStyle(
@@ -245,6 +268,7 @@ val SongyanTypography =
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
                 letterSpacing = 0.25.sp,
+                lineBreak = StrictLineBreak,
             ),
         labelLarge =
             TextStyle(
@@ -253,6 +277,7 @@ val SongyanTypography =
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.1.sp,
+                lineBreak = StrictLineBreak,
             ),
         labelMedium =
             TextStyle(
@@ -261,6 +286,7 @@ val SongyanTypography =
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 letterSpacing = 0.2.sp,
+                lineBreak = StrictLineBreak,
             ),
         labelSmall =
             TextStyle(
@@ -269,6 +295,7 @@ val SongyanTypography =
                 fontSize = 11.sp,
                 lineHeight = 16.sp,
                 letterSpacing = 0.2.sp,
+                lineBreak = StrictLineBreak,
             ),
     )
 

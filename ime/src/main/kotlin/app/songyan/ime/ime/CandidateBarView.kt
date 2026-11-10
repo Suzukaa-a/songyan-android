@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Handler
+import android.os.LocaleList
 import android.os.Looper
 import android.text.TextPaint
 import android.view.HapticFeedbackConstants
@@ -25,6 +26,7 @@ import app.songyan.ime.candidate.BrowserCandidate
 import app.songyan.ime.candidate.CandidateBrowser.CandidatePageReadResult
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.InputLanguage
 
 /**
  * The candidate row: one row of the keyboard's top band, [KeyboardDesignTokens.candidateBarHeightDp]
@@ -125,6 +127,20 @@ class CandidateBarView(
     internal val density = resources.displayMetrics.density
     internal val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     internal val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+
+    /**
+     * The running scheme's input language: it decides the glyph forms every candidate, reading and
+     * popup character is measured and drawn in. The candidate widths depend on it, so a change
+     * invalidates the measured widths and lays the bar out again.
+     */
+    internal var language: InputLanguage = InputLanguage.ZH_HANS
+        set(value) {
+            if (field == value) return
+            field = value
+            applyTextLanguage()
+            if (width > 0) rebuild()
+            invalidate()
+        }
     internal var palette = KeyboardPalette.from(context)
     internal var metrics = palette.tokens.withCandidateTextFactor(1f)
 
@@ -162,6 +178,18 @@ class CandidateBarView(
     /** The candidate and comment text sizes the entries of [measureGeneration] were measured at. */
     internal var measuredTextSize = 0f
     internal var measuredCommentSize = 0f
+
+    init {
+        applyTextLanguage()
+    }
+
+    /** Applies [language] to the paints measuring and drawing the bar's text; widths are remeasured. */
+    private fun applyTextLanguage() {
+        val locales = LocaleList.forLanguageTags(language.languageTag)
+        paint.setTextLocales(locales)
+        textPaint.setTextLocales(locales)
+        measureGeneration++
+    }
 
     /** One rectangle per entry, in content coordinates (before [scroll]). */
     internal var cells = emptyList<RectF>()

@@ -114,6 +114,9 @@ class DictionaryImportDeviceTest {
             assertEquals(DictionaryImportBuilder.SOURCE_ID, firstRecord.sourceId)
             assertTrue(publisher.isComplete(firstRecord))
             assertTrue(File(storage.generationDir(firstRecord.generation), "build/songyan_quanpin.prism.bin").isFile)
+            // The next import of the same source supersedes this build, and pruning may drop it.
+            val firstPrism = prismOf(firstRecord)
+            val firstTable = tableOf(firstRecord)
 
             // A different dictionary must be built from scratch: with a reused build directory the
             // prism stayed compiled for the previous dictionary and lookups returned nothing.
@@ -125,11 +128,11 @@ class DictionaryImportDeviceTest {
             assertTrue(publisher.isComplete(secondRecord))
             assertFalse(
                 "a re-import must rebuild the prism, not inherit the previous one",
-                prismOf(firstRecord).contentEquals(prismOf(secondRecord)),
+                firstPrism.contentEquals(prismOf(secondRecord)),
             )
             assertFalse(
                 "a re-import must rebuild the tables, not inherit the previous ones",
-                tableOf(firstRecord).contentEquals(tableOf(secondRecord)),
+                firstTable.contentEquals(tableOf(secondRecord)),
             )
 
             // Re-importing the exact same bytes keeps a stable revision; the request must still

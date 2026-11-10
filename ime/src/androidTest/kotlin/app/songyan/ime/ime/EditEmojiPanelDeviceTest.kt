@@ -8,6 +8,8 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.emoji2.text.EmojiCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.songyan.ime.candidate.ToolbarItem
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.EditPanelView
 import app.songyan.ime.ime.panels.EmojiPanelView
 import org.junit.AfterClass
@@ -30,6 +32,26 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.string(R.string.ime_toolbar_emoji) in toolbar)
             assertTrue(host.string(R.string.ime_toolbar_edit) in toolbar)
             assertEquals(ToolbarView.DEFAULT_ACTIONS.size, toolbar.size)
+        }
+
+    @Test
+    fun theToolbarFollowsTheChosenItemsAndTheirOrderWhileShown() =
+        withHost { host ->
+            host.start()
+            val emoji = host.string(R.string.ime_toolbar_emoji)
+            val clipboard = host.string(R.string.ime_panel_clipboard)
+            val chosen =
+                ToolbarLayout.DEFAULT
+                    .withShown(ToolbarItem.EMOJI, false)
+                    .moveEarlier(ToolbarItem.EDIT)
+            host.toolbarLayoutFlow.value = chosen.toWire()
+            assertTrue(host.await { emoji !in host.toolbarLabels() })
+            val labels = host.toolbarLabels()
+            assertEquals(host.string(R.string.ime_toolbar_hide), labels.last())
+            assertEquals(labels.indexOf(clipboard) + 2, labels.indexOf(host.string(R.string.ime_toolbar_edit)))
+            host.toolbarLayoutFlow.value = ""
+            assertTrue(host.await { emoji in host.toolbarLabels() })
+            assertEquals(ToolbarView.DEFAULT_ACTIONS.size, host.toolbarLabels().size)
         }
 
     // ---- edit panel -------------------------------------------------------------------------
@@ -372,6 +394,8 @@ class EditEmojiPanelDeviceTest {
             host.tapToolbar(host.string(R.string.ime_toolbar_edit))
             host.tap(host.string(R.string.ime_edit_select), EditPanelView::class.java)
             host.main { host.controller.closePanels() }
+            // Closing a panel is animated: wait for the toolbar band before tapping it.
+            assertTrue(host.await { host.labelsOf(ToolbarView::class.java).isNotEmpty() })
             host.awaitIdle()
             host.tapToolbar(host.string(R.string.ime_toolbar_edit))
             host.tap(host.string(R.string.ime_edit_right), EditPanelView::class.java)
@@ -536,7 +560,7 @@ class EditEmojiPanelDeviceTest {
             host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
             assertTrue(host.await { host.string(R.string.ime_emoji_category_smileys) in host.panelLabels() })
             host.startEmojiSearch()
-            host.tap(host.string(R.string.ime_language_to_english))
+            host.tapControl(ControlKey.LANGUAGE_TOGGLE)
             host.type("cry")
             assertEquals("what is typed goes into the query, not the editor", "", host.text())
             assertTrue("results: ${host.barLabels()}", host.await { "😭" in host.barLabels() })
@@ -560,7 +584,7 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.await { host.editor.composing.not() && "爱" in host.barLabels() })
             assertEquals("the spelling is not written to the editor", "", host.text())
             host.tapBar("爱")
-            val chip = "搜索：爱"
+            val chip = host.context.getString(R.string.ime_emoji_search_chip, "爱")
             assertTrue("chip and results: ${host.barLabels()}", host.await { host.barLabels().firstOrNull() == chip })
             assertTrue("hearts for 爱: ${host.barLabels()}", host.barLabels().size > 1)
             assertEquals("", host.text())
@@ -576,7 +600,7 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.await { host.string(R.string.ime_emoji_category_smileys) in host.panelLabels() })
             host.startEmojiSearch()
             host.type("ai")
-            val chip = "搜索：ai"
+            val chip = host.context.getString(R.string.ime_emoji_search_chip, "ai")
             assertTrue("the query shows the spelling: ${host.barLabels()}", host.await { chip in host.barLabels() })
             assertTrue("the candidates stay: ${host.barLabels()}", "爱" in host.barLabels())
             assertEquals("", host.text())
@@ -590,7 +614,7 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.await { host.string(R.string.ime_emoji_category_smileys) in host.panelLabels() })
             host.startEmojiSearch()
             assertTrue("Back belongs to the search", host.backOwned)
-            host.tap("搜索表情", CandidateBarView::class.java)
+            host.tap(host.context.getString(R.string.ime_emoji_search_empty), CandidateBarView::class.java)
             assertTrue(host.await { host.toolbarLabels().isNotEmpty() })
             assertFalse(host.backOwned)
             host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
@@ -640,9 +664,11 @@ class EditEmojiPanelDeviceTest {
             host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
             host.startEmojiSearch()
             host.main { host.controller.insertText("a😀") }
-            assertTrue(host.await { host.barLabels().firstOrNull() == "搜索：a😀" })
-            host.tap(host.string(R.string.ime_delete))
-            assertTrue("query: " + host.barLabels(), host.await { host.barLabels().firstOrNull() == "搜索：a" })
+            val withEmoji = host.context.getString(R.string.ime_emoji_search_chip, "a😀")
+            assertTrue(host.await { host.barLabels().firstOrNull() == withEmoji })
+            host.tapControl(ControlKey.DELETE)
+            val backspaced = host.context.getString(R.string.ime_emoji_search_chip, "a")
+            assertTrue("query: " + host.barLabels(), host.await { host.barLabels().firstOrNull() == backspaced })
             assertEquals("", host.text())
         }
 
@@ -650,13 +676,13 @@ class EditEmojiPanelDeviceTest {
     fun emojiSearchOpenedFromTheNumbersPageTypesOnTheLetters() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.tapToolbar(host.string(R.string.ime_toolbar_emoji))
             assertTrue(host.await { host.string(R.string.ime_emoji_category_smileys) in host.panelLabels() })
             host.startEmojiSearch()
             // On the numbers page there is no "a" key to tap.
             host.type("ai")
-            val chip = "搜索：ai"
+            val chip = host.context.getString(R.string.ime_emoji_search_chip, "ai")
             assertTrue("the letters were typed: ${host.barLabels()}", host.await { chip in host.barLabels() })
         }
 

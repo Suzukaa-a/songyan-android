@@ -53,6 +53,7 @@ If you cannot run a check, say so in the pull request and list what remains unve
 - When a capability cannot be proven, fail closed and fall back to native Rime behavior.
 - Follow Android conventions (official documentation, Material 3, platform behavior) over copying iOS UI.
 - Every bug fix comes with a regression test that reproduces the problem. Behavior in editors is tested with `:ime` instrumented tests against the real engine, not a stub.
+- The recommended catalogue's archives are pinned to upstream commits with SHA-256 digests that match the iOS catalogue; change an entry in both repositories together.
 - Documents state current facts only (no progress logs or dated notes), and paths and commands in them must exist. When you add or move a module or key file, update [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Do not commit build output, logs, backups or scratch files.
 
 ## Modules and directories
@@ -70,7 +71,9 @@ If you cannot run a check, say so in the pull request and list what remains unve
 - Internal terms never reach the UI: schema, recipe, deploy, manifest, generation, prism, processor, 部署, 发布, 配方, 绑定 and the like.
 - Product terms follow the iOS app's `Packages/KeyboardCore/Sources/KeyboardCore/Support/UserTerminology.swift`: 输入方案, 输入方式, 键盘布局, 键盘外观, 词库, 语法模型, 我的键盘, 正在使用, 未使用, 使用, 使用新版本, 试打, 候选栏, 松烟.
 - System concepts use the names Android's own Settings uses in Simplified Chinese (「屏幕键盘」「管理键盘」「默认键盘」), not iOS terms such as 「完全访问」 or 「地球键」. A tap is 「点按」 and a long press is 「长按」.
-- Every user-visible string lives in `strings.xml` with both Chinese and English; never build Chinese text in code.
+- Every user-visible string lives in `strings.xml` and is authored in four interface languages: English in `values/`, Simplified Chinese in `values-zh/`, Traditional Chinese in `values-b+zh+Hant/` and Japanese in `values-ja/`. Never build interface text in code. [StringResourceParityTest](app/src/test/kotlin/app/songyan/ime/resources/StringResourceParityTest.kt) and [ResourceContractTest](app/src/test/kotlin/app/songyan/ime/resources/ResourceContractTest.kt) check that the key sets and format arguments match.
+- Configuration-file and file-editor errors show the original parser, filesystem or resource-validation message, optionally prefixed with a filename. Only prompts requiring a user decision, such as script confirmation or an oversized file, use fixed localized resources.
+- Traditional Chinese resources are generated, never edited by hand. Change `values-zh/` and run `scripts/gen-zh-hant-strings.sh`; it converts with the pinned OpenCC 1.1.9 `s2twp` data and the shared Taiwan wording corrections, leaving resource names, attributes and formatting untouched. `scripts/gen-zh-hant-strings.sh --check` regenerates into a temporary directory and fails on any difference or banned term. Japanese is written by hand and must not be left as the Simplified text.
 
 ## Code style
 

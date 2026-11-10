@@ -4,6 +4,18 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
+/** Where the active symbol catalog came from: the bundled default or the user's imported file. */
+enum class SymbolCatalogSource {
+    BUNDLED,
+    CUSTOM,
+}
+
+/** The active catalog together with the source it was actually loaded from. */
+data class ActiveSymbolCatalog(
+    val catalog: SymbolCatalog,
+    val source: SymbolCatalogSource,
+)
+
 /**
  * The symbol catalog the keyboard panel shows: a user-imported catalog if there is one,
  * otherwise the bundled default.
@@ -51,6 +63,9 @@ class SymbolCatalogStore(
         }
     }
 
+    /** The active catalog, see [loadActiveWithSource]. */
+    fun loadActive(onError: ((ContentException) -> Unit)? = null): SymbolCatalog = loadActiveWithSource(onError).catalog
+
     /**
      * The active catalog: custom first, bundled default when the custom one is missing or
      * corrupt.
@@ -59,21 +74,27 @@ class SymbolCatalogStore(
      * returned, because refusing to render the symbol panel would be worse than showing the
      * built-in set. A missing bundled default is a packaging error and yields an empty
      * catalog: the panel shows an empty state rather than fabricated items.
+     *
+     * [ActiveSymbolCatalog.source] reports what is shown, not what exists on disk: a corrupt
+     * import falls back to the bundled catalog, and a UI that localizes built-in names must not
+     * treat that fallback as authored text.
      */
-    fun loadActive(onError: ((ContentException) -> Unit)? = null): SymbolCatalog {
+    fun loadActiveWithSource(onError: ((ContentException) -> Unit)? = null): ActiveSymbolCatalog {
         if (Files.exists(activeFile)) {
             try {
-                return SymbolCatalog.decodeFile(activeFile)
+                return ActiveSymbolCatalog(SymbolCatalog.decodeFile(activeFile), SymbolCatalogSource.CUSTOM)
             } catch (error: ContentException) {
                 onError?.invoke(error)
             }
         }
-        return try {
-            SymbolCatalog.bundledDefault()
-        } catch (error: ContentException) {
-            onError?.invoke(error)
-            SymbolCatalog()
-        }
+        val bundled =
+            try {
+                SymbolCatalog.bundledDefault()
+            } catch (error: ContentException) {
+                onError?.invoke(error)
+                SymbolCatalog()
+            }
+        return ActiveSymbolCatalog(bundled, SymbolCatalogSource.BUNDLED)
     }
 
     /**

@@ -1,6 +1,8 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.AlternateKeyPolicy
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardPageCategory
@@ -11,6 +13,7 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutOption
 import app.songyan.ime.layout.LayoutPageJump
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
@@ -99,12 +102,71 @@ class KeyboardPagesCatalogTest {
                 .action.type,
         )
         assertEquals(
-            listOf("123", "中/英", "空格", "，", "⏎"),
+            listOf("123", "中/英", "，", "空格", "。", "⏎"),
             definition.rows
                 .last()
                 .keys
                 .map { it.label },
         )
+    }
+
+    @Test
+    fun nativeLetterMarksFollowTheScriptLanguage() {
+        fun pageKeys(language: InputLanguage) =
+            KeyboardPages
+                .definition(null, config(null).copy(inputLanguage = language))
+                .rows
+                .flatMap { it.keys }
+                .associateBy { it.label }
+        val ja = pageKeys(InputLanguage.JA)
+        assertEquals(listOf("「", "『"), ja.getValue("c").longPress?.map { it.label })
+        assertEquals("「", ja.getValue("c").secondaryLabel)
+        assertEquals(listOf("・"), ja.getValue("g").longPress?.map { it.label })
+        assertEquals("・", ja.getValue("g").secondaryLabel)
+        assertTrue(
+            ja
+                .getValue("x")
+                .longPress
+                ?.map { it.label }
+                ?.containsAll(listOf("ー", "～")) == true,
+        )
+        assertEquals("ー", ja.getValue("x").secondaryLabel)
+        assertEquals("「", pageKeys(InputLanguage.ZH_HANT).getValue("c").secondaryLabel)
+    }
+
+    @Test
+    fun authorDeclaredLetterMarksStayAsWritten() {
+        val hansDefaults =
+            AlternateKeyPolicy.defaultLetterLiterals("c").map { LayoutOption(it, LayoutAction.literal(it)) }
+        val mine =
+            BuiltinLayouts.qwerty26.copyWithId("mine", "我的").let { layout ->
+                layout.copy(
+                    rows =
+                        layout.rows.map { row ->
+                            LayoutRow(
+                                row.keys.map { key ->
+                                    when (key.label) {
+                                        "c" -> key.copy(longPress = hansDefaults, secondaryLabel = "“")
+                                        "g" -> key.copy(longPress = null, secondaryLabel = null)
+                                        else -> key
+                                    }
+                                },
+                            )
+                        },
+                )
+            }
+        KeyboardLayoutCatalog.install(LayoutRegistry.create().install(mine.encoded()))
+        val page =
+            KeyboardPages.definition(
+                null,
+                config(KeyboardComposition(mainLayoutID = "mine")).copy(inputLanguage = InputLanguage.JA),
+            )
+        val keys = page.rows.flatMap { it.keys }.associateBy { it.label }
+        // An explicit author list is its own data, even when it happens to equal the old defaults.
+        assertEquals(hansDefaults, keys.getValue("c").longPress)
+        assertEquals("“", keys.getValue("c").secondaryLabel)
+        // An explicitly cleared long press stays empty instead of gaining the language defaults.
+        assertNull(keys.getValue("g").longPress)
     }
 
     @Test

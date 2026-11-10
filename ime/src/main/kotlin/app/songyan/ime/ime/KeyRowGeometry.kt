@@ -29,10 +29,21 @@ internal object KeyRowSolver {
     fun columns(
         rows: List<LayoutRow>,
         showsGlobe: Boolean = false,
-    ): List<List<LayoutKey>> =
-        rows.map { row ->
-            if (showsGlobe) row.keys else row.keys.filterNot { it.action.type == LayoutActionKind.GLOBE }
+    ): List<List<LayoutKey>> = rows.map { row -> if (showsGlobe) row.keys else withoutGlobe(row.keys) }
+
+    /**
+     * [keys] without the input-method switch key. In a footer its width goes to Return, so the
+     * other switches keep their size and the bar does not stretch into the gap.
+     */
+    fun withoutGlobe(keys: List<LayoutKey>): List<LayoutKey> {
+        val freed = keys.filter { it.action.type == LayoutActionKind.GLOBE }.sumOf { it.widthWeight }
+        if (freed == 0.0) return keys
+        val rest = keys.filterNot { it.action.type == LayoutActionKind.GLOBE }
+        if (rest.none { it.action.type == LayoutActionKind.SPACE }) return rest
+        return rest.map { key ->
+            if (key.action.type == LayoutActionKind.ENTER) key.copy(width = key.widthWeight + freed) else key
         }
+    }
 
     /**
      * A control key that sits outside the character grid: Shift (or, on a 123 / symbol page, the

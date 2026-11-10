@@ -65,6 +65,12 @@ internal fun KeyboardController.wireViews() {
         candidates.dismissPopup()
         enqueueKey(action, t9FirstKey = true)
     }
+    // The twelve-key kana surface reports one gesture per press; the press time is read here, on
+    // the UI thread, so a queued press keeps the user's own tap timing.
+    keyboard.onKana12Action = { action ->
+        candidates.dismissPopup()
+        handleKana12(action)
+    }
     // A held key repeats through the queue, so each step is checked again when it runs: one queued
     // for a hold that has since ended types nothing.
     keyboard.onRepeatAction = { action, stillHeld ->
@@ -86,6 +92,8 @@ internal fun KeyboardController.wireViews() {
         // caret, so holding space never drops what the user typed, and never strands a hidden
         // spelling in the editor.
         enqueue {
+            // A caret move is never the state the kana model predicted.
+            kana12Reset()
             val active = session.takeIf { ready }
             if (active != null) active.moveCursor(delta) else callbacks.moveCursor(delta)
             resetEnglishWord()
@@ -199,6 +207,8 @@ internal fun KeyboardController.wireViews() {
         val revision = session?.compositionRevision
         val suggested = candidates.suggestionRow
         enqueue {
+            // Every candidate selection ends the composition the kana model claimed a tail of.
+            kana12Reset()
             if (suggested) {
                 if (panelSearch !=
                     null
@@ -270,6 +280,7 @@ internal fun KeyboardController.wireViews() {
             // to it. The commit lands first, while the editor still has the marked region, so
             // commitText replaces that region; clearing the engine composition first would make
             // finishComposingText publish the half-typed spelling as real text.
+            kana12Reset()
             callbacks.commit(pick.text, false)
             active?.discardComposition()
             render()
@@ -281,6 +292,7 @@ internal fun KeyboardController.wireViews() {
     }
     menu.onSchema = { id -> enqueue { chooseSchema(id) } }
     menu.onLayout = { kind -> enqueue { chooseLayout(kind) } }
+    menu.onBoard = { id -> enqueue { chooseBoard(id) } }
     menu.onQuickContent = { openQuickContentPanel() }
     menu.onKeyboardSettings = { openKeyboardSettingsPanel() }
     menu.onEmoji = { openEmojiPanel() }
@@ -303,5 +315,6 @@ internal fun KeyboardController.wireViews() {
         callbacks.inputMethods.startVoice()
     }
     observePreferences()
+    observeKana12Preferences()
     observeLayoutCatalog()
 }

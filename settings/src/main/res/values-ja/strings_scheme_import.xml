@@ -1,0 +1,92 @@
+<resources>
+    <string name="import_cancelling">キャンセルしています…</string>
+    <!-- 入力パック · パッケージ -->
+    <string name="schemes_scheme_import_file">入力パックをインポート</string>
+    <string name="schemes_scheme_import_note">.zip ファイル、フォルダ、ZIP のダウンロードリンク、GitHub リポジトリのアドレスに対応しています。すでにある入力パックの新しいバージョンをインポートすると置き換わり、覚えた語と文法モデルはそのまま残ります。</string>
+    <string name="schemes_scheme_import_unavailable">今は入力パックをインポートできません。しばらくしてからやり直してください。</string>
+    <string name="schemes_scheme_importing">入力パックをインポートしています…</string>
+    <string name="schemes_scheme_downloading">入力パックをダウンロードしています…</string>
+    <string name="schemes_scheme_importing_note">大きな入力パックは数分かかります。</string>
+    <string name="transfer_downloaded_of">%1$s / %2$s ダウンロード済み</string>
+    <string name="transfer_downloaded">%1$s ダウンロード済み</string>
+    <string name="schemes_scheme_import_success">入力パックをインポートしました。</string>
+    <string name="schemes_scheme_import_success_named">「%1$s」をインポートしました</string>
+    <string name="schemes_scheme_import_failed">入力パックをインポートできませんでした。もう一度お試しください。</string>
+
+    <string name="schemes_sources_section">自分の入力パック</string>
+    <string name="schemes_source_kind_builtin">内蔵</string>
+    <string name="schemes_source_kind_dictionary">内蔵の入力方式 · インポートした辞書</string>
+    <string name="schemes_source_kind_scheme">インポートした入力パック</string>
+    <string name="schemes_source_use">使う</string>
+    <string name="schemes_source_delete">削除</string>
+    <string name="schemes_source_delete_title">「%1$s」を削除しますか？</string>
+    <string name="schemes_source_delete_body">覚えた語は残ります。もう一度インポートすると戻ります。</string>
+    <string name="schemes_source_working">処理しています…</string>
+    <string name="schemes_source_failed">操作が完了しませんでした。もう一度お試しください。</string>
+
+    <!-- 入力パック · フォルダ、リンク、おすすめ、更新 -->
+    <string name="schemes_scheme_import_folder">フォルダをインポート</string>
+    <string name="schemes_scheme_import_link">リンクからインポート</string>
+    <string name="schemes_scheme_link_label">ZIP のリンクまたは GitHub リポジトリのアドレス</string>
+    <string name="schemes_scheme_link_invalid">https で始まるリンクを入力してください。</string>
+    <string name="schemes_scheme_link_note">「ダウンロード」をタップしたときだけ通信します。ファイルは最大 1.5 GB です。</string>
+    <string name="schemes_scheme_link_confirm">ダウンロード</string>
+    <string name="schemes_recommended_section">おすすめ</string>
+    <string name="schemes_recommended_rime_ice_name">雾凇拼音</string>
+    <string name="schemes_recommended_rime_ice_detail">全拼と複数の双拼に対応、辞書が充実</string>
+    <string name="schemes_recommended_wanxiang_name">万象拼音</string>
+    <string name="schemes_recommended_wanxiang_detail">全拼と複数の双拼に対応、別途約 400 MB のモデルが必要</string>
+    <string name="schemes_recommended_bopomofo_name">注音（台湾）</string>
+    <string name="schemes_recommended_bopomofo_detail">台湾でよく使われる、注音符号で入力する方式</string>
+    <string name="schemes_recommended_cangjie_name">倉頡五代</string>
+    <string name="schemes_recommended_cangjie_detail">字根を組み合わせて入力する方式</string>
+    <string name="schemes_recommended_quick_name">速成</string>
+    <string name="schemes_recommended_quick_detail">倉頡の簡略版。最初と最後の字根だけで入力する</string>
+    <string name="schemes_recommended_cantonese_name">粤拼（香港）</string>
+    <string name="schemes_recommended_cantonese_detail">広東語の拼音入力。香港の語彙と絵文字に対応</string>
+    <string name="schemes_recommended_license">ライセンス：%1$s</string>
+    <string name="schemes_recommended_size">ダウンロード約 %1$s</string>
+    <string name="schemes_recommended_homepage">上流のページを開く</string>
+    <string name="schemes_recommended_confirm_title">「%1$s」をダウンロードしますか？</string>
+    <string name="schemes_recommended_confirm_body">GitHub からこの入力パックをダウンロードします。ファイルが大きいので、Wi-Fi での接続をおすすめします。</string>
+    <string name="schemes_recommended_confirm">ダウンロード</string>
+    <string name="schemes_incoming_title">受け取った入力パックをインポートしますか？</string>
+    <string name="schemes_incoming_body">ほかのアプリが、ZIP ファイルを入力パックとして松煙にインポートしようとしています。</string>
+    <string name="schemes_incoming_confirm">インポート</string>
+    <string name="schemes_status_update_available">新しいバージョン</string>
+    <string name="schemes_status_damaged">破損</string>
+    <string name="schemes_source_damaged_note">ファイルが足りません。削除してからもう一度インポートしてください。</string>
+    <string name="schemes_source_update">更新する</string>
+    <string name="schemes_source_use_new">新しいバージョンを使う</string>
+    <string name="schemes_source_deleted">「%1$s」を削除しました</string>
+    <string name="schemes_source_undo">元に戻す</string>
+    <string name="schemes_update_up_to_date">最新バージョンです。</string>
+    <string name="schemes_update_up_to_date_named">「%1$s」は最新バージョンです。</string>
+    <string name="schemes_update_success_named">「%1$s」を更新しました</string>
+
+    <!-- 入力パック · パッケージに含まれる学習した語 -->
+    <plurals name="schemes_scheme_learning_question">
+        <item quantity="other">このパックには %d 個の辞書で学習した語が含まれています。一緒に統合しますか？</item>
+    </plurals>
+    <string name="schemes_scheme_learning_merge">統合</string>
+    <string name="schemes_scheme_learning_use_and_merge">使って統合</string>
+    <string name="schemes_scheme_learning_decline">統合しない</string>
+    <string name="schemes_scheme_learning_merging">学習した語を統合しています…</string>
+    <string name="schemes_grammar_needed">この文法モデルがないと使えません。先にダウンロードするかインポートしてください。</string>
+    <string name="schemes_grammar_model_n">文法モデル %1$d</string>
+    <string name="schemes_grammar_download">文法モデルをダウンロード（約 %1$d MB）</string>
+    <string name="schemes_grammar_from_file">ファイルから文法モデルをインポート</string>
+    <string name="schemes_grammar_later">あとで</string>
+    <string name="schemes_grammar_imported">文法モデルをインポートしました。「入力オプション → 補正と予測変換」で選ぶと使えます。</string>
+    <string name="schemes_grammar_choose">選ぶ</string>
+    <!-- 入力パックの詳細 -->
+    <string name="schemes_detail_status_section">状態</string>
+    <string name="schemes_detail_not_found">入力パックが見つかりません。</string>
+    <string name="schemes_detail_from_link">取得元：%1$s</string>
+    <string name="schemes_detail_from_file">この端末のファイルから</string>
+    <string name="schemes_detail_update_section">取得元と更新</string>
+    <string name="schemes_detail_reimport_note">新しいバージョンに変えるには、同じ入力パックをもう一度インポートしてください。</string>
+    <string name="schemes_detail_builtin_note">内蔵の入力パックは松煙と一緒に更新され、削除できません。</string>
+    <string name="schemes_detail_stop_using">使用をやめる</string>
+    <string name="schemes_detail_stop_using_note">使用をやめると、キーボードは「%1$s」に切り替わります。</string>
+</resources>

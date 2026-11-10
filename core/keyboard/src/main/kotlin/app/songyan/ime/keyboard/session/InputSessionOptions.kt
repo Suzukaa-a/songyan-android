@@ -15,6 +15,8 @@ internal suspend fun InputSession.setOptionImpl(
     try {
         val updated = engine.setOption(name, value)
         options = engine.optionStates()
+        // A script switch can change the input language the key faces follow.
+        refreshInputLanguage()
         apply(if (mode == InputMode.ENGLISH) EngineSnapshot() else updated)
     } catch (error: CancellationException) {
         throw error

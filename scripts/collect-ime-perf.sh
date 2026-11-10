@@ -13,15 +13,23 @@
 # Usage: scripts/collect-ime-perf.sh [options]
 #   --serial <serial>  adb serial (default: $ANDROID_SERIAL, else emulator-5554)
 #   --shows <n>        keyboard show/dismiss cycles (default 10)
-#   --keys <n>         letter taps in total (default 20, split evenly over rounds)
+#   --keys <n>         letter taps in total (default 20, split evenly over rounds); ignored by --text
+#   --text <letters>   lower-case ASCII string typed in full every round instead of the "nihao"
+#                      cycle; the key count becomes len(text) * rounds and overrides --keys
 #   --rounds <n>       rounds of letter taps; a candidate tap closes each round (default 2)
 #   --no-build         reuse app/build/outputs/apk/debug/app-debug.apk
 #   --no-install       do not install the APK
 #   --keep-app         keep the running IME process (default: force-stop it first)
 #   --keep-log <path>  raw logcat copy (default .local/perf/songyanperf-<serial>.log)
+#   --pss-log <path>   also sample the IME process's memory every 200 ms: one TOTAL PSS value in
+#                      KiB per line from dumpsys meminfo app.songyan.ime.debug (default: off).
+#                      Sampling is load of its own, so run without it when the latencies must be
+#                      clean; a run with no positive sample fails instead of reporting 0.
+#   --json <path>      write the summary as JSON
 #   --help             show this usage
-# Prints count/min/p50/p90/p99/max in microseconds for show_us, key_us and commit_us, and exits
-# non-zero when the scenario collected fewer samples than requested.
+# Prints count/min/p50/p90/p95/p99/max in microseconds for show_us, key_us and commit_us through
+# scripts/ime-perf-summary.py, and exits non-zero when the scenario collected fewer samples than
+# requested.
 set -uo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -35,6 +43,10 @@ build=true
 install=true
 restart_app=true
 raw_log=""
+text=""
+json_path=""
+pss_log=""
+keys_given=false
 
 # The debug build's package carries a .debug suffix; the classes keep the app.songyan.ime namespace.
 pkg=app.songyan.ime.debug
@@ -43,25 +55,39 @@ activity=$pkg/app.songyan.ime.SongyanSettingsActivity
 tag=SongyanPerf
 
 usage() {
-  sed -n '2,22p' "${BASH_SOURCE[0]}" | sed -E 's/^# ?//'
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "${BASH_SOURCE[0]}"
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --serial) serial="${2:?--serial needs a value}"; shift 2 ;;
     --shows) shows="${2:?--shows needs a value}"; shift 2 ;;
-    --keys) keys="${2:?--keys needs a value}"; shift 2 ;;
+    --keys) keys="${2:?--keys needs a value}"; keys_given=true; shift 2 ;;
+    --text) text="${2:?--text needs a value}"; shift 2 ;;
     --rounds) rounds="${2:?--rounds needs a value}"; shift 2 ;;
     --no-build) build=false; shift ;;
     --no-install) install=false; shift ;;
     --keep-app) restart_app=false; shift ;;
     --keep-log) raw_log="${2:?--keep-log needs a value}"; shift 2 ;;
+    --pss-log) pss_log="${2:?--pss-log needs a value}"; shift 2 ;;
+    --json) json_path="${2:?--json needs a value}"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
 : "${raw_log:=$root/.local/perf/songyanperf-$serial.log}"
 mkdir -p "$(dirname "$raw_log")" || exit 1
+
+# A lower-case string is typed key by key, so anything else would silently tap the wrong keys.
+if [[ -n "$text" ]]; then
+  if [[ ! "$text" =~ ^[a-z]+$ ]]; then
+    echo "error: --text takes lower-case ASCII letters only, got '$text'" >&2
+    exit 2
+  fi
+  if $keys_given; then
+    echo "warning: --keys is ignored with --text; the key count is len(text) * rounds" >&2
+  fi
+fi
 
 if [[ -n "${ADB:-}" ]]; then
   adb_bin=$ADB
@@ -85,8 +111,45 @@ die() {
 }
 dev() { "$adb_bin" -s "$serial" "$@"; }
 
+# One memory sample of the IME process: dumpsys meminfo prints TOTAL PSS in its App Summary, in
+# KiB. Only the main process block counts, since the package can also have a :deploy process; older
+# layouts without the summary line fall back to the TOTAL row of the meminfo table.
+pss_kib() {
+  dev shell dumpsys meminfo "$pkg" 2>/dev/null | awk -v target="[$pkg]" '
+    index($0, "** MEMINFO in pid") > 0 { main = index($0, target) > 0 }
+    main && $1 == "TOTAL" && $2 == "PSS:" { value = $3; gsub(/[^0-9]/, "", value); if (value != "") { print value; done = 1; exit } }
+    main && $1 == "TOTAL" && $2 ~ /^[0-9]+$/ { if (fallback == "") fallback = $2 }
+    END { if (!done && fallback != "") print fallback }
+  '
+}
+
+pss_pid=""
+start_pss() {
+  [[ -n "$pss_log" ]] || return 0
+  mkdir -p "$(dirname "$pss_log")" || { echo "error: cannot create the PSS log directory" >&2; exit 1; }
+  printf '# IME process TOTAL PSS in KiB from dumpsys meminfo %s, one sample every 200 ms\n' "$pkg" > "$pss_log"
+  (
+    while :; do
+      value=$(pss_kib)
+      [[ -n "$value" ]] && printf '%s\n' "$value" >> "$pss_log"
+      sleep 0.2
+    done
+  ) &
+  pss_pid=$!
+}
+
+# The sampler's current sleep/adb child would otherwise outlive it.
+stop_pss() {
+  [[ -n "${pss_pid:-}" ]] || return 0
+  pkill -P "$pss_pid" 2>/dev/null || true
+  kill "$pss_pid" 2>/dev/null || true
+  wait "$pss_pid" 2>/dev/null || true
+  pss_pid=""
+}
+
 tmp=$(mktemp -d)
 cleanup() {
+  stop_pss
   dev shell rm -f /sdcard/songyan-perf.xml >/dev/null 2>&1
   rm -rf "$tmp"
 }
@@ -357,6 +420,8 @@ dev shell input keyevent KEYCODE_DEL KEYCODE_DEL KEYCODE_DEL KEYCODE_DEL >/dev/n
 hide_keyboard
 dev logcat -c >/dev/null 2>&1
 
+start_pss
+
 step "keyboard shows: $shows cycles"
 for ((i = 1; i <= shows; i++)); do
   hide_keyboard
@@ -365,8 +430,14 @@ for ((i = 1; i <= shows; i++)); do
   sleep 1.0
 done
 
-step "key taps: $keys letters in $rounds rounds, one candidate tap per round"
-per_round=$(( (keys + rounds - 1) / rounds ))
+if [[ -n "$text" ]]; then
+  per_round=${#text}
+  keys=$((per_round * rounds))
+  step "key taps: '$text' in full in each of $rounds rounds ($keys letters), one candidate tap per round"
+else
+  per_round=$(( (keys + rounds - 1) / rounds ))
+  step "key taps: $keys letters in $rounds rounds, one candidate tap per round"
+fi
 # "ni hao" cycles: every prefix is a valid pinyin spelling, so candidates exist at every step.
 letters=(n i h a o)
 for ((r = 1; r <= rounds; r++)); do
@@ -381,7 +452,11 @@ for ((r = 1; r <= rounds; r++)); do
   sleep 0.4
   refresh_perf
   for ((k = 1; k <= per_round; k++)); do
-    letter=${letters[$(( (k - 1) % ${#letters[@]} ))]}
+    if [[ -n "$text" ]]; then
+      letter=${text:$((k - 1)):1}
+    else
+      letter=${letters[$(( (k - 1) % ${#letters[@]} ))]}
+    fi
     xy=$(key_center "$letter")
     [[ -n "$xy" ]] || die "no key box for '$letter'"
     dev shell input tap $xy >/dev/null 2>&1
@@ -411,59 +486,12 @@ for ((r = 1; r <= rounds; r++)); do
 done
 
 step "collecting logcat"
+stop_pss
 perf_lines > "$raw_log"
 echo "raw log: $raw_log"
+[[ -n "$pss_log" ]] && echo "pss log: $pss_log"
 
-python3 - "$raw_log" "$shows" "$keys" <<'PY'
-import math
-import re
-import sys
-
-path, want_shows, want_keys = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-text = open(path, encoding="utf-8", errors="replace").read()
-
-metrics = [
-    ("show_us", "onStartInputView -> first keyboard frame", want_shows),
-    ("key_us", "key ACTION_DOWN -> preedit applied", want_keys),
-    ("commit_us", "candidate tap -> commit applied", None),
-]
-
-def samples(field, limit=None):
-    values = sorted(int(v) for v in re.findall(r"\b" + field + r"=(\d+)", text))
-    return values if limit is None else values[:limit]
-
-def pct(values, p):
-    # Nearest-rank percentile: the smallest value whose rank covers p.
-    return values[max(0, math.ceil(p * len(values)) - 1)]
-
-print()
-header = f'{"metric":<10} {"count":>5} {"min":>9} {"p50":>9} {"p90":>9} {"p99":>9} {"max":>9}'
-print(header)
-print("-" * len(header))
-short = []
-for field, what, want in metrics:
-    # The rounds re-show the keyboard, so extra show samples may trail the measured cycles; the
-    # first N (N = --shows) ones are the counted sequence.
-    values = samples(field, want)
-    if not values:
-        print(f"{field:<10} {0:>5} {'-':>9} {'-':>9} {'-':>9} {'-':>9} {'-':>9}")
-        short.append(field)
-        continue
-    print(
-        f"{field:<10} {len(values):>5} {values[0]:>9} {pct(values, .50):>9} "
-        f"{pct(values, .90):>9} {pct(values, .99):>9} {values[-1]:>9}"
-    )
-    if want is not None and len(values) < want:
-        short.append(f"{field} ({len(values)} < {want})")
-
-print()
-print("all values in microseconds; measured on the debug build with debug=true")
-print("key_us: finger press to preedit; commit_us: candidate tap to committed text")
-for field, what, _ in metrics:
-    print(f"  {field:<10} {what}")
-
-if short:
-    print()
-    print("incomplete samples: " + ", ".join(short), file=sys.stderr)
-    sys.exit(1)
-PY
+summary_args=("$raw_log" --shows "$shows" --keys "$keys")
+[[ -n "$json_path" ]] && summary_args+=(--json "$json_path")
+[[ -n "$pss_log" ]] && summary_args+=(--pss-log "$pss_log")
+python3 "$root/scripts/ime-perf-summary.py" "${summary_args[@]}"

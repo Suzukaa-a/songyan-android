@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Built-in symbol library categories and the built-in symbol page tabs -->
+    <string name="ime_symbol_category_math">Math</string>
+    <string name="ime_symbol_category_numbers">Numbers</string>
+    <string name="ime_symbol_category_arrows">Arrows</string>
+    <string name="ime_symbol_category_units">Units</string>
+    <string name="ime_symbol_category_currency">Currency</string>
+    <string name="ime_symbol_category_shapes">Shapes</string>
+    <string name="ime_symbol_category_letters">Greek</string>
+    <string name="ime_symbol_category_special">Other</string>
+    <string name="ime_symbol_category_kaomoji">Kaomoji</string>
+    <string name="ime_symbol_category_punctuation">Punctuation</string>
+
+    <string name="ime_symbol_page_common">Common</string>
+    <string name="ime_symbol_page_recent">Recent</string>
+    <string name="ime_symbol_page_chinese">Chinese</string>
+    <string name="ime_symbol_page_english">English</string>
+    <string name="ime_symbol_page_brackets">Brackets</string>
+</resources>

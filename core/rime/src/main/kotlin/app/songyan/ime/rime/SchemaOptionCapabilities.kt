@@ -1,7 +1,9 @@
 package app.songyan.ime.rime
 
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionDescriptor
 import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -10,7 +12,10 @@ import kotlinx.serialization.json.contentOrNull
 import java.io.File
 import java.io.IOException
 
-/** Reads verified simplifier switches and native script choice groups from expanded engine schemas. */
+/**
+ * Reads facts of expanded engine schemas: the verified simplifier switches and native script choice
+ * groups, and the declared speller alphabet.
+ */
 object SchemaOptionCapabilities {
     /** The switches of [schemaID] as built in [compiledDir]; empty when the schema cannot be read. */
     fun read(
@@ -20,14 +25,33 @@ object SchemaOptionCapabilities {
         sharedDir: File,
     ): List<EngineOptionDescriptor> {
         if (resourceID.isEmpty()) return emptyList()
-        val yaml =
-            try {
-                File(compiledDir, "$schemaID.schema.yaml").takeIf { it.isFile }?.readText(Charsets.UTF_8)
-            } catch (_: IOException) {
-                null
-            } ?: return emptyList()
+        val yaml = deployedSchema(compiledDir, schemaID) ?: return emptyList()
         return parse(resourceID, schemaID, yaml, { true }) { config -> verifiedOpencc(config, sharedDir) }
     }
+
+    /**
+     * The speller alphabet [schemaID] declares as built in [compiledDir]; empty when it declares
+     * none or cannot be read. The language table reads it to place an input method its id cannot
+     * name by itself.
+     */
+    fun spellerAlphabet(
+        compiledDir: File,
+        schemaID: String,
+    ): String = alphabetOf(deployedSchema(compiledDir, schemaID).orEmpty())
+
+    /** The declared `speller/alphabet` of one deployed schema text; empty when absent. */
+    internal fun alphabetOf(yaml: String): String =
+        scalarField(sections(yaml)["speller"].orEmpty(), "alphabet").orEmpty()
+
+    private fun deployedSchema(
+        compiledDir: File,
+        schemaID: String,
+    ): String? =
+        try {
+            File(compiledDir, "$schemaID.schema.yaml").takeIf { it.isFile }?.readText(Charsets.UTF_8)
+        } catch (_: IOException) {
+            null
+        }
 
     fun parse(
         resourceID: String,
@@ -39,6 +63,7 @@ object SchemaOptionCapabilities {
         val sections = sections(yaml)
         val items = switchItems(sections["switches"].orEmpty())
         val conversions = linkedMapOf<String, EngineOptionKind?>()
+        val declaredConfigs = linkedMapOf<String, String>()
         for (filter in filters(sections["engine"].orEmpty())) {
             val namespace =
                 when {
@@ -49,7 +74,12 @@ object SchemaOptionCapabilities {
             val fields = sections[namespace].orEmpty()
             val name = scalarField(fields, "option_name") ?: "simplification"
             val config = scalarField(fields, "opencc_config") ?: "t2s.json"
-            if (name !in conversions) conversions[name] = if (openccInstalled(config)) openccKind(config) else null
+            if (name !in conversions) {
+                conversions[name] = if (openccInstalled(config)) openccKind(config) else null
+                // Keep the config the schema declares: the keyboard's script rules read it instead
+                // of inferring a state from the verified kind alone.
+                declaredConfigs[name] = config.removeSuffix(".json")
+            }
         }
         val result = mutableListOf<EngineOptionDescriptor>()
         for (item in items) {
@@ -63,6 +93,10 @@ object SchemaOptionCapabilities {
                         name,
                         kind,
                         scalarField(item, "reset") in TRUE_VALUES,
+                        scriptConfig =
+                            declaredConfigs[name]?.takeIf {
+                                kind == EngineOptionKind.TRADITIONAL || kind == EngineOptionKind.SIMPLIFIED
+                            },
                     )
                 continue
             }
@@ -83,6 +117,7 @@ object SchemaOptionCapabilities {
             }
             if (options.any { it in conversions && conversions[it] == null }) continue
             val reset = scalarField(item, "reset")?.toIntOrNull() ?: 0
+            val knownStates = knownScriptStates(schemaID, options, labels)
             for ((index, option) in options.withIndex()) {
                 result +=
                     EngineOptionDescriptor(
@@ -93,6 +128,8 @@ object SchemaOptionCapabilities {
                         reset == index,
                         options,
                         labels[index],
+                        scriptConfig = declaredConfigs[option],
+                        knownScriptState = knownStates.getOrNull(index),
                     )
             }
         }
@@ -198,6 +235,23 @@ object SchemaOptionCapabilities {
         }
     }
 
+    /**
+     * The bundled schemes' one exclusive four-state group, recognized by the scheme it belongs to
+     * plus its complete declaration (members, order and canonical labels). A group an author defines
+     * with the same option names keeps null, so its own labels stay as written; the UI words only
+     * the group it can prove is the bundled one.
+     */
+    private fun knownScriptStates(
+        schemaID: String,
+        options: List<String>,
+        labels: List<String>,
+    ): List<BuiltinScriptState> {
+        if (schemaID !in BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS) return emptyList()
+        if (options != BuiltinScriptState.entries.map { it.optionName }) return emptyList()
+        if (labels != CANONICAL_SCRIPT_LABELS) return emptyList()
+        return options.map { name -> BuiltinScriptState.entries.first { it.optionName == name } }
+    }
+
     private fun kindOf(config: String): EngineOptionKind? =
         when (config) {
             "s2t.json", "s2tw.json", "s2hk.json", "t2tw.json", "t2hk.json", "t2hkf.json" -> EngineOptionKind.TRADITIONAL
@@ -254,6 +308,9 @@ object SchemaOptionCapabilities {
     }
 
     private fun scalar(text: String): String = text.trim().trim('"', '\'')
+
+    /** The bundled schemes' declared labels; a custom label means the group is no longer the canonical one. */
+    private val CANONICAL_SCRIPT_LABELS = listOf("简体", "繁體", "臺灣", "香港")
 
     private val TRUE_VALUES = setOf("1", "true")
 

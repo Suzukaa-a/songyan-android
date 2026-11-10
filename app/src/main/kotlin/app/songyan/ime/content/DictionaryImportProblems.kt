@@ -55,6 +55,9 @@ internal enum class DictionaryImportProblemKind {
     /** A scheme package link answered with something that is not a ZIP archive. */
     NOT_ZIP,
 
+    /** The downloaded bytes do not match the digest a catalogue entry pins. */
+    CHECKSUM_MISMATCH,
+
     /** The server has no file at the link (404 / 410). */
     DOWNLOAD_NOT_FOUND,
     DOWNLOAD_TIMEOUT,
@@ -185,6 +188,7 @@ internal object DictionaryImportProblems {
             DictionaryImportProblemKind.DOWNLOAD_OFFLINE -> R.string.dictionary_import_error_download_offline
             DictionaryImportProblemKind.DOWNLOAD_SERVER -> R.string.dictionary_import_error_download_server
             DictionaryImportProblemKind.NOT_ZIP -> R.string.scheme_import_error_link_not_zip
+            DictionaryImportProblemKind.CHECKSUM_MISMATCH -> R.string.scheme_import_error_checksum
             DictionaryImportProblemKind.DOWNLOAD_NOT_FOUND -> R.string.dictionary_import_error_download_not_found
             DictionaryImportProblemKind.DOWNLOAD_TIMEOUT -> R.string.dictionary_import_error_download_timeout
             DictionaryImportProblemKind.TOO_MANY_REDIRECTS -> R.string.dictionary_import_error_redirects

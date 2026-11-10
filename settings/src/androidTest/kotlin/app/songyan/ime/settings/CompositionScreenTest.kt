@@ -4,12 +4,16 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
+import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
 import app.songyan.ime.settings.ui.screens.CompositionScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
@@ -103,6 +107,58 @@ class CompositionScreenTest {
         compose.waitForIdle()
         compose.onNodeWithText(str(R.string.row_tryout_title)).performScrollTo().performClick()
         assertEquals(true, tried)
+    }
+
+    @Test
+    fun thePairingNamesAPhysicalBoardInsteadOfItsShape() {
+        val zhuyin = KeyboardCompositionKey("bopomofo_tw", LayoutInput.Builtin.QWERTY26)
+        val registry =
+            LayoutRegistry
+                .create()
+                .withComposition(KeyboardComposition(mainLayoutID = "zhuyin41"), zhuyin.rawValue)
+        val model = LayoutLibraryViewModel(InMemoryLayoutLibrarySource(registry))
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                CompositionScreen(
+                    key = zhuyin,
+                    keyboardName = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41)),
+                    families = LayoutFamilyContext.of("bopomofo_tw" to InputSchemeFamily.ZHUYIN),
+                    onBack = null,
+                    viewModel = model,
+                )
+            }
+        }
+        compose.onNodeWithText(str(R.string.layout_name_zhuyin41)).performScrollTo().assertExists()
+        // The stored definition's own Simplified literal is not what the UI shows.
+        compose.onNodeWithText(BuiltinLayouts.zhuyin41.name).assertDoesNotExist()
+    }
+
+    @Test
+    fun aUseTargetNamesThePhysicalBoardItWouldDraw() {
+        val zhuyin = KeyboardCompositionKey("bopomofo_tw", LayoutInput.Builtin.QWERTY26)
+        val registry =
+            LayoutRegistry
+                .create()
+                .withComposition(KeyboardComposition(mainLayoutID = "zhuyin41"), zhuyin.rawValue)
+        val model = LayoutLibraryViewModel(InMemoryLayoutLibrarySource(registry))
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                app.songyan.ime.settings.ui.screens.UseContentScreen(
+                    contentId = BuiltinLayouts.zhuyin41.id,
+                    isPage = false,
+                    schemes = listOf(InstalledScheme("bopomofo_tw", "注音", family = InputSchemeFamily.ZHUYIN)),
+                    sourcesLoaded = true,
+                    onActivate = {},
+                    onTryOut = {},
+                    onOpenSchemes = {},
+                    onBack = {},
+                    viewModel = model,
+                )
+            }
+        }
+        val target = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41))
+        compose.onNodeWithText(target).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.keyboard_title, "注音", str(R.string.layout_name_26))).assertDoesNotExist()
     }
 
     private val keypadMisses =

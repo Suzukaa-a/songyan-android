@@ -3,6 +3,7 @@ package app.songyan.ime.ime.panels
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyHeight
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 
@@ -15,6 +16,9 @@ enum class QuickSetting {
     KEY_SOUND,
     KEY_HAPTICS,
     KEY_PREVIEW,
+
+    /** The Japanese twelve-key keys only flick; shown only while a Japanese scheme is running. */
+    KANA12_FLICK_ONLY,
     PHRASES,
 
     /** A schema switch of the input method in use (traditional output, emoji, ...); one tile per switch. */
@@ -47,6 +51,11 @@ sealed interface QuickSettingChange {
         val on: Boolean,
     ) : QuickSettingChange
 
+    /** The twelve-key kana keys only flick; the store keeps the choice. */
+    data class Kana12FlickOnly(
+        val on: Boolean,
+    ) : QuickSettingChange
+
     data class EngineOption(
         val name: String,
         val on: Boolean,
@@ -60,6 +69,8 @@ data class EngineOptionTile(
     val on: Boolean,
     val choiceGroup: List<String> = emptyList(),
     val choiceLabel: String? = null,
+    /** The bundled scheme's known script state; its wording comes from resources instead of [choiceLabel]. */
+    val knownScriptState: BuiltinScriptState? = null,
 )
 
 /**
@@ -72,6 +83,8 @@ data class QuickSettingsState(
     val oneHandAvailable: Boolean = true,
     val keyHeight: KeyHeight = KeyHeight.DEFAULT,
     val layout: KeyboardLayoutKind = KeyboardLayoutKind.QWERTY26,
+    /** The name the keyboard's main layout shows; null keeps the shape's own name. */
+    val layoutName: String? = null,
     val colorMode: ColorMode = ColorMode.SYSTEM,
     /** Whether key presses make a sound right now (the user's choice and the system's switch together). */
     val soundOn: Boolean = true,
@@ -79,6 +92,9 @@ data class QuickSettingsState(
     val soundBlockedBySystem: Boolean = false,
     val hapticsOn: Boolean = true,
     val previewOn: Boolean = true,
+    /** The running scheme types Japanese kana, so the twelve-key tap-cycle choice applies. */
+    val kana12: Boolean = false,
+    val kana12FlickOnly: Boolean = false,
     /** The switches of the input method in use; empty when it has none. */
     val engineOptions: List<EngineOptionTile> = emptyList(),
 ) {
@@ -90,6 +106,7 @@ data class QuickSettingsState(
             is QuickSettingChange.Sound -> copy(soundOn = change.on)
             is QuickSettingChange.Haptics -> copy(hapticsOn = change.on)
             is QuickSettingChange.Preview -> copy(previewOn = change.on)
+            is QuickSettingChange.Kana12FlickOnly -> copy(kana12FlickOnly = change.on)
             is QuickSettingChange.EngineOption ->
                 copy(
                     engineOptions =
@@ -112,6 +129,8 @@ data class QuickOption(
     /** What choosing it asks for. */
     val change: QuickSettingChange,
     val label: String? = null,
+    /** The known bundled script state; its label is taken from resources instead of [label]. */
+    val knownScriptState: BuiltinScriptState? = null,
 )
 
 /** One tile of the grid. */
@@ -180,8 +199,20 @@ object QuickSettingsModel {
             ),
             QuickTile(QuickSetting.KEY_HAPTICS, QuickTile.Kind.TOGGLE, on = state.hapticsOn),
             QuickTile(QuickSetting.KEY_PREVIEW, QuickTile.Kind.TOGGLE, on = state.previewOn),
-            QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
         ) +
+            listOfNotNull(
+                // A twelve-key kana choice means nothing on another scheme, so it appears only there.
+                if (state.kana12) {
+                    QuickTile(
+                        QuickSetting.KANA12_FLICK_ONLY,
+                        QuickTile.Kind.TOGGLE,
+                        on = state.kana12FlickOnly,
+                    )
+                } else {
+                    null
+                },
+                QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
+            ) +
             state.engineOptions
                 .distinctBy { it.choiceGroup.firstOrNull() ?: it.name }
                 .map { option ->
@@ -209,6 +240,7 @@ object QuickSettingsModel {
                                         it.on,
                                         QuickSettingChange.EngineOption(it.name, true),
                                         it.choiceLabel,
+                                        it.knownScriptState,
                                     )
                                 },
                         )
@@ -222,6 +254,7 @@ object QuickSettingsModel {
             QuickSetting.KEY_SOUND -> QuickSettingChange.Sound(!tile.on)
             QuickSetting.KEY_HAPTICS -> QuickSettingChange.Haptics(!tile.on)
             QuickSetting.KEY_PREVIEW -> QuickSettingChange.Preview(!tile.on)
+            QuickSetting.KANA12_FLICK_ONLY -> QuickSettingChange.Kana12FlickOnly(!tile.on)
             QuickSetting.ENGINE_OPTION -> tile.engineOption?.let { QuickSettingChange.EngineOption(it.name, !tile.on) }
             else -> null
         }

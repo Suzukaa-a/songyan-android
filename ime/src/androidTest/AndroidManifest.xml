@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- A bare window for the keyboard surface. Accessibility clients only read attached view
+             trees, and a view only announces a changed subtree from one, so the tests of what a
+             screen reader reads need a window; no input method service is started. -->
+        <activity
+            android:name="app.songyan.ime.ime.PanelHostActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+    </application>
+</manifest>

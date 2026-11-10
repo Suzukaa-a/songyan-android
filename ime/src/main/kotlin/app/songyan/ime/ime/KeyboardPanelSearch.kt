@@ -59,7 +59,7 @@ private const val RESULT_LIMIT = 40
 internal fun KeyboardController.Callbacks.routedThrough(search: () -> PanelSearchSink?): KeyboardController.Callbacks =
     copy(
         commit = { text, selected -> search()?.append(text)?.let { true } ?: commit(text, selected) },
-        preedit = { text -> if (search() == null) preedit(text) },
+        preedit = { text, language -> if (search() == null) preedit(text, language) },
         delete = { search()?.backspace() ?: delete() },
         moveCursor = { delta -> if (search() == null) moveCursor(delta) },
         action = { search()?.submit() ?: action() },
@@ -177,9 +177,10 @@ private fun KeyboardController.refreshPanelSearch() {
 internal fun KeyboardController.panelSearchRow(snapshot: EngineSnapshot): EnglishSuggestionRow? {
     val state = panelSearch ?: return null
     if (snapshot.isComposing) return null
+    // The search band is panel chrome, so it follows the app language like the other panel text.
     val chip =
         if (state.query.isEmpty()) {
-            keyNames.chinese().getString(
+            context.getString(
                 when (state.kind) {
                     PanelSearchKind.EMOJI -> R.string.ime_emoji_search_empty
                     PanelSearchKind.SYMBOLS -> R.string.ime_symbol_search_empty
@@ -187,7 +188,7 @@ internal fun KeyboardController.panelSearchRow(snapshot: EngineSnapshot): Englis
                 },
             )
         } else {
-            keyNames.chinese().getString(R.string.ime_emoji_search_chip, state.query)
+            context.getString(R.string.ime_emoji_search_chip, state.query)
         }
     val texts = listOf(chip) + state.results
     val cands = texts.mapIndexed { index, text -> Candidate(index = index, text = text) }
@@ -205,7 +206,7 @@ internal fun KeyboardController.panelSearchRow(snapshot: EngineSnapshot): Englis
 internal fun KeyboardController.searchEcho(active: InputSession?): List<RailItem>? {
     val state = panelSearch ?: return null
     if (active?.snapshot?.isComposing != true) return null
-    val text = keyNames.chinese().getString(R.string.ime_emoji_search_chip, state.query + lastMarked)
+    val text = context.getString(R.string.ime_emoji_search_chip, state.query + lastMarked)
     return listOf(RailItem(text, RailKind.ECHO))
 }
 

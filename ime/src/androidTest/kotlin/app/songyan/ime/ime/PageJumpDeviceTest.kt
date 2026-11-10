@@ -58,12 +58,9 @@ class PageJumpDeviceTest {
         )
     }
 
-    private fun jumpName(host: FeatureHost): String =
-        host.context.getString(R.string.ime_jump_to_numbers, host.string(R.string.ime_layout_phone9))
-
     private fun openSymbolPage(host: FeatureHost) {
-        host.tap(host.string(R.string.ime_open_numbers_page))
-        host.tap(host.string(R.string.ime_open_symbols_page))
+        host.tapNumbersPage()
+        host.tapSymbolsPage()
         host.awaitIdle()
     }
 
@@ -73,9 +70,8 @@ class PageJumpDeviceTest {
             installSymbolPageWithJump()
             host.start()
             openSymbolPage(host)
-            val labels = host.labelsOf(KeyboardView::class.java)
-            assertTrue(labels.toString(), jumpName(host) in labels)
-            host.tap(jumpName(host))
+            assertTrue(host.hasAction { it.type == LayoutActionKind.LAYOUT_PAGE_SWITCH })
+            host.tapAction(LayoutActionKind.LAYOUT_PAGE_SWITCH)
             assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.PHONE9 })
             host.awaitIdle()
             assertEquals(KeyboardPageKind.NUMERIC, host.main2 { host.controller.page })
@@ -86,13 +82,13 @@ class PageJumpDeviceTest {
             host.tap("5")
             host.assertText("5")
             // 返回 lands on the 26-key letters the jump came from, not on the 9-key ones.
-            host.tap(host.string(R.string.ime_return_to_letters))
+            host.tapControl(ControlKey.RETURN_TO_LETTERS)
             assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.QWERTY26 })
             host.awaitIdle()
             assertNull(host.main2 { host.controller.page })
             assertEquals(KeyboardLayoutKind.QWERTY26, host.main2 { host.controller.session?.layout })
             val letters = host.labelsOf(KeyboardView::class.java)
-            assertTrue(letters.toString(), host.string(R.string.ime_clear) !in letters)
+            assertTrue(letters.toString(), !host.hasControl(ControlKey.CLEAR_INPUT))
             host.setText("")
             host.type("ni")
             assertTrue(host.barLabels().toString(), host.await { host.barLabels().any { it.contains("你") } })
@@ -105,7 +101,7 @@ class PageJumpDeviceTest {
             host.start()
             openSymbolPage(host)
             repeat(2) { round ->
-                host.tap(jumpName(host))
+                host.tapAction(LayoutActionKind.LAYOUT_PAGE_SWITCH)
                 assertTrue(
                     "round $round",
                     host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.PHONE9 },
@@ -113,14 +109,14 @@ class PageJumpDeviceTest {
                 host.awaitIdle()
                 assertEquals(KeyboardPageKind.NUMERIC, host.main2 { host.controller.page })
                 // 符 on the visited 9-key 123 page opens the user's own symbol page, which has the jump key again.
-                host.hold(host.string(R.string.ime_open_symbols_page), 30L) {}
+                host.holdAction({ it.pageSwitchTarget == LayoutPageTarget.SYMBOLS }, 30L) {}
                 assertTrue(
                     "round $round",
                     host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.QWERTY26 },
                 )
                 host.awaitIdle()
                 assertEquals(KeyboardPageKind.SYMBOLS, host.main2 { host.controller.page })
-                assertTrue(jumpName(host) in host.labelsOf(KeyboardView::class.java))
+                assertTrue(host.hasAction { it.type == LayoutActionKind.LAYOUT_PAGE_SWITCH })
                 // The key now in 符's slot (# on this page) does not light up.
                 val fading = host.main2 { host.find(KeyboardView::class.java).releases.count { it != 0L } }
                 assertEquals("round $round", 0, fading)
@@ -133,7 +129,7 @@ class PageJumpDeviceTest {
             installSymbolPageWithJump()
             host.start()
             openSymbolPage(host)
-            host.tap(jumpName(host))
+            host.tapAction(LayoutActionKind.LAYOUT_PAGE_SWITCH)
             assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.PHONE9 })
             host.main {
                 val field = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT }

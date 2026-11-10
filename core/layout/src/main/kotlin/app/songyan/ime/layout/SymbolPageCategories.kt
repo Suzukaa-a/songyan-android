@@ -1,5 +1,6 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import java.text.BreakIterator
 
 /**
@@ -216,6 +217,7 @@ object SymbolPageCategories {
         recents: List<String> = emptyList(),
         library: List<LibrarySet> = emptyList(),
         leading: List<String> = emptyList(),
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     ): List<Category> {
         fun category(
             id: String,
@@ -223,7 +225,8 @@ object SymbolPageCategories {
             symbols: List<String>,
         ) = Category(id, title, symbols.filter { it.isNotEmpty() }.distinct())
 
-        val common = category(COMMON_ID, "常用", KeyboardPageMarkCoverage.commonSymbols(commonSymbols(ascii), leading))
+        val everyday = commonSymbols(ascii) + if (inputLanguage == InputLanguage.JA) JAPANESE_COMMON else emptyList()
+        val common = category(COMMON_ID, "常用", KeyboardPageMarkCoverage.commonSymbols(everyday, leading))
         val widths =
             listOf(
                 category("chinese", "中文", chineseSymbols),
@@ -250,8 +253,9 @@ object SymbolPageCategories {
         recents: List<String>,
         library: List<LibrarySet>,
         leading: List<String> = emptyList(),
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     ): List<KeyboardPageCategory> =
-        display(ascii, recents, library, leading).map { category ->
+        display(ascii, recents, library, leading, inputLanguage).map { category ->
             KeyboardPageCategory(
                 id = category.id,
                 name = category.title,
@@ -269,9 +273,10 @@ object SymbolPageCategories {
         recents: List<String>,
         library: List<LibrarySet>,
         quickSymbols: List<String>,
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     ): List<KeyboardPageCategory> {
         val result =
-            display(ascii = false, recents = recents, library = library)
+            display(ascii = false, recents = recents, library = library, inputLanguage = inputLanguage)
                 .map { category ->
                     val recent = category.id == RECENT_ID
                     KeyboardPageCategory(
@@ -295,6 +300,9 @@ object SymbolPageCategories {
         }
         return result
     }
+
+    /** Marks Japanese typing needs that the Chinese common set has no home for. */
+    private val JAPANESE_COMMON = listOf("・", "ー", "～")
 
     /** What a categorized page draws for [categories]: a recent tab lists [recents], every other tab its own keys. */
     fun resolved(

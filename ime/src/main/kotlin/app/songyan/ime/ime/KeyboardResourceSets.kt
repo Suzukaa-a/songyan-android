@@ -37,6 +37,9 @@ object KeyboardResourceSets {
             layoutEntries =
                 base.layoutEntries + extra.map { KeyboardResourceSet.LayoutEntry(KeyboardLayoutKind.QWERTY26, it) },
             encodingAdapters = base.encodingAdapters + offered,
+            // The descriptors keep the declared speller alphabet: the family rule reads it, and
+            // nothing on the key path has to ask the engine for it again.
+            schemaFacts = schemas,
         )
     }
 

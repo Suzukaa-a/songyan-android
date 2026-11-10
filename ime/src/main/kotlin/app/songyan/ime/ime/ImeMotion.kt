@@ -7,8 +7,8 @@ import android.view.animation.PathInterpolator
 import androidx.dynamicanimation.animation.SpringForce
 
 /**
- * The keyboard's few transitions: the candidate bar's expansion, panel show/hide and the page
- * content fade.
+ * The keyboard's few transitions: the candidate bar's expansion, panel show/hide and the keys
+ * fading in after a keyboard switch.
  *
  * Every transition follows a state change that already happened, so nothing here delays dispatch,
  * key feedback or input: it only animates what is already on screen. When the system asks for no
@@ -18,7 +18,7 @@ import androidx.dynamicanimation.animation.SpringForce
  * Two kinds of animation exist here and they scale differently:
  *  - Platform-driven ones ([android.animation.ValueAnimator], [android.view.ViewPropertyAnimator]):
  *    the platform already multiplies their duration by the system animator duration scale, so they
- *    take the base [CANDIDATE_MS] / [PANEL_MS] / [PAGE_MS] and must NOT pass through [duration].
+ *    take the base [CANDIDATE_MS] / [PANEL_MS] / [SWITCH_MS] and must NOT pass through [duration].
  *    AndroidX spring animations likewise scale their frame deltas on API 33+, so their physical
  *    response must stay unchanged; changing stiffness would apply the speed twice.
  *  - Canvas-driven progress (a value read while drawing, e.g. the key press release): no platform
@@ -31,8 +31,11 @@ object ImeMotion {
     /** Base quick-content panel show/hide time; a platform animator already scales it. */
     const val PANEL_MS: Long = 140
 
-    /** Base page-swap fade time; a platform animator already scales it. */
-    const val PAGE_MS: Long = 100
+    /** Base fade-in of the keys after a keyboard switch; a platform animator already scales it. */
+    const val SWITCH_MS: Long = 180
+
+    /** The keys start the switch fade faint, not invisible, the same as on iOS. */
+    const val SWITCH_FROM_ALPHA = 0.15f
 
     /**
      * Partial animator scales are only readable from API 33; older platforms only expose the

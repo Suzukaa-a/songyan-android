@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 輸入方案 · 詞庫 -->
+    <string name="schemes_dictionary_section">詞庫</string>
+    <string name="schemes_dictionary_unavailable">現在不能匯入詞庫，請稍後再試。</string>
+    <string name="schemes_dictionary_entry_count">已匯入詞庫 · %1$d 條</string>
+    <string name="schemes_dictionary_import_file">匯入詞庫</string>
+    <string name="schemes_dictionary_import_url">從連結匯入</string>
+    <string name="schemes_dictionary_note">支援 .dict.yaml 格式，可同時選擇它引用的詞庫檔案。</string>
+    <string name="schemes_dictionary_importing">正在匯入詞庫…</string>
+    <string name="schemes_dictionary_removing">正在移除詞庫…</string>
+    <string name="schemes_dictionary_remove">移除</string>
+    <string name="schemes_dictionary_remove_title">移除匯入的詞庫？</string>
+    <string name="schemes_dictionary_remove_body">已經學會的詞會保留。</string>
+    <string name="schemes_dictionary_cancel">取消</string>
+    <string name="schemes_dictionary_import_success">詞庫已匯入。</string>
+    <string name="schemes_dictionary_remove_success">已移除匯入的詞庫。</string>
+    <string name="schemes_dictionary_import_failed">匯入失敗，請重試。</string>
+    <string name="schemes_dictionary_remove_failed">移除失敗，請重試。</string>
+
+    <!-- 從連結匯入 -->
+    <string name="schemes_dictionary_url_label">詞庫連結</string>
+    <string name="schemes_dictionary_url_invalid">請填以 https:// 開頭的連結。</string>
+    <string name="schemes_dictionary_url_note">連結要直接指向 .dict.yaml 檔案。</string>
+    <string name="schemes_dictionary_url_confirm">匯入</string>
+    <string name="schemes_dictionary_target_title">加到哪個輸入方案？</string>
+    <string name="schemes_dictionary_target_builtin">松煙內建</string>
+    <string name="schemes_dictionary_target_continue">繼續</string>
+    <string name="schemes_dictionary_stacked_on">加在「%1$s」上</string>
+</resources>

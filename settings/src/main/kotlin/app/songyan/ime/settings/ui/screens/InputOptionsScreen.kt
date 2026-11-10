@@ -26,10 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.state.EngineOptionSetting
 import app.songyan.ime.settings.ui.EngineOptionsUiState
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
@@ -85,6 +87,7 @@ fun InputOptionsScreen(
     onBack: (() -> Unit)?,
     onOpenFeatures: () -> Unit = {},
     onOpenCandidateBar: () -> Unit = {},
+    onOpenToolbar: () -> Unit = {},
     onOpenShuangpinHints: () -> Unit = {},
     engineOptions: EngineOptionsUiState = EngineOptionsUiState(),
     onEngineOptionChanged: (String, Boolean) -> Unit = { _, _ -> },
@@ -150,6 +153,11 @@ fun InputOptionsScreen(
                 subtitle = stringResource(R.string.candidate_bar_entry_subtitle),
                 onClick = onOpenCandidateBar,
             )
+            SettingsRow(
+                title = stringResource(R.string.toolbar_title),
+                subtitle = stringResource(R.string.toolbar_entry_subtitle),
+                onClick = onOpenToolbar,
+            )
 
             SectionHeader(stringResource(R.string.options_candidate_size_section))
             Column(modifier = Modifier.selectableGroup()) {
@@ -188,7 +196,10 @@ private fun EngineOptionsSection(
         } else {
             SettingsRow(
                 title = stringResource(R.string.options_engine_character_form),
-                subtitle = state.options.firstOrNull { it.name in option.choiceGroup && it.on }?.choiceLabel,
+                subtitle =
+                    state.options
+                        .firstOrNull { it.name in option.choiceGroup && it.on }
+                        ?.let { engineOptionLabel(it) },
                 onClick = { openGroupName = option.choiceGroup.first() },
             )
         }
@@ -201,7 +212,7 @@ private fun EngineOptionsSection(
                 Column(Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
                     group.mapNotNull { name -> state.options.find { it.name == name } }.forEach { option ->
                         RadioRow(
-                            title = option.choiceLabel ?: option.name,
+                            title = engineOptionLabel(option),
                             selected = option.on,
                             onClick = {
                                 onChange(option.name, true)
@@ -227,6 +238,19 @@ private fun EngineOptionsSection(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
 }
+
+/** A known bundled state is worded by its resource; every other choice keeps the schema's own label. */
+@Composable
+private fun engineOptionLabel(option: EngineOptionSetting): String =
+    option.knownScriptState?.let { stringResource(scriptStateLabel(it)) } ?: (option.choiceLabel ?: option.name)
+
+private fun scriptStateLabel(state: BuiltinScriptState): Int =
+    when (state) {
+        BuiltinScriptState.SIMPLIFIED -> R.string.options_engine_script_simplified
+        BuiltinScriptState.TRADITIONAL -> R.string.options_engine_script_traditional
+        BuiltinScriptState.TAIWAN -> R.string.options_engine_script_taiwan
+        BuiltinScriptState.HONG_KONG -> R.string.options_engine_script_hong_kong
+    }
 
 private fun engineOptionTitle(kind: EngineOptionKind): Int =
     when (kind) {

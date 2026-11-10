@@ -10,6 +10,7 @@ import app.songyan.ime.deploy.DeployContract
 import app.songyan.ime.deploy.DeployMode
 import app.songyan.ime.deploy.DeployPipeline
 import app.songyan.ime.deploy.DeployRequest
+import app.songyan.ime.deploy.PinnedArchive
 import app.songyan.ime.deploy.RequestState
 import app.songyan.ime.learning.LearningBackupService
 import app.songyan.ime.learning.PackageLearning
@@ -19,6 +20,8 @@ import app.songyan.ime.packages.SchemeGrammarRequirements
 import app.songyan.ime.packages.SchemePackageLimits
 import app.songyan.ime.settings.state.ImportedSchemeInfo
 import app.songyan.ime.settings.state.PackageLearningResult
+import app.songyan.ime.settings.state.RecommendedArchive
+import app.songyan.ime.settings.state.RecommendedSchemes
 import app.songyan.ime.settings.state.SchemeImportGateway
 import app.songyan.ime.settings.state.SchemeImportResult
 import app.songyan.ime.settings.state.TransferProgress
@@ -68,6 +71,27 @@ internal class SchemeImportGatewayImpl(
             finish(client.await(request, progress))
         }
 
+    /**
+     * A recommended entry is several pinned archives installed as one package. The download and the
+     * digest check run in :deploy, the only process allowed to use the network; this process only
+     * hands the links over.
+     */
+    override suspend fun importRecommendedScheme(
+        archives: List<RecommendedArchive>,
+        advertisedSchemas: List<String>,
+        progress: (TransferProgress) -> Unit,
+    ): SchemeImportResult =
+        client.detached {
+            val request =
+                DeployRequest(
+                    DeployContract.newRequestId(),
+                    DeployMode.IMPORT_SCHEME_URL,
+                    archives = archives.map { PinnedArchive(it.url, it.sha256, it.bytes) },
+                    advertisedSchemas = advertisedSchemas,
+                )
+            finish(client.await(request, progress))
+        }
+
     override suspend fun update(
         sourceId: String,
         progress: (TransferProgress) -> Unit,
@@ -76,13 +100,26 @@ internal class SchemeImportGatewayImpl(
             val origin =
                 withContext(Dispatchers.IO) { SourceCatalog(storage).read(sourceId)?.origin }
                     ?: return@detached failure(SchemeImportProblemKind.UPDATE_TARGET_MISSING)
+            // A recommended entry needs its pinned archives: the stored link alone would miss them.
+            val recommended = RecommendedSchemes.forLink(origin)
             val request =
-                DeployRequest(
-                    DeployContract.newRequestId(),
-                    DeployMode.IMPORT_SCHEME_URL,
-                    sourceId = sourceId,
-                    url = origin,
-                )
+                if (recommended == null) {
+                    DeployRequest(
+                        DeployContract.newRequestId(),
+                        DeployMode.IMPORT_SCHEME_URL,
+                        sourceId = sourceId,
+                        url = origin,
+                    )
+                } else {
+                    DeployRequest(
+                        DeployContract.newRequestId(),
+                        DeployMode.IMPORT_SCHEME_URL,
+                        sourceId = sourceId,
+                        url = origin,
+                        archives = recommended.archives.map { PinnedArchive(it.url, it.sha256, it.bytes) },
+                        advertisedSchemas = recommended.advertisedSchemas,
+                    )
+                }
             finish(client.await(request, progress))
         }
 
@@ -234,7 +271,9 @@ internal class SchemeImportGatewayImpl(
                         res,
                         SchemeImportProblems.SIZE_LIMIT_LABEL,
                     )
-                SchemeImportProblemKind.MISSING_DEPENDENCY ->
+                SchemeImportProblemKind.MISSING_DEPENDENCY,
+                SchemeImportProblemKind.CONFLICTING_FILES,
+                ->
                     appContext.getString(
                         res,
                         ImportPaths.list(paths, appContext.getString(R.string.import_path_separator)),

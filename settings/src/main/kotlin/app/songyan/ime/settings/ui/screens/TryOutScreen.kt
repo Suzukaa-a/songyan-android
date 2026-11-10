@@ -30,6 +30,8 @@ import app.songyan.ime.settings.ui.components.TryOutKind
 @Composable
 fun TryOutScreen(
     ime: ImeStatus,
+    /** The input method in use types Japanese, so its language key reads あ/A instead of 中/英. */
+    japanese: Boolean = false,
     onTyped: () -> Unit,
     onEnableIme: () -> Unit,
     onBack: (() -> Unit)?,
@@ -71,7 +73,7 @@ fun TryOutScreen(
             TryOutField(onTyped = onTyped, kind = kind)
 
             Text(
-                text = stringResource(R.string.tryout_note),
+                text = stringResource(if (japanese) R.string.tryout_note_japanese else R.string.tryout_note),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

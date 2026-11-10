@@ -44,12 +44,14 @@ import androidx.compose.ui.unit.dp
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.InstalledScheme
-import app.songyan.ime.settings.state.RecommendedSchemes
+import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.state.StoredSourceKind
 import app.songyan.ime.settings.state.StoredSourceStatus
 import app.songyan.ime.settings.ui.DictionaryImportUiState
 import app.songyan.ime.settings.ui.EngineFeaturesUiState
+import app.songyan.ime.settings.ui.RecommendedSchemeDownloadDetails
+import app.songyan.ime.settings.ui.RecommendedSchemeSummary
 import app.songyan.ime.settings.ui.RimeConfigMessage
 import app.songyan.ime.settings.ui.RimeConfigUiState
 import app.songyan.ime.settings.ui.SchemeImportUiState
@@ -65,6 +67,8 @@ import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.importCardOf
 import app.songyan.ime.settings.ui.normalizeDictionaryUrl
 import app.songyan.ime.settings.ui.normalizeSchemeUrl
+import app.songyan.ime.settings.ui.openWebPage
+import app.songyan.ime.settings.ui.recommendedSchemes
 
 /** The state and actions behind the grammar-model card. */
 data class GrammarModelCardInput(
@@ -109,6 +113,7 @@ fun SchemesScreen(
     stackedDictionaries: List<ImportedDictionaryInfo> = emptyList(),
     onImportSchemeFolder: (Uri) -> Unit = {},
     onImportSchemeFromLink: (String) -> Unit = {},
+    onImportRecommendedScheme: (RecommendedScheme) -> Unit = {},
     onRestoreSource: (String) -> Unit = {},
     /** A package another app handed over; nothing is imported until the user agrees. */
     incomingPackage: Uri? = null,
@@ -163,6 +168,8 @@ fun SchemesScreen(
     var showSchemeLinkDialog by rememberSaveable { mutableStateOf(false) }
     var schemeLinkText by rememberSaveable { mutableStateOf("") }
     var recommendedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // One order for the guide and this page: the device's own language decides it, not the app's.
+    val recommendedCatalog = recommendedSchemes()
     var showUrlDialog by rememberSaveable { mutableStateOf(false) }
     var urlText by rememberSaveable { mutableStateOf("") }
     var confirmRemove by rememberSaveable { mutableStateOf(false) }
@@ -359,16 +366,16 @@ fun SchemesScreen(
                     item { BodyText(stringResource(R.string.schemes_scheme_import_note)) }
                     item { SectionHeader(stringResource(R.string.schemes_recommended_section)) }
                     items(
-                        RecommendedSchemes.catalog.size,
-                        key = { "recommended_" + RecommendedSchemes.catalog[it].id },
+                        recommendedCatalog.size,
+                        key = { "recommended_" + recommendedCatalog[it].id },
                     ) {
-                        val recommended = RecommendedSchemes.catalog[it]
+                        val entry = recommendedCatalog[it]
                         ListItem(
-                            headlineContent = { Text(stringResource(recommended.nameRes)) },
-                            supportingContent = { Text(stringResource(recommended.detailRes)) },
+                            headlineContent = { Text(stringResource(entry.nameRes)) },
+                            supportingContent = { RecommendedSchemeSummary(entry) },
                             modifier =
                                 Modifier.clickable(enabled = !schemeRunning && !running, role = Role.Button) {
-                                    recommendedId = recommended.id
+                                    recommendedId = entry.id
                                 },
                         )
                     }
@@ -494,18 +501,27 @@ fun SchemesScreen(
         )
     }
 
-    val recommended = RecommendedSchemes.catalog.firstOrNull { it.id == recommendedId }
-    if (recommended != null) {
-        val name = stringResource(recommended.nameRes)
+    val selected = recommendedCatalog.firstOrNull { it.id == recommendedId }
+    if (selected != null) {
+        val name = stringResource(selected.nameRes)
         AlertDialog(
             onDismissRequest = { recommendedId = null },
             title = { Text(stringResource(R.string.schemes_recommended_confirm_title, name)) },
-            text = { Text(stringResource(R.string.schemes_recommended_confirm_body)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.schemes_recommended_confirm_body))
+                    RecommendedSchemeSummary(selected)
+                    RecommendedSchemeDownloadDetails(
+                        selected,
+                        onOpenHomepage = { openWebPage(context, it) },
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         recommendedId = null
-                        onImportSchemeFromLink(recommended.url)
+                        onImportRecommendedScheme(selected)
                     },
                 ) {
                     Text(stringResource(R.string.schemes_recommended_confirm))

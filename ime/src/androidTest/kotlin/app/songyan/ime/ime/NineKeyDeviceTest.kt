@@ -17,6 +17,7 @@ import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutRow
 import org.junit.After
@@ -144,7 +145,7 @@ class NineKeyDeviceTest {
             // While composing, readings take the leading rail's slots.
             assertTrue(host.await { host.labelsOf(KeyboardView::class.java).first() != "@" })
             // The author's "重输" is the keyboard's own key name, so a screen reader says it in the system language.
-            host.tap(host.string(R.string.ime_clear))
+            host.tapControl(ControlKey.CLEAR_INPUT)
             host.awaitIdle()
             assertEquals("", host.text())
             // Idle again: the declared symbol types itself.
@@ -236,8 +237,8 @@ class NineKeyDeviceTest {
             host.start()
             val labels = host.labelsOf(KeyboardView::class.java)
             // The declared control row (布局, 空格, 🌐) is data only: the generated row has 123, space and Return.
-            assertTrue(labels.toString(), host.string(R.string.ime_open_numbers_page) in labels)
-            assertTrue(labels.toString(), host.string(R.string.ime_space) in labels)
+            assertTrue(labels.toString(), host.hasAction { it.pageSwitchTarget == LayoutPageTarget.NUMERIC })
+            assertTrue(labels.toString(), host.hasControl(ControlKey.SPACE))
             assertFalse(labels.toString(), "布局" in labels)
         }
 
@@ -257,8 +258,8 @@ class NineKeyDeviceTest {
             install(broken)
             host.start()
             val labels = host.labelsOf(KeyboardView::class.java)
-            assertTrue(labels.toString(), host.string(R.string.ime_open_numbers_page) in labels)
-            assertTrue(labels.toString(), host.string(R.string.ime_space) in labels)
+            assertTrue(labels.toString(), host.hasAction { it.pageSwitchTarget == LayoutPageTarget.NUMERIC })
+            assertTrue(labels.toString(), host.hasControl(ControlKey.SPACE))
         }
 
     @Test
@@ -267,43 +268,54 @@ class NineKeyDeviceTest {
             host.start()
             val labels = host.labelsOf(KeyboardView::class.java)
             assertEquals(listOf("，", "。", "？"), labels.take(3))
-            assertTrue(labels.toString(), host.string(R.string.ime_clear) in labels)
+            assertTrue(labels.toString(), host.hasControl(ControlKey.CLEAR_INPUT))
         }
 
     @Test
     fun theNineKeySymbolPageIsTheCategorizedPage() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapNumbersPage()
+            host.tapSymbolsPage()
             host.awaitIdle()
+            val expectedTabs =
+                listOf(
+                    host.string(R.string.ime_symbol_page_common),
+                    host.string(R.string.ime_symbol_page_chinese),
+                    host.string(R.string.ime_symbol_page_english),
+                    host.string(R.string.ime_symbol_page_brackets),
+                )
             val tabs = host.labelsOf(SymbolPagePanelView::class.java)
-            for (tab in listOf("常用", "中文", "英文", "括号")) assertTrue("$tab in $tabs", tab in tabs)
+            for (tab in expectedTabs) assertTrue("$tab in $tabs", tab in tabs)
             for (key in listOf(R.string.ime_return_to_letters, R.string.ime_open_numbers_page, R.string.ime_space)) {
                 assertTrue(host.string(key) in host.labelsOf(SymbolPagePanelView::class.java))
             }
             // Switching tabs shows that tab's symbols.
-            host.tap("英文", SymbolPagePanelView::class.java)
+            host.tap(host.string(R.string.ime_symbol_page_english), SymbolPagePanelView::class.java)
             val english = host.labelsOf(SymbolPagePanelView::class.java)
             assertTrue("[ in $english", "[" in english)
-            host.tap("中文", SymbolPagePanelView::class.java)
+            host.tap(host.string(R.string.ime_symbol_page_chinese), SymbolPagePanelView::class.java)
             host.tap("【", SymbolPagePanelView::class.java)
             host.assertText("【")
             // One symbol returns to the letters: the page closed and the nine-key shell is back.
             assertTrue(host.await { host.findOrNull(SymbolPagePanelView::class.java) == null })
-            assertTrue(host.string(R.string.ime_clear) in host.labelsOf(KeyboardView::class.java))
+            assertTrue(host.hasControl(ControlKey.CLEAR_INPUT))
         }
 
     @Test
     fun theCategoryRailTouchTargetsAreAtLeast48dp() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapNumbersPage()
+            host.tapSymbolsPage()
             host.awaitIdle()
             val labels = host.labelsOf(SymbolPagePanelView::class.java)
-            val first = labels.indexOf("常用")
-            val second = labels.indexOf("最近").takeIf { it >= 0 } ?: labels.indexOf("中文")
+            val first = labels.indexOf(host.string(R.string.ime_symbol_page_common))
+            val second =
+                labels
+                    .indexOf(host.string(R.string.ime_symbol_page_recent))
+                    .takeIf { it >= 0 }
+                    ?: labels.indexOf(host.string(R.string.ime_symbol_page_chinese))
             assertTrue(labels.toString(), first >= 0 && second >= 0)
             val (density, heights) =
                 host.main2 {
@@ -324,8 +336,8 @@ class NineKeyDeviceTest {
     fun aLockedSymbolPageStaysOpenAndTheWayBackClosesIt() =
         withHost { host ->
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapNumbersPage()
+            host.tapSymbolsPage()
             host.tap(host.string(R.string.ime_symbol_lock), SymbolPagePanelView::class.java)
             host.tap("，", SymbolPagePanelView::class.java)
             host.tap("。", SymbolPagePanelView::class.java)
@@ -339,7 +351,7 @@ class NineKeyDeviceTest {
             host.assertText("，")
             host.tap(host.string(R.string.ime_return_to_letters), SymbolPagePanelView::class.java)
             assertTrue(host.await { host.findOrNull(SymbolPagePanelView::class.java) == null })
-            assertTrue(host.string(R.string.ime_clear) in host.labelsOf(KeyboardView::class.java))
+            assertTrue(host.hasControl(ControlKey.CLEAR_INPUT))
         }
 
     @Test
@@ -365,8 +377,8 @@ class NineKeyDeviceTest {
                     ),
             )
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
-            host.tap(host.string(R.string.ime_open_symbols_page))
+            host.tapNumbersPage()
+            host.tapSymbolsPage()
             host.awaitIdle()
             val labels = host.labelsOf(SymbolPagePanelView::class.java)
             assertTrue(labels.toString(), "甲组" in labels && "乙组" in labels && "甲" in labels)

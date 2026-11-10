@@ -76,6 +76,7 @@
     <string name="tryout_kind_password">Password</string>
     <string name="tryout_hint">Type here…</string>
     <string name="tryout_note">Tap 中/英 to switch between Chinese and English. Press and hold it for the keyboard menu to change the input method or keyboard layout. Switch to other keyboards from the system navigation bar.</string>
+    <string name="tryout_note_japanese">Tap あ/A to switch between Japanese and English. Press and hold it for the keyboard menu to change the input method or keyboard layout. Switch to other keyboards from the system navigation bar.</string>
     <string name="tryout_needs_enable">Songyan keyboard is not enabled yet. Please enable it first.</string>
     <string name="tryout_needs_select">Songyan is not the default keyboard. Please switch to it first.</string>
     <string name="tryout_action">Open system settings</string>
@@ -94,6 +95,15 @@
     <string name="layout_name_14">14-key</string>
     <string name="layout_name_18">18-key</string>
     <string name="layout_name_9">9-key</string>
+    <string name="layout_name_zhuyin41">Zhuyin 41 keys</string>
+    <string name="layout_name_cangjie26">Cangjie 26 keys</string>
+    <string name="layout_name_romaji26">Romaji 26 keys</string>
+    <string name="layout_name_kana12">Kana 12 keys</string>
+    <string name="page_name_symbols_system">Default symbols</string>
+    <string name="page_name_symbols_categorized">Symbols by category</string>
+    <string name="page_name_numeric_automatic">Automatic 123</string>
+    <string name="page_name_numeric_keypad">Number pad 123</string>
+    <string name="page_name_english_qwerty">English QWERTY</string>
     <string name="layout_unavailable_note">This layout is not supported by the keyboard yet.</string>
 
     <!-- Input options -->
@@ -300,6 +310,10 @@
     <string name="search_keywords_haptics">vibrate vibration haptic feedback</string>
     <string name="search_keywords_switch_key">globe switch input method keyboard</string>
     <string name="options_engine_character_form">Character form</string>
+    <string name="options_engine_script_simplified">Simplified</string>
+    <string name="options_engine_script_traditional">Traditional</string>
+    <string name="options_engine_script_taiwan">Taiwan</string>
+    <string name="options_engine_script_hong_kong">Hong Kong</string>
     <string name="composition_needs_scheme">Download or import an input scheme first.</string>
     <string name="composition_get_scheme">Get an input scheme</string>
     <string name="layouts_action_use">Use</string>

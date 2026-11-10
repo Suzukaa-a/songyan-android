@@ -67,7 +67,7 @@ class AuthoredPageRailsDeviceTest {
         val host = FeatureHost(engine.backend(), "qwerty26")
         try {
             host.start()
-            host.tap(host.string(R.string.ime_open_numbers_page))
+            host.tapNumbersPage()
             host.awaitIdle()
             block(host)
         } finally {
@@ -163,7 +163,7 @@ class AuthoredPageRailsDeviceTest {
                     true
                 }
             }
-            host.tap(host.string(R.string.ime_send))
+            host.tapControl(ControlKey.ENTER)
             host.awaitIdle()
             assertEquals(EditorInfo.IME_ACTION_SEND, action)
             assertEquals("", host.text())
@@ -176,7 +176,7 @@ class AuthoredPageRailsDeviceTest {
                 inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE,
                 imeOptions = EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION,
             )
-            host.tap(host.string(R.string.ime_enter))
+            host.tapControl(ControlKey.ENTER)
             host.awaitIdle()
             assertEquals("\n", host.text())
         }

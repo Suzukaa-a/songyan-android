@@ -1,7 +1,9 @@
 package app.songyan.ime.ime
 
+import android.animation.ValueAnimator
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
@@ -53,11 +55,12 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
     }
     updateSwipe(active)
     syncMenu()
+    // The new package may arrive while the keyboard is closed; it is named when the keys show.
+    if (announceWhenReady && windowShown) finishSwitch()
     render()
     ImePerf.ready()
     while (heldKeys.isNotEmpty() && ready) {
-        val (action, t9FirstKey) = heldKeys.removeFirst()
-        dispatch(action, t9FirstKey)
+        heldKeys.removeFirst()()
     }
 }
 
@@ -107,6 +110,7 @@ internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardRes
     KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters)
 
 internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
+    val before = layoutKind
     val active = session
     val accepted =
         if (active != null && ready) {
@@ -127,6 +131,24 @@ internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
     }
     syncMenu()
     closeKeyboardMenu()
+    if (accepted && kind != before) announceSwitch(named = false)
+    render()
+}
+
+/**
+ * Makes [boardId] the main layout of the running input method's identity shape and moves the keyboard
+ * to that shape. Only the pairing and the layout change: the engine keeps its schema, so nothing is
+ * redeployed. The pairing is saved first; the catalog it publishes redraws the board, and a refused
+ * save leaves the keyboard where it was.
+ */
+internal suspend fun KeyboardController.chooseBoard(boardId: String) {
+    val saved = preferences?.setMainLayout(schemaId, layoutFamilies(), boardId) ?: false
+    if (!saved) {
+        closeKeyboardMenu()
+        return
+    }
+    chooseLayout(KeyboardLayoutKind.QWERTY26)
+    announceSwitch(named = false)
     render()
 }
 
@@ -146,6 +168,11 @@ internal fun KeyboardController.jumpableLayouts(): Set<KeyboardLayoutKind> {
 
 internal suspend fun KeyboardController.chooseSchema(target: String) {
     if (target.isBlank()) return
+    val before = schemaId
+    if (target.startsWith(OtherInputMethod.MENU_ID_PREFIX)) {
+        otherInputMethods.firstOrNull { it.menuId == target }?.let { switchToOtherPackage(it) }
+        return
+    }
     val active = session
     val accepted =
         if (active != null && ready) {
@@ -161,18 +188,90 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
         preferredSchema = target
         page = null
         preferences?.setActiveSchemaId(target)
+        // A family that cannot run the saved layout (zhuyin, cangjie, Japanese) replaced it; save
+        // that so the next start does not begin from a pairing it must repair again.
+        if (active != null && ready) persistSelection(active)
     }
     syncMenu()
     closeKeyboardMenu()
+    if (accepted && target != before) announceSwitch()
     render()
 }
 
+/**
+ * Another package's input method was picked. The composition is committed first, as before any
+ * outside write, because the engine is replaced and its spelling cannot continue; a field that is
+ * no longer current keeps the keyboard where it is.
+ */
+private suspend fun KeyboardController.switchToOtherPackage(method: OtherInputMethod) {
+    val settled = confirmComposition()
+    if (!settled) {
+        closeKeyboardMenu()
+        render()
+        return
+    }
+    // The menu stays up, its new choice lit, until the new keys can fade in in its place: closing
+    // it first would show the old keys only to take them away again.
+    announceWhenReady = true
+    menu.markPicked(method.menuId)
+    callbacks.switchSource(method.sourceId, method.schemaId)
+}
+
+/** Another package's engine is ready and shown: the menu gives way to its keys. */
+internal fun KeyboardController.finishSwitch() {
+    announceWhenReady = false
+    closeKeyboardMenu()
+    syncMenu()
+    announceSwitch()
+}
+
+/**
+ * The user switched input method, layout or board: the new keys fade in, and when the input method
+ * changed ([named]) the space bar names it for [SWITCH_NOTICE_MS], so the switch shows where the
+ * eyes already are. A new layout shows in its keys; naming the unchanged input method adds nothing.
+ * The fade only changes opacity, so a key pressed during it lands as usual; with animations off
+ * the keys simply appear.
+ */
+internal fun KeyboardController.announceSwitch(named: Boolean = true) {
+    if (named) {
+        switchNotice = true
+        noticeTimer.removeCallbacks(endSwitchNotice)
+        noticeTimer.postDelayed(endSwitchNotice, SWITCH_NOTICE_MS)
+    }
+    switchFade?.cancel()
+    if (!ImeMotion.enabled) {
+        keyboard.alpha = 1f
+        return
+    }
+    // A plain animator, not the view's: it runs even while the view is detached (the notice of
+    // another package arrives with its engine), so the keys never stay faint.
+    switchFade =
+        // Keys uncovered by the preparing notice are hidden already and fade in from there.
+        ValueAnimator.ofFloat(if (keyboard.alpha < 1f) keyboard.alpha else ImeMotion.SWITCH_FROM_ALPHA, 1f).apply {
+            duration = ImeMotion.SWITCH_MS
+            interpolator = ImeMotion.standard
+            addUpdateListener { keyboard.alpha = it.animatedValue as Float }
+            start()
+        }
+}
+
+/** How long the space bar names the keyboard after a switch; the same as on iOS. */
+internal const val SWITCH_NOTICE_MS = 2_500L
+
 internal suspend fun KeyboardController.cycleLayout() {
     val usable = jumpableLayouts()
-    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind).filter { it in usable }
+    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, usable)
     val next = KeyboardMenuEntries.nextLayout(offered, layoutKind) ?: return
     chooseLayout(next)
 }
+
+/**
+ * The scheme families the session already resolved (the cached profile carries the engine alphabet),
+ * for choosing a keyboard's physical layout. An id the language table cannot place by its name still
+ * selects the layout of its family; before the session is ready the id-only answer stands.
+ */
+internal fun KeyboardController.layoutFamilies(): LayoutFamilyContext =
+    session?.layoutFamilyContext() ?: LayoutFamilyContext.UNKNOWN
 
 internal fun KeyboardController.syncSelection(active: InputSession) {
     layoutKind = active.layout

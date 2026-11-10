@@ -14,6 +14,9 @@ import android.text.TextUtils
 import android.view.MotionEvent
 import androidx.core.content.ContextCompat
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarCapacity
+import app.songyan.ime.candidate.ToolbarItem
+import app.songyan.ime.candidate.ToolbarLayout
 
 /**
  * The idle row of the keyboard's top band: while nothing is being composed the candidate row shows
@@ -39,6 +42,13 @@ class ToolbarView(
         HIDE(R.drawable.ic_toolbar_hide, R.string.ime_toolbar_hide),
         SWITCH_INPUT_METHOD(R.drawable.ic_toolbar_globe, R.string.ime_toolbar_switch_input_method),
         VOICE_INPUT(R.drawable.ic_toolbar_mic, R.string.ime_toolbar_voice_input),
+        ;
+
+        /** The user-chosen item this action stands for; null for the collapse button and system-driven entries. */
+        val item: ToolbarItem? get() = ToolbarItem.entries.firstOrNull { it.name == name }
+
+        /** Whether overflow may drop it: only the user's own choices, never the system-driven ones. */
+        val chosen: Boolean get() = item != null
     }
 
     /** An entry at the right end of the engine notice: a text button or one of the icon actions. */
@@ -110,9 +120,64 @@ class ToolbarView(
         set(value) {
             if (field == value) return
             field = value
+            resetSlots()
             requestLayout()
             invalidate()
         }
+
+    /**
+     * The entries from left to right. What does not fit the width is dropped from the end of the
+     * user's order, so the first choices stay.
+     */
+    private fun entries(): List<Action> {
+        val cached = entryCache
+        if (cached != null && entryCacheWidth == width) return cached
+        val kept =
+            if (width <= 0) {
+                actions
+            } else {
+                val slots =
+                    actions.map { action ->
+                        ToolbarCapacity.Slot(ToolbarCapacity.MIN_ICON_SLOT_DP, droppable = action.chosen)
+                    }
+                val keep = ToolbarCapacity.keep(width / density, slots)
+                actions.filterIndexed { index, _ -> keep[index] }
+            }
+        entryCache = kept
+        entryCacheWidth = width
+        return kept
+    }
+
+    private var entryCache: List<Action>? = null
+    private var entryCacheWidth = -1
+
+    private fun resetSlots() {
+        slotCache = null
+        entryCache = null
+    }
+
+    /** Slot boxes of the drawn entries: the width shared equally. */
+    private var slotCache: List<Rect>? = null
+    private var slotCacheWidth = -1
+    private var slotCacheHeight = -1
+
+    private fun slots(): List<Rect> {
+        val cached = slotCache
+        if (cached != null && slotCacheWidth == width && slotCacheHeight == height) return cached
+        val entries = entries()
+        if (entries.isEmpty() || width <= 0) return emptyList()
+        val iconWidth = (width / entries.size).coerceAtLeast(1)
+        var left = 0
+        val result = ArrayList<Rect>(entries.size)
+        for (index in entries.indices) {
+            result += Rect(left, 0, left + iconWidth, height)
+            left += iconWidth
+        }
+        slotCache = result
+        slotCacheWidth = width
+        slotCacheHeight = height
+        return result
+    }
 
     private val density = resources.displayMetrics.density
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -129,7 +194,7 @@ class ToolbarView(
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     override val itemCount: Int
-        get() = notice?.items?.size ?: if (chip != null) CHIP_ITEMS else actions.size
+        get() = notice?.items?.size ?: if (chip != null) CHIP_ITEMS else entries().size
 
     /** The reading row's height while one sits above; the toolbar then shrinks to it ([ReadingRowBudget.bandDp]). */
     var readingRowDp: Float? = null
@@ -138,6 +203,7 @@ class ToolbarView(
             field = value
             chipLayout = null
             noticeLayout = null
+            resetSlots()
             requestLayout()
             invalidate()
         }
@@ -148,6 +214,7 @@ class ToolbarView(
         drawables.clear()
         chipLayout = null
         noticeLayout = null
+        resetSlots()
         requestLayout()
         invalidate()
     }
@@ -160,6 +227,7 @@ class ToolbarView(
     ) {
         chipLayout = null
         noticeLayout = null
+        resetSlots()
         super.onSizeChanged(w, h, oldw, oldh)
     }
 
@@ -188,8 +256,10 @@ class ToolbarView(
         }
         // Icons, chip and notice share the candidates' content line (BarContentLine).
         val drop = dropPx
-        for ((index, action) in actions.withIndex()) {
-            val slot = slot(index)
+        val entries = entries()
+        val boxes = slots()
+        for ((index, entry) in entries.withIndex()) {
+            val slot = boxes.getOrNull(index) ?: break
             val pressedNow = index == down
             val fading = index == fadeIndex && fadeAlpha > 0f
             if (pressedNow || fading) {
@@ -207,9 +277,9 @@ class ToolbarView(
                 canvas.drawRoundRect(bounds, radius, radius, paint)
                 paint.alpha = base
             }
-            val icon = drawable(iconOf(action)) ?: continue
+            val icon = drawable(iconOf(entry)) ?: continue
             icon.setTint(
-                if (action == Action.ONE_HAND &&
+                if (entry == Action.ONE_HAND &&
                     oneHand != KeyboardOneHandMode.OFF
                 ) {
                     palette.accent
@@ -380,10 +450,9 @@ class ToolbarView(
         }
     }
 
-    private fun slot(index: Int): Rect {
-        notice?.let { return noticeLayout(it).slots[index] }
-        val shown = chip
-        if (shown != null) {
+    override fun itemBounds(index: Int): Rect {
+        notice?.let { return noticeLayout(it).slots.getOrNull(index) ?: Rect() }
+        chip?.let { shown ->
             val g = chipLayout(shown).geometry
             return if (index ==
                 0
@@ -393,16 +462,15 @@ class ToolbarView(
                 Rect(g.dismissLeft, 0, g.dismissRight, height)
             }
         }
-        val count = actions.size.coerceAtLeast(1)
-        return Rect(width * index / count, 0, width * (index + 1) / count, height)
+        return slots().getOrNull(index) ?: Rect()
     }
-
-    override fun itemBounds(index: Int): Rect = slot(index)
 
     override fun itemLabel(index: Int): String {
         notice?.let { return context.getString(it.items[index].labelRes) }
-        val shown = chip ?: return actionLabel(actions[index])
-        return if (index == 0) chipLabel(shown) else context.getString(R.string.ime_chip_dismiss)
+        chip?.let { shown ->
+            return if (index == 0) chipLabel(shown) else context.getString(R.string.ime_chip_dismiss)
+        }
+        return entries().getOrNull(index)?.let(::actionLabel) ?: ""
     }
 
     /** The one-handed button says its state, the way the settings panel's tile does. */
@@ -432,7 +500,7 @@ class ToolbarView(
             }
             return
         }
-        actions.getOrNull(index)?.let(onAction)
+        entries().getOrNull(index)?.let(onAction)
     }
 
     override fun itemAt(
@@ -444,8 +512,8 @@ class ToolbarView(
             return noticeLayout(shown).slots.indexOfFirst { x >= it.left && x < it.right }
         }
         chip?.let { return chipLayout(it).geometry.hit(x, y) }
-        if (actions.isEmpty() || x < 0f || x >= width || y < 0f || y >= height) return -1
-        return (x * actions.size / width).toInt().coerceIn(0, actions.size - 1)
+        if (x < 0f || x >= width || y < 0f || y >= height) return -1
+        return slots().indexOfFirst { x >= it.left && x < it.right }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -520,21 +588,14 @@ class ToolbarView(
     }
 
     companion object {
-        /** The entries in the order the idle band lists them. */
-        val DEFAULT_ACTIONS =
-            listOf(
-                Action.CLIPBOARD,
-                Action.INPUT_METHODS,
-                Action.EMOJI,
-                Action.EDIT,
-                Action.ONE_HAND,
-                Action.SETTINGS,
-                Action.HIDE,
-            )
+        val DEFAULT_ACTIONS: List<Action> =
+            ToolbarLayout.DEFAULT.shown
+                .map { Action.valueOf(it.name) } + Action.HIDE
 
         private const val ICON_DP = 24f
         private const val ICON_SMALL_DP = 18f
         private const val ICON_GAP_DP = 6f
+
         private const val CHIP_MARGIN_DP = 8f
         private const val CHIP_INSET_DP = 6f
         private const val CROSS_DP = 12f

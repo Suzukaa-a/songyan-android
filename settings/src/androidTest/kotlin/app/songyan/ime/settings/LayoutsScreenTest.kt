@@ -16,6 +16,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
@@ -66,7 +68,7 @@ class LayoutsScreenTest {
         }
         compose
             .onNodeWithContentDescription(
-                str(R.string.layouts_more_actions, BuiltinLayouts.phone9.name),
+                str(R.string.layouts_more_actions, str(R.string.layout_name_9)),
             ).performClick()
         compose.onNodeWithText(str(R.string.layouts_action_edit)).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.layouts_action_copy)).performClick()
@@ -74,7 +76,8 @@ class LayoutsScreenTest {
         val copy = source.registry.value!!.layout("copy-id")
         assertNotNull(copy)
         assertEquals(BuiltinLayouts.phone9.rows, copy!!.rows)
-        assertEquals(BuiltinLayouts.phone9.name + str(R.string.layout_copy_suffix), copy.name)
+        // A bundled layout is shown, and copied, under its name in the UI language.
+        assertEquals(str(R.string.layout_name_9) + str(R.string.layout_copy_suffix), copy.name)
     }
 
     @Test
@@ -111,7 +114,7 @@ class LayoutsScreenTest {
                 )
             }
         }
-        compose.onNodeWithText(BuiltinLayouts.phone9.name).performClick()
+        compose.onNodeWithText(str(R.string.layout_name_9)).performClick()
         assertEquals("phone9", edited)
     }
 
@@ -122,7 +125,7 @@ class LayoutsScreenTest {
                 PagesScreen(onBack = null, onEdit = {}, viewModel = viewModel(factory = factory()))
             }
         }
-        val name = KeyboardPagePresets.symbolsCategorized.name
+        val name = str(R.string.page_name_symbols_categorized)
         compose.onNodeWithContentDescription(str(R.string.layouts_more_actions, name)).performScrollTo().performClick()
         compose.onNodeWithText(str(R.string.layouts_action_copy)).performClick()
         compose.waitForIdle()
@@ -193,5 +196,46 @@ class LayoutsScreenTest {
         compose.onNodeWithText(str(R.string.layouts_action_delete)).performClick()
         compose.waitForIdle()
         assertNull(library.registry.value!!.page(free.id))
+    }
+
+    @Test
+    fun aPageAPhysicalBoardUsesNamesThatBoard() {
+        val used = KeyboardPagePresets.numericRowsPage(ascii = false).duplicated("zhuyin-digits", "注音数字")
+        val key = KeyboardCompositionKey("bopomofo_tw", LayoutInput.Builtin.QWERTY26)
+        val library =
+            InMemoryLayoutLibrarySource(
+                LayoutRegistry
+                    .create()
+                    .withPage(used)
+                    .withComposition(
+                        KeyboardComposition(mainLayoutID = "zhuyin41", numericPageID = used.id),
+                        key.rawValue,
+                    ),
+            )
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(
+                    modelClass: Class<T>,
+                    extras: CreationExtras,
+                ): T = LayoutLibraryViewModel(library) as T
+            }
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                PagesScreen(
+                    onBack = null,
+                    onEdit = {},
+                    inputMethodNames = mapOf("bopomofo_tw" to "注音"),
+                    families = LayoutFamilyContext.of("bopomofo_tw" to InputSchemeFamily.ZHUYIN),
+                    viewModel = viewModel(factory = factory),
+                )
+            }
+        }
+        val keyboard = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41))
+        val usage = str(R.string.pages_used_by_one, keyboard)
+        compose
+            .onNode(hasText(used.name, substring = true) and hasText(usage, substring = true))
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 }

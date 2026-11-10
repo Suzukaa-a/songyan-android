@@ -87,21 +87,25 @@ class SourceBuilder(
     }
 
     /**
-     * [sourceId] installs the package under an existing id instead of its content hash: an update
-     * of that package, whose learning data is keyed by the id. [origin] is the link it came from.
+     * [archives] are the ZIPs of one package, the entry first. [sourceId] installs the package under
+     * an existing id instead of its content hash: an update of that package, whose learning data is
+     * keyed by the id. [origin] is the link it came from; [advertisedSchemas] narrows the input
+     * methods it offers to the ones a catalogue entry names.
      */
     fun buildScheme(
-        archive: File,
+        archives: List<File>,
         target: File,
         cancelled: () -> Boolean = { false },
         sourceId: String? = null,
         origin: String? = null,
+        advertisedSchemas: List<String> = emptyList(),
     ): BuiltSource {
         val prepared =
-            SchemePackageImportBuilder.prepare(
-                archive = archive,
+            SchemePackageImportBuilder.prepareArchives(
+                archives = archives,
                 target = target,
                 supplement = installer::supplementFrontendFiles,
+                advertisedSchemas = advertisedSchemas,
                 cancelled = cancelled,
             )
         return BuiltSource(

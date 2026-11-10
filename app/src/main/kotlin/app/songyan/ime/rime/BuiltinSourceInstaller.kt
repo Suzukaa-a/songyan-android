@@ -1,5 +1,6 @@
 package app.songyan.ime.rime
 
+import app.songyan.ime.packages.JapaneseSchemePresets
 import java.io.File
 import kotlin.math.roundToLong
 
@@ -160,6 +161,8 @@ class BuiltinSourceInstaller(
                 }
             destination.writeBytes(data)
         }
+        // Scheme-specific patches travel beside the package sources, never inside them.
+        JapaneseSchemePresets.supplement(target)
     }
 
     private fun rewriteSchemaList(
@@ -208,7 +211,7 @@ class BuiltinSourceInstaller(
          * It participates in the install stamp so an app update re-deploys the built-in package
          * instead of reusing a generation compiled from older data.
          */
-        const val DATA_VERSION: String = "5"
+        const val DATA_VERSION: String = "6"
 
         private const val STAMP_NAME = ".installed"
         private const val BASIC_DICTIONARY = "songyan_basic.dict.yaml"

@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">松烟</string>
     <string name="ime_name">松烟输入法</string>
-    <string name="subtype_pinyin">拼音</string>
 
     <!-- Deploy process foreground notification. -->
     <string name="deploy_channel_name">输入方案准备</string>
@@ -56,6 +55,8 @@
     <string name="scheme_import_error_invalid_scheme">输入方案里的配置文件有误，请检查文件内容。</string>
     <string name="scheme_import_error_encoding">输入方案里有文件不是 UTF-8 文本。</string>
     <string name="scheme_import_error_missing_dependency">输入方案缺少这些文件：%s。</string>
+    <string name="scheme_import_error_checksum">下载的文件与这个输入方案记录的校验值不一致，没有安装。</string>
+    <string name="scheme_import_error_conflicting_files">这个输入方案的两个压缩包提供了同名但内容不同的文件：%s。请只保留一个压缩包。</string>
     <string name="scheme_import_error_invalid_model">输入方案里的语法模型文件不可用。</string>
     <string name="scheme_import_error_builtin_customization">这个输入方案会改动松烟自带的输入方式，暂不支持。</string>
     <string name="scheme_import_error_read">无法读取这个文件。</string>
@@ -70,13 +71,16 @@
     <string name="source_error_delete">没能删除这个输入方案，请重试。</string>
 
     <!-- Settings: built-in scheme and keyboard names. -->
-    <string name="scheme_builtin_quanpin">全拼</string>
-    <string name="scheme_builtin_flypy">小鹤双拼</string>
+    <string name="scheme_builtin_quanpin">内置全拼</string>
+    <string name="scheme_builtin_flypy">内置小鹤双拼</string>
     <string name="keyboard_input_method_pinyin">拼音</string>
     <string name="keyboard_layout_14">14 键</string>
     <string name="keyboard_layout_18">18 键</string>
     <string name="keyboard_layout_9">9 键</string>
     <string name="keyboard_layout_26">26 键</string>
+    <string name="keyboard_layout_zhuyin41">注音 41 键</string>
+    <string name="keyboard_layout_cangjie26">仓颉 26 键</string>
+    <string name="keyboard_layout_romaji26">罗马字 26 键</string>
 
     <!-- IME status overlay before a published generation exists. -->
     <string name="dictionary_import_error_row">「%1$s」第 %2$d 行的列数不对。</string>

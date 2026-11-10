@@ -2,7 +2,9 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.QuickSettingChange
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -58,6 +60,13 @@ internal fun KeyboardController.applyHideIdleToolbar(hide: Boolean) {
     syncToolbar()
 }
 
+internal fun KeyboardController.applyToolbarLayout(wire: String) {
+    val layout = ToolbarLayout.parse(wire)
+    if (toolbarLayout == layout) return
+    toolbarLayout = layout
+    syncToolbar()
+}
+
 /** The toolbar's one-handed button: off, or back to the side used last (right until one was chosen). */
 internal fun KeyboardController.toggleOneHand() {
     val next = if (oneHandMode == KeyboardOneHandMode.OFF) lastOneHandSide else KeyboardOneHandMode.OFF
@@ -90,6 +99,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.doubleSpacePeriod.collect { doubleSpacePeriodEnabled = it } }
     scope.launch { source.keyPreview.collect { keyboard.keyPreviewEnabled = it } }
     scope.launch { source.hideIdleToolbar.collect { applyHideIdleToolbar(it) } }
+    scope.launch { source.toolbarLayout.collect { applyToolbarLayout(it) } }
     scope.launch {
         source.symbolLock.collect {
             if (symbolLock == it) return@collect
@@ -182,6 +192,7 @@ internal suspend fun KeyboardController.readPreferences() {
     runCatching { source.doubleSpacePeriod.first() }.getOrNull()?.let { doubleSpacePeriodEnabled = it }
     runCatching { source.keyPreview.first() }.getOrNull()?.let { keyboard.keyPreviewEnabled = it }
     runCatching { source.hideIdleToolbar.first() }.getOrNull()?.let { applyHideIdleToolbar(it) }
+    runCatching { source.toolbarLayout.first() }.getOrNull()?.let { applyToolbarLayout(it) }
     runCatching { source.releaseHaptic.first() }.getOrNull()?.let { feedback.releaseEnabled = it }
     runCatching { source.oneHand.first() }.getOrNull()?.let {
         oneHandMode = KeyboardOneHandMode.resolve(it)
@@ -199,11 +210,27 @@ internal suspend fun KeyboardController.applyPreferences(active: InputSession) {
     val layout = preferredLayout
     val schema = preferredSchema
     if (active.layout == layout && active.selectedSchemaID == schema) {
-        syncSelection(active)
-        return
+        // A stored layout the new scheme's family cannot use is repaired here as well: the pair can
+        // match the preference and still be one the family forbids.
+        active.repairFamilyLayout()
+    } else {
+        active.selectLayout(layout, schema)
     }
-    active.selectLayout(layout, schema)
     syncSelection(active)
+    persistSelection(active)
+}
+
+/**
+ * Writes back a selection the keyboard itself had to change because the scheme's family cannot use
+ * the saved layout, so the next editor does not retry the refused pairing. Any other difference
+ * (a switch that failed, companions still being generated) keeps the user's choice for next time.
+ */
+internal suspend fun KeyboardController.persistSelection(active: InputSession) {
+    if (preferredLayout == layoutKind) return
+    val set = active.resourceSet ?: return
+    if (InputLayoutPolicy.allows(preferredLayout, set.familyOf(active.selectedSchemaID))) return
+    preferredLayout = layoutKind
+    preferences?.setLayoutId(layoutKind.wire)
 }
 
 /** Applies a preference written elsewhere (settings app, the in-keyboard menu). */
@@ -221,6 +248,8 @@ internal suspend fun KeyboardController.applyPreferenceChange() {
  * ones the user hid in settings; the ones in use are always there so the menu shows where you are.
  */
 internal fun KeyboardController.syncMenu() {
+    // The menu covering a switch to another package holds still; it is redrawn once it closes.
+    if (announceWhenReady && menuOpen) return
     val engine = session?.engine ?: pendingBackend
     // A layout's generated companion runs as its own schema but is not an input method to pick.
     val companions =
@@ -235,12 +264,64 @@ internal fun KeyboardController.syncMenu() {
             ?.filter { it.id !in companions && !KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }
             ?.map { it.id to it.displayName }
             .orEmpty()
-    menu.setSchemas(KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema)))
-    menu.setLayouts(KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind))
+    val own = KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema))
+    val others =
+        KeyboardMenuEntries.otherSchemas(otherInputMethods, menuHiddenSchemas, listed.map { it.first }.toSet(), own)
+    menu.setSchemas(own + others.map { it.menuId to it.label }, others.associate { it.menuId to it.method })
+    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts())
+    menu.setLayoutNames(layoutNamesByKind())
+    menu.setLayouts(offered, layoutBoards(), mainDefinition().id)
     menu.update(schemaId, layoutKind)
 }
 
+/** The physical boards the running input method types on, preferred first; empty keeps the shapes. */
+internal fun KeyboardController.layoutBoards(): List<String> =
+    InputLayoutPolicy.boardsOf(layoutFamilies().familyOf(schemaId))
+
+/** An input method of an installed package other than the running one; plain data the service reads from storage. */
+data class OtherInputMethod(
+    val sourceId: String,
+    val schemaId: String,
+    val name: String,
+    val packageName: String,
+) {
+    /** Cannot collide with an engine schema id, which never starts with a NUL. */
+    val menuId: String get() = "$MENU_ID_PREFIX$sourceId/$schemaId"
+
+    companion object {
+        const val MENU_ID_PREFIX = "\u0000src/"
+    }
+}
+
 internal object KeyboardMenuEntries {
+    /** A chip that switches to another package: its menu id, its label and the data it acts on. */
+    data class OtherChip(
+        val menuId: String,
+        val label: String,
+        val method: OtherInputMethod,
+    )
+
+    /**
+     * The chips for [others], after the running package's [own] chips. Ones the user hid in settings
+     * are dropped by plain schema id, and so are ones whose id the running engine already lists, so
+     * a chip never stands for two input methods. A name that would read the same as another chip
+     * gets the package name appended.
+     */
+    fun otherSchemas(
+        others: List<OtherInputMethod>,
+        hidden: Set<String>,
+        running: Set<String>,
+        own: List<Pair<String, String>>,
+    ): List<OtherChip> {
+        val offered = others.filter { it.schemaId !in hidden && it.schemaId !in running }
+        val ownNames = own.map { (id, name) -> name.ifBlank { BuiltinTemplateSchemas.NAMES[id] ?: id } }
+        val counts = (ownNames + offered.map { it.name }).groupingBy { it }.eachCount()
+        return offered.map {
+            val label = if ((counts[it.name] ?: 0) > 1) "${it.name} · ${it.packageName}" else it.name
+            OtherChip(it.menuId, label, it)
+        }
+    }
+
     /** Before the engine has listed its input methods the bundled ones stand in. */
     fun schemas(
         listed: List<Pair<String, String>>,
@@ -251,10 +332,45 @@ internal object KeyboardMenuEntries {
             .ifEmpty { BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS.map { it to "" } }
             .filter { (id, _) -> id !in hidden || id in current }
 
+    /**
+     * The layout chips: the running input method's usable shapes, less the ones the user hid. The
+     * running one always stays, so the menu can show where the keyboard is.
+     */
     fun layouts(
         hidden: Set<String>,
         current: KeyboardLayoutKind,
-    ): List<KeyboardLayoutKind> = KeyboardLayoutKind.entries.filter { it.wire !in hidden || it == current }
+        usable: Set<KeyboardLayoutKind> = KeyboardLayoutKind.entries.toSet(),
+    ): List<KeyboardLayoutKind> =
+        KeyboardLayoutKind.entries.filter {
+            (it.wire !in hidden || it == current) && (it in usable || it == current)
+        }
+
+    /**
+     * One chip of the layout row: a shape, and the physical board it stands for when the input
+     * method types on several boards that share the identity shape's slot.
+     */
+    data class LayoutChip(
+        val kind: KeyboardLayoutKind,
+        val boardId: String? = null,
+    )
+
+    /**
+     * The layout row for [offered] shapes. The identity shape's chip is replaced by one chip per
+     * entry of [boards] (preferred first); a main layout that is none of them (the user's own) keeps
+     * a chip of the shape itself, after the boards. Without boards the row is the shapes as they are.
+     */
+    fun layoutChips(
+        offered: List<KeyboardLayoutKind>,
+        boards: List<String>,
+        mainLayoutId: String?,
+    ): List<LayoutChip> =
+        offered.flatMap { kind ->
+            when {
+                kind != KeyboardLayoutKind.QWERTY26 || boards.isEmpty() -> listOf(LayoutChip(kind))
+                mainLayoutId in boards -> boards.map { LayoutChip(kind, it) }
+                else -> boards.map { LayoutChip(kind, it) } + LayoutChip(kind)
+            }
+        }
 
     /**
      * The layout after [current] in [offered] (the menu's list, already limited to what the running

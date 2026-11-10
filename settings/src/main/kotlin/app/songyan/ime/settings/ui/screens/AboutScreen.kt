@@ -108,7 +108,6 @@ fun AboutScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Three short facts: where it runs, when it goes online, what private fields skip.
                 Text(
                     text = stringResource(R.string.about_privacy_local),
                     style = MaterialTheme.typography.bodyMedium,

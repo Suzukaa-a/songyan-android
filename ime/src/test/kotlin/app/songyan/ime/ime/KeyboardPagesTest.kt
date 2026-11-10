@@ -47,22 +47,27 @@ class KeyboardPagesTest {
                 .rows
                 .last()
                 .keys
-        // 123 | 中/英 | 空格 | ，| 回车. No globe key: the navigation bar owns the switcher.
+        // 123 | 中/英 | ，| 空格 | 。| 回车. No globe key: the navigation bar owns the switcher.
         assertEquals(
             listOf(
                 LayoutActionKind.PAGE_SWITCH,
                 LayoutActionKind.LANGUAGE_SWITCH,
+                LayoutActionKind.LITERAL,
                 LayoutActionKind.SPACE,
                 LayoutActionKind.LITERAL,
                 LayoutActionKind.ENTER,
             ),
             footer.map { it.action.type },
         )
-        assertEquals(listOf("123", "中/英", "空格", "，", "⏎"), footer.map { it.label })
-        // One punctuation key: the comma, with the full stop first in its long press (the corner hint).
-        assertEquals(listOf("。", "？", "！", "、", "：", "；"), footer[3].longPress?.map { it.label })
+        assertEquals(listOf("123", "中/英", "，", "空格", "。", "⏎"), footer.map { it.label })
+        // The comma holds the pauses and the full stop the sentence ends.
+        assertEquals(listOf("、", "：", "；"), footer[2].longPress?.map { it.label })
+        assertEquals(listOf("？", "！", "…"), footer[4].longPress?.map { it.label })
         // The space bar keeps one share on every page, so every bottom row lines up.
-        assertEquals(KeyboardPages.FooterWeight.SPACE, footer[2].widthWeight, 0.001)
+        assertEquals(KeyboardPages.FooterWeight.SPACE, footer[3].widthWeight, 0.001)
+        // The marks either side of the space bar match; Return takes the rest of the right side.
+        assertEquals(footer[2].widthWeight, footer[4].widthWeight, 0.001)
+        assertTrue(footer[5].widthWeight > footer[4].widthWeight)
         val forcedAscii =
             KeyboardPages
                 .definition(null, letters.copy(languageSwitch = false))
@@ -144,10 +149,21 @@ class KeyboardPagesTest {
                     .rows
                     .last()
                     .keys
-            assertEquals(listOf("返回", "中/英", "空格", if (ascii) "," else "，", "⏎"), footer.map { it.label })
+            assertEquals(
+                if (ascii) {
+                    listOf("返回", "中/英", ",", "空格", ".", "⏎")
+                } else {
+                    listOf("返回", "中/英", "，", "空格", "。", "⏎")
+                },
+                footer.map { it.label },
+            )
             assertTrue(footer.none { it.action.pageSwitchTarget == LayoutPageTarget.SYMBOLS })
             // The comma holds the slot it has on the letters footer, so it stays put when the page flips.
-            assertEquals(KeyboardPages.lettersFooter(config.copy(englishDirectInput = ascii))[3].label, footer[3].label)
+            val lettersFooter = KeyboardPages.lettersFooter(config.copy(englishDirectInput = ascii))
+            assertEquals(
+                lettersFooter.first { it.label == if (ascii) "," else "，" }.label,
+                footer.first { it.label == if (ascii) "," else "，" }.label,
+            )
         }
     }
 
@@ -183,8 +199,8 @@ class KeyboardPagesTest {
         assertEquals("123", third.first().label)
         assertEquals(LayoutActionKind.BACKSPACE, third.last().action.type)
         val footer = definition.rows.last().keys
-        // The page types every mark itself: no comma, no lock, and 更多 right of the space bar.
-        assertEquals(listOf("返回", "中/英", "空格", "更多", "⏎"), footer.map { it.label })
+        // The page types every mark itself, so 更多 takes the full stop's place beside the space bar.
+        assertEquals(listOf("返回", "中/英", "，", "空格", "更多", "⏎"), footer.map { it.label })
         assertTrue(footer.none { it.action.type == LayoutActionKind.SYMBOL_LOCK })
         assertTrue(footer.none { it.action.pageSwitchTarget == LayoutPageTarget.NUMERIC })
         assertEquals(
@@ -295,14 +311,19 @@ class KeyboardPagesTest {
                     .keys
             return footer.filter { it.action.type == LayoutActionKind.LITERAL }.map { it.label }
         }
-        assertEquals(listOf("，"), marks(letters))
-        assertEquals(listOf(","), marks(letters.copy(englishDirectInput = true)))
+        assertEquals(listOf("，", "。"), marks(letters))
+        assertEquals(
+            listOf("、", "。"),
+            marks(letters.copy(inputLanguage = app.songyan.ime.keyboard.engine.InputLanguage.JA)),
+        )
+        assertEquals(listOf(",", "."), marks(letters.copy(englishDirectInput = true)))
         val email = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL)
-        assertEquals(listOf("@", "."), marks(email))
+        assertEquals(listOf("@", "_", "."), marks(email))
         val url = letters.copy(englishDirectInput = true, field = FieldKind.URL)
-        assertEquals(listOf("."), marks(url))
-        val urlStop = KeyboardPages.lettersFooter(url).first { it.label == "." }
-        assertEquals("/", urlStop.longPress?.first()?.label)
+        assertEquals(listOf(":", "/"), marks(url))
+        assertEquals(listOf(":", "/"), marks(url.copy(englishDirectInput = false)))
+        val password = letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.PASSWORD)
+        assertEquals(listOf("@", ",", "."), marks(password))
         // The URL field keeps its 中/英 key; an email field has none.
         assertTrue(
             KeyboardPages.definition(null, url).rows.last().keys.any {
@@ -316,6 +337,56 @@ class KeyboardPagesTest {
                     LayoutActionKind.LANGUAGE_SWITCH
             },
         )
+    }
+
+    /**
+     * A field type never moves a footer key: URL, email and password fields keep the text field's
+     * widths on every page. They used to drop the mark left of the space bar and stretch 123 (or
+     * 返回 on the 123 page) into the missing 中/英 slot.
+     */
+    @Test
+    fun everyFieldKeepsTheTextFieldsFooterWidths() {
+        fun widths(
+            config: KeyboardPages.Config,
+            page: KeyboardPageKind?,
+        ) = KeyboardPages
+            .definition(page, config)
+            .rows
+            .last()
+            .keys
+            .map { it.width }
+        val fields =
+            listOf(
+                letters.copy(englishDirectInput = true, field = FieldKind.URL),
+                letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.EMAIL),
+                letters.copy(englishDirectInput = true, languageSwitch = false, field = FieldKind.PASSWORD),
+                letters.copy(languageSwitch = false),
+            )
+        for (page in listOf(null, KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS)) {
+            for (field in fields) {
+                assertEquals("$page ${field.field}", widths(letters, page), widths(field, page))
+            }
+        }
+    }
+
+    /** 中/英 changes the marks beside the space bar, never a key's place or width. */
+    @Test
+    fun theLanguageKeyNeverMovesAFooterKey() {
+        fun widths(
+            config: KeyboardPages.Config,
+            page: KeyboardPageKind?,
+        ) = KeyboardPages
+            .definition(page, config)
+            .rows
+            .last()
+            .keys
+            .map { it.width }
+        for (base in listOf(letters, letters.copy(inputLanguage = app.songyan.ime.keyboard.engine.InputLanguage.JA))) {
+            assertEquals(widths(base, null), widths(base.copy(englishDirectInput = true), null))
+            for (page in listOf(KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS)) {
+                assertEquals("$page", widths(base, page), widths(base.copy(symbolMarksAscii = true), page))
+            }
+        }
     }
 
     /** The keys left of the space bar weigh what the keys right of it weigh, whatever the editor drops. */

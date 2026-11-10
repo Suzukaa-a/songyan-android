@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
@@ -103,6 +104,34 @@ class InputOptionsScreenTest {
         compose.onNodeWithText("臺灣").performClick()
         assertEquals(listOf("s2tw" to true), engineChanges)
         compose.onNode(isDialog()).assertDoesNotExist()
+    }
+
+    @Test
+    fun theBundledFourStatesAreWordedByResources() {
+        val names = listOf("simplification", "zht", "zh_tw", "zh_hk")
+        val states =
+            listOf(
+                BuiltinScriptState.SIMPLIFIED,
+                BuiltinScriptState.TRADITIONAL,
+                BuiltinScriptState.TAIWAN,
+                BuiltinScriptState.HONG_KONG,
+            )
+        engineOptions =
+            EngineOptionsUiState(
+                options =
+                    names.mapIndexed { index, name ->
+                        EngineOptionSetting(name, EngineOptionKind.TRADITIONAL, index == 0, names, null, states[index])
+                    },
+            )
+        show()
+        // The selected state is worded by its resource, not by the schema's own (absent) label.
+        compose.onNodeWithText(str(R.string.options_engine_script_simplified)).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.options_engine_character_form)).performScrollTo().performClick()
+        compose
+            .onNode(hasText(str(R.string.options_engine_script_taiwan)) and hasAnyAncestor(isDialog()))
+            .assertExists()
+        compose.onNodeWithText(str(R.string.options_engine_script_taiwan)).performClick()
+        assertEquals(listOf("zh_tw" to true), engineChanges)
     }
 
     @Test

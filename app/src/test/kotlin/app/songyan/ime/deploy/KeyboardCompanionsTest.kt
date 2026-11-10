@@ -80,6 +80,33 @@ class KeyboardCompanionsTest {
     }
 
     @Test
+    fun familiesWithoutCompactKeyboardsDoNotPublishCompanions() =
+        runBlocking {
+            for (schemaId in listOf("cangjie5", "quick5", "bopomofo_tw", "kagiroi")) {
+                val (sourceDir, workDir, engine) = setUp(name = schemaId)
+                File(engine.compiledDir, "$schemaId.schema.yaml").writeText(schemaText.replace(source, schemaId))
+                engine.projectionBytes = String(projection, Charsets.UTF_8).replace(source, schemaId).toByteArray()
+
+                KeyboardCompanions(sourceDir, workDir, listOf(schemaId)).generate(engine)
+
+                assertTrue(schemaId, EncodingAdapterRegistry.read(engine.compiledDir, setOf(schemaId)).isEmpty())
+            }
+        }
+
+    @Test
+    fun aRomanizationSchemeFoldsLikePinyin() =
+        runBlocking {
+            val schemaId = "jyut6ping3"
+            val (sourceDir, workDir, engine) = setUp(name = schemaId)
+            File(engine.compiledDir, "$schemaId.schema.yaml").writeText(schemaText.replace(source, schemaId))
+            engine.projectionBytes = String(projection, Charsets.UTF_8).replace(source, schemaId).toByteArray()
+
+            KeyboardCompanions(sourceDir, workDir, listOf(schemaId)).generate(engine)
+
+            assertEquals(3, EncodingAdapterRegistry.read(engine.compiledDir, setOf(schemaId)).size)
+        }
+
+    @Test
     fun aPinyinSchemeGetsThreeCompiledCompanionsAndARegistry() =
         runBlocking {
             val (sourceDir, workDir, engine) = setUp()
@@ -101,6 +128,37 @@ class KeyboardCompanionsTest {
             }
             assertEquals(3, engine.deployed.size)
             assertTrue(sourceDir.listFiles().orEmpty().isEmpty())
+        }
+
+    @Test
+    fun anExplicitNumericPrefixLockGetsACompanionWhilePlainDigitsStayNative() =
+        runBlocking {
+            for (opted in listOf(false, true)) {
+                val (sourceDir, workDir, engine) = setUp(name = "numeric-$opted")
+                engine.projectionBytes =
+                    """
+                    {"source_schema":"$source","translator_namespace":"translator",
+                    "dictionary":"songyan_basic","producer_class":"script_translator",
+                    "alphabet":"23456789abcdefghijklmnopqrstuvwxyz","algebra":[],
+                    "prefix_declaration":"${if (opted) "letter_class_v1" else ""}",
+                    "syllables":{"ba":[{"text":"22","normal":true,"correction":false}]}}
+                    """.trimIndent().toByteArray()
+
+                KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(engine)
+
+                val nine =
+                    EncodingAdapterRegistry
+                        .read(engine.compiledDir, setOf(source))
+                        .single { it.layout == KeyboardLayoutKind.PHONE9 }
+                if (opted) {
+                    assertTrue(nine.schemaID != source)
+                    assertTrue(
+                        File(workDir, "${nine.schemaID}.schema.yaml").readText().contains("prefix_token_rewrite_v4"),
+                    )
+                } else {
+                    assertEquals(source, nine.schemaID)
+                }
+            }
         }
 
     @Test

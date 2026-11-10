@@ -53,6 +53,16 @@ interface EngineBackend {
     suspend fun processKey(keyValue: String): EngineSnapshot
 
     /**
+     * Moves the engine's own composition caret by [offset] characters (negative = left) without
+     * confirming or rewriting the composition, and returns the state afterwards.
+     *
+     * Null — the default — means this backend cannot move the caret natively. The caller must then
+     * leave the composition alone: a caret move is never faked with a text key value, because the
+     * engine would either type it or refuse the whole call.
+     */
+    suspend fun moveCompositionCaret(offset: Int): EngineSnapshot? = null
+
+    /**
      * Cancels the current composition (no commit, no commit text) and returns the validated
      * post-cancel snapshot. Distinct from `processKey("Esc")`: librime's editor cancels only one
      * segment, so an engine with a dedicated clear API must override this to clear unconditionally.

@@ -1,0 +1,355 @@
+{
+  "id" : "zhuyin41",
+  "input" : {
+    "builtinLayout" : "qwerty26"
+  },
+  "name" : "注音 41 键",
+  "rows" : [
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "1"
+          },
+          "label" : "ㄅ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "2"
+          },
+          "label" : "ㄉ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "3"
+          },
+          "label" : "ˇ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "4"
+          },
+          "label" : "ˋ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "5"
+          },
+          "label" : "ㄓ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "6"
+          },
+          "label" : "ˊ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "7"
+          },
+          "label" : "˙"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "8"
+          },
+          "label" : "ㄚ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "9"
+          },
+          "label" : "ㄞ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "0"
+          },
+          "label" : "ㄢ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "-"
+          },
+          "label" : "ㄦ"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "q"
+          },
+          "label" : "ㄆ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "w"
+          },
+          "label" : "ㄊ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "e"
+          },
+          "label" : "ㄍ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "r"
+          },
+          "label" : "ㄐ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "t"
+          },
+          "label" : "ㄔ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "y"
+          },
+          "label" : "ㄗ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "u"
+          },
+          "label" : "ㄧ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "i"
+          },
+          "label" : "ㄛ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "o"
+          },
+          "label" : "ㄟ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "p"
+          },
+          "label" : "ㄣ"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "a"
+          },
+          "label" : "ㄇ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "s"
+          },
+          "label" : "ㄋ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "d"
+          },
+          "label" : "ㄎ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "f"
+          },
+          "label" : "ㄑ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "g"
+          },
+          "label" : "ㄕ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "h"
+          },
+          "label" : "ㄘ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "j"
+          },
+          "label" : "ㄨ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "k"
+          },
+          "label" : "ㄜ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "l"
+          },
+          "label" : "ㄠ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : ";"
+          },
+          "label" : "ㄤ"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "z"
+          },
+          "label" : "ㄈ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "x"
+          },
+          "label" : "ㄌ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "c"
+          },
+          "label" : "ㄏ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "v"
+          },
+          "label" : "ㄒ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "b"
+          },
+          "label" : "ㄖ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "n"
+          },
+          "label" : "ㄙ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "m"
+          },
+          "label" : "ㄩ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : ","
+          },
+          "label" : "ㄝ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "."
+          },
+          "label" : "ㄡ"
+        },
+        {
+          "action" : {
+            "type" : "code",
+            "value" : "/"
+          },
+          "label" : "ㄥ"
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫",
+          "titleMode" : "automatic"
+        }
+      ]
+    },
+    {
+      "keys" : [
+        {
+          "action" : {
+            "type" : "modeSwitch",
+            "value" : "nextLayout"
+          },
+          "label" : "布局"
+        },
+        {
+          "action" : {
+            "type" : "globe"
+          },
+          "label" : "🌐"
+        },
+        {
+          "action" : {
+            "type" : "space"
+          },
+          "label" : "空格",
+          "width" : 4
+        },
+        {
+          "action" : {
+            "type" : "backspace"
+          },
+          "label" : "⌫"
+        },
+        {
+          "action" : {
+            "type" : "enter"
+          },
+          "label" : "⏎"
+        }
+      ]
+    }
+  ]
+}

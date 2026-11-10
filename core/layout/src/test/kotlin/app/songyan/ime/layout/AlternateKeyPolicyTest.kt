@@ -1,5 +1,6 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.AlternateKeyPolicy.Language
 import app.songyan.ime.layout.AlternateKeyPolicy.Page
 import app.songyan.ime.layout.AlternateKeyPolicy.Payload
@@ -26,6 +27,7 @@ class AlternateKeyPolicyTest {
         uppercase: Boolean = false,
         asciiPunctuation: Boolean = false,
         alphabet: String = "",
+        inputLanguage: InputLanguage = InputLanguage.ZH_HANS,
     ): List<AlternateKeyPolicy.Option> =
         AlternateKeyPolicy.options(
             AlternateKeyPolicy.Request(
@@ -37,6 +39,7 @@ class AlternateKeyPolicyTest {
                 isUppercase = uppercase,
                 usesAsciiPunctuation = asciiPunctuation,
                 schemaAlphabet = alphabet,
+                inputLanguage = inputLanguage,
             ),
         )
 
@@ -686,6 +689,83 @@ class AlternateKeyPolicyTest {
         assertNull(AlternateKeyPolicy.letterSwipeCodes(listOf('u', 'i'), clover14Alphabet))
         assertNull(AlternateKeyPolicy.letterSwipeCodes(listOf('q'), "q"))
         assertNull(AlternateKeyPolicy.letterSwipeCodes(listOf('a', 'b', 'c'), "abc"))
+    }
+
+    // MARK: Input script language selects the bundled defaults only
+
+    @Test
+    fun theScriptLanguageChoosesTheBundledLetterMarks() {
+        assertEquals(
+            listOf("「", "『", "“", "\""),
+            AlternateKeyPolicy.defaultLetterLiterals("c", InputLanguage.ZH_HANT),
+        )
+        assertEquals(listOf("、"), AlternateKeyPolicy.defaultLetterLiterals("a", InputLanguage.JA))
+        assertEquals(listOf("・"), AlternateKeyPolicy.defaultLetterLiterals("g", InputLanguage.JA))
+        val jaX = AlternateKeyPolicy.defaultLetterLiterals("x", InputLanguage.JA)
+        assertTrue(jaX.containsAll(listOf("ー", "～")))
+        assertTrue(AlternateKeyPolicy.defaultLetterLiterals("g", InputLanguage.JA).contains("・"))
+        // ー is a letter, not punctuation: the payload contract must keep it as a literal.
+        assertTrue(AlternateKeyPolicy.containsNonAsciiLetter("ー"))
+        val options =
+            options(
+                key = "x",
+                secondary = jaX,
+                inputLanguage = InputLanguage.JA,
+                alphabet = fullAlphabet,
+            )
+        assertTrue(options.map { it.label }.containsAll(jaX))
+        assertEquals(jaX.toSet(), options.map { it.label }.toSet())
+        assertTrue(options.all { it.payload is Payload.Literal })
+        assertTrue(AlternateKeyPolicy.isAllowedInAsciiField("ー"))
+    }
+
+    @Test
+    fun declaredLiteralsStayAsWrittenInEveryScriptLanguage() {
+        val diy = listOf("自", "定")
+        for (language in InputLanguage.entries) {
+            val shown =
+                options(
+                    key = "a",
+                    secondary = diy,
+                    inputLanguage = language,
+                    alphabet = fullAlphabet,
+                )
+            assertEquals("$language", diy, shown.map { it.label })
+        }
+    }
+
+    @Test
+    fun japaneseSymbolLongPressOffersItsOwnMarks() {
+        val marks =
+            options(
+                key = "-",
+                page = Page.SYMBOLS,
+                inputLanguage = InputLanguage.JA,
+            ).map { it.label }
+        assertTrue(marks.containsAll(listOf("ー", "～")))
+        val stop =
+            options(
+                key = "。",
+                page = Page.SYMBOLS,
+                inputLanguage = InputLanguage.JA,
+            ).map { it.label }
+        assertEquals("、", stop.firstOrNull())
+    }
+
+    @Test
+    fun theEngineDispatchLanguageKeepsItsOwnMeaning() {
+        // The script language never changes the engine mode: merged partners stay codes.
+        val merged =
+            options(
+                key = "q",
+                mergedGroup = "qw",
+                inputLanguage = InputLanguage.JA,
+                alphabet = fullAlphabet,
+            )
+        assertEquals(
+            listOf(AlternateKeyPolicy.Option("w", Payload.Code("w"))),
+            merged,
+        )
     }
 
     @Test

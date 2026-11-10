@@ -7,6 +7,8 @@ import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.layout.KeyboardPageKind
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -25,6 +27,8 @@ import org.junit.runner.RunWith
 class EditorPadRenderTest {
     private class Rendered(
         val spoken: List<String>,
+        /** The drawn keys, index for index with [spoken]: the provider makes one node per key. */
+        val keys: List<LayoutKey>,
         val path: String,
         val heightDp: Float,
     )
@@ -39,6 +43,7 @@ class EditorPadRenderTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val pad = requireNotNull(EditorDigitLayouts.pad(kind, flags, dateTime))
         lateinit var view: KeyboardView
+        var keys: List<LayoutKey> = emptyList()
         instrumentation.runOnMainSync {
             view = KeyboardView(instrumentation.targetContext)
             view.updateDial(
@@ -52,6 +57,7 @@ class EditorPadRenderTest {
                 View.MeasureSpec.makeMeasureSpec(2000, View.MeasureSpec.AT_MOST),
             )
             view.layout(0, 0, width, view.measuredHeight)
+            keys = view.keys
         }
         instrumentation.waitForIdleSync()
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
@@ -68,7 +74,7 @@ class EditorPadRenderTest {
             spoken += node.contentDescription?.toString() ?: ""
         }
         val density = instrumentation.targetContext.resources.displayMetrics.density
-        return Rendered(spoken, file.absolutePath, view.height / density)
+        return Rendered(spoken, keys, file.absolutePath, view.height / density)
     }
 
     private fun Rendered.has(label: String): Boolean = spoken.contains(label)
@@ -126,10 +132,15 @@ class EditorPadRenderTest {
         for (rejected in listOf("/", ".", "-")) {
             assertFalse("a time field rejects " + rejected, time.has(rejected))
         }
-        // The closing row still holds the digits and the editing keys the pad needs.
-        for (key in listOf("0", context.getString(R.string.ime_delete), enter)) {
+        // The closing row still holds the digits and the editing keys the pad needs; TalkBack names
+        // them in the system language.
+        val delete = context.getString(R.string.ime_delete)
+        for (key in listOf("0", delete, enter)) {
             assertTrue(time.spoken.toString(), time.has(key))
         }
+        val deleteIndex = time.spoken.indexOf(delete)
+        assertTrue(time.spoken.toString(), deleteIndex >= 0)
+        assertEquals(LayoutActionKind.BACKSPACE, time.keys[deleteIndex].action.type)
     }
 
     @Test

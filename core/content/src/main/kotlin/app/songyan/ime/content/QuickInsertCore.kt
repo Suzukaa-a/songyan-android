@@ -1,5 +1,6 @@
 package app.songyan.ime.content
 
+import app.songyan.ime.keyboard.engine.InputLanguage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -12,25 +13,27 @@ import java.util.Locale
  * understood by the other. Titles are UI copy and live in `strings.xml`; this model never
  * carries user-visible text. The formats are computed locally on tap: no schema script, no Lua
  * component and no dictionary change is involved.
+ *
+ * The shape of each format belongs to [QuickInsertFormatting], because it follows the input
+ * language of the active scheme rather than the app or system language.
  */
 enum class QuickInsertDateFormat(
     val id: String,
-    internal val pattern: String,
 ) {
     /** 2026-09-09 */
-    DATE("date", "yyyy-MM-dd"),
+    DATE("date"),
 
-    /** 2026年9月9日 */
-    DATE_CHINESE("date-chinese", "yyyy'年'M'月'd'日'"),
+    /** 2026年9月9日; Japanese writes the weekday too, 2026年11月5日(木) */
+    DATE_CHINESE("date-chinese"),
 
     /** 14:30, 24-hour without seconds */
-    TIME("time", "HH:mm"),
+    TIME("time"),
 
     /** 2026-09-09 14:30 */
-    DATE_TIME("date-time", "yyyy-MM-dd HH:mm"),
+    DATE_TIME("date-time"),
 
-    /** 2026年9月9日 14:30 */
-    DATE_TIME_CHINESE("date-time-chinese", "yyyy'年'M'月'd'日' HH:mm"),
+    /** 2026年9月9日 14:30; Japanese writes the weekday too */
+    DATE_TIME_CHINESE("date-time-chinese"),
     ;
 
     companion object {
@@ -39,17 +42,47 @@ enum class QuickInsertDateFormat(
     }
 }
 
-/** Date/time text computation, pure: the zone and the instant are always passed in. */
+/** Date/time text computation, pure: the zone, the instant and the input language are passed in. */
 object QuickInsertFormatting {
     /**
      * Formats [instant] with [format], using a stable numbering system and a 24-hour clock
      * regardless of the system region, so the inserted text matches the copies in the docs.
+     *
+     * Only the input language decides the shape. Japanese writes the weekday after the
+     * Chinese-style dates (`2026年11月5日(木)`); traditional and simplified Chinese share one
+     * wording because year, month and day are written identically in both scripts.
      */
     fun text(
         format: QuickInsertDateFormat,
         instant: Instant,
         zone: ZoneId,
-    ): String = DateTimeFormatter.ofPattern(format.pattern, Locale.ROOT).withZone(zone).format(instant)
+        language: InputLanguage = InputLanguage.ZH_HANS,
+    ): String {
+        val (pattern, locale) =
+            when (language) {
+                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT -> CHINESE_PATTERNS.getValue(format) to Locale.ROOT
+                InputLanguage.JA -> JAPANESE_PATTERNS.getValue(format) to Locale.JAPAN
+            }
+        return DateTimeFormatter.ofPattern(pattern, locale).withZone(zone).format(instant)
+    }
+
+    private val CHINESE_PATTERNS =
+        mapOf(
+            QuickInsertDateFormat.DATE to "yyyy-MM-dd",
+            QuickInsertDateFormat.DATE_CHINESE to "yyyy'年'M'月'd'日'",
+            QuickInsertDateFormat.TIME to "HH:mm",
+            QuickInsertDateFormat.DATE_TIME to "yyyy-MM-dd HH:mm",
+            QuickInsertDateFormat.DATE_TIME_CHINESE to "yyyy'年'M'月'd'日' HH:mm",
+        )
+
+    private val JAPANESE_PATTERNS =
+        mapOf(
+            QuickInsertDateFormat.DATE to "yyyy-MM-dd",
+            QuickInsertDateFormat.DATE_CHINESE to "yyyy'年'M'月'd'日'(E)",
+            QuickInsertDateFormat.TIME to "HH:mm",
+            QuickInsertDateFormat.DATE_TIME to "yyyy-MM-dd HH:mm",
+            QuickInsertDateFormat.DATE_TIME_CHINESE to "yyyy'年'M'月'd'日'(E) HH:mm",
+        )
 }
 
 /**
@@ -172,6 +205,14 @@ class QuickInsertCore(
     private val confirmComposition: () -> Boolean = { true },
     private val insert: (String) -> Boolean = { true },
     private val onChange: () -> Unit = {},
+    /**
+     * The input language of the active scheme, read at the moment a date is inserted.
+     *
+     * The caller resolves and caches it off the key path; a tap is the only time this value is
+     * needed, so nothing is recomputed per keystroke. The fallback keeps simplified Chinese, which
+     * is what an unknown or not-yet-ready scheme shows today.
+     */
+    private val inputLanguage: () -> InputLanguage = { InputLanguage.ZH_HANS },
 ) {
     /** The session's repeat cache. */
     val recent: QuickInsertRecentText = QuickInsertRecentText()
@@ -228,7 +269,8 @@ class QuickInsertCore(
     }
 
     /** The text [format] inserts right now; computed fresh before it is displayed. */
-    fun formattedText(format: QuickInsertDateFormat): String = QuickInsertFormatting.text(format, now(), zone)
+    fun formattedText(format: QuickInsertDateFormat): String =
+        QuickInsertFormatting.text(format, now(), zone, inputLanguage())
 
     /** Preselects [format] without inserting, for a settings row; persists it. */
     fun selectFormat(format: QuickInsertDateFormat) {

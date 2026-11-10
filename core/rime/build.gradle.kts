@@ -30,19 +30,8 @@ android {
         buildConfigField("String", "LIBRIME_VERSION", "\"$librimeVersion\"")
         ndk { abiFilters += abis }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Offline replay classes run explicitly after their real archives are staged.
-        val externalFixtureTests = mutableListOf<String>()
-        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.traditionalArchivesDir").isPresent) {
-            externalFixtureTests += "app.songyan.ime.rime.TraditionalReplayDeviceTest"
-        }
-        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.kagiroiFixture").isPresent) {
-            externalFixtureTests += "app.songyan.ime.rime.JapaneseReplayTest"
-            externalFixtureTests += "app.songyan.ime.rime.JapaneseLearningTest"
-            externalFixtureTests += "app.songyan.ime.rime.KanaRomajiTableTest"
-        }
-        if (externalFixtureTests.isNotEmpty()) {
-            testInstrumentationRunnerArguments["notClass"] = externalFixtureTests.joinToString(",")
-        }
+        // Offline replay classes run only when their real archives are staged; see the filter.
+        testInstrumentationRunnerArguments["filter"] = "app.songyan.ime.rime.ExternalFixtureFilter"
         externalNativeBuild {
             cmake {
                 arguments += "-DANDROID_STL=c++_static"

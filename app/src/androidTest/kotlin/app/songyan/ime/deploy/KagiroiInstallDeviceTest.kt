@@ -53,7 +53,7 @@ import java.io.File
  * zipped in chunks, measured by length, and never read into the Java heap.
  *
  * Opt-in: the package reaches hundreds of megabytes and both publications copy it. The default
- * connected run leaves this class out (Root keeps it in the runner's notClass list); it runs as
+ * connected run leaves this class out (ManualRunFilter); it runs as
  * `-e kagiroiInstall true -e kagiroiFixture <path>`. Optional: `-e kagiroiSchema <id>` when the
  * primary input method cannot take romaji, `-e kagiroiSchemas a,b` when the package has no
  * default.yaml. Once asked to run, a missing or unusable package fails; nothing is skipped.

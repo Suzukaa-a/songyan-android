@@ -8,23 +8,8 @@ android {
     buildFeatures { compose = true }
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // First-install acceptance requires an explicitly selected isolated target.
-        val bootstrapTarget =
-            providers.gradleProperty("android.testInstrumentationRunnerArguments.songyan.bootstrap.target")
-        val excludedTests = mutableListOf<String>()
-        if (!bootstrapTarget.isPresent) {
-            excludedTests += "app.songyan.ime.ime.BuiltinScriptDefaultDeviceTest"
-        }
-        // Offline catalogue tests need archives staged in this runner's own cache.
-        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.traditionalArchivesDir").isPresent) {
-            excludedTests += "app.songyan.ime.ime.ZhuyinKeyboardDeviceTest"
-            excludedTests += "app.songyan.ime.ime.CangjieKeyboardDeviceTest"
-        }
-        if (!providers.gradleProperty("android.testInstrumentationRunnerArguments.kagiroiFixture").isPresent) {
-            excludedTests += "app.songyan.ime.ime.JapaneseRomajiDeviceTest"
-            excludedTests += "app.songyan.ime.ime.KanaFlickDeviceTest"
-        }
-        if (excludedTests.isNotEmpty()) testInstrumentationRunnerArguments["notClass"] = excludedTests.joinToString(",")
+        // Tests that need a selected target or staged archives run only when given them; see the filter.
+        testInstrumentationRunnerArguments["filter"] = "app.songyan.ime.ime.ExternalFixtureFilter"
     }
 }
 

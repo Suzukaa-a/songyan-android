@@ -27,11 +27,11 @@ class InputLanguagePunctuationDeviceTest {
             host.assertText("，")
             host.tap("。")
             host.assertText("，。")
-            switchTo(host, "kagiroi_test")
+            host.selectSchema("kagiroi_test")
             assertSpaceSides(host, left = "、", right = "。")
             host.tap("、")
             host.assertText("，。、")
-            switchTo(host, "songyan_quanpin")
+            host.selectSchema("songyan_quanpin")
             assertSpaceSides(host, left = "，", right = "。")
             host.tap("，")
             host.assertText("，。、，")
@@ -42,7 +42,7 @@ class InputLanguagePunctuationDeviceTest {
     fun aTraditionalSchemeKeepsTheChineseMarks() {
         withHost { host ->
             host.start()
-            switchTo(host, "bopomofo_test")
+            host.selectSchema("bopomofo_test")
             assertSpaceSides(host, left = "，", right = "。")
         }
     }
@@ -57,14 +57,6 @@ class InputLanguagePunctuationDeviceTest {
         assertTrue("no space bar in " + labels, space > 0 && space < labels.lastIndex)
         assertEquals("left of space in " + labels, left, labels[space - 1])
         assertEquals("right of space in " + labels, right, labels[space + 1])
-    }
-
-    private fun switchTo(
-        host: FeatureHost,
-        schemaID: String,
-    ) {
-        host.main { runBlocking { host.controller.session?.selectSchema(schemaID) } }
-        host.awaitIdle()
     }
 
     private fun withHost(block: (FeatureHost) -> Unit) {

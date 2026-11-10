@@ -28,10 +28,10 @@ class CandidateGlyphLocaleDeviceTest {
     fun theSamePinnedCandidateRendersDifferentlyInJapaneseAndSimplifiedChineseAndStaysStable() {
         withHost { host ->
             host.start()
-            switchTo(host, "kagiroi_test")
+            host.selectSchema("kagiroi_test")
             val japanese = drawPinnedCandidate(host, CANDIDATE)
             assertTrue("pinned candidate in the bar: " + barTexts(host), CANDIDATE in barTexts(host))
-            switchTo(host, "songyan_quanpin")
+            host.selectSchema("songyan_quanpin")
             val simplified = drawPinnedCandidate(host, CANDIDATE)
             val simplifiedAgain = drawPinnedCandidate(host, CANDIDATE)
             assertTrue(
@@ -49,9 +49,9 @@ class CandidateGlyphLocaleDeviceTest {
     fun theKeyPaintFollowsTheRunningSchemeLanguage() {
         withHost { host ->
             host.start()
-            switchTo(host, "kagiroi_test")
+            host.selectSchema("kagiroi_test")
             assertEquals("ja", keyPaintLocales(host))
-            switchTo(host, "songyan_quanpin")
+            host.selectSchema("songyan_quanpin")
             assertEquals("zh-Hans", keyPaintLocales(host))
         }
     }
@@ -97,14 +97,6 @@ class CandidateGlyphLocaleDeviceTest {
             val locales = keyboard.paint.textLocales
             locales.toLanguageTags()
         }
-
-    private fun switchTo(
-        host: FeatureHost,
-        schemaID: String,
-    ) {
-        host.main { runBlocking { host.controller.session?.selectSchema(schemaID) } }
-        host.awaitIdle()
-    }
 
     private fun withHost(block: (FeatureHost) -> Unit) {
         val host = FeatureHost(engine.backend(), "qwerty26")

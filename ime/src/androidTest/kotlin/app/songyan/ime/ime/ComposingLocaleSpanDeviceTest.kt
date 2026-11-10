@@ -30,7 +30,7 @@ class ComposingLocaleSpanDeviceTest {
             // confirmed part would show up in the field before the next keystroke.
             withHost { host ->
                 host.start()
-                switchTo(host, schemaID)
+                host.selectSchema(schemaID)
                 assertListed(host, schemaID)
                 assertEquals("active schema", schemaID, activeSchema(host))
                 host.type("ni")
@@ -53,7 +53,7 @@ class ComposingLocaleSpanDeviceTest {
     fun aBopomofoCompositionKeepsItsLocaleSpan() {
         withHost { host ->
             host.start()
-            switchTo(host, BOPOMOFO_SCHEMA)
+            host.selectSchema(BOPOMOFO_SCHEMA)
             assertListed(host, BOPOMOFO_SCHEMA)
             assertEquals("active schema", BOPOMOFO_SCHEMA, activeSchema(host))
             host.type("ni")
@@ -114,14 +114,6 @@ class ComposingLocaleSpanDeviceTest {
         }
 
     private fun localeTags(span: LocaleSpan): List<String> = span.locales.toLanguageTags().split(",")
-
-    private fun switchTo(
-        host: FeatureHost,
-        schemaID: String,
-    ) {
-        host.main { runBlocking { host.controller.session?.selectSchema(schemaID) } }
-        host.awaitIdle()
-    }
 
     private fun withHost(block: (FeatureHost) -> Unit) {
         val host = FeatureHost(engine.backend(), "qwerty26")

@@ -849,6 +849,18 @@ internal class FeatureHost(
         }
     }
 
+    /**
+     * Switches the running session to [schemaID]. The session is created after [start] returns, and
+     * [awaitIdle] cannot see that, so the switch waits for it; a switch that did not take fails here
+     * instead of leaving the test on the previous scheme.
+     */
+    fun selectSchema(schemaID: String) {
+        assertTrue("the engine never became ready", await { main2 { controller.session != null && controller.ready } })
+        main { runBlocking { controller.session?.selectSchema(schemaID) } }
+        assertEquals("the selected scheme", schemaID, main2 { controller.session?.selectedSchemaID })
+        awaitIdle()
+    }
+
     /** Polls [condition] until it holds or the time is up; the last answer is the result. */
     fun await(condition: () -> Boolean): Boolean {
         val deadline = SystemClock.uptimeMillis() + TIMEOUT_MS

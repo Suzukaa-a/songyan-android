@@ -25,14 +25,14 @@ class InputLanguageKeyLabelsDeviceTest {
         withHost { host ->
             host.start()
             // The host starts on the bundled pair; the fixture scheme proves the table switch.
-            switchTo(host, "kagiroi_test")
+            host.selectSchema("kagiroi_test")
             assertTrue("ja space: " + drawn(host), "空白" in drawn(host))
             assertFalse("no simplified space under ja: " + drawn(host), "空格" in drawn(host))
             host.type("ka")
             host.awaitIdle()
             assertTrue("ja composing space: " + drawn(host), "変換" in drawn(host))
             assertTrue("ja composing return: " + drawn(host), "確定" in drawn(host))
-            switchTo(host, "songyan_quanpin")
+            host.selectSchema("songyan_quanpin")
             assertTrue("built-in space: " + drawn(host), "空格" in drawn(host))
             assertFalse("no japanese space: " + drawn(host), "空白" in drawn(host))
         }
@@ -42,10 +42,10 @@ class InputLanguageKeyLabelsDeviceTest {
     fun aTraditionalSchemeNamesItsKeysInTraditionalChinese() {
         withHost { host ->
             host.start(imeOptions = EditorInfo.IME_ACTION_SEARCH)
-            switchTo(host, "bopomofo_test")
+            host.selectSchema("bopomofo_test")
             assertTrue("hant space: " + drawn(host), "空白" in drawn(host))
             assertTrue("hant search: " + drawn(host), "搜尋" in drawn(host))
-            switchTo(host, "songyan_quanpin")
+            host.selectSchema("songyan_quanpin")
             assertTrue("built-in space: " + drawn(host), "空格" in drawn(host))
             assertTrue("built-in search: " + drawn(host), "搜索" in drawn(host))
         }
@@ -66,7 +66,7 @@ class InputLanguageKeyLabelsDeviceTest {
             assertSame("simplified page solved again", keys, host.main2 { keyboard.keys })
             assertSame("simplified page relabelled", labels, host.main2 { keyboard.labels })
 
-            switchTo(host, "kagiroi_test")
+            host.selectSchema("kagiroi_test")
             val japaneseKeys = host.main2 { keyboard.keys }
             host.type("ka")
             host.awaitIdle()
@@ -76,15 +76,6 @@ class InputLanguageKeyLabelsDeviceTest {
     }
 
     private fun drawn(host: FeatureHost): List<String> = host.main2 { host.find(KeyboardView::class.java).labels }
-
-    /** Switches the running session, then waits until the controller repaints the new faces. */
-    private fun switchTo(
-        host: FeatureHost,
-        schemaID: String,
-    ) {
-        host.main { runBlocking { host.controller.session?.selectSchema(schemaID) } }
-        host.awaitIdle()
-    }
 
     private fun withHost(block: (FeatureHost) -> Unit) {
         val host = FeatureHost(engine.backend(), "qwerty26")

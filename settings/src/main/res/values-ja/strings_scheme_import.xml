@@ -44,6 +44,8 @@
     <string name="schemes_recommended_quick_detail">倉頡の簡略版。最初と最後の字根だけで入力する</string>
     <string name="schemes_recommended_cantonese_name">粤拼（香港）</string>
     <string name="schemes_recommended_cantonese_detail">広東語の拼音入力。香港の語彙と絵文字に対応</string>
+    <string name="schemes_recommended_kagiroi_name">カギロイ</string>
+    <string name="schemes_recommended_kagiroi_detail">ローマ字またはかなで日本語を入力</string>
     <string name="schemes_recommended_license">ライセンス：%1$s</string>
     <string name="schemes_recommended_size">ダウンロード約 %1$s</string>
     <string name="schemes_recommended_homepage">上流のページを開く</string>

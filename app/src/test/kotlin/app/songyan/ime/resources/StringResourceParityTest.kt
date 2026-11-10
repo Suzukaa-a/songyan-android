@@ -196,6 +196,7 @@ class StringResourceParityTest {
                 "settings/schemes_recommended_bopomofo_name",
                 "settings/schemes_recommended_quick_name",
                 "settings/schemes_recommended_cantonese_name",
+                "settings/schemes_recommended_kagiroi_name",
             )
     }
 }

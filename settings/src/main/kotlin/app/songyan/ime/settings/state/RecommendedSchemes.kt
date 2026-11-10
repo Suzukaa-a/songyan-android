@@ -219,6 +219,28 @@ private val RIME_CANTONESE =
         advertisedSchemas = listOf("jyut6ping3"),
     )
 
+/**
+ * Upstream's own prebuilt kagiroi: the `build` branch commit generated from source 808a1954. Compiling
+ * the source dictionaries on a phone runs out of memory, so the entry takes the compiled tables as
+ * upstream ships them, its dictionary set included.
+ */
+private val RIME_KAGIROI =
+    RecommendedScheme(
+        id = "rime-kagiroi",
+        nameRes = R.string.schemes_recommended_kagiroi_name,
+        detailRes = R.string.schemes_recommended_kagiroi_detail,
+        main =
+            RecommendedArchive(
+                url = "https://codeload.github.com/rimeinn/rime-kagiroi/zip/1c4cd914a92ec433e2c90436414d7d05eeded6c9",
+                sha256 = "4091251313f98b76c49a340f21b94ae0d606993e4134c7c8ba0c5d969c6fa4a2",
+                bytes = 67_182_927,
+            ),
+        licenses = listOf("GPL-3.0", "Mozc"),
+        homepage = "https://github.com/rimeinn/rime-kagiroi",
+        languageTags = listOf("ja"),
+        advertisedSchemas = listOf("kagiroi"),
+    )
+
 object RecommendedSchemes {
     /** Same pinned versions as the iOS catalog; they change only together with it. */
     val catalog: List<RecommendedScheme> =
@@ -229,6 +251,7 @@ object RecommendedSchemes {
             RIME_CANGJIE,
             RIME_QUICK,
             RIME_CANTONESE,
+            RIME_KAGIROI,
         )
 
     /**

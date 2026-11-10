@@ -57,23 +57,16 @@ class RecommendedSchemesOrderTest {
     }
 
     @Test
-    fun aFutureJapaneseEntryMovesFirstWithoutChangingTheRest() {
-        val japanese =
-            RecommendedScheme(
-                id = "rime-kagiroi",
-                nameRes = catalog.first().nameRes,
-                detailRes = catalog.first().detailRes,
-                main = RecommendedArchive("https://example.com/kagiroi.zip", "0".repeat(64), 1),
-                licenses = listOf("GPL-3.0"),
-                homepage = "https://example.com/kagiroi",
-                languageTags = listOf("ja"),
-                advertisedSchemas = listOf("kagiroi"),
-            )
+    fun japaneseIsUpstreamsPrebuiltKagiroiAndLeadsForJapanese() {
+        val kagiroi = catalog.first { it.id == "rime-kagiroi" }
+        assertTrue(kagiroi.main.url.endsWith("/1c4cd914a92ec433e2c90436414d7d05eeded6c9"))
+        assertEquals("4091251313f98b76c49a340f21b94ae0d606993e4134c7c8ba0c5d969c6fa4a2", kagiroi.main.sha256)
+        assertEquals(67_182_927L, kagiroi.downloadBytes)
+        assertTrue(kagiroi.extras.isEmpty())
+        assertEquals(listOf("kagiroi"), kagiroi.advertisedSchemas)
+        assertEquals(listOf("GPL-3.0", "Mozc"), kagiroi.licenses)
 
-        val ordered = RecommendedSchemes.ordered(catalog + japanese, listOf("ja-JP")).map { it.id }
-
-        assertEquals("rime-kagiroi", ordered.first())
-        assertEquals(DEFAULT_ORDER, ordered.drop(1))
+        assertEquals(listOf("rime-kagiroi") + DEFAULT_ORDER.dropLast(1), ordered("ja-JP"))
     }
 
     @Test
@@ -193,8 +186,16 @@ class RecommendedSchemesOrderTest {
 
     private companion object {
         val DEFAULT_ORDER =
-            listOf("rime-ice", "rime-wanxiang", "rime-bopomofo", "rime-cangjie", "rime-quick", "rime-cantonese")
-        val REST = listOf("rime-ice", "rime-wanxiang", "rime-quick", "rime-cantonese")
-        val REST_WITHOUT_QUICK = listOf("rime-ice", "rime-wanxiang", "rime-bopomofo")
+            listOf(
+                "rime-ice",
+                "rime-wanxiang",
+                "rime-bopomofo",
+                "rime-cangjie",
+                "rime-quick",
+                "rime-cantonese",
+                "rime-kagiroi",
+            )
+        val REST = listOf("rime-ice", "rime-wanxiang", "rime-quick", "rime-cantonese", "rime-kagiroi")
+        val REST_WITHOUT_QUICK = listOf("rime-ice", "rime-wanxiang", "rime-bopomofo", "rime-kagiroi")
     }
 }

@@ -265,6 +265,32 @@ class BuiltinSourceInstallerTest {
         assertFalse("paging bindings must not be added: " + text, accepts.contains("equal"))
     }
 
+    /**
+     * The build branch ships the source schema and preset but no default.yaml, so import_preset
+     * reaches the frontend prelude's, which links the paging pair again under has_menu. Emptying
+     * kagiroi's own preset left minus on Page_Up there.
+     */
+    @Test
+    fun supplementFrontendFiles_expandsTheLinksWhenThePreludeDefaultLinksPaging() {
+        val target = kagiroiTarget(KAGIROI_RAW_SCHEMA)
+        java.io.File(target, "default.yaml").writeText(PRELUDE_DEFAULT_KEY_BINDER)
+        java.io.File(target, "key_bindings.yaml").writeText(PRELUDE_KEY_BINDINGS)
+
+        BuiltinSourceInstaller(assets()).supplementFrontendFiles(target)
+
+        val text = kagiroiPatchText(target)
+        assertTrue("the key binder must be replaced as a whole: " + text, text.contains("key_binder:"))
+        assertFalse("no preset is emptied in place: " + text, text.contains("__append"))
+        assertFalse(text.contains("import_preset"))
+        val accepts = bindingAccepts(text)
+        assertEquals(
+            listOf("Control+p", "comma", "period", "Control+u", "Control+i", "Control+o", "Control+q"),
+            accepts,
+        )
+        assertEquals(2, commitCount(text))
+        assertTrue("the half-width comma and period must commit: " + text, commitsJapanesePunctuation(text))
+    }
+
     @Test
     fun supplementFrontendFiles_writesTheCompiledKagiroiPatch() {
         val target = kagiroiTarget(KAGIROI_COMPILED_SCHEMA)
@@ -409,6 +435,32 @@ class BuiltinSourceInstallerTest {
                   ',' : [ 、, ・, ， ]
                   '.' : [ 。, …, ．, . ]
                   '?' : { commit: ？ }
+            """.trimIndent()
+
+        /** The frontend prelude's default.yaml as far as key_binder goes: it links the paging pair. */
+        val PRELUDE_DEFAULT_KEY_BINDER =
+            """
+            key_binder:
+              bindings:
+                __patch:
+                  - key_bindings:/emacs_editing
+                  - key_bindings:/paging_with_minus_equal
+                  - key_bindings:/paging_with_comma_period
+            """.trimIndent()
+
+        val PRELUDE_KEY_BINDINGS =
+            """
+            emacs_editing:
+              __append:
+                - { when: composing, accept: "Control+p", send: Up }
+            paging_with_minus_equal:
+              __append:
+                - { when: has_menu, accept: minus, send: Page_Up }
+                - { when: has_menu, accept: equal, send: Page_Down }
+            paging_with_comma_period:
+              __append:
+                - { when: paging, accept: comma, send: Page_Up }
+                - { when: has_menu, accept: period, send: Page_Down }
             """.trimIndent()
 
         /** The prebuilt package: one flat bindings list plus import_preset: default. */

@@ -45,6 +45,8 @@
     <string name="schemes_recommended_quick_detail">A simplified Cangjie: the first and the last radical are enough</string>
     <string name="schemes_recommended_cantonese_name">Cantonese (Hong Kong)</string>
     <string name="schemes_recommended_cantonese_detail">Jyutping input for Cantonese, with Hong Kong wording and emoji</string>
+    <string name="schemes_recommended_kagiroi_name">Kagiroi (カギロイ)</string>
+    <string name="schemes_recommended_kagiroi_detail">Type Japanese with romaji or kana</string>
     <string name="schemes_recommended_license">License: %1$s</string>
     <string name="schemes_recommended_size">About %1$s to download</string>
     <string name="schemes_recommended_homepage">Open the upstream page</string>

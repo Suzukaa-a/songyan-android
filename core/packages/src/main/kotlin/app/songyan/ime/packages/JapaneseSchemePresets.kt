@@ -34,7 +34,7 @@ object JapaneseSchemePresets {
         val patch = LinkedHashMap<String, Any?>()
         patch[HALF_SHAPE_COMMA] = mapOf("commit" to "、")
         patch[HALF_SHAPE_PERIOD] = mapOf("commit" to "。")
-        pagingPatch(keyBinder)?.let { patch.putAll(it) }
+        pagingPatch(keyBinder, directory)?.let { patch.putAll(it) }
 
         val patchFile = File(directory, PATCH_FILE)
         val existing =
@@ -61,8 +61,16 @@ object JapaneseSchemePresets {
      * has to go with it: librime's legacy preset link appends the frontend prelude's default.yaml
      * (which links the paging preset again) after custom patches, and a null patch entry is dropped
      * before it applies, so the section is replaced as a whole.
+     *
+     * The build branch is the third shape: the in-place `__patch` of the source package without the
+     * package's own default.yaml, so import_preset reaches the frontend prelude's default.yaml, which
+     * links the paging pair again and keeps minus bound whenever a menu is open. Every preset link of
+     * both files is expanded instead and the section replaced as a whole, as for a prebuilt package.
      */
-    private fun pagingPatch(keyBinder: Map<String, Any?>): Map<String, Any?>? {
+    private fun pagingPatch(
+        keyBinder: Map<String, Any?>,
+        directory: File,
+    ): Map<String, Any?>? {
         val bindings = keyBinder["bindings"] ?: return null
         if (bindings is List<*> && bindings.isNotEmpty()) {
             val list = bindings.map { it.asStringMap() ?: return null }
@@ -72,8 +80,67 @@ object JapaneseSchemePresets {
         }
         val inPlace = bindings.asStringMap() ?: return null
         val path = pagingPresetPath(inPlace["__patch"]) ?: return null
+        val importedBindings =
+            (keyBinder["import_preset"] as? String)
+                ?.let { loadMapping(File(directory, "$it.yaml")) }
+                ?.get("key_binder")
+                .asStringMap()
+                ?.get("bindings")
+        if (importedBindings != null && linksPaging(importedBindings)) {
+            val before = expanded(importedBindings, directory) ?: return null
+            val own = expanded(bindings, directory) ?: return null
+            val list = before + own
+            val kept = list.filterNot(::isPagingBinding)
+            if (kept.size >= list.size) return null
+            return mapOf("key_binder" to mapOf("bindings" to kept))
+        }
         return mapOf(path + "/__append" to emptyList<Any>())
     }
+
+    /** Whether a bindings node links the paging preset, by name, through `__patch`. */
+    private fun linksPaging(bindings: Any): Boolean =
+        links(bindings.asStringMap()?.get("__patch")).any {
+            (it as? String)?.endsWith("/paging_with_minus_equal") ==
+                true
+        }
+
+    /**
+     * A bindings node as the flat list librime builds from it: a plain list as it is, an in-place
+     * `__patch` as the `__append` lists of the presets it links, in order. Null when a link does not
+     * resolve to such a list, so nothing is guessed.
+     */
+    private fun expanded(
+        bindings: Any,
+        directory: File,
+    ): List<Map<String, Any?>>? {
+        if (bindings is List<*>) return mappings(bindings)
+        val inPlace = bindings.asStringMap()?.takeIf { it.size == 1 } ?: return null
+        val result = ArrayList<Map<String, Any?>>()
+        for (link in links(inPlace["__patch"])) {
+            val reference = link as? String ?: return null
+            val separator = reference.indexOf(":/")
+            if (separator < 0) return null
+            val document = loadMapping(File(directory, reference.substring(0, separator) + ".yaml")) ?: return null
+            var node: Any? = document
+            for (key in reference.substring(separator + 2).split('/').filter { it.isNotEmpty() }) {
+                node = node.asStringMap()?.get(key) ?: return null
+            }
+            val items = node.asStringMap()?.get("__append") ?: node
+            result += mappings(items as? List<*> ?: return null) ?: return null
+        }
+        return result
+    }
+
+    private fun links(directive: Any?): List<Any?> = directive as? List<*> ?: listOf(directive)
+
+    private fun mappings(list: List<*>): List<Map<String, Any?>>? = list.map { it.asStringMap() ?: return null }
+
+    private fun loadMapping(file: File): Map<String, Any?>? =
+        file
+            .takeIf { it.isFile }
+            ?.let(::readText)
+            ?.let(::readDocument)
+            .asStringMap()
 
     private fun pagingPresetPath(directive: Any?): String? =
         when (directive) {

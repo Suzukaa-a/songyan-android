@@ -46,6 +46,8 @@
     <string name="schemes_recommended_quick_detail">仓颉的简化版，只取头尾两码</string>
     <string name="schemes_recommended_cantonese_name">粤拼（香港）</string>
     <string name="schemes_recommended_cantonese_detail">粤语拼音输入，带香港用词与表情</string>
+    <string name="schemes_recommended_kagiroi_name">カギロイ</string>
+    <string name="schemes_recommended_kagiroi_detail">用罗马字或假名输入日语</string>
     <string name="schemes_recommended_license">许可：%1$s</string>
     <string name="schemes_recommended_size">下载约 %1$s</string>
     <string name="schemes_recommended_homepage">打开上游主页</string>

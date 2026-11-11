@@ -16,8 +16,8 @@ internal object ImePalettes {
      *
      * The skin's numbers are taken literally, so one file means the same on both apps: 1 pt is 1 dp
      * (1 sp for text). The visible gap between two keys is twice the skin's inset. Row height stays
-     * the user's key-height setting, and the platform still adds a hairline outline where a dark
-     * control key would otherwise vanish.
+     * the user's key-height setting, and on a dark palette the function keys get a hairline outline
+     * unless the skin declares a border of its own.
      */
     fun tokensOf(palette: AppearancePalette): KeyboardDesignTokens =
         ensureControlSeparation(
@@ -56,14 +56,12 @@ internal object ImePalettes {
         )
 
     /**
-     * On a dark palette a control key can sit within a few luminance steps of the canvas and read
-     * as a hole rather than a key. The palette's own divider is then used as the key outline, which
-     * is a colour the appearance already declares, so no new colour is invented here.
+     * Dark function keys sit only a few steps off the canvas; an outline in the palette's own
+     * divider colour sets them apart from the letter keys. No new colour is invented here.
      */
     private fun ensureControlSeparation(tokens: KeyboardDesignTokens): KeyboardDesignTokens {
         val dark = luminance(tokens.background) < DARK_LUMINANCE
         if (!dark || tokens.controlKeyBorder != 0L || (tokens.controlKey shr 24) and 0xFFL != 0xFFL) return tokens
-        if (contrast(tokens.controlKey, tokens.background) >= MINIMUM_CONTROL_CONTRAST) return tokens
         return tokens.copy(controlKeyBorder = tokens.divider)
     }
 
@@ -76,23 +74,11 @@ internal object ImePalettes {
         return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
     }
 
-    private fun contrast(
-        a: Long,
-        b: Long,
-    ): Double {
-        val first = luminance(a)
-        val second = luminance(b)
-        return (maxOf(first, second) + 0.05) / (minOf(first, second) + 0.05)
-    }
-
     /** The iOS keycap's resting shadow opacity. */
     private const val KEY_SHADOW_OPACITY = 0.18f
 
     /** Canvas luminance below which the palette is treated as the dark theme. */
     private const val DARK_LUMINANCE = 0.2
-
-    /** Minimum fill contrast a control key needs against the canvas before it gets an outline. */
-    private const val MINIMUM_CONTROL_CONTRAST = 1.3
 
     /**
      * [colors] with the metrics of [appearance]: dynamic colour replaces the wallpaper-independent

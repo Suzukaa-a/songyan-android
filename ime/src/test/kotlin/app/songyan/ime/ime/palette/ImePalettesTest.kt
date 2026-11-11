@@ -205,6 +205,16 @@ class ImePalettesTest {
     }
 
     @Test
+    fun darkBuiltInsOutlineTheFunctionKeysInTheirDividerColour() {
+        for (preset in AppearancePresets.BUILT_IN) {
+            val tokens = ImePalettes.tokensOf(AppearancePalette.of(preset, true))
+            if (preset.skin.keycap.borderWidth > 0) continue
+            assertEquals(preset.id, tokens.divider, tokens.controlKeyBorder)
+            assertEquals(preset.id, 0L, tokens.keyBorder and 0xFF000000L)
+        }
+    }
+
+    @Test
     fun aBorderlessAppearancePaintsNoBorder() {
         val tokens = ImePalettes.of(AppearancePalette.of(AppearanceDocument.systemDefault, false)).tokens
         assertEquals(0, tokens.keyBorder)

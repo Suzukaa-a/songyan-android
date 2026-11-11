@@ -114,6 +114,11 @@ data class KeyboardDesignTokens(
      */
     val candidateChipPaddingDp: Float = 10f,
     /**
+     * Room a key label leaves at its keycap's sides, both together, before it is shrunk to fit (dp).
+     * Its own value, so a candidate bar's padding from an appearance file never shrinks key labels.
+     */
+    val keyLabelPaddingDp: Float = 10f,
+    /**
      * A candidate cell is never narrower than this (dp): the iOS candidate cell minimum. With the
      * 48 dp row height and no space between cells, a one-character candidate keeps a 44 x 48 dp
      * target that touches its neighbours, so no tap lands between two words.
@@ -176,6 +181,7 @@ data class KeyboardDesignTokens(
             candidateChipGapDp = 6f,
             candidateStartPaddingDp = 10f,
             candidateChipPaddingDp = 8f,
+            keyLabelPaddingDp = 8f,
             candidateMinChipWidthDp = 40f,
             popupCellWidthDp = 44f,
             popupCellHeightDp = 44f,

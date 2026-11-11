@@ -607,7 +607,7 @@ internal fun KeyboardView.fitLabels() {
                 fitSize(
                     labels[i],
                     labelTextSizeSp(key, labels[i]),
-                    capWidth - metrics.candidateChipPaddingDp * density,
+                    capWidth - metrics.keyLabelPaddingDp * density,
                 )
             }
         inkCentre(i)

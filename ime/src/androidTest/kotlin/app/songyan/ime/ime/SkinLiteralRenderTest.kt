@@ -10,6 +10,7 @@ import app.songyan.ime.appearance.SkinDefinition
 import app.songyan.ime.ime.palette.KeyboardAppearanceRegistry
 import app.songyan.ime.ime.palette.KeyboardAppearanceSettings
 import app.songyan.ime.ime.palette.KeyboardPalettes
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardPageKind
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -38,6 +39,8 @@ class SkinLiteralRenderTest {
         radius: Double,
         border: Double,
         inset: Double,
+        candidatePadding: Double = 10.0,
+        letters: Boolean = false,
     ): Drawn {
         val base = AppearancePresets.androidDefault.skin
         val light = base.variants.light!!
@@ -52,7 +55,13 @@ class SkinLiteralRenderTest {
             )
         KeyboardAppearanceRegistry.install(
             KeyboardAppearanceSettings(
-                document = AppearancePresets.androidDefault.replacing(skin),
+                document =
+                    AppearancePresets.androidDefault.replacing(skin).let { document ->
+                        val bar = document.candidateBar
+                        document.replacing(
+                            bar.copy(collapsed = bar.collapsed.copy(cellPaddingX = candidatePadding)),
+                        )
+                    },
                 dynamicColor = false,
                 forcedDark = false,
             ),
@@ -60,14 +69,18 @@ class SkinLiteralRenderTest {
         lateinit var view: KeyboardView
         instrumentation.runOnMainSync {
             view = KeyboardView(instrumentation.targetContext)
-            view.updateDial(
-                pad =
-                    requireNotNull(
-                        EditorDigitLayouts.pad(NumericEditorKind.PHONE, NumberInputFlags(), DateTimeFlags()),
-                    ),
-                enterLabel = "OK",
-                faces = KeyboardFaces(english = true, page = KeyboardPageKind.NUMERIC),
-            )
+            if (letters) {
+                view.update(BuiltinLayouts.qwerty26, shift = false, enterLabel = "OK")
+            } else {
+                view.updateDial(
+                    pad =
+                        requireNotNull(
+                            EditorDigitLayouts.pad(NumericEditorKind.PHONE, NumberInputFlags(), DateTimeFlags()),
+                        ),
+                    enterLabel = "OK",
+                    faces = KeyboardFaces(english = true, page = KeyboardPageKind.NUMERIC),
+                )
+            }
             view.measure(
                 View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(2000, View.MeasureSpec.AT_MOST),
@@ -117,5 +130,13 @@ class SkinLiteralRenderTest {
         assertEquals(round.view.palette.background, cornerPixel(round))
         assertNotEquals(square.view.palette.background, cornerPixel(square))
         assertTrue(square.view.metrics.keyRadiusDp == 0f)
+    }
+
+    @Test
+    fun theCandidateBarPaddingDoesNotShrinkKeyLabels() {
+        val narrow = draw(radius = 8.0, border = 0.0, inset = 2.5, candidatePadding = 4.0, letters = true)
+        val wide = draw(radius = 8.0, border = 0.0, inset = 2.5, candidatePadding = 24.0, letters = true)
+        assertEquals(24f, wide.view.metrics.candidateChipPaddingDp, 0.001f)
+        assertTrue(narrow.view.labelSizes.contentEquals(wide.view.labelSizes))
     }
 }

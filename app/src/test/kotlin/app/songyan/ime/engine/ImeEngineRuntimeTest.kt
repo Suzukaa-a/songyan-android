@@ -545,7 +545,9 @@ class ImeEngineRuntimeTest {
             runtime.refreshIfChanged()
             withTimeout(10_000) { while (callbacks.ready.get() < 1) delay(10) }
             assertEquals(1, created.size)
-            assertFalse(File(storage.rimeRoot, "engine-start.json").exists())
+            // The marker is cleared after readiness is reported, so readiness never waits on it.
+            val marker = File(storage.rimeRoot, "engine-start.json")
+            withTimeout(10_000) { while (marker.exists()) delay(10) }
             runtime.close()
         }
 }

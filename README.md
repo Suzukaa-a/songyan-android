@@ -2,15 +2,16 @@
 
 [简体中文](README.zh-CN.md)
 
-Songyan is a Chinese keyboard for Android built on the [RIME](https://rime.im) input method engine.
-It runs any RIME input scheme you give it and keeps everything on your phone. It shares its engine,
+Songyan is an Android keyboard built on the [RIME](https://rime.im) input method engine. It types in
+whatever your RIME input scheme types: pinyin and double pinyin, zhuyin, cangjie, Cantonese,
+Japanese and more. Everything stays on your phone. It shares its engine,
 schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/songyan-ios).
 
 ## Install
 
 1. Download the APK from [Releases](https://github.com/Suzukaa-a/songyan-android/releases):
    `universal` works on every phone, `arm64-v8a` is smaller and fits almost all recent ones.
-   Android 8.0 or later.
+   Android 11 or later.
 2. Open Songyan. The guide walks you through picking an input scheme and turning the keyboard on
    (Settings > System > Keyboard > On-screen keyboard; the path varies by phone).
 
@@ -23,8 +24,8 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
   kana pads. Edit any layout, or build your own pages for numbers and symbols.
 - **Simplified or Traditional output** (Taiwan and Hong Kong standards too), switchable per input
   method.
-- **Make it look your own:** dynamic color, built-in appearances, and appearance files that work on
-  both Android and iOS.
+- **Make it look your own:** dynamic color, built-in appearances, and your own made in the
+  [appearance editor](https://suzukaa-a.github.io/songyan-themes/). Appearance files work on both Android and iOS.
 - **Fits big and small screens:** one-handed mode, adjustable key height, and on wide screens a
   split keyboard with your own split width and side margins.
 - **Fast editing:** hold space and slide to move the cursor, or to move through the spelling you are

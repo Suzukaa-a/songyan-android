@@ -8,6 +8,7 @@ import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.storage.SourceScheme
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,6 +32,9 @@ class CompanionOrderTest {
     /** Pretends to be librime: a schema compiles by being copied into the build directory. */
     private inner class CompilingRunner : RimeDeployRunner {
         val compiled = mutableListOf<String>()
+
+        /** Called after each compile, the way a switch to another package can land mid-run. */
+        var onCompile: (() -> Unit)? = null
 
         override suspend fun deployFull(
             sharedDataDir: File,
@@ -67,6 +71,7 @@ class CompanionOrderTest {
                     override suspend fun deploySchema(file: File): Boolean {
                         compiled += file.name.removeSuffix(".schema.yaml")
                         file.copyTo(File(build, file.name), overwrite = true)
+                        onCompile?.invoke()
                         return true
                     }
 
@@ -141,6 +146,34 @@ class CompanionOrderTest {
             assertTrue("beta's layouts are not compiled again", runner.compiled.none { it in betaLayouts })
             assertEquals(setOf("alpha", "beta", "gamma"), layoutSources(complete))
             assertFalse(workDir.exists())
+        }
+
+    /**
+     * Switching to another package cancels the completion of this one's layouts. The switch waits
+     * for the completion to stop, so it must stop at the next layout rather than run to the end, and
+     * the next attempt still adds only the missing layouts.
+     */
+    @Test
+    fun aCancelledCompletionStopsAtOnceAndTheNextOneStillResumes() =
+        runTest {
+            storage.keyboardSchemaFile.writeText("beta")
+            val first = coordinator.installSource(staged("alpha", "beta", "gamma")).getOrThrow()
+            val workDir = storage.deployWorkDir(first.sourceId)
+            var switched = false
+            runner.onCompile = { switched = true }
+
+            val cancelled = withContext(DeployCancellation { switched }) { coordinator.completeCompanions() }
+            runner.onCompile = null
+
+            assertTrue(cancelled.isFailure)
+            assertEquals(1, runner.compiled.count { it.startsWith("keyboard_") })
+            assertTrue(coordinator.companionsPending())
+            assertEquals(listOf("beta"), PendingWork.read(workDir, first.generation))
+
+            val complete = coordinator.completeCompanions().getOrThrow()!!
+
+            assertEquals(6, runner.compiled.count { it.startsWith("keyboard_") })
+            assertEquals(setOf("alpha", "beta", "gamma"), layoutSources(complete))
         }
 
     @Test

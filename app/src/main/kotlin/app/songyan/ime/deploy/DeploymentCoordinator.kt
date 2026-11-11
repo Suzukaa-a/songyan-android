@@ -560,12 +560,21 @@ class DeploymentCoordinator(
         val workDir = storage.deployWorkDir(manifest.sourceId)
         val timer = DeployTimer("deploy " + manifest.sourceId + if (allCompanions) " (all layouts)" else "")
         var keepWorkDir = false
+        // Set once this run continues a kept directory: a cancelled run leaves it as it found it, so
+        // the next attempt still only adds the missing layouts instead of starting over.
+        var keepForNextAttempt: (() -> Unit)? = null
         try {
             val done = resume?.takeIf { it.stamp == stamp }?.let { PendingWork.read(workDir, it.generation) }
             PendingWork.clear(workDir)
             // Feature settings changed since the first part: the kept directory no longer matches.
             val kept = done?.let { linkFeatureFiles(workDir) }
             val resumed = kept != null && effectiveRevision(manifest, kept.settings, config) == resume?.revision
+            if (resumed && done != null && resume != null) {
+                keepForNextAttempt = {
+                    PendingWork.write(workDir, resume.generation, done)
+                    keepWorkDir = true
+                }
+            }
             val features =
                 if (resumed && kept != null) {
                     kept
@@ -675,6 +684,12 @@ class DeploymentCoordinator(
                 keepWorkDir = true
             }
             return record
+        } catch (e: CancellationException) {
+            keepForNextAttempt?.invoke()
+            throw e
+        } catch (e: InterruptedException) {
+            keepForNextAttempt?.invoke()
+            throw e
         } finally {
             // The published generation holds its own copy of the build; only a generation still
             // waiting for its other layouts keeps the directory, for the deployment completing it.
@@ -793,6 +808,11 @@ class DeploymentCoordinator(
         reuseCompanions: List<String>?,
     ) {
         val manifest = scope.manifest
+        // The engine work runs non-cancellable so native teardown always completes; the request's
+        // own cancellation is still honoured between steps, so a switch to another package does not
+        // wait for layouts that are about to be thrown away.
+        val cancellation = coroutineContext[DeployCancellation]
+        cancellation?.check()
         val changed =
             if (reuseCompanions != null) {
                 emptySet()
@@ -813,6 +833,7 @@ class DeploymentCoordinator(
                 scope.sourceDir,
                 scope.workDir,
                 scope.companionSchemas,
+                cancelled = { cancellation?.isCancelled == true },
                 packageSchemaIds = manifest.schemaIds,
                 timer = scope.timer,
                 reuse = reuseCompanions.orEmpty().toSet(),

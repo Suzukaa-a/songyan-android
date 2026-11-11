@@ -511,6 +511,8 @@ class DeployPipeline(
 internal class DeployCancellation(
     private val cancelled: () -> Boolean,
 ) : AbstractCoroutineContextElement(Key) {
+    val isCancelled: Boolean get() = cancelled()
+
     fun check() {
         if (cancelled()) throw DeployCancelledException()
     }

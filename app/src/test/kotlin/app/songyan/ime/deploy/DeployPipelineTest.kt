@@ -111,8 +111,20 @@ class DeployPipelineTest {
                             cancelled = true
                             false
                         }
-                        return runner.deployFull(sharedDataDir, userDataDir, appName, appVersion, afterDeploy).also {
-                            assertTrue(it.success)
+                        // The native run always gets to its end; the cancellation may then stop the
+                        // work that follows it on the engine, before anything is published.
+                        try {
+                            return runner
+                                .deployFull(
+                                    sharedDataDir,
+                                    userDataDir,
+                                    appName,
+                                    appVersion,
+                                    afterDeploy,
+                                ).also {
+                                    assertTrue(it.success)
+                                }
+                        } finally {
                             assertTrue(userDataDir.isDirectory)
                             finished = true
                         }

@@ -15,6 +15,7 @@ import app.songyan.ime.packages.Prediction
 import app.songyan.ime.packages.RecipeInstallError
 import app.songyan.ime.packages.TypoCorrection
 import java.io.File
+import kotlin.coroutines.coroutineContext
 
 /**
  * Applies [EngineFeatureSettings] to the input methods of one deployment, on its still open engine.
@@ -42,6 +43,8 @@ internal class EngineFeatures(
         val report = LinkedHashMap<String, EngineFeatureReport.SchemaFeatures>()
         val changed = LinkedHashSet<String>()
         for (id in schemaIds.distinct()) {
+            // A switch to another package must not wait for every input method of this one.
+            coroutineContext[DeployCancellation]?.check()
             if (CompactSchemaAdapter.isGeneratedCompanionID(id)) continue
             val compiledFile = File(engine.compiledDir, "$id.schema.yaml")
             if (!compiledFile.isFile) continue

@@ -79,7 +79,7 @@ jobs:
   # Engine replay and editor behaviour need a real device runtime. GitHub's hosted Linux runners
   # only accelerate x86_64 emulators (an arm64 image there is fully emulated and far too slow), so
   # behaviour is tested on x86_64; every ABI's engine, arm64-v8a included, is built and inspected by
-  # the check job. API 29 is the minimum supported version.
+  # the check job. API 30 is the minimum supported version.
   emulator:
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -87,7 +87,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - api-level: 29
+          - api-level: 30
             target: default
           - api-level: 34
             target: google_apis

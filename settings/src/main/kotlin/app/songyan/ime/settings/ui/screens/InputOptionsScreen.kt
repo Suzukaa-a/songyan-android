@@ -79,6 +79,8 @@ fun InputOptionsScreen(
     onWidePositionChanged: (String) -> Unit = {},
     onWidePositionCustomChanged: (Int) -> Unit = {},
     onSplitModeChanged: (String) -> Unit = {},
+    onSplitWidthChanged: (Int) -> Unit = {},
+    onSideMarginChanged: (Int) -> Unit = {},
     onReadingPlacementChanged: (String) -> Unit = {},
     candidateTextSize: CandidateTextSize,
     onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
@@ -118,6 +120,8 @@ fun InputOptionsScreen(
                 onWidePosition = onWidePositionChanged,
                 onWidePositionCustom = onWidePositionCustomChanged,
                 onSplitMode = onSplitModeChanged,
+                onSplitWidth = onSplitWidthChanged,
+                onSideMargin = onSideMarginChanged,
             )
             SettingsRow(
                 title = stringResource(R.string.features_title),

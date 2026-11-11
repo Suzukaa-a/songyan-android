@@ -44,6 +44,8 @@ data class KeyboardFeelState(
     val widePosition: String = "center",
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
+    val splitWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
+    val sideMarginDp: Int = 0,
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
 
@@ -62,7 +64,39 @@ fun KeyboardFeelSection(
     onWidePosition: (String) -> Unit = {},
     onWidePositionCustom: (Int) -> Unit = {},
     onSplitMode: (String) -> Unit = {},
+    onSplitWidth: (Int) -> Unit = {},
+    onSideMargin: (Int) -> Unit = {},
 ) {
+    var splitWidthOpen by rememberSaveable { mutableStateOf(false) }
+    var sideMarginOpen by rememberSaveable { mutableStateOf(false) }
+    if (splitWidthOpen) {
+        ValueSliderDialog(
+            title = stringResource(R.string.options_split_width_title),
+            range = SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP,
+            step = SettingsPreferences.SPLIT_WIDTH_STEP_DP,
+            initial = state.splitWidthDp,
+            label = { stringResource(R.string.options_split_width_value, it) },
+            onConfirm = onSplitWidth,
+            onDismiss = { splitWidthOpen = false },
+            resetLabel =
+                stringResource(R.string.options_reset_default)
+                    .takeIf { state.splitWidthDp != SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP },
+            onReset = { onSplitWidth(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP) },
+        )
+    }
+    if (sideMarginOpen) {
+        ValueSliderDialog(
+            title = stringResource(R.string.options_side_margin_title),
+            range = 0..SettingsPreferences.SIDE_MARGIN_MAX_DP,
+            step = SettingsPreferences.SIDE_MARGIN_STEP_DP,
+            initial = state.sideMarginDp,
+            label = { stringResource(R.string.options_side_margin_value, it) },
+            onConfirm = onSideMargin,
+            onDismiss = { sideMarginOpen = false },
+            resetLabel = stringResource(R.string.options_reset_default).takeIf { state.sideMarginDp != 0 },
+            onReset = { onSideMargin(0) },
+        )
+    }
     var bottomGapOpen by rememberSaveable { mutableStateOf(false) }
     var longPressOpen by rememberSaveable { mutableStateOf(false) }
     if (bottomGapOpen) {
@@ -188,6 +222,23 @@ fun KeyboardFeelSection(
                 onClick = { onSplitMode(mode) },
             )
         }
+        if (state.splitMode != "off") {
+            SettingsRow(
+                title = stringResource(R.string.options_split_width_title),
+                subtitle = stringResource(R.string.options_split_width_subtitle, state.splitWidthDp),
+                onClick = { splitWidthOpen = true },
+            )
+        }
+        SettingsRow(
+            title = stringResource(R.string.options_side_margin_title),
+            subtitle =
+                if (state.sideMarginDp == 0) {
+                    stringResource(R.string.options_side_margin_none)
+                } else {
+                    stringResource(R.string.options_side_margin_value, state.sideMarginDp)
+                },
+            onClick = { sideMarginOpen = true },
+        )
 
         SectionHeader(stringResource(R.string.options_key_flick_title))
         Text(

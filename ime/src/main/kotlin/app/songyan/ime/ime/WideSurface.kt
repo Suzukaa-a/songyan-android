@@ -39,6 +39,21 @@ internal object WideSurface {
     /** The key area never grows wider than this when it is not split (dp). */
     const val CONTENT_MAXIMUM_DP = 600.0
 
+    /** The key area never gets narrower than this (dp), whatever side margin is chosen. */
+    const val MINIMUM_KEY_AREA_DP = 280.0
+
+    /**
+     * The blank margin (dp) kept on each side of a [surfaceDp] wide surface for a [requestedDp] choice:
+     * cut so the key area keeps [MINIMUM_KEY_AREA_DP], and zero on a surface already that narrow.
+     */
+    fun sideMargin(
+        surfaceDp: Double,
+        requestedDp: Int,
+    ): Double {
+        if (!surfaceDp.isFinite()) return 0.0
+        return requestedDp.toDouble().coerceAtMost((surfaceDp - MINIMUM_KEY_AREA_DP) / 2).coerceAtLeast(0.0)
+    }
+
     /** The split that applies to a layout's own [split] under [mode], or null for an unsplit keyboard. */
     fun effectiveSplit(
         split: LayoutSplitConfiguration?,
@@ -58,15 +73,31 @@ internal object WideSurface {
 
     /**
      * The key area on a [surfaceDp] wide surface. A split keyboard takes the whole surface (its halves
-     * stay within thumb reach through the gutter); an unsplit one is capped and docked.
+     * stay within thumb reach through the gutter); an unsplit one is capped and docked. The side margin
+     * comes off the surface first, so the split decision and the cap see the width the keys really get
+     * and a margin can keep a keyboard from splitting; the insets then include the margin.
      */
     fun plan(
         surfaceDp: Double,
         split: LayoutSplitConfiguration?,
         dock: KeyboardContentDock,
         capDp: Double = CONTENT_MAXIMUM_DP,
+        automaticAboveDp: Double = LayoutSplitConfiguration.AUTOMATIC_MAXIMUM_WIDTH,
+        sideMarginDp: Int = 0,
     ): KeyboardWideContentPlan {
-        if (split?.isActive(surfaceDp) == true) return KeyboardWideContentPlan.inactive(surfaceDp)
-        return KeyboardWideContentPolicy.plan(surfaceDp, capDp, dock)
+        val margin = sideMargin(surfaceDp, sideMarginDp)
+        val inner = surfaceDp - 2 * margin
+        val plan =
+            if (split?.isActive(inner, automaticAboveDp) == true) {
+                KeyboardWideContentPlan.inactive(inner)
+            } else {
+                KeyboardWideContentPolicy.plan(inner, capDp, dock)
+            }
+        if (margin == 0.0) return plan
+        return plan.copy(
+            active = true,
+            leadingInset = plan.leadingInset + margin,
+            trailingInset = plan.trailingInset + margin,
+        )
     }
 }

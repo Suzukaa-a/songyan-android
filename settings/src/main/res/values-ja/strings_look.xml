@@ -49,6 +49,13 @@
     <string name="options_split_on">大画面で分割する</string>
     <string name="options_split_on_body">すべてのキー配列を左右に分割します。</string>
     <string name="options_split_off">分割しない</string>
+    <string name="options_split_width_title">自動分割の幅</string>
+    <string name="options_split_width_subtitle">キーボードの幅が %1$d dp を超えると分割します</string>
+    <string name="options_split_width_value">%1$d dp</string>
+    <string name="options_side_margin_title">左右の余白</string>
+    <string name="options_side_margin_none">なし</string>
+    <string name="options_side_margin_value">%1$d dp</string>
+    <string name="options_reset_default">初期設定に戻す</string>
     <string name="keyboards_pages_section">キー配列とページ</string>
     <string name="composition_title">ページの組み合わせ</string>
     <string name="composition_entry_body">このキーボードで使うキー配列と、123、記号、ABC のページを選びます</string>

@@ -81,6 +81,30 @@ class SettingsPreferencesTest {
         }
 
     @Test
+    fun theSplitWidthAndSideMarginHaveTheirDefaultsAndStoreTheChoice() =
+        runTest {
+            val preferences = InMemorySettingsPreferences()
+            assertEquals(600, preferences.splitWidthDp.first())
+            assertEquals(0, preferences.sideMarginDp.first())
+            preferences.setSplitWidthDp(840)
+            preferences.setSideMarginDp(24)
+            assertEquals(840, preferences.splitWidthDp.first())
+            assertEquals(24, preferences.sideMarginDp.first())
+        }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsASplitWidthOffTheStep() =
+        runTest {
+            InMemorySettingsPreferences().setSplitWidthDp(610)
+        }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsASideMarginOutOfRange() =
+        runTest {
+            InMemorySettingsPreferences().setSideMarginDp(100)
+        }
+
+    @Test
     fun theSwitchKeyIsOffUntilTheUserTurnsItOn() =
         runTest {
             val preferences = InMemorySettingsPreferences()

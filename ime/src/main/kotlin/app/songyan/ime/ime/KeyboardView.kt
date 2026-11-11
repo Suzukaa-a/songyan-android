@@ -95,6 +95,22 @@ class KeyboardView(
             relayout()
         }
 
+    /** The key area width (dp) above which an automatic split shows. */
+    var splitWidthDp: Int = KeyboardGeometry.SPLIT_WIDTH_DEFAULT_DP
+        set(value) {
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
+    /** The blank margin (dp) on each side of the key area; the candidate bar and toolbar keep the full width. */
+    var sideMarginDp: Int = 0
+        set(value) {
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
     /** Whether pages split into two halves on a wide surface. */
     var splitMode: SplitMode = SplitMode.LAYOUT
         set(value) {

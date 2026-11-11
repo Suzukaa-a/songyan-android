@@ -59,12 +59,19 @@ data class LayoutSplitConfiguration(
         ALWAYS,
     }
 
-    /** Whether this split really shows at [width]. [Activation.ALWAYS] ignores the width rule. */
-    fun isActive(width: Double): Boolean =
+    /**
+     * Whether this split really shows at [width]. [Activation.ALWAYS] ignores the width rule;
+     * [Activation.AUTOMATIC] splits above [automaticAboveDp], which the user's device setting can move
+     * without touching the layout file.
+     */
+    fun isActive(
+        width: Double,
+        automaticAboveDp: Double = AUTOMATIC_MAXIMUM_WIDTH,
+    ): Boolean =
         when (activation) {
             Activation.OFF -> false
             Activation.ALWAYS -> true
-            Activation.AUTOMATIC -> width.isFinite() && width > AUTOMATIC_MAXIMUM_WIDTH
+            Activation.AUTOMATIC -> width.isFinite() && width > automaticAboveDp
         }
 
     /**
@@ -72,8 +79,11 @@ data class LayoutSplitConfiguration(
      * marked [Activation.ALWAYS] in memory only, so an inner key area narrowed by rails cannot make
      * the automatic rule switch the split off a second time.
      */
-    fun resolvedForWidth(width: Double): LayoutSplitConfiguration? {
-        if (!isActive(width)) return null
+    fun resolvedForWidth(
+        width: Double,
+        automaticAboveDp: Double = AUTOMATIC_MAXIMUM_WIDTH,
+    ): LayoutSplitConfiguration? {
+        if (!isActive(width, automaticAboveDp)) return null
         return copy(activation = Activation.ALWAYS)
     }
 

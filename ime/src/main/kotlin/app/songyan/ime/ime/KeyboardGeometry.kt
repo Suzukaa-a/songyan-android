@@ -123,6 +123,23 @@ object KeyboardGeometry {
     fun clampBottomGapDp(value: Int): Int =
         (value.coerceIn(0, BOTTOM_GAP_MAX_DP) / BOTTOM_GAP_STEP_DP) * BOTTOM_GAP_STEP_DP
 
+    /** The width (dp) above which the automatic split shows is chosen in this range and step. */
+    const val SPLIT_WIDTH_MIN_DP = 400
+    const val SPLIT_WIDTH_MAX_DP = 1200
+    const val SPLIT_WIDTH_STEP_DP = 20
+    const val SPLIT_WIDTH_DEFAULT_DP = 600
+
+    /** The blank margin (dp) on each side of the key area is chosen in this range and step. */
+    const val SIDE_MARGIN_MAX_DP = 96
+    const val SIDE_MARGIN_STEP_DP = 4
+
+    fun clampSplitWidthDp(value: Int): Int =
+        (value.coerceIn(SPLIT_WIDTH_MIN_DP, SPLIT_WIDTH_MAX_DP) - SPLIT_WIDTH_MIN_DP) / SPLIT_WIDTH_STEP_DP *
+            SPLIT_WIDTH_STEP_DP + SPLIT_WIDTH_MIN_DP
+
+    fun clampSideMarginDp(value: Int): Int =
+        value.coerceIn(0, SIDE_MARGIN_MAX_DP) / SIDE_MARGIN_STEP_DP * SIDE_MARGIN_STEP_DP
+
     /**
      * The extra empty band below the key area for a [requestedDp] choice. On a short window it is
      * cut to what is left of [shortKeyboardMaxDp] after the bar, the rows at [pitchDp] and the

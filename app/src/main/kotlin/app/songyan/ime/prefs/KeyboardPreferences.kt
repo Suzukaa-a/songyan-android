@@ -216,6 +216,20 @@ class KeyboardPreferences(
             .map { it[KEY_SPLIT_MODE] ?: DEFAULT_SPLIT_MODE }
             .distinctUntilChanged()
 
+    /** Key area width in dp above which the automatic split shows; 400..1200 in steps of 20, 600 by default. */
+    val splitWidthDp: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { clampSplitWidth(it[KEY_SPLIT_WIDTH] ?: SPLIT_WIDTH_DEFAULT_DP) }
+            .distinctUntilChanged()
+
+    /** Blank margin in dp on each side of the key area; 0..96 in steps of 4, 0 by default. */
+    val sideMarginDp: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { clampSideMargin(it[KEY_SIDE_MARGIN] ?: 0) }
+            .distinctUntilChanged()
+
     /** "row" (own row above the candidates) / "inline" (start of the candidate row): 14 / 18-key readings. */
     val readingPlacement: Flow<String> =
         appContext.keyboardDataStore.data
@@ -358,6 +372,14 @@ class KeyboardPreferences(
     suspend fun setKeyHeight(value: String) {
         require(value in KEY_HEIGHTS) { "unknown key height: $value" }
         appContext.keyboardDataStore.edit { it[KEY_HEIGHT] = value }
+    }
+
+    suspend fun setSplitWidthDp(value: Int) {
+        appContext.keyboardDataStore.edit { it[KEY_SPLIT_WIDTH] = clampSplitWidth(value) }
+    }
+
+    suspend fun setSideMarginDp(value: Int) {
+        appContext.keyboardDataStore.edit { it[KEY_SIDE_MARGIN] = clampSideMargin(value) }
     }
 
     suspend fun setBottomGapDp(value: Int) {
@@ -506,6 +528,12 @@ class KeyboardPreferences(
         const val DEFAULT_KEY_HEIGHT = "standard"
         const val BOTTOM_GAP_MAX_DP = 48
         const val BOTTOM_GAP_STEP_DP = 4
+        const val SPLIT_WIDTH_MIN_DP = 400
+        const val SPLIT_WIDTH_MAX_DP = 1200
+        const val SPLIT_WIDTH_STEP_DP = 20
+        const val SPLIT_WIDTH_DEFAULT_DP = 600
+        const val SIDE_MARGIN_MAX_DP = 96
+        const val SIDE_MARGIN_STEP_DP = 4
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50
@@ -513,6 +541,13 @@ class KeyboardPreferences(
         /** Snaps to the range and the step, so a hand-edited store cannot draw an odd band. */
         fun clampBottomGap(value: Int): Int =
             value.coerceIn(0, BOTTOM_GAP_MAX_DP) / BOTTOM_GAP_STEP_DP * BOTTOM_GAP_STEP_DP
+
+        fun clampSplitWidth(value: Int): Int =
+            (value.coerceIn(SPLIT_WIDTH_MIN_DP, SPLIT_WIDTH_MAX_DP) - SPLIT_WIDTH_MIN_DP) / SPLIT_WIDTH_STEP_DP *
+                SPLIT_WIDTH_STEP_DP + SPLIT_WIDTH_MIN_DP
+
+        fun clampSideMargin(value: Int): Int =
+            value.coerceIn(0, SIDE_MARGIN_MAX_DP) / SIDE_MARGIN_STEP_DP * SIDE_MARGIN_STEP_DP
 
         fun clampLongPress(value: Int): Int =
             (value.coerceIn(LONG_PRESS_MIN_MS, LONG_PRESS_MAX_MS) - LONG_PRESS_MIN_MS) / LONG_PRESS_STEP_MS *
@@ -543,6 +578,8 @@ class KeyboardPreferences(
         private val KEY_KANA12_FLICK_ONLY = booleanPreferencesKey("kana12_flick_only")
         private val KEY_HEIGHT = stringPreferencesKey("key_height")
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
+        private val KEY_SPLIT_WIDTH = intPreferencesKey("split_width_dp")
+        private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_dp")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")
 

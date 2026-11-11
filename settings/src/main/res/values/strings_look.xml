@@ -50,6 +50,13 @@
     <string name="options_split_on">Split on large screens</string>
     <string name="options_split_on_body">Every layout splits into a left and a right half.</string>
     <string name="options_split_off">Never split</string>
+    <string name="options_split_width_title">Split width</string>
+    <string name="options_split_width_subtitle">Splits when the keyboard is wider than %1$d dp</string>
+    <string name="options_split_width_value">%1$d dp</string>
+    <string name="options_side_margin_title">Side margins</string>
+    <string name="options_side_margin_none">None</string>
+    <string name="options_side_margin_value">%1$d dp</string>
+    <string name="options_reset_default">Reset to default</string>
     <string name="keyboards_pages_section">Layouts and pages</string>
     <string name="composition_title">Page pairing</string>
     <string name="composition_entry_body">Choose the layout and the 123, symbol and ABC pages of this keyboard</string>

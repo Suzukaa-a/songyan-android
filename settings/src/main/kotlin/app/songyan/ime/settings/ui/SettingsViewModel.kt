@@ -180,6 +180,8 @@ class SettingsViewModel(
         collectPreference(preferences.keyFeedback) { copy(keyFeedback = it) }
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
         collectPreference(preferences.bottomGapDp) { copy(keyboardFeel = keyboardFeel.copy(bottomGapDp = it)) }
+        collectPreference(preferences.splitWidthDp) { copy(keyboardFeel = keyboardFeel.copy(splitWidthDp = it)) }
+        collectPreference(preferences.sideMarginDp) { copy(keyboardFeel = keyboardFeel.copy(sideMarginDp = it)) }
         collectPreference(
             preferences.longPressDelayMs,
         ) { copy(keyboardFeel = keyboardFeel.copy(longPressDelayMs = it)) }
@@ -310,6 +312,24 @@ class SettingsViewModel(
             return
         }
         viewModelScope.launch { preferences.setBottomGapDp(value) }
+    }
+
+    fun setSplitWidthDp(value: Int) {
+        if (value !in SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP ||
+            (value - SettingsPreferences.SPLIT_WIDTH_MIN_DP) % SettingsPreferences.SPLIT_WIDTH_STEP_DP != 0
+        ) {
+            return
+        }
+        viewModelScope.launch { preferences.setSplitWidthDp(value) }
+    }
+
+    fun setSideMarginDp(value: Int) {
+        if (value !in 0..SettingsPreferences.SIDE_MARGIN_MAX_DP ||
+            value % SettingsPreferences.SIDE_MARGIN_STEP_DP != 0
+        ) {
+            return
+        }
+        viewModelScope.launch { preferences.setSideMarginDp(value) }
     }
 
     fun setShowSwitchKey(value: Boolean) {

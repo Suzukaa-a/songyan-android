@@ -62,6 +62,12 @@ interface KeyboardPreferencesSource {
     /** [SplitMode.wire]: whether layouts split into two halves on a wide surface. */
     val splitMode: Flow<String> get() = flowOf(SplitMode.LAYOUT.wire)
 
+    /** Key area width in dp above which the automatic split shows, [KeyboardGeometry.clampSplitWidthDp] steps. */
+    val splitWidthDp: Flow<Int> get() = flowOf(KeyboardGeometry.SPLIT_WIDTH_DEFAULT_DP)
+
+    /** Blank margin in dp on each side of the key area, [KeyboardGeometry.clampSideMarginDp] steps. */
+    val sideMarginDp: Flow<Int> get() = flowOf(0)
+
     /** [ReadingPlacement.wire]: where 14 / 18-key readings show while composing. */
     val readingPlacement: Flow<String> get() = flowOf(ReadingPlacement.ROW.wire)
 

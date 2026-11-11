@@ -1,7 +1,6 @@
 package app.songyan.ime.ime
 
 import android.os.LocaleList
-import app.songyan.ime.candidate.KeyboardWideContentPlan
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_HINT_TEXT_SIZE_SP
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_LABEL_TEXT_SIZE_SP
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_SYLLABLE_TEXT_SIZE_SP
@@ -178,24 +177,37 @@ internal class ContentFrame(
  * The key area of a view [width] px wide. Only tablets (and unfolded foldables) cap and dock it
  * at 600 dp: a phone turned sideways has no room to waste, and a centred narrow keyboard there reads
  * as a floating slab. A split keyboard takes the whole width, its halves kept within reach by the gutter.
+ * The user's side margin applies on every device and page, before the split and cap decisions. In
+ * one-handed mode this view is already the narrowed column, so the margin comes off that column
+ * and the minimum key area still holds.
  */
 internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): ContentFrame {
     val surfaceDp = width / density.toDouble()
     val tablet = resources.configuration.smallestScreenWidthDp >= WideSurface.PHONE_MAXIMUM_DP
     val plan =
-        if (tablet) {
-            WideSurface.plan(surfaceDp, split, dock)
-        } else {
-            KeyboardWideContentPlan.inactive(surfaceDp)
-        }
+        WideSurface.plan(
+            surfaceDp,
+            split,
+            dock,
+            capDp = if (tablet) WideSurface.CONTENT_MAXIMUM_DP else Double.POSITIVE_INFINITY,
+            automaticAboveDp = splitWidthDp.toDouble(),
+            sideMarginDp = sideMarginDp,
+        )
     return ContentFrame(plan.leadingInset.toFloat() * density, plan.contentWidth.toFloat() * density)
 }
 
-/** The split that applies to the page being drawn at the current width, or null for an unsplit keyboard. */
-internal fun KeyboardView.activeSplit(): LayoutSplitConfiguration? =
-    WideSurface
+/**
+ * The split that applies to the page being drawn at the current width, or null for an unsplit keyboard.
+ * The width is the key area's, after the side margin. The returned copy is resolved so the row solvers,
+ * which see an even narrower inner width, do not apply the default threshold a second time.
+ */
+internal fun KeyboardView.activeSplit(): LayoutSplitConfiguration? {
+    val surfaceDp = width / density.toDouble()
+    val keyAreaDp = surfaceDp - 2 * WideSurface.sideMargin(surfaceDp, sideMarginDp)
+    return WideSurface
         .effectiveSplit(layout?.split, splitMode)
-        ?.takeIf { it.isActive(width / density.toDouble()) }
+        ?.resolvedForWidth(keyAreaDp, splitWidthDp.toDouble())
+}
 
 /**
  * The key columns of a split keyboard: the space bar of the footer becomes one half under each

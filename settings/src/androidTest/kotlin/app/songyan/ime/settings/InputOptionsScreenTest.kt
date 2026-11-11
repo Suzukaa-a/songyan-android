@@ -35,6 +35,8 @@ class InputOptionsScreenTest {
     private var placement = "row"
     private var longPress: Int? = null
     private var bottomGap = -1
+    private var splitWidth = -1
+    private var sideMargin = -1
     private var feel = KeyboardFeelState()
     private var engineOptions = EngineOptionsUiState()
     private val engineChanges = mutableListOf<Pair<String, Boolean>>()
@@ -55,6 +57,8 @@ class InputOptionsScreenTest {
                     keyboardFeel = feel.copy(readingPlacement = placement),
                     onLongPressDelayChanged = { longPress = it },
                     onBottomGapChanged = { bottomGap = it },
+                    onSplitWidthChanged = { splitWidth = it },
+                    onSideMarginChanged = { sideMargin = it },
                     onReadingPlacementChanged = { placement = it },
                     onKeyHeightChanged = {},
                     onOneHandChanged = {},
@@ -217,5 +221,36 @@ class InputOptionsScreenTest {
         compose.onNodeWithText(str(R.string.options_bottom_gap_title)).performScrollTo().performClick()
         compose.onNode(hasText(str(R.string.action_ok)) and hasAnyAncestor(isDialog())).performClick()
         assertEquals(0, bottomGap)
+    }
+
+    @Test
+    fun theSplitWidthRowShowsItsValueAndHidesWhenSplittingIsOff() {
+        feel = KeyboardFeelState(splitMode = "layout", splitWidthDp = 840)
+        show()
+        compose
+            .onNodeWithText(str(R.string.options_split_width_subtitle, 840))
+            .performScrollTo()
+            .assertExists()
+        compose.onNodeWithText(str(R.string.options_split_width_title)).performScrollTo().performClick()
+        compose.onNode(hasText(str(R.string.action_ok)) and hasAnyAncestor(isDialog())).performClick()
+        assertEquals(840, splitWidth)
+        compose.onNode(hasText(str(R.string.options_reset_default)) and hasAnyAncestor(isDialog())).assertDoesNotExist()
+    }
+
+    @Test
+    fun theSplitWidthRowIsGoneWhileSplittingIsOff() {
+        feel = KeyboardFeelState(splitMode = "off")
+        show()
+        compose.onNodeWithText(str(R.string.options_split_width_title)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theSideMarginRowSaysNoneByDefaultAndResetsToZero() {
+        feel = KeyboardFeelState(sideMarginDp = 24)
+        show()
+        compose.onNodeWithText(str(R.string.options_side_margin_value, 24)).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.options_side_margin_title)).performScrollTo().performClick()
+        compose.onNode(hasText(str(R.string.options_reset_default)) and hasAnyAncestor(isDialog())).performClick()
+        assertEquals(0, sideMargin)
     }
 }

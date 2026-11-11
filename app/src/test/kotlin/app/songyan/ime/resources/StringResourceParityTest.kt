@@ -173,6 +173,8 @@ class StringResourceParityTest {
                 "settings/layout_jump_target",
                 "settings/learning_backup_detail",
                 "settings/options_bottom_gap_value",
+                "settings/options_side_margin_value",
+                "settings/options_split_width_value",
                 "settings/options_percent",
                 "settings/options_wide_position_value",
                 "settings/quick_content_phrases_counter",

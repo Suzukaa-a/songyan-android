@@ -50,6 +50,13 @@
     <string name="options_split_on">大螢幕上拆分</string>
     <string name="options_split_on_body">所有佈局都分成左右兩半。</string>
     <string name="options_split_off">不拆分</string>
+    <string name="options_split_width_title">自動拆分寬度</string>
+    <string name="options_split_width_subtitle">鍵盤寬於 %1$d dp 時拆分</string>
+    <string name="options_split_width_value">%1$d dp</string>
+    <string name="options_side_margin_title">兩側留白</string>
+    <string name="options_side_margin_none">無</string>
+    <string name="options_side_margin_value">%1$d dp</string>
+    <string name="options_reset_default">恢復預設</string>
     <string name="keyboards_pages_section">佈局與頁面</string>
     <string name="composition_title">頁面搭配</string>
     <string name="composition_entry_body">選擇這個鍵盤用的佈局，以及 123、符號和 ABC 頁面</string>

@@ -233,5 +233,24 @@ class LayoutSplitConfigurationTest {
         assertNotNull(automatic.resolvedForWidth(601.0))
     }
 
+    @Test
+    fun theAutomaticThresholdIsTheUsersAndEqualWidthDoesNotSplit() {
+        val automatic = LayoutSplitConfiguration()
+        assertFalse(automatic.isActive(400.0, automaticAboveDp = 400.0))
+        assertTrue(automatic.isActive(401.0, automaticAboveDp = 400.0))
+        assertTrue(automatic.isActive(601.0, automaticAboveDp = 400.0))
+        assertFalse(automatic.isActive(1200.0, automaticAboveDp = 1200.0))
+        assertTrue(automatic.isActive(1200.5, automaticAboveDp = 1200.0))
+        assertNull(automatic.resolvedForWidth(700.0, automaticAboveDp = 700.0))
+        assertNotNull(automatic.resolvedForWidth(701.0, automaticAboveDp = 700.0))
+        // The threshold concerns the automatic rule only.
+        assertTrue(
+            LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.ALWAYS).isActive(100.0, 1200.0),
+        )
+        assertFalse(
+            LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF).isActive(2000.0, 400.0),
+        )
+    }
+
     private fun assertNotNull(value: Any?) = org.junit.Assert.assertNotNull(value)
 }

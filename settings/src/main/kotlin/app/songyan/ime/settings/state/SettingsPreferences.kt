@@ -23,6 +23,12 @@ interface SettingsPreferences {
     /** Extra empty band below the keys in dp, 0..[BOTTOM_GAP_MAX_DP] in [BOTTOM_GAP_STEP_DP] steps. */
     val bottomGapDp: Flow<Int>
 
+    /** Key area width in dp above which the automatic split shows, in the [SPLIT_WIDTH_MIN_DP]..[SPLIT_WIDTH_MAX_DP] range. */
+    val splitWidthDp: Flow<Int>
+
+    /** Blank margin in dp on each side of the key area, 0..[SIDE_MARGIN_MAX_DP] in [SIDE_MARGIN_STEP_DP] steps. */
+    val sideMarginDp: Flow<Int>
+
     /** Key hold delay in ms, [LONG_PRESS_MIN_MS]..[LONG_PRESS_MAX_MS]; null follows the system. */
     val longPressDelayMs: Flow<Int?>
 
@@ -105,6 +111,10 @@ interface SettingsPreferences {
 
     suspend fun setBottomGapDp(value: Int)
 
+    suspend fun setSplitWidthDp(value: Int)
+
+    suspend fun setSideMarginDp(value: Int)
+
     /** Null returns to following the system. */
     suspend fun setLongPressDelayMs(value: Int?)
 
@@ -150,6 +160,12 @@ interface SettingsPreferences {
 
         const val BOTTOM_GAP_MAX_DP = 48
         const val BOTTOM_GAP_STEP_DP = 4
+        const val SPLIT_WIDTH_MIN_DP = 400
+        const val SPLIT_WIDTH_MAX_DP = 1200
+        const val SPLIT_WIDTH_STEP_DP = 20
+        const val SPLIT_WIDTH_DEFAULT_DP = 600
+        const val SIDE_MARGIN_MAX_DP = 96
+        const val SIDE_MARGIN_STEP_DP = 4
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50
@@ -204,6 +220,8 @@ class InMemorySettingsPreferences(
     private val hideToolbar = MutableStateFlow(false)
     private val release = MutableStateFlow(false)
     private val bottomGap = MutableStateFlow(0)
+    private val splitWidth = MutableStateFlow(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP)
+    private val sideMargin = MutableStateFlow(0)
     private val longPress = MutableStateFlow<Int?>(null)
     private val switchKey = MutableStateFlow(false)
     private val hand = MutableStateFlow("off")
@@ -270,6 +288,8 @@ class InMemorySettingsPreferences(
 
     override val keyHeight: Flow<String> = height.asStateFlow()
     override val bottomGapDp: Flow<Int> = bottomGap.asStateFlow()
+    override val splitWidthDp: Flow<Int> = splitWidth.asStateFlow()
+    override val sideMarginDp: Flow<Int> = sideMargin.asStateFlow()
     override val longPressDelayMs: Flow<Int?> = longPress.asStateFlow()
     override val showSwitchKey: Flow<Boolean> = switchKey.asStateFlow()
 
@@ -320,6 +340,25 @@ class InMemorySettingsPreferences(
             "bad bottom gap: $value"
         }
         bottomGap.value = value
+    }
+
+    override suspend fun setSplitWidthDp(value: Int) {
+        require(
+            value in SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP &&
+                (value - SettingsPreferences.SPLIT_WIDTH_MIN_DP) % SettingsPreferences.SPLIT_WIDTH_STEP_DP == 0,
+        ) {
+            "bad split width: $value"
+        }
+        splitWidth.value = value
+    }
+
+    override suspend fun setSideMarginDp(value: Int) {
+        require(
+            value in 0..SettingsPreferences.SIDE_MARGIN_MAX_DP && value % SettingsPreferences.SIDE_MARGIN_STEP_DP == 0,
+        ) {
+            "bad side margin: $value"
+        }
+        sideMargin.value = value
     }
 
     override suspend fun setLongPressDelayMs(value: Int?) {

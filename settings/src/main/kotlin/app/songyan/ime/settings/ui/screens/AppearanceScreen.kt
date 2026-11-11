@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.appearance.AppearanceDocument
 import app.songyan.ime.appearance.AppearancePresets
+import app.songyan.ime.appearance.BackgroundFill
 import app.songyan.ime.appearance.KeyboardPalette
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.settings.R
@@ -311,6 +313,7 @@ private fun KeyboardPaletteSample(palette: KeyboardPalette) {
                 .size(width = 52.dp, height = 34.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color(palette.background))
+                .then(gradientOf(palette.backgroundFill))
                 .padding(5.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
@@ -325,6 +328,19 @@ private fun KeyboardPaletteSample(palette: KeyboardPalette) {
             )
         }
     }
+}
+
+/** The skin's gradient over the panel colour; a picture is left out of a swatch this small. */
+private fun gradientOf(fill: BackgroundFill?): Modifier {
+    if (fill !is BackgroundFill.Gradient) return Modifier
+    val colors = fill.colors.map { Color(it) }
+    val brush =
+        when (fill.direction) {
+            BackgroundFill.Direction.VERTICAL -> Brush.verticalGradient(colors)
+            BackgroundFill.Direction.HORIZONTAL -> Brush.horizontalGradient(colors)
+            BackgroundFill.Direction.DIAGONAL -> Brush.linearGradient(colors)
+        }
+    return Modifier.background(brush)
 }
 
 /** A user-authored appearance carries its own name; built-ins resolve from resources. */

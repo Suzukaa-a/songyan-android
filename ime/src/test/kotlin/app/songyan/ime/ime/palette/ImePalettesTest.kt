@@ -43,14 +43,6 @@ class ImePalettesTest {
     }
 
     @Test
-    fun theAndroidDefaultAppearanceKeepsTheSongyanInkDesign() {
-        val light = AppearancePalette.of(AppearancePresets.androidDefault, false)
-        assertInkDesign(ImePalettes.of(light).tokens, KeyboardDesignTokens.light())
-        val dark = AppearancePalette.of(AppearancePresets.androidDefault, true)
-        assertInkDesign(ImePalettes.of(dark).tokens, KeyboardDesignTokens.dark())
-    }
-
-    @Test
     fun dynamicColourKeepsTheAppearanceMetrics() {
         val appearance = ImePalettes.tokensOf(AppearancePalette.of(AppearanceDocument.systemDefault, false))
         val colours = DynamicAppearancePalette.tokens(greyPalettes, dark = false)
@@ -142,17 +134,6 @@ class ImePalettesTest {
         val tokens = ImePalettes.of(AppearancePalette.of(AppearanceDocument.systemDefault, false)).tokens
         assertEquals(0, tokens.keyBorder)
         assertEquals(0, tokens.controlKeyBorder)
-    }
-
-    private fun assertInkDesign(
-        tokens: KeyboardDesignTokens,
-        legacy: KeyboardDesignTokens,
-    ) {
-        assertEquals(legacy.pressed, tokens.pressed)
-        assertEquals(legacy.text, tokens.text)
-        assertEquals(legacy.mutedText, tokens.mutedText)
-        assertEquals(legacy.accent, tokens.accent)
-        assertEquals(legacy.accentText, tokens.accentText)
     }
 
     private val grey =

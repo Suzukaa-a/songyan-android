@@ -1,0 +1,51 @@
+{
+  "formatVersion" : 1,
+  "id" : "builtin-bamboo",
+  "keycap" : {
+    "borderWidth" : 0,
+    "cornerRadius" : 6,
+    "shadow" : "none"
+  },
+  "name" : "青竹",
+  "spacing" : {
+    "visualInsetX" : 0,
+    "visualInsetY" : 1
+  },
+  "typography" : {
+    "candidateSize" : 21,
+    "family" : "system",
+    "keySize" : 22,
+    "secondarySize" : 10,
+    "weight" : "regular"
+  },
+  "variants" : {
+    "dark" : {
+      "colors" : {
+        "accent" : "#368461",
+        "accentText" : "#FFFFFF",
+        "border" : "#808080",
+        "control" : "#33433A",
+        "key" : "#3F5348",
+        "panel" : "#1B2520",
+        "pressed" : "#52695B",
+        "secondaryText" : "#FFFFFF",
+        "selected" : "#2F5F48",
+        "text" : "#EEF5F0"
+      }
+    },
+    "light" : {
+      "colors" : {
+        "accent" : "#2E7D5B",
+        "accentText" : "#FFFFFF",
+        "border" : "#777777",
+        "control" : "#C3D6C8",
+        "key" : "#FFFFFF",
+        "panel" : "#DDE8E0",
+        "pressed" : "#B3CBBB",
+        "secondaryText" : "#4C5E53",
+        "selected" : "#BFDCCB",
+        "text" : "#1E2A23"
+      }
+    }
+  }
+}

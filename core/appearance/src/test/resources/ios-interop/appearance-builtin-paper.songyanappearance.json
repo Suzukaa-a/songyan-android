@@ -51,13 +51,13 @@
     "variants" : {
       "dark" : {
         "colors" : {
-          "accent" : "#C8773A",
-          "accentText" : "#000000",
+          "accent" : "#AA6531",
+          "accentText" : "#FFFFFF",
           "border" : "#808080",
-          "control" : "#3A332C",
-          "key" : "#4A423A",
+          "control" : "#433B33",
+          "key" : "#524940",
           "panel" : "#2A2520",
-          "pressed" : "#5C534A",
+          "pressed" : "#685D53",
           "secondaryText" : "#C9BBAA",
           "selected" : "#6A4A30",
           "text" : "#F6EFE6"
@@ -65,8 +65,8 @@
       },
       "light" : {
         "colors" : {
-          "accent" : "#B5652B",
-          "accentText" : "#000000",
+          "accent" : "#B0622A",
+          "accentText" : "#FFFFFF",
           "border" : "#777777",
           "control" : "#DCD1BF",
           "key" : "#FFFCF6",

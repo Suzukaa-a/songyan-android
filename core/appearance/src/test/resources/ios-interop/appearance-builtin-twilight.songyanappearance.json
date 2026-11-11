@@ -51,14 +51,14 @@
     "variants" : {
       "dark" : {
         "colors" : {
-          "accent" : "#A855F7",
-          "accentText" : "#000000",
+          "accent" : "#9B4EE3",
+          "accentText" : "#FFFFFF",
           "border" : "#808080",
-          "control" : "#221C2E",
-          "key" : "#2D243A",
+          "control" : "#3A314C",
+          "key" : "#4C3E60",
           "panel" : "#1A1625",
-          "pressed" : "#493F59",
-          "secondaryText" : "#AFA3BF",
+          "pressed" : "#625575",
+          "secondaryText" : "#BDB2CC",
           "selected" : "#4E3A63",
           "text" : "#F3EEF9"
         }

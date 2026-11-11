@@ -10,7 +10,7 @@ class KeyboardPaletteTest {
         val light = KeyboardPalette.of(SkinDefinition.systemDefault, dark = false)
         val dark = KeyboardPalette.of(SkinDefinition.systemDefault, dark = true)
         assertEquals(0xFFDFE2E7.toInt(), light.background)
-        assertEquals(0xFFFAFBFC.toInt(), light.keySurface)
+        assertEquals(0xFFFFFFFF.toInt(), light.keySurface)
         assertEquals(0xFF25272C.toInt(), dark.background)
         assertEquals(0xFF44474E.toInt(), dark.keySurface)
         assertEquals(0xFF252930.toInt(), light.text)
@@ -87,7 +87,7 @@ class KeyboardPaletteTest {
 
         val dark = KeyboardPalette.of(AppearancePresets.androidDefault, dark = true)
         assertEquals(0xFF121513.toInt(), dark.background)
-        assertEquals(0xFF232724.toInt(), dark.keySurface)
+        assertEquals(0xFF454D47.toInt(), dark.keySurface)
         assertEquals(0xFF8FD7AA.toInt(), dark.accent)
         assertEquals(0xFF003820.toInt(), dark.accentText)
     }

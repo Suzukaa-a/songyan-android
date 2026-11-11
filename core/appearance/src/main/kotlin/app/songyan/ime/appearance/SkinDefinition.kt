@@ -259,10 +259,10 @@ data class SkinDefinition(
                                 colors =
                                     mapOf(
                                         "panel" to "#DFE2E7",
-                                        "key" to "#FAFBFC",
+                                        "key" to "#FFFFFF",
                                         "control" to "#CBD0D8",
-                                        "accent" to "#CCDBEE",
-                                        "accentText" to "#284D7A",
+                                        "accent" to "#44598F",
+                                        "accentText" to "#FFFFFF",
                                         "text" to "#252930",
                                         "secondaryText" to "#505863",
                                         "selected" to "#CCDBEE",
@@ -276,7 +276,7 @@ data class SkinDefinition(
                                         "panel" to "#25272C",
                                         "key" to "#44474E",
                                         "control" to "#363940",
-                                        "accent" to "#3B536F",
+                                        "accent" to "#4C65A6",
                                         "accentText" to "#F0F5FC",
                                         "text" to "#F4F5F7",
                                         "secondaryText" to "#BDC3CD",

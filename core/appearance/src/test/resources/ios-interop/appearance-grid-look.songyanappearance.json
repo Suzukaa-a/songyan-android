@@ -50,30 +50,30 @@
     "variants" : {
       "dark" : {
         "colors" : {
-          "accent" : "#3F9A71",
-          "accentText" : "#000000",
+          "accent" : "#3A6EA5",
+          "accentText" : "#FFFFFF",
           "border" : "#808080",
-          "control" : "#27342D",
-          "key" : "#34443B",
-          "panel" : "#1B2520",
-          "pressed" : "#4A5E52",
-          "secondaryText" : "#AFC2B6",
-          "selected" : "#2F5F48",
-          "text" : "#EEF5F0"
+          "control" : "#353841",
+          "key" : "#43464F",
+          "panel" : "#141518",
+          "pressed" : "#555A65",
+          "secondaryText" : "#FFFFFF",
+          "selected" : "#3A6EA5",
+          "text" : "#F2F3F5"
         }
       },
       "light" : {
         "colors" : {
-          "accent" : "#2E7D5B",
+          "accent" : "#2B2D33",
           "accentText" : "#FFFFFF",
           "border" : "#777777",
-          "control" : "#C3D6C8",
-          "key" : "#FBFDFB",
-          "panel" : "#DDE8E0",
-          "pressed" : "#B3CBBB",
-          "secondaryText" : "#4C5E53",
-          "selected" : "#BFDCCB",
-          "text" : "#1E2A23"
+          "control" : "#D1D5DB",
+          "key" : "#FFFFFF",
+          "panel" : "#E5E7EB",
+          "pressed" : "#9CA3AF",
+          "secondaryText" : "#4B5563",
+          "selected" : "#D1D5DB",
+          "text" : "#111827"
         }
       }
     }

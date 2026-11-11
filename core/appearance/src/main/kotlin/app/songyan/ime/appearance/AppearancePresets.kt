@@ -37,14 +37,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#121513",
-                        "key" to "#232724",
-                        "control" to "#1B1E1C",
+                        "key" to "#454D47",
+                        "control" to "#383E3A",
                         "accent" to "#8FD7AA",
                         "accentText" to "#003820",
                         "text" to "#E2E5E0",
-                        "secondaryText" to "#959F96",
+                        "secondaryText" to "#B4BEB5",
                         "selected" to "#1C3426",
-                        "pressed" to "#3B433D",
+                        "pressed" to "#57635A",
                         "border" to "#272C28",
                     ),
                 // Dark-mode key separation relies on the border stroke as well as on contrast.
@@ -67,14 +67,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#141518",
-                        "key" to "#2B2D33",
-                        "control" to "#1F2126",
+                        "key" to "#43464F",
+                        "control" to "#353841",
                         "accent" to "#3A6EA5",
                         "accentText" to "#FFFFFF",
                         "text" to "#F2F3F5",
-                        "secondaryText" to "#A7ADB8",
+                        "secondaryText" to "#FFFFFF",
                         "selected" to "#3A6EA5",
-                        "pressed" to "#454952",
+                        "pressed" to "#555A65",
                     ),
             ),
             create(
@@ -82,7 +82,7 @@ object AppearancePresets {
                 light =
                     mapOf(
                         "panel" to "#DDE8E0",
-                        "key" to "#FBFDFB",
+                        "key" to "#FFFFFF",
                         "control" to "#C3D6C8",
                         "accent" to "#2E7D5B",
                         "accentText" to "#FFFFFF",
@@ -94,14 +94,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#1B2520",
-                        "key" to "#34443B",
-                        "control" to "#27342D",
-                        "accent" to "#3F9A71",
+                        "key" to "#3F5348",
+                        "control" to "#33433A",
+                        "accent" to "#368461",
                         "accentText" to "#FFFFFF",
                         "text" to "#EEF5F0",
-                        "secondaryText" to "#AFC2B6",
+                        "secondaryText" to "#FFFFFF",
                         "selected" to "#2F5F48",
-                        "pressed" to "#4A5E52",
+                        "pressed" to "#52695B",
                     ),
             ),
             create(
@@ -111,7 +111,7 @@ object AppearancePresets {
                         "panel" to "#EDE6DA",
                         "key" to "#FFFCF6",
                         "control" to "#DCD1BF",
-                        "accent" to "#B5652B",
+                        "accent" to "#B0622A",
                         "accentText" to "#FFFFFF",
                         "text" to "#2E261D",
                         "secondaryText" to "#6A5C4B",
@@ -121,14 +121,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#2A2520",
-                        "key" to "#4A423A",
-                        "control" to "#3A332C",
-                        "accent" to "#C8773A",
+                        "key" to "#524940",
+                        "control" to "#433B33",
+                        "accent" to "#AA6531",
                         "accentText" to "#FFFFFF",
                         "text" to "#F6EFE6",
                         "secondaryText" to "#C9BBAA",
                         "selected" to "#6A4A30",
-                        "pressed" to "#5C534A",
+                        "pressed" to "#685D53",
                     ),
             ),
             create(
@@ -148,14 +148,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#111827",
-                        "key" to "#1F2937",
-                        "control" to "#182234",
-                        "accent" to "#3B82F6",
+                        "key" to "#394659",
+                        "control" to "#2E3748",
+                        "accent" to "#3472D8",
                         "accentText" to "#FFFFFF",
                         "text" to "#F3F4F6",
-                        "secondaryText" to "#8FA3BF",
+                        "secondaryText" to "#A9BAD3",
                         "selected" to "#28436B",
-                        "pressed" to "#364761",
+                        "pressed" to "#495972",
                     ),
             ),
             create(
@@ -175,14 +175,14 @@ object AppearancePresets {
                 dark =
                     mapOf(
                         "panel" to "#1A1625",
-                        "key" to "#2D243A",
-                        "control" to "#221C2E",
-                        "accent" to "#A855F7",
+                        "key" to "#4C3E60",
+                        "control" to "#3A314C",
+                        "accent" to "#9B4EE3",
                         "accentText" to "#FFFFFF",
                         "text" to "#F3EEF9",
-                        "secondaryText" to "#AFA3BF",
+                        "secondaryText" to "#BDB2CC",
                         "selected" to "#4E3A63",
-                        "pressed" to "#493F59",
+                        "pressed" to "#625575",
                     ),
             ),
         )

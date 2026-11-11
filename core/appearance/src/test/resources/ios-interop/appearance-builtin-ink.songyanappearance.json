@@ -54,11 +54,11 @@
           "accent" : "#3A6EA5",
           "accentText" : "#FFFFFF",
           "border" : "#808080",
-          "control" : "#1F2126",
-          "key" : "#2B2D33",
+          "control" : "#353841",
+          "key" : "#43464F",
           "panel" : "#141518",
-          "pressed" : "#454952",
-          "secondaryText" : "#A7ADB8",
+          "pressed" : "#555A65",
+          "secondaryText" : "#FFFFFF",
           "selected" : "#3A6EA5",
           "text" : "#F2F3F5"
         }

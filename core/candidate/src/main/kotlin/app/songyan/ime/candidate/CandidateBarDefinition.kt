@@ -244,6 +244,14 @@ data class CandidateBarDefinition(
                 controls = Controls(pagePosition = Controls.PagePosition.TRAILING),
             )
 
+        /**
+         * Android's built-in candidate area: a 48 dp row (the platform's touch target), 10 dp cell
+         * padding and no spacing. Built-in appearances carry these numbers so the file means what
+         * the keyboard draws.
+         */
+        val androidDefault: CandidateBarDefinition =
+            systemDefault.copy(collapsed = systemDefault.collapsed.copy(height = 48.0, cellPaddingX = 10.0))
+
         private fun allowedFields(path: String): Set<String> =
             when (path) {
                 "$" -> TOP_LEVEL_FIELDS

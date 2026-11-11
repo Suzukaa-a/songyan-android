@@ -3,60 +3,51 @@ package app.songyan.ime.ime
 import app.songyan.ime.candidate.CandidateBarDefinition
 import app.songyan.ime.candidate.CandidateBarDefinition.Expanded.Mode
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Test
 
 class CandidateBarStyleTest {
     private val tokens = KeyboardDesignTokens.light()
 
-    @Test
-    fun theBuiltInDefaultKeepsTheKeyboardTokens() {
-        val style = CandidateBarStyle.of(CandidateBarDefinition.systemDefault)
-        assertNull(style.rowHeightDp)
-        assertNull(style.chipPaddingDp)
-        assertNull(style.cellSpacingDp)
-        assertSame(tokens, style.applyTo(tokens))
+    private fun bar(
+        height: Double = 48.0,
+        padding: Double = 10.0,
+        spacing: Double = 0.0,
+    ) = CandidateBarDefinition.androidDefault.run {
+        copy(collapsed = collapsed.copy(height = height, cellPaddingX = padding, cellSpacing = spacing))
     }
 
     @Test
-    fun aChangedRowHeightBecomesATouchTargetAtLeast48Dp() {
-        val taller =
-            CandidateBarDefinition.systemDefault.run {
-                copy(collapsed = collapsed.copy(height = 52.0))
-            }
-        assertEquals(60f, CandidateBarStyle.of(taller).rowHeightDp!!, 0.001f)
-        val shorter =
-            CandidateBarDefinition.systemDefault.run {
-                copy(collapsed = collapsed.copy(height = 36.0))
-            }
-        assertEquals(48f, CandidateBarStyle.of(shorter).rowHeightDp!!, 0.001f)
+    fun theAndroidBuiltInBarDrawsTheNumbersTheKeyboardAlwaysHad() {
+        val applied = CandidateBarStyle.of(CandidateBarDefinition.androidDefault, 18.0).applyTo(tokens)
+        assertEquals(48f, applied.candidateBarHeightDp, 0.001f)
+        assertEquals(10f, applied.candidateChipPaddingDp, 0.001f)
+        assertEquals(0f, applied.candidateCellSpacingDp, 0.001f)
     }
 
     @Test
-    fun changedPaddingAndSpacingOverrideTheTokens() {
-        val bar =
-            CandidateBarDefinition.systemDefault.run {
-                copy(collapsed = collapsed.copy(cellPaddingX = 16.0, cellSpacing = 6.0))
-            }
-        val applied = CandidateBarStyle.of(bar).applyTo(tokens)
-        assertEquals(19f, applied.candidateChipPaddingDp, 0.001f)
+    fun theRowHeightIsTheFileValueWithNoFloorOrOffset() {
+        assertEquals(36f, CandidateBarStyle.of(bar(height = 36.0), 18.0).rowHeightDp!!, 0.001f)
+        assertEquals(52f, CandidateBarStyle.of(bar(height = 52.0), 18.0).rowHeightDp!!, 0.001f)
+    }
+
+    @Test
+    fun theHeightIsClampedToTheFormatRange() {
+        assertEquals(56f, CandidateBarStyle.of(bar(height = 70.0), 18.0).rowHeightDp!!, 0.001f)
+        assertEquals(36f, CandidateBarStyle.of(bar(height = 10.0), 18.0).rowHeightDp!!, 0.001f)
+    }
+
+    @Test
+    fun aLargeCandidateFontTopsTheHeightUp() {
+        // ceil(30 * 1.25 + 3) = 41 beats a 40 dp row; ceil(28 * 1.25 + 3) = 38 does not.
+        assertEquals(41f, CandidateBarStyle.of(bar(height = 40.0), 30.0).rowHeightDp!!, 0.001f)
+        assertEquals(40f, CandidateBarStyle.of(bar(height = 40.0), 28.0).rowHeightDp!!, 0.001f)
+    }
+
+    @Test
+    fun paddingAndSpacingAreLiteralDp() {
+        val applied = CandidateBarStyle.of(bar(padding = 16.0, spacing = 6.0), 18.0).applyTo(tokens)
+        assertEquals(16f, applied.candidateChipPaddingDp, 0.001f)
         assertEquals(6f, applied.candidateCellSpacingDp, 0.001f)
-        assertEquals(tokens.candidateBarHeightDp, applied.candidateBarHeightDp, 0.001f)
-    }
-
-    @Test
-    fun paddingKeepsTheStepBetweenTheIosDefaultAndTheAndroidToken() {
-        // The settings slider shows the padding the keyboard draws: one step up from the default is 11 dp, not 8.
-        val bar =
-            CandidateBarDefinition.systemDefault.run {
-                copy(collapsed = collapsed.copy(cellPaddingX = collapsed.cellPaddingX + 1))
-            }
-        assertEquals(
-            tokens.candidateChipPaddingDp + 1,
-            CandidateBarStyle.of(bar).applyTo(tokens).candidateChipPaddingDp,
-            0.001f,
-        )
     }
 
     @Test

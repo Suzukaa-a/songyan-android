@@ -31,13 +31,11 @@ import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.SwitchRow
 import kotlin.math.roundToInt
 
-/** The row height slider's range in the stored unit; the keyboard shows it 8 dp taller (a 48 dp minimum). */
-private val ROW_HEIGHT_RANGE = 40f..56f
-private const val ROW_HEIGHT_DISPLAY_OFFSET = 8
+/** The row height slider's range in dp; the keyboard draws the stored value (a large candidate font tops it up). */
+private val ROW_HEIGHT_RANGE = 36f..56f
 
-/** Cell padding is stored in the iOS unit too; the keyboard draws it 3 dp wider (the 10 dp token for 7). */
+/** The cell padding slider's range in dp, drawn as stored. */
 private val CELL_PADDING_RANGE = 4f..24f
-private const val CELL_PADDING_DISPLAY_OFFSET = 3
 
 /**
  * 候选栏: whether the idle row shows the toolbar, the single-row size and how the expanded panel
@@ -93,7 +91,7 @@ fun CandidateBarScreen(
                         .toFloat()
                         .coerceIn(ROW_HEIGHT_RANGE),
                 range = ROW_HEIGHT_RANGE,
-                display = { it.roundToInt() + ROW_HEIGHT_DISPLAY_OFFSET },
+                display = { it.roundToInt() },
                 onCommit = { value ->
                     viewModel.updateCandidateBar { current ->
                         current.copy(collapsed = current.collapsed.copy(height = value.roundToInt().toDouble()))
@@ -107,7 +105,7 @@ fun CandidateBarScreen(
                         .toFloat()
                         .coerceIn(CELL_PADDING_RANGE),
                 range = CELL_PADDING_RANGE,
-                display = { it.roundToInt() + CELL_PADDING_DISPLAY_OFFSET },
+                display = { it.roundToInt() },
                 onCommit = { value ->
                     viewModel.updateCandidateBar { current ->
                         current.copy(collapsed = current.collapsed.copy(cellPaddingX = value.roundToInt().toDouble()))

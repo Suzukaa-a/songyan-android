@@ -24,7 +24,7 @@ data class AppearanceSettingsState(
     /** Whether this device can paint the wallpaper palette (Android 12+ with a readable palette). */
     val dynamicColorAvailable: Boolean = false,
     /** The candidate area of the appearance in use; the candidate bar screen edits a copy of it. */
-    val candidateBar: CandidateBarDefinition = CandidateBarDefinition.systemDefault,
+    val candidateBar: CandidateBarDefinition = CandidateBarDefinition.androidDefault,
     /** False until the app module installs its source; the screen then says so instead of pretending. */
     val available: Boolean = false,
 ) {

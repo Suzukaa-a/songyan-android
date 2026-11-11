@@ -72,6 +72,16 @@ class EditorConnection(
     /** [textBefore] starts at the very beginning of the field, so nothing precedes it. */
     private var textBeforeComplete = false
 
+    /** The editor reported a composing region for the current composition at least once. */
+    private var regionConfirmed = false
+
+    /**
+     * After confirming the region, the editor reported none: it ended the composition itself and
+     * the text is its own now. Chrome's address bar does this when it puts its inline completion back
+     * after a shorter spelling, and then moves the cursor; the old region holds the user's text.
+     */
+    private var editorEndedComposition = false
+
     /** The editor of the running input, as the service handed it over. */
     private var startedInfo: EditorInfo? = null
 
@@ -108,6 +118,10 @@ class EditorConnection(
                 null
             }
         val wasComposing = composing
+        if (!wasComposing) {
+            regionConfirmed = false
+            editorEndedComposition = false
+        }
         ic.beginBatchEdit()
         Trace.beginSection("Songyan.editorUpdate")
         try {
@@ -327,7 +341,15 @@ class EditorConnection(
         // Whoever moved the cursor may also have changed the text before it.
         if (!expected) forgetText()
         if (expected) {
-            if (composing) selection.reportedComposing(candidatesStart, candidatesEnd)
+            if (composing) {
+                selection.reportedComposing(candidatesStart, candidatesEnd)
+                if (candidatesStart >= 0) {
+                    regionConfirmed = true
+                    editorEndedComposition = false
+                } else if (regionConfirmed) {
+                    editorEndedComposition = true
+                }
+            }
             return false
         }
         if (!composing) {
@@ -347,6 +369,13 @@ class EditorConnection(
         val written = composingText
         composing = false
         composingText = ""
+        if (editorEndedComposition && candidatesStart < 0) {
+            // Nothing in the editor is the keyboard's any more: removing the old region would delete
+            // the user's own text. Only the engine composition is dropped, by the caller.
+            ic?.finishComposingText()
+            selection.moved(newStart, newEnd)
+            return true
+        }
         if (ic == null || regionStart < 0 || regionEnd < regionStart) {
             // Where the composition is cannot be told, so it is not removed; unmarked, it stays put
             // instead of being replaced by the next letter typed wherever the cursor now is.

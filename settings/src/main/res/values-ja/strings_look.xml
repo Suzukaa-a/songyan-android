@@ -4,6 +4,8 @@
     <string name="candidate_bar_value">%1$s：%2$d</string>
     <string name="candidate_bar_row_section">候補の行</string>
     <string name="candidate_bar_hide_toolbar_title">未入力のときはツールバーを隠す</string>
+    <string name="candidate_bar_row_comments_title">1行表示でも注釈を表示</string>
+    <string name="candidate_bar_row_comments_body">オフにすると、注釈は候補欄を展開したときだけ表示されます。</string>
     <string name="candidate_bar_hide_toolbar_body">入力していないとき、候補バーにはアイコンが表示されません。クリップボード、絵文字、編集、片手モード、キーボードの設定は「中/英」を長押しすると開けます。</string>
     <string name="candidate_bar_row_height">行の高さ</string>
     <string name="candidate_bar_cell_padding">候補の内側の余白</string>

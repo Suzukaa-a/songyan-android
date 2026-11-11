@@ -5,6 +5,8 @@
     <string name="candidate_bar_value">%1$s: %2$d</string>
     <string name="candidate_bar_row_section">Candidate row</string>
     <string name="candidate_bar_hide_toolbar_title">Hide the toolbar when idle</string>
+    <string name="candidate_bar_row_comments_title">Show notes in the single row</string>
+    <string name="candidate_bar_row_comments_body">When off, notes appear only in the expanded bar.</string>
     <string name="candidate_bar_hide_toolbar_body">When you\'re not typing, the candidate row shows no icons. Long-press the language key for the clipboard, emoji, editing, one-handed mode and keyboard settings.</string>
     <string name="candidate_bar_row_height">Row height</string>
     <string name="candidate_bar_cell_padding">Candidate padding</string>

@@ -50,6 +50,7 @@ class CandidateBarScreenTest {
     }
 
     private var size = CandidateTextSize.STANDARD
+    private var rowComments = true
 
     private fun show(source: Source) {
         compose.setContent {
@@ -59,6 +60,8 @@ class CandidateBarScreenTest {
                     onHideIdleToolbarChanged = {},
                     candidateTextSize = size,
                     onCandidateTextSizeChanged = { size = it },
+                    collapsedComments = rowComments,
+                    onCollapsedCommentsChanged = { rowComments = it },
                     onBack = {},
                     viewModel =
                         viewModel(
@@ -125,5 +128,12 @@ class CandidateBarScreenTest {
         show(Source())
         compose.onNodeWithText(str(R.string.options_candidate_size_large)).performScrollTo().performClick()
         assertEquals(CandidateTextSize.LARGE, size)
+    }
+
+    @Test
+    fun theSingleRowCommentsSwitchReportsTheChoice() {
+        show(Source())
+        compose.onNodeWithText(str(R.string.candidate_bar_row_comments_title)).performScrollTo().performClick()
+        assertEquals(false, rowComments)
     }
 }

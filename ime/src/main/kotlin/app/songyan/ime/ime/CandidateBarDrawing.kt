@@ -167,13 +167,14 @@ internal fun CandidateBarView.drawCandidateText(
         return
     }
     val commentSize = metrics.candidateCommentTextSizeSp * textScale
-    val commentWidth = entry.commentWidth
-    val groupGap = if (entry.comment.isEmpty()) 0f else chipGapPx / 2
+    val showComment = showsComment(entry)
+    val commentWidth = if (showComment) entry.commentWidth else 0f
+    val groupGap = if (showComment) chipGapPx / 2 else 0f
     val total = textWidth + groupGap + commentWidth
     val x = max(box.left + chipPaddingPx, box.centerX() - total / 2)
     paint.textSize = metrics.candidateTextSizeSp * textScale
     canvas.drawText(entry.text, x, baseline, paint)
-    if (entry.comment.isEmpty()) return
+    if (!showComment) return
     paint.textSize = commentSize
     paint.color = if (textColor == palette.candidateSelectedText) textColor else palette.muted
     val commentBaseline = BarContentLine.hanCentredBaseline(paint, box.centerY()) + candidateDropDp() * density

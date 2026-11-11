@@ -588,6 +588,15 @@ class CandidateBarView(
             refreshAppearance()
         }
 
+    /** Whether the single row draws comments; the expanded grid always does. */
+    var collapsedComments: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+            invalidate()
+        }
+
     private fun KeyboardDesignTokens.withCandidateTextFactor(factor: Float): KeyboardDesignTokens =
         copy(
             candidateTextSizeSp = candidateTextSizeSp * factor,

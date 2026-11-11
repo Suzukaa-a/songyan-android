@@ -50,6 +50,8 @@ fun CandidateBarScreen(
     onHideIdleToolbarChanged: (Boolean) -> Unit,
     candidateTextSize: CandidateTextSize?,
     onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
+    collapsedComments: Boolean?,
+    onCollapsedCommentsChanged: (Boolean) -> Unit,
     onBack: (() -> Unit)?,
     viewModel: AppearanceViewModel = viewModel(factory = AppearanceViewModel.Factory()),
 ) {
@@ -139,6 +141,14 @@ fun CandidateBarScreen(
                         )
                     }
                 }
+            }
+            if (collapsedComments != null) {
+                SwitchRow(
+                    title = stringResource(R.string.candidate_bar_row_comments_title),
+                    subtitle = stringResource(R.string.candidate_bar_row_comments_body),
+                    checked = collapsedComments,
+                    onCheckedChange = onCollapsedCommentsChanged,
+                )
             }
 
             SectionHeader(stringResource(R.string.candidate_bar_expanded_section))

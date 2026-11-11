@@ -91,6 +91,7 @@ class AppSettingsPreferences(
     override suspend fun setOneHand(value: String) = preferences.setOneHand(value)
 
     override val candidateTextSize: Flow<String> = preferences.candidateTextSize
+    override val collapsedCandidateComments: Flow<Boolean> = preferences.collapsedCandidateComments
     override val keyFeedback: Flow<KeyFeedbackSettings> = preferences.keyFeedback
 
     override val onboardingShown: Flow<Boolean> = preferences.onboardingShown
@@ -102,6 +103,10 @@ class AppSettingsPreferences(
 
     override suspend fun setNotificationRationaleShown() {
         preferences.setNotificationRationaleShown()
+    }
+
+    override suspend fun setCollapsedCandidateComments(value: Boolean) {
+        preferences.setCollapsedCandidateComments(value)
     }
 
     override suspend fun setCandidateTextSize(value: String) {

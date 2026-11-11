@@ -53,6 +53,9 @@ interface KeyboardPreferencesSource {
     /** [CandidateTextSize.id]; the standard size when the owner stores no choice. */
     val candidateTextSize: Flow<String> get() = flowOf(CandidateTextSize.DEFAULT.id)
 
+    /** Whether the single-row candidate bar shows comments; on unless the owner says otherwise. */
+    val collapsedCandidateComments: Flow<Boolean> get() = flowOf(true)
+
     /** The user's key sound and vibration choices; unset fields follow the system. */
     val keyFeedback: Flow<KeyFeedbackSettings> get() = flowOf(KeyFeedbackSettings())
 

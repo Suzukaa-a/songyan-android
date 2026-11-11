@@ -41,10 +41,22 @@ internal fun CandidateBarView.measureEntries() {
 }
 
 /** The width an entry asks for: its text, the reading comment behind it, and the cell padding. */
-internal fun CandidateBarView.chipWidth(entry: Entry): Float {
-    var width = entry.textWidth
-    if (entry.comment.isNotEmpty()) width += chipGapPx / 2 + entry.commentWidth
-    return width + chipPaddingPx * 2
+internal fun CandidateBarView.chipWidth(entry: Entry): Float =
+    ChipWidth.of(entry.textWidth, entry.commentWidth, showsComment(entry), chipGapPx, chipPaddingPx)
+
+/** Whether [entry]'s comment is drawn and counted: always when expanded, by the user's choice in the row. */
+internal fun CandidateBarView.showsComment(entry: Entry): Boolean =
+    entry.comment.isNotEmpty() && (expanded || collapsedComments)
+
+/** The cell width rule, apart from the view so it can be tested without one. */
+internal object ChipWidth {
+    fun of(
+        textWidth: Float,
+        commentWidth: Float,
+        showComment: Boolean,
+        gap: Float,
+        padding: Float,
+    ): Float = textWidth + (if (showComment) gap / 2 + commentWidth else 0f) + padding * 2
 }
 
 /**

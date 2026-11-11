@@ -127,6 +127,9 @@ internal fun KeyboardController.observePreferences() {
         }
     }
     scope.launch {
+        source.collapsedCandidateComments.collect { candidates.collapsedComments = it }
+    }
+    scope.launch {
         source.keyFeedback.collect { value -> feedback.settings = value }
     }
     scope.launch { source.widePosition.collect { keyboard.dock = KeyboardContentDock.of(it) } }

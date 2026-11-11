@@ -173,6 +173,7 @@ class SongyanInputMethodService : InputMethodService() {
             override suspend fun setKana12FlickOnly(value: Boolean) = store.setKana12FlickOnly(value)
 
             override val candidateTextSize = store.candidateTextSize
+            override val collapsedCandidateComments = store.collapsedCandidateComments
             override val keyFeedback = store.keyFeedback
 
             override suspend fun setLayoutId(id: String) = store.setLayoutId(id)

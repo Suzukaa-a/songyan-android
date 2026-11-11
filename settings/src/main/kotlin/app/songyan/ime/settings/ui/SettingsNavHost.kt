@@ -650,6 +650,8 @@ private fun NavGraphBuilder.settingsGraph(
             onHideIdleToolbarChanged = viewModel::setHideIdleToolbar,
             candidateTextSize = state.value.candidateTextSize.takeIf { state.value.preferencesLoaded },
             onCandidateTextSizeChanged = viewModel::setCandidateTextSize,
+            collapsedComments = state.value.collapsedCandidateComments.takeIf { state.value.preferencesLoaded },
+            onCollapsedCommentsChanged = viewModel::setCollapsedCandidateComments,
             onBack = { navController.popBackStack() },
         )
     }

@@ -69,6 +69,7 @@ data class SettingsUiState(
     /** The main layout the keyboard in use draws, once the layout catalog is read; null until then. */
     val mainLayout: CurrentMainLayout? = null,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
+    val collapsedCandidateComments: Boolean = true,
     val keyFeedback: KeyFeedbackSettings = KeyFeedbackSettings(),
     /** Key height, one-handed mode, key preview and release vibration, shown on the options screen. */
     val keyboardFeel: KeyboardFeelState = KeyboardFeelState(),
@@ -110,6 +111,7 @@ data class SettingsUiState(
 private data class StoredPreferences(
     val layoutId: String = SettingsPreferences.DEFAULT_LAYOUT_ID,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
+    val collapsedCandidateComments: Boolean = true,
     val keyFeedback: KeyFeedbackSettings = KeyFeedbackSettings(),
     val keyboardFeel: KeyboardFeelState = KeyboardFeelState(),
     val onboardingShown: Boolean = false,
@@ -177,6 +179,7 @@ class SettingsViewModel(
     init {
         collectPreference(preferences.layoutId) { copy(layoutId = it) }
         collectPreference(preferences.candidateTextSize) { copy(candidateTextSize = CandidateTextSize.fromId(it)) }
+        collectPreference(preferences.collapsedCandidateComments) { copy(collapsedCandidateComments = it) }
         collectPreference(preferences.keyFeedback) { copy(keyFeedback = it) }
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
         collectPreference(preferences.bottomGapDp) { copy(keyboardFeel = keyboardFeel.copy(bottomGapDp = it)) }
@@ -257,6 +260,7 @@ class SettingsViewModel(
                 otherSources = app.otherSources,
                 layoutId = prefs.layoutId,
                 candidateTextSize = prefs.candidateTextSize,
+                collapsedCandidateComments = prefs.collapsedCandidateComments,
                 keyFeedback = prefs.keyFeedback,
                 keyboardFeel = prefs.keyboardFeel,
                 preferencesLoaded = prefs.pending == 0,
@@ -454,6 +458,10 @@ class SettingsViewModel(
             preferences.setLayoutId(layout.id)
             appStateSource.refresh()
         }
+    }
+
+    fun setCollapsedCandidateComments(value: Boolean) {
+        viewModelScope.launch { preferences.setCollapsedCandidateComments(value) }
     }
 
     fun setCandidateTextSize(size: CandidateTextSize) {

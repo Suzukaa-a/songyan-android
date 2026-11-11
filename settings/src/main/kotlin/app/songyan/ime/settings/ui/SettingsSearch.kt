@@ -44,6 +44,11 @@ object SettingsSearch {
                 R.string.options_candidate_size_section,
                 R.string.candidate_bar_title,
             ),
+            SearchEntry(
+                SettingsRoutes.CANDIDATE_BAR,
+                R.string.candidate_bar_row_comments_title,
+                R.string.candidate_bar_title,
+            ),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_key_height_section, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_bottom_gap_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_engine_section, R.string.row_options_title),

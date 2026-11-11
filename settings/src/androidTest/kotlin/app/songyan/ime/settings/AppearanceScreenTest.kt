@@ -14,7 +14,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.settings.state.AppearanceOption
 import app.songyan.ime.settings.state.AppearanceSettingsSource
 import app.songyan.ime.settings.state.AppearanceSettingsState
@@ -66,7 +65,6 @@ class AppearanceScreenTest {
             available = true,
         )
 
-    private var size = CandidateTextSize.STANDARD
     private var candidateBarOpened = 0
 
     private fun show(source: Source) {
@@ -74,8 +72,6 @@ class AppearanceScreenTest {
             SongyanTheme(dynamicColor = false) {
                 AppearanceScreen(
                     onBack = {},
-                    candidateTextSize = size,
-                    onCandidateTextSizeChanged = { size = it },
                     onOpenCandidateBar = { candidateBarOpened++ },
                     viewModel =
                         viewModel(
@@ -94,12 +90,17 @@ class AppearanceScreenTest {
     }
 
     @Test
-    fun theCandidateBarStyleAndSizeAreChosenWithTheRestOfTheLook() {
+    fun theCandidateBarStyleOpensFromTheLookAndItsTextSizeLivesThere() {
         show(Source(state(dynamic = false)))
         compose.onNodeWithText(str(R.string.candidate_bar_title)).performScrollTo().performClick()
         assertEquals(1, candidateBarOpened)
-        compose.onNodeWithText(str(R.string.options_candidate_size_large)).performScrollTo().performClick()
-        assertEquals(CandidateTextSize.LARGE, size)
+        compose.onNodeWithText(str(R.string.options_candidate_size_section)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theWebEditorIsOfferedNextToTheFileImport() {
+        show(Source(state(dynamic = false)))
+        compose.onNodeWithText(str(R.string.appearance_web_editor_title)).performScrollTo().assertExists()
     }
 
     @Test

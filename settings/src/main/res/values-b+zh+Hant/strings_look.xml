@@ -20,6 +20,7 @@
     <string name="appearance_section_candidates">候選欄</string>
     <string name="appearance_section_files">外觀檔案</string>
     <string name="appearance_import_title">匯入外觀檔案</string>
+    <string name="appearance_web_editor_title">在網頁上編輯外觀</string>
     <string name="appearance_import_body">選擇外觀、配色或候選列檔案。</string>
     <string name="appearance_action_export">匯出</string>
     <string name="appearance_action_delete">刪除</string>

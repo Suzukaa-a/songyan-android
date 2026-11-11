@@ -20,6 +20,7 @@
     <string name="appearance_section_candidates">Candidate bar</string>
     <string name="appearance_section_files">Appearance files</string>
     <string name="appearance_import_title">Import appearance file</string>
+    <string name="appearance_web_editor_title">Edit appearance on the web</string>
     <string name="appearance_import_body">Pick an appearance, color scheme or candidate bar file.</string>
     <string name="appearance_action_export">Export</string>
     <string name="appearance_action_delete">Delete</string>

@@ -6,12 +6,14 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.candidate.CandidateBarDefinition
 import app.songyan.ime.candidate.CandidateBarDefinition.Expanded.Mode
+import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.settings.state.AppearanceSettingsSource
 import app.songyan.ime.settings.state.AppearanceSettingsState
 import app.songyan.ime.settings.ui.AppearanceViewModel
@@ -47,12 +49,16 @@ class CandidateBarScreenTest {
         }
     }
 
+    private var size = CandidateTextSize.STANDARD
+
     private fun show(source: Source) {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 CandidateBarScreen(
                     hideIdleToolbar = false,
                     onHideIdleToolbarChanged = {},
+                    candidateTextSize = size,
+                    onCandidateTextSizeChanged = { size = it },
                     onBack = {},
                     viewModel =
                         viewModel(
@@ -78,7 +84,7 @@ class CandidateBarScreenTest {
             .onNodeWithText(
                 str(R.string.candidate_bar_value, str(R.string.candidate_bar_columns), 2),
             ).assertDoesNotExist()
-        compose.onNodeWithText(str(R.string.candidate_bar_mode_grid)).performClick()
+        compose.onNodeWithText(str(R.string.candidate_bar_mode_grid)).performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(
             Mode.GRID,
@@ -112,5 +118,12 @@ class CandidateBarScreenTest {
             .onNodeWithText(
                 str(R.string.candidate_bar_value, str(R.string.candidate_bar_cell_spacing), 0),
             ).assertExists()
+    }
+
+    @Test
+    fun theCandidateTextSizeIsChosenWithTheRestOfTheBarStyle() {
+        show(Source())
+        compose.onNodeWithText(str(R.string.options_candidate_size_large)).performScrollTo().performClick()
+        assertEquals(CandidateTextSize.LARGE, size)
     }
 }

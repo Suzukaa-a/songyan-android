@@ -19,6 +19,7 @@
     <string name="appearance_section_candidates">候補バー</string>
     <string name="appearance_section_files">外観ファイル</string>
     <string name="appearance_import_title">外観ファイルをインポート</string>
+    <string name="appearance_web_editor_title">Webで外観を編集</string>
     <string name="appearance_import_body">外観、配色、候補バーのファイルを選んでください。</string>
     <string name="appearance_action_export">エクスポート</string>
     <string name="appearance_action_delete">削除</string>

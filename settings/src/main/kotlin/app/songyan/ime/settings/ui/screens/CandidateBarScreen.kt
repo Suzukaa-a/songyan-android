@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.candidate.CandidateBarDefinition.Expanded.Mode
+import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.AppearanceViewModel
 import app.songyan.ime.settings.ui.components.RadioRow
@@ -38,8 +39,8 @@ private val ROW_HEIGHT_RANGE = 36f..56f
 private val CELL_PADDING_RANGE = 4f..24f
 
 /**
- * 候选栏: whether the idle row shows the toolbar, the single-row size and how the expanded panel
- * arranges candidates. The toolbar choice is a keyboard preference; the sizes belong to the keyboard
+ * 候选栏: whether the idle row shows the toolbar, the single-row size, the candidate text size and how
+ * the expanded panel arranges candidates. The toolbar choice is a keyboard preference; the sizes belong to the keyboard
  * appearance in use, so a change on a built-in appearance lands in a copy of it, and the keyboard
  * picks it up the next time it is shown.
  */
@@ -47,6 +48,8 @@ private val CELL_PADDING_RANGE = 4f..24f
 fun CandidateBarScreen(
     hideIdleToolbar: Boolean,
     onHideIdleToolbarChanged: (Boolean) -> Unit,
+    candidateTextSize: CandidateTextSize?,
+    onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
     onBack: (() -> Unit)?,
     viewModel: AppearanceViewModel = viewModel(factory = AppearanceViewModel.Factory()),
 ) {
@@ -123,6 +126,20 @@ fun CandidateBarScreen(
                     }
                 },
             )
+
+            // Not drawn until the stored choice is read, so a default never flashes by.
+            if (candidateTextSize != null) {
+                SectionHeader(stringResource(R.string.options_candidate_size_section))
+                Column(modifier = Modifier.selectableGroup()) {
+                    CandidateTextSize.entries.forEach { size ->
+                        RadioRow(
+                            title = stringResource(candidateTextSizeLabel(size)),
+                            selected = size == candidateTextSize,
+                            onClick = { onCandidateTextSizeChanged(size) },
+                        )
+                    }
+                }
+            }
 
             SectionHeader(stringResource(R.string.candidate_bar_expanded_section))
             Column(modifier = Modifier.selectableGroup()) {
@@ -206,3 +223,11 @@ private fun ValueSlider(
         },
     )
 }
+
+private fun candidateTextSizeLabel(size: CandidateTextSize): Int =
+    when (size) {
+        CandidateTextSize.SMALL -> R.string.options_candidate_size_small
+        CandidateTextSize.STANDARD -> R.string.options_candidate_size_standard
+        CandidateTextSize.LARGE -> R.string.options_candidate_size_large
+        CandidateTextSize.EXTRA_LARGE -> R.string.options_candidate_size_extra_large
+    }

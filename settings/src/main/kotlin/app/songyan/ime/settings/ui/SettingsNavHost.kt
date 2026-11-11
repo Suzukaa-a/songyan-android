@@ -586,8 +586,6 @@ private fun NavGraphBuilder.settingsGraph(
     composable(SettingsRoutes.APPEARANCE) {
         AppearanceScreen(
             onBack = topBack(navController),
-            candidateTextSize = state.value.candidateTextSize.takeIf { state.value.preferencesLoaded },
-            onCandidateTextSizeChanged = viewModel::setCandidateTextSize,
             onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
         )
     }
@@ -650,6 +648,8 @@ private fun NavGraphBuilder.settingsGraph(
         CandidateBarScreen(
             hideIdleToolbar = state.value.keyboardFeel.hideIdleToolbar,
             onHideIdleToolbarChanged = viewModel::setHideIdleToolbar,
+            candidateTextSize = state.value.candidateTextSize.takeIf { state.value.preferencesLoaded },
+            onCandidateTextSizeChanged = viewModel::setCandidateTextSize,
             onBack = { navController.popBackStack() },
         )
     }

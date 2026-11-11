@@ -191,7 +191,7 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
             dock,
             capDp = if (tablet) WideSurface.CONTENT_MAXIMUM_DP else Double.POSITIVE_INFINITY,
             automaticAboveDp = splitWidthDp.toDouble(),
-            sideMarginDp = sideMarginDp,
+            sideMarginPerMille = sideMarginPerMille,
         )
     return ContentFrame(plan.leadingInset.toFloat() * density, plan.contentWidth.toFloat() * density)
 }

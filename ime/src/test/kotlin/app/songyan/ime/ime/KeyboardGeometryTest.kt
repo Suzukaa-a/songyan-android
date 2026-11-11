@@ -157,9 +157,9 @@ class KeyboardGeometryTest {
         assertEquals(400, KeyboardGeometry.clampSplitWidthDp(0))
         assertEquals(600, KeyboardGeometry.clampSplitWidthDp(609))
         assertEquals(1200, KeyboardGeometry.clampSplitWidthDp(5000))
-        assertEquals(0, KeyboardGeometry.clampSideMarginDp(-3))
-        assertEquals(8, KeyboardGeometry.clampSideMarginDp(11))
-        assertEquals(96, KeyboardGeometry.clampSideMarginDp(500))
+        assertEquals(0, KeyboardGeometry.clampSideMarginPerMille(-3))
+        assertEquals(10, KeyboardGeometry.clampSideMarginPerMille(13))
+        assertEquals(100, KeyboardGeometry.clampSideMarginPerMille(500))
     }
 
     @Test

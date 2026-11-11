@@ -43,18 +43,18 @@ internal object WideSurface {
     const val MINIMUM_KEY_AREA_DP = 280.0
 
     /**
-     * The blank margin (dp) kept on each side of a [surfaceDp] wide surface for a [requestedDp] choice.
-     * Only a large surface, one wider than [largeAboveDp] (the user's split width), gets one: a margin
-     * is for keeping keys within thumb reach on a wide screen, and a phone needs all of its width. It
-     * is cut so the key area keeps [MINIMUM_KEY_AREA_DP].
+     * The blank margin (dp) kept on each side of a [surfaceDp] wide surface for a [perMille] share of
+     * its width. Only a large surface, one wider than [largeAboveDp] (the user's split width), gets one:
+     * a margin is for keeping keys within thumb reach on a wide screen, and a phone needs all of its
+     * width. It is cut so the key area keeps [MINIMUM_KEY_AREA_DP].
      */
     fun sideMargin(
         surfaceDp: Double,
-        requestedDp: Int,
+        perMille: Int,
         largeAboveDp: Double = LayoutSplitConfiguration.AUTOMATIC_MAXIMUM_WIDTH,
     ): Double {
         if (!surfaceDp.isFinite() || surfaceDp <= largeAboveDp) return 0.0
-        return requestedDp.toDouble().coerceAtMost((surfaceDp - MINIMUM_KEY_AREA_DP) / 2).coerceAtLeast(0.0)
+        return (surfaceDp * perMille / 1000).coerceAtMost((surfaceDp - MINIMUM_KEY_AREA_DP) / 2).coerceAtLeast(0.0)
     }
 
     /** The split that applies to a layout's own [split] under [mode], or null for an unsplit keyboard. */
@@ -87,9 +87,9 @@ internal object WideSurface {
         dock: KeyboardContentDock,
         capDp: Double = CONTENT_MAXIMUM_DP,
         automaticAboveDp: Double = LayoutSplitConfiguration.AUTOMATIC_MAXIMUM_WIDTH,
-        sideMarginDp: Int = 0,
+        sideMarginPerMille: Int = 0,
     ): KeyboardWideContentPlan {
-        val margin = sideMargin(surfaceDp, sideMarginDp, automaticAboveDp)
+        val margin = sideMargin(surfaceDp, sideMarginPerMille, automaticAboveDp)
         val inner = surfaceDp - 2 * margin
         val plan =
             if (split?.isActive(surfaceDp, automaticAboveDp) == true) {

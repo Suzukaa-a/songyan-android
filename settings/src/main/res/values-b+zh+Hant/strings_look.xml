@@ -56,7 +56,7 @@
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_side_margin_title">大螢幕兩側留白</string>
     <string name="options_side_margin_none">無</string>
-    <string name="options_side_margin_value">%1$d dp</string>
+    <string name="options_side_margin_value">寬度的 %1$s%%</string>
     <string name="options_reset_default">恢復預設</string>
     <string name="keyboards_pages_section">佈局與頁面</string>
     <string name="composition_title">頁面搭配</string>

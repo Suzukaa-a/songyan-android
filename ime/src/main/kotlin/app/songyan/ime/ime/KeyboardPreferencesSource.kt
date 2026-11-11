@@ -65,8 +65,8 @@ interface KeyboardPreferencesSource {
     /** Key area width in dp above which the automatic split shows, [KeyboardGeometry.clampSplitWidthDp] steps. */
     val splitWidthDp: Flow<Int> get() = flowOf(KeyboardGeometry.SPLIT_WIDTH_DEFAULT_DP)
 
-    /** Blank margin in dp on each side of the key area, [KeyboardGeometry.clampSideMarginDp] steps. */
-    val sideMarginDp: Flow<Int> get() = flowOf(0)
+    /** Blank margin on each side of a large surface in per mille of its width, [KeyboardGeometry.clampSideMarginPerMille] steps. */
+    val sideMarginPerMille: Flow<Int> get() = flowOf(KeyboardGeometry.SIDE_MARGIN_DEFAULT_PER_MILLE)
 
     /** [ReadingPlacement.wire]: where 14 / 18-key readings show while composing. */
     val readingPlacement: Flow<String> get() = flowOf(ReadingPlacement.ROW.wire)

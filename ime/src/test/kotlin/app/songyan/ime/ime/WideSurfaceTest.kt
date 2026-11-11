@@ -44,62 +44,76 @@ class WideSurfaceTest {
     }
 
     @Test
-    fun onlyASurfaceWiderThanTheSplitWidthGetsTheSideMargin() {
-        // A phone, at or below the split width, keeps its full width whatever margin is chosen.
-        val phone = WideSurface.plan(411.0, null, KeyboardContentDock.CENTER, sideMarginDp = 24)
+    fun aPhoneAtTheDefaultSplitWidthGetsNoSideMargin() {
+        val phone = WideSurface.plan(411.0, null, KeyboardContentDock.CENTER)
         assertEquals(411.0, phone.contentWidth, 1e-9)
         assertEquals(0.0, phone.leadingInset, 1e-9)
         assertFalse(phone.active)
-        assertEquals(0.0, WideSurface.sideMargin(600.0, 40, 600.0), 1e-9)
-        assertEquals(40.0, WideSurface.sideMargin(601.0, 40, 600.0), 1e-9)
-        // Lowering the split width makes the same phone large: it gets the margin.
+        assertEquals(0.0, WideSurface.sideMargin(600.0, 100, 600.0), 1e-9)
+        assertEquals(60.1, WideSurface.sideMargin(601.0, 100, 600.0), 1e-9)
+    }
+
+    @Test
+    fun aLoweredSplitWidthMakesThePhoneLargeAndGivesAShareOfItsWidthOnEachSide() {
         val lowered =
             WideSurface.plan(
                 411.0,
                 null,
                 KeyboardContentDock.CENTER,
                 automaticAboveDp = 400.0,
-                sideMarginDp = 24,
+                sideMarginPerMille = 25,
             )
-        assertEquals(363.0, lowered.contentWidth, 1e-9)
-        assertEquals(24.0, lowered.leadingInset, 1e-9)
-        assertEquals(24.0, lowered.trailingInset, 1e-9)
-        // On a tablet the cap and the dock work on the width left after the margins.
-        val tablet = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, sideMarginDp = 40)
+        assertEquals(10.275, lowered.leadingInset, 1e-9)
+        assertEquals(10.275, lowered.trailingInset, 1e-9)
+        assertEquals(411.0 - 2 * 10.275, lowered.contentWidth, 1e-9)
+    }
+
+    @Test
+    fun aTabletTakesTheShareThenCapsAndDocksOnTheRemainder() {
+        assertEquals(25.6, WideSurface.sideMargin(1024.0, 25), 1e-9)
+        val tablet = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, sideMarginPerMille = 25)
         assertEquals(600.0, tablet.contentWidth, 1e-9)
-        assertEquals(40.0, tablet.leadingInset, 1e-9)
-        assertEquals(344.0 + 40.0, tablet.trailingInset, 1e-9)
+        assertEquals(25.6, tablet.leadingInset, 1e-9)
+        assertEquals(1024.0 - 600.0 - 25.6, tablet.trailingInset, 1e-9)
     }
 
     @Test
     fun theSideMarginNeverLeavesTheKeyAreaBelow280() {
-        assertEquals(65.5, WideSurface.sideMargin(411.0, 96, 400.0), 1e-9)
+        assertEquals(65.5, WideSurface.sideMargin(411.0, 1000, 400.0), 1e-9)
         val plan =
             WideSurface.plan(
                 411.0,
                 null,
                 KeyboardContentDock.CENTER,
                 automaticAboveDp = 400.0,
-                sideMarginDp = 96,
+                sideMarginPerMille = 1000,
             )
         assertEquals(280.0, plan.contentWidth, 1e-9)
         assertEquals(65.5, plan.leadingInset, 1e-9)
+        assertEquals(0.0, WideSurface.sideMargin(1024.0, 0), 1e-9)
     }
 
     @Test
     fun theSplitWidthDecidesTheSplitOnTheFullSurfaceSoAMarginNeverUndoesIt() {
         val split = LayoutSplitConfiguration()
-        val lowered = WideSurface.plan(500.0, split, KeyboardContentDock.CENTER, automaticAboveDp = 450.0)
+        val lowered =
+            WideSurface.plan(
+                500.0,
+                split,
+                KeyboardContentDock.CENTER,
+                automaticAboveDp = 450.0,
+                sideMarginPerMille = 0,
+            )
         assertTrue(lowered.contentWidth == 500.0)
         assertFalse(split.isActive(580.0, 580.0))
         assertTrue(split.isActive(581.0, 580.0))
-        // 700 dp is above the default 600: it splits, and a 60 dp margin stays blank on both sides.
-        val marginal = WideSurface.plan(700.0, split, KeyboardContentDock.CENTER, sideMarginDp = 60)
-        assertEquals(580.0, marginal.contentWidth, 1e-9)
-        assertEquals(60.0, marginal.leadingInset, 1e-9)
-        val tablet = WideSurface.plan(1024.0, split, KeyboardContentDock.CENTER, sideMarginDp = 40)
-        assertEquals(944.0, tablet.contentWidth, 1e-9)
-        assertEquals(40.0, tablet.leadingInset, 1e-9)
+        // 700 dp is above the default 600: it splits, and the 2.5 % margin stays blank on both sides.
+        val marginal = WideSurface.plan(700.0, split, KeyboardContentDock.CENTER, sideMarginPerMille = 25)
+        assertEquals(700.0 - 35.0, marginal.contentWidth, 1e-9)
+        assertEquals(17.5, marginal.leadingInset, 1e-9)
+        val tablet = WideSurface.plan(1024.0, split, KeyboardContentDock.CENTER, sideMarginPerMille = 25)
+        assertEquals(1024.0 - 51.2, tablet.contentWidth, 1e-9)
+        assertEquals(25.6, tablet.leadingInset, 1e-9)
     }
 
     @Test

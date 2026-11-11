@@ -13,8 +13,8 @@ class KeyboardFeelPreferencesTest {
         assertEquals(620, KeyboardPreferences.clampSplitWidth(639))
         assertEquals(1200, KeyboardPreferences.clampSplitWidth(9999))
         assertEquals(0, KeyboardPreferences.clampSideMargin(-1))
-        assertEquals(12, KeyboardPreferences.clampSideMargin(13))
-        assertEquals(96, KeyboardPreferences.clampSideMargin(97))
+        assertEquals(10, KeyboardPreferences.clampSideMargin(13))
+        assertEquals(100, KeyboardPreferences.clampSideMargin(101))
     }
 
     @Test

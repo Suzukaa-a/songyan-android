@@ -223,11 +223,11 @@ class KeyboardPreferences(
             .map { clampSplitWidth(it[KEY_SPLIT_WIDTH] ?: SPLIT_WIDTH_DEFAULT_DP) }
             .distinctUntilChanged()
 
-    /** Blank margin in dp on each side of the key area; 0..96 in steps of 4, 0 by default. */
-    val sideMarginDp: Flow<Int> =
+    /** Blank margin on each side of a large surface in per mille of its width; 0..100 in steps of 5, 25 by default. */
+    val sideMarginPerMille: Flow<Int> =
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
-            .map { clampSideMargin(it[KEY_SIDE_MARGIN] ?: 0) }
+            .map { clampSideMargin(it[KEY_SIDE_MARGIN] ?: SIDE_MARGIN_DEFAULT_PER_MILLE) }
             .distinctUntilChanged()
 
     /** "row" (own row above the candidates) / "inline" (start of the candidate row): 14 / 18-key readings. */
@@ -378,7 +378,7 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_SPLIT_WIDTH] = clampSplitWidth(value) }
     }
 
-    suspend fun setSideMarginDp(value: Int) {
+    suspend fun setSideMarginPerMille(value: Int) {
         appContext.keyboardDataStore.edit { it[KEY_SIDE_MARGIN] = clampSideMargin(value) }
     }
 
@@ -532,8 +532,9 @@ class KeyboardPreferences(
         const val SPLIT_WIDTH_MAX_DP = 1200
         const val SPLIT_WIDTH_STEP_DP = 20
         const val SPLIT_WIDTH_DEFAULT_DP = 600
-        const val SIDE_MARGIN_MAX_DP = 96
-        const val SIDE_MARGIN_STEP_DP = 4
+        const val SIDE_MARGIN_MAX_PER_MILLE = 100
+        const val SIDE_MARGIN_STEP_PER_MILLE = 5
+        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 25
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50
@@ -547,7 +548,7 @@ class KeyboardPreferences(
                 SPLIT_WIDTH_STEP_DP + SPLIT_WIDTH_MIN_DP
 
         fun clampSideMargin(value: Int): Int =
-            value.coerceIn(0, SIDE_MARGIN_MAX_DP) / SIDE_MARGIN_STEP_DP * SIDE_MARGIN_STEP_DP
+            value.coerceIn(0, SIDE_MARGIN_MAX_PER_MILLE) / SIDE_MARGIN_STEP_PER_MILLE * SIDE_MARGIN_STEP_PER_MILLE
 
         fun clampLongPress(value: Int): Int =
             (value.coerceIn(LONG_PRESS_MIN_MS, LONG_PRESS_MAX_MS) - LONG_PRESS_MIN_MS) / LONG_PRESS_STEP_MS *
@@ -579,7 +580,7 @@ class KeyboardPreferences(
         private val KEY_HEIGHT = stringPreferencesKey("key_height")
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SPLIT_WIDTH = intPreferencesKey("split_width_dp")
-        private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_dp")
+        private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_per_mille")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")
 

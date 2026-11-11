@@ -620,7 +620,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onWidePositionCustomChanged = viewModel::setWidePositionCustom,
                 onSplitModeChanged = viewModel::setSplitMode,
                 onSplitWidthChanged = viewModel::setSplitWidthDp,
-                onSideMarginChanged = viewModel::setSideMarginDp,
+                onSideMarginChanged = viewModel::setSideMarginPerMille,
                 onReadingPlacementChanged = viewModel::setReadingPlacement,
                 onBack = topBack(navController),
                 onOpenFeatures = { navController.navigate(SettingsRoutes.FEATURES) },

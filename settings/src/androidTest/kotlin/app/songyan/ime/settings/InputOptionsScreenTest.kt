@@ -238,12 +238,28 @@ class InputOptionsScreenTest {
     }
 
     @Test
-    fun theSideMarginRowSaysNoneByDefaultAndResetsToZero() {
-        feel = KeyboardFeelState(sideMarginDp = 24)
+    fun theSideMarginRowReadsTwoPointFivePercentByDefault() {
         show()
-        compose.onNodeWithText(str(R.string.options_side_margin_value, 24)).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.options_side_margin_value, "2.5")).performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theSideMarginRowSaysNoneAtZero() {
+        feel = KeyboardFeelState(sideMarginPerMille = 0)
+        show()
+        compose
+            .onNode(
+                hasText(str(R.string.options_side_margin_title)) and hasText(str(R.string.options_side_margin_none)),
+            ).performScrollTo()
+            .assertExists()
+    }
+
+    @Test
+    fun theSideMarginResetReturnsTheDefault() {
+        feel = KeyboardFeelState(sideMarginPerMille = 40)
+        show()
         compose.onNodeWithText(str(R.string.options_side_margin_title)).performScrollTo().performClick()
         compose.onNode(hasText(str(R.string.options_reset_default)) and hasAnyAncestor(isDialog())).performClick()
-        assertEquals(0, sideMargin)
+        assertEquals(25, sideMargin)
     }
 }

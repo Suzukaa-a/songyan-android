@@ -36,7 +36,7 @@ class AppSettingsPreferences(
     override val widePositionCustom: Flow<Int> = preferences.widePositionCustom
     override val splitMode: Flow<String> = preferences.splitMode
     override val splitWidthDp: Flow<Int> = preferences.splitWidthDp
-    override val sideMarginDp: Flow<Int> = preferences.sideMarginDp
+    override val sideMarginPerMille: Flow<Int> = preferences.sideMarginPerMille
 
     override val readingPlacement: Flow<String> = preferences.readingPlacement
 
@@ -66,7 +66,7 @@ class AppSettingsPreferences(
 
     override suspend fun setSplitWidthDp(value: Int) = preferences.setSplitWidthDp(value)
 
-    override suspend fun setSideMarginDp(value: Int) = preferences.setSideMarginDp(value)
+    override suspend fun setSideMarginPerMille(value: Int) = preferences.setSideMarginPerMille(value)
 
     override suspend fun setKeyHeight(value: String) = preferences.setKeyHeight(value)
 

@@ -129,16 +129,17 @@ object KeyboardGeometry {
     const val SPLIT_WIDTH_STEP_DP = 20
     const val SPLIT_WIDTH_DEFAULT_DP = 600
 
-    /** The blank margin (dp) on each side of the key area is chosen in this range and step. */
-    const val SIDE_MARGIN_MAX_DP = 96
-    const val SIDE_MARGIN_STEP_DP = 4
+    /** Each side of a large surface keeps this share of its width (per mille) as blank margin, chosen in this range and step. */
+    const val SIDE_MARGIN_MAX_PER_MILLE = 100
+    const val SIDE_MARGIN_STEP_PER_MILLE = 5
+    const val SIDE_MARGIN_DEFAULT_PER_MILLE = 25
 
     fun clampSplitWidthDp(value: Int): Int =
         (value.coerceIn(SPLIT_WIDTH_MIN_DP, SPLIT_WIDTH_MAX_DP) - SPLIT_WIDTH_MIN_DP) / SPLIT_WIDTH_STEP_DP *
             SPLIT_WIDTH_STEP_DP + SPLIT_WIDTH_MIN_DP
 
-    fun clampSideMarginDp(value: Int): Int =
-        value.coerceIn(0, SIDE_MARGIN_MAX_DP) / SIDE_MARGIN_STEP_DP * SIDE_MARGIN_STEP_DP
+    fun clampSideMarginPerMille(value: Int): Int =
+        value.coerceIn(0, SIDE_MARGIN_MAX_PER_MILLE) / SIDE_MARGIN_STEP_PER_MILLE * SIDE_MARGIN_STEP_PER_MILLE
 
     /**
      * The extra empty band below the key area for a [requestedDp] choice. On a short window it is

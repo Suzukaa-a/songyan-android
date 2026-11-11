@@ -127,7 +127,12 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.widePosition.collect { keyboard.dock = KeyboardContentDock.of(it) } }
     scope.launch { source.splitMode.collect { keyboard.splitMode = SplitMode.resolve(it) } }
     scope.launch { source.splitWidthDp.collect { keyboard.splitWidthDp = KeyboardGeometry.clampSplitWidthDp(it) } }
-    scope.launch { source.sideMarginDp.collect { keyboard.sideMarginDp = KeyboardGeometry.clampSideMarginDp(it) } }
+    scope.launch {
+        source.sideMarginPerMille.collect {
+            keyboard.sideMarginPerMille =
+                KeyboardGeometry.clampSideMarginPerMille(it)
+        }
+    }
     scope.launch { source.readingPlacement.collect { applyReadingPlacement(it) } }
     scope.launch {
         source.menuHiddenSchemas.collect {
@@ -205,8 +210,8 @@ internal suspend fun KeyboardController.readPreferences() {
     runCatching { source.splitWidthDp.first() }.getOrNull()?.let {
         keyboard.splitWidthDp = KeyboardGeometry.clampSplitWidthDp(it)
     }
-    runCatching { source.sideMarginDp.first() }.getOrNull()?.let {
-        keyboard.sideMarginDp = KeyboardGeometry.clampSideMarginDp(it)
+    runCatching { source.sideMarginPerMille.first() }.getOrNull()?.let {
+        keyboard.sideMarginPerMille = KeyboardGeometry.clampSideMarginPerMille(it)
     }
     runCatching { source.readingPlacement.first() }.getOrNull()?.let { readingPlacement = ReadingPlacement.resolve(it) }
     runCatching { source.shuangpinHints.first() }.getOrNull()?.let { shuangpinHints = it }

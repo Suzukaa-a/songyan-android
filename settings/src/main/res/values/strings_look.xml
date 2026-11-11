@@ -56,7 +56,7 @@
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_side_margin_title">Side margins on large screens</string>
     <string name="options_side_margin_none">None</string>
-    <string name="options_side_margin_value">%1$d dp</string>
+    <string name="options_side_margin_value">%1$s%% of the width</string>
     <string name="options_reset_default">Reset to default</string>
     <string name="keyboards_pages_section">Layouts and pages</string>
     <string name="composition_title">Page pairing</string>

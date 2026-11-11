@@ -85,11 +85,11 @@ class SettingsPreferencesTest {
         runTest {
             val preferences = InMemorySettingsPreferences()
             assertEquals(600, preferences.splitWidthDp.first())
-            assertEquals(0, preferences.sideMarginDp.first())
+            assertEquals(25, preferences.sideMarginPerMille.first())
             preferences.setSplitWidthDp(840)
-            preferences.setSideMarginDp(24)
+            preferences.setSideMarginPerMille(40)
             assertEquals(840, preferences.splitWidthDp.first())
-            assertEquals(24, preferences.sideMarginDp.first())
+            assertEquals(40, preferences.sideMarginPerMille.first())
         }
 
     @Test(expected = IllegalArgumentException::class)
@@ -101,7 +101,13 @@ class SettingsPreferencesTest {
     @Test(expected = IllegalArgumentException::class)
     fun rejectsASideMarginOutOfRange() =
         runTest {
-            InMemorySettingsPreferences().setSideMarginDp(100)
+            InMemorySettingsPreferences().setSideMarginPerMille(101)
+        }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsASideMarginOffTheStep() =
+        runTest {
+            InMemorySettingsPreferences().setSideMarginPerMille(12)
         }
 
     @Test

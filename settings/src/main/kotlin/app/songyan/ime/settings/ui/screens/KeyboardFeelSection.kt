@@ -45,7 +45,7 @@ data class KeyboardFeelState(
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
     val splitWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
-    val sideMarginDp: Int = 0,
+    val sideMarginPerMille: Int = SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE,
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
 
@@ -87,14 +87,18 @@ fun KeyboardFeelSection(
     if (sideMarginOpen) {
         ValueSliderDialog(
             title = stringResource(R.string.options_side_margin_title),
-            range = 0..SettingsPreferences.SIDE_MARGIN_MAX_DP,
-            step = SettingsPreferences.SIDE_MARGIN_STEP_DP,
-            initial = state.sideMarginDp,
-            label = { stringResource(R.string.options_side_margin_value, it) },
+            range = 0..SettingsPreferences.SIDE_MARGIN_MAX_PER_MILLE,
+            step = SettingsPreferences.SIDE_MARGIN_STEP_PER_MILLE,
+            initial = state.sideMarginPerMille,
+            label = { stringResource(R.string.options_side_margin_value, percentText(it)) },
             onConfirm = onSideMargin,
             onDismiss = { sideMarginOpen = false },
-            resetLabel = stringResource(R.string.options_reset_default).takeIf { state.sideMarginDp != 0 },
-            onReset = { onSideMargin(0) },
+            resetLabel =
+                stringResource(R.string.options_reset_default).takeIf {
+                    state.sideMarginPerMille !=
+                        SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE
+                },
+            onReset = { onSideMargin(SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE) },
         )
     }
     var bottomGapOpen by rememberSaveable { mutableStateOf(false) }
@@ -231,10 +235,10 @@ fun KeyboardFeelSection(
         SettingsRow(
             title = stringResource(R.string.options_side_margin_title),
             subtitle =
-                if (state.sideMarginDp == 0) {
+                if (state.sideMarginPerMille == 0) {
                     stringResource(R.string.options_side_margin_none)
                 } else {
-                    stringResource(R.string.options_side_margin_value, state.sideMarginDp)
+                    stringResource(R.string.options_side_margin_value, percentText(state.sideMarginPerMille))
                 },
             onClick = { sideMarginOpen = true },
         )
@@ -393,6 +397,10 @@ internal fun WidePositionCustomControls(
         )
     }
 }
+
+/** Per mille as a percent, with a decimal only when needed: 25 reads 2.5, 30 reads 3. */
+internal fun percentText(perMille: Int): String =
+    if (perMille % 10 == 0) "${perMille / 10}" else "${perMille / 10}.${perMille % 10}"
 
 /** The number typed into the position field, or null when it is not a whole number from 0 to 100. */
 internal fun parseWidePosition(text: String): Int? =

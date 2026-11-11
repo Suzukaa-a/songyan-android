@@ -103,8 +103,8 @@ class KeyboardView(
             relayout()
         }
 
-    /** The blank margin (dp) on each side of the key area; the candidate bar and toolbar keep the full width. */
-    var sideMarginDp: Int = 0
+    /** The blank margin on each side of a large surface, in per mille of its width; the candidate bar and toolbar keep the full width. */
+    var sideMarginPerMille: Int = KeyboardGeometry.SIDE_MARGIN_DEFAULT_PER_MILLE
         set(value) {
             if (field == value) return
             field = value

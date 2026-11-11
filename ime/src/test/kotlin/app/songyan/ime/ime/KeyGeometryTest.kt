@@ -32,4 +32,17 @@ class KeyGeometryTest {
         assertFalse(KeyGeometry.near(key, 20f, 168f, 8f))
         assertFalse(KeyGeometry.near(key, 48f, 130f, 8f))
     }
+
+    @Test fun aPressNearTheTopOfALowerRowGoesToTheKeyAboveIt() {
+        // Four 50 px rows, one key each.
+        val rows = (0 until 4).map { KeyBounds(0f, it * 50f, 100f, it * 50f + 50f) }
+        // 2 px into the bottom row: a finger that aimed at the row above lands this low.
+        assertEquals(2, KeyGeometry.hitCorrected(rows, 50f, 152f, 200f))
+        assertEquals(3, KeyGeometry.hit(rows, 50f, 152f))
+        // Well inside the bottom row it stays there.
+        assertEquals(3, KeyGeometry.hitCorrected(rows, 50f, 170f, 200f))
+        // At the top of the key area nothing moves: a top-row press never jumps out of the keys.
+        assertEquals(0, KeyGeometry.hitCorrected(rows, 50f, 1f, 200f))
+        assertEquals(1, KeyGeometry.hitCorrected(rows, 50f, 53f, 200f))
+    }
 }

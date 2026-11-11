@@ -68,7 +68,7 @@ internal fun KeyboardView.handleDown(
     // A new finger takes the surface over: an open popup is cancelled and its highlight dropped.
     if (popupKey >= 0) dismissPopup(animated = true)
     stopAccessibilityRepeat()
-    val slot = KeyGeometry.hit(hitBounds, x, y)
+    val slot = KeyGeometry.hitCorrected(hitBounds, x, y, height.toFloat())
     if (slot < 0) return
     rollOver()
     ImePerf.keyDown()
@@ -681,7 +681,7 @@ internal fun KeyboardView.handleUp(
                     // still a space.
                     press.held && !press.moved && press.snapshot.isSpace -> activate(press.snapshot)
                     !press.held && !press.snapshot.isSpace -> {
-                        val target = KeyGeometry.hit(hitBounds, x, y)
+                        val target = KeyGeometry.hitCorrected(hitBounds, x, y, height.toFloat())
                         when {
                             // Lifted on the key it pressed: that key was meant, whatever it does, as a
                             // View's click survives drift that stays inside it. Without this a function

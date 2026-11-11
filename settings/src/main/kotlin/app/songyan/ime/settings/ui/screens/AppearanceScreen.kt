@@ -46,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.appearance.AppearanceDocument
 import app.songyan.ime.appearance.AppearancePresets
 import app.songyan.ime.appearance.KeyboardPalette
+import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.AppearanceFailure
 import app.songyan.ime.settings.state.AppearanceImportOutcome
@@ -68,6 +69,9 @@ import app.songyan.ime.settings.ui.theme.ThemePreferencesHolder
 @Composable
 fun AppearanceScreen(
     onBack: (() -> Unit)?,
+    candidateTextSize: CandidateTextSize?,
+    onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
+    onOpenCandidateBar: () -> Unit,
     viewModel: AppearanceViewModel = viewModel(factory = AppearanceViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -169,6 +173,8 @@ fun AppearanceScreen(
                     )
                 }
             }
+
+            CandidateBarLookSection(candidateTextSize, onCandidateTextSizeChanged, onOpenCandidateBar)
 
             SectionHeader(stringResource(R.string.appearance_section_files))
             SettingsRow(
@@ -347,3 +353,45 @@ private fun themeModeLabel(mode: ThemeMode): String =
             ThemeMode.DARK -> R.string.appearance_theme_dark
         },
     )
+
+/**
+ * Everything about how the candidate bar looks sits with the rest of the look, so it is not split
+ * between this page and the input options. [candidateTextSize] is null until the stored choice is
+ * read; the size list is not drawn before that, so a default never flashes by.
+ */
+@Composable
+fun CandidateBarLookSection(
+    candidateTextSize: CandidateTextSize?,
+    onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
+    onOpenCandidateBar: () -> Unit,
+) {
+    SectionHeader(stringResource(R.string.appearance_section_candidates))
+    SettingsRow(
+        title = stringResource(R.string.candidate_bar_title),
+        subtitle = stringResource(R.string.candidate_bar_entry_subtitle),
+        onClick = onOpenCandidateBar,
+    )
+    if (candidateTextSize == null) return
+    Text(
+        text = stringResource(R.string.options_candidate_size_section),
+        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    )
+    Column(modifier = Modifier.selectableGroup()) {
+        CandidateTextSize.entries.forEach { size ->
+            RadioRow(
+                title = stringResource(candidateTextSizeLabel(size)),
+                selected = size == candidateTextSize,
+                onClick = { onCandidateTextSizeChanged(size) },
+            )
+        }
+    }
+}
+
+private fun candidateTextSizeLabel(size: CandidateTextSize): Int =
+    when (size) {
+        CandidateTextSize.SMALL -> R.string.options_candidate_size_small
+        CandidateTextSize.STANDARD -> R.string.options_candidate_size_standard
+        CandidateTextSize.LARGE -> R.string.options_candidate_size_large
+        CandidateTextSize.EXTRA_LARGE -> R.string.options_candidate_size_extra_large
+    }

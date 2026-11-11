@@ -39,7 +39,11 @@ object SettingsSearch {
                 R.string.section_keyboard,
                 R.string.row_options_subtitle,
             ),
-            SearchEntry(SettingsRoutes.OPTIONS, R.string.options_candidate_size_section, R.string.row_options_title),
+            SearchEntry(
+                SettingsRoutes.APPEARANCE,
+                R.string.options_candidate_size_section,
+                R.string.row_appearance_title,
+            ),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_key_height_section, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_bottom_gap_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_engine_section, R.string.row_options_title),

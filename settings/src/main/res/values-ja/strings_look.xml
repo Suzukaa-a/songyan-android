@@ -16,6 +16,7 @@
     <string name="candidate_bar_row_gap">行の間隔</string>
     <string name="candidate_bar_column_gap">列の間隔</string>
     <string name="appearance_copy_suffix">（カスタム）</string>
+    <string name="appearance_section_candidates">候補バー</string>
     <string name="appearance_section_files">外観ファイル</string>
     <string name="appearance_import_title">外観ファイルをインポート</string>
     <string name="appearance_import_body">外観、配色、候補バーのファイルを選んでください。</string>

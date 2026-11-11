@@ -28,7 +28,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
-import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.EngineOptionSetting
@@ -82,13 +81,10 @@ fun InputOptionsScreen(
     onSplitWidthChanged: (Int) -> Unit = {},
     onSideMarginChanged: (Int) -> Unit = {},
     onReadingPlacementChanged: (String) -> Unit = {},
-    candidateTextSize: CandidateTextSize,
-    onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
     keyFeedback: KeyFeedbackSettings,
     onKeyFeedbackChanged: (KeyFeedbackSettings) -> Unit,
     onBack: (() -> Unit)?,
     onOpenFeatures: () -> Unit = {},
-    onOpenCandidateBar: () -> Unit = {},
     onOpenToolbar: () -> Unit = {},
     onOpenShuangpinHints: () -> Unit = {},
     engineOptions: EngineOptionsUiState = EngineOptionsUiState(),
@@ -153,26 +149,10 @@ fun InputOptionsScreen(
             }
 
             SettingsRow(
-                title = stringResource(R.string.candidate_bar_title),
-                subtitle = stringResource(R.string.candidate_bar_entry_subtitle),
-                onClick = onOpenCandidateBar,
-            )
-            SettingsRow(
                 title = stringResource(R.string.toolbar_title),
                 subtitle = stringResource(R.string.toolbar_entry_subtitle),
                 onClick = onOpenToolbar,
             )
-
-            SectionHeader(stringResource(R.string.options_candidate_size_section))
-            Column(modifier = Modifier.selectableGroup()) {
-                CandidateTextSize.entries.forEach { size ->
-                    RadioRow(
-                        title = stringResource(candidateTextSizeLabel(size)),
-                        selected = size == candidateTextSize,
-                        onClick = { onCandidateTextSizeChanged(size) },
-                    )
-                }
-            }
 
             SectionHeader(stringResource(R.string.options_feedback_section))
             FeedbackControls(keyFeedback, onKeyFeedbackChanged, system)
@@ -262,14 +242,6 @@ private fun engineOptionTitle(kind: EngineOptionKind): Int =
         EngineOptionKind.SIMPLIFIED -> R.string.options_engine_simplified
         EngineOptionKind.EMOJI -> R.string.options_engine_emoji
         EngineOptionKind.FULL_SHAPE -> R.string.options_engine_full_shape
-    }
-
-private fun candidateTextSizeLabel(size: CandidateTextSize): Int =
-    when (size) {
-        CandidateTextSize.SMALL -> R.string.options_candidate_size_small
-        CandidateTextSize.STANDARD -> R.string.options_candidate_size_standard
-        CandidateTextSize.LARGE -> R.string.options_candidate_size_large
-        CandidateTextSize.EXTRA_LARGE -> R.string.options_candidate_size_extra_large
     }
 
 @Composable

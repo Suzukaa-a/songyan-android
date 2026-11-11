@@ -32,7 +32,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
-import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.ImeStatus
@@ -251,8 +250,6 @@ class LargeFontTest {
                 onOneHandChanged = {},
                 onKeyPreviewChanged = {},
                 onReleaseHapticChanged = {},
-                candidateTextSize = CandidateTextSize.STANDARD,
-                onCandidateTextSizeChanged = {},
                 keyFeedback = KeyFeedbackSettings(),
                 onKeyFeedbackChanged = {},
                 onBack = {},

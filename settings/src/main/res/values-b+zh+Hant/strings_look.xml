@@ -17,6 +17,7 @@
     <string name="candidate_bar_row_gap">行間距</string>
     <string name="candidate_bar_column_gap">列間距</string>
     <string name="appearance_copy_suffix">（自訂）</string>
+    <string name="appearance_section_candidates">候選欄</string>
     <string name="appearance_section_files">外觀檔案</string>
     <string name="appearance_import_title">匯入外觀檔案</string>
     <string name="appearance_import_body">選擇外觀、配色或候選列檔案。</string>

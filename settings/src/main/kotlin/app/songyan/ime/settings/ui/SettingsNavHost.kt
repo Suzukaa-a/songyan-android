@@ -584,7 +584,12 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.APPEARANCE) {
-        AppearanceScreen(onBack = topBack(navController))
+        AppearanceScreen(
+            onBack = topBack(navController),
+            candidateTextSize = state.value.candidateTextSize.takeIf { state.value.preferencesLoaded },
+            onCandidateTextSizeChanged = viewModel::setCandidateTextSize,
+            onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
+        )
     }
 
     composable(SettingsRoutes.OPTIONS) {
@@ -600,8 +605,6 @@ private fun NavGraphBuilder.settingsGraph(
             InputOptionsScreen(
                 engineOptions = engineOptions,
                 onEngineOptionChanged = engineOptionsModel::set,
-                candidateTextSize = state.value.candidateTextSize,
-                onCandidateTextSizeChanged = viewModel::setCandidateTextSize,
                 keyFeedback = state.value.keyFeedback,
                 onKeyFeedbackChanged = viewModel::setKeyFeedback,
                 keyboardFeel = state.value.keyboardFeel,
@@ -621,7 +624,6 @@ private fun NavGraphBuilder.settingsGraph(
                 onReadingPlacementChanged = viewModel::setReadingPlacement,
                 onBack = topBack(navController),
                 onOpenFeatures = { navController.navigate(SettingsRoutes.FEATURES) },
-                onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
                 onOpenToolbar = { navController.navigate(SettingsRoutes.TOOLBAR) },
                 onOpenShuangpinHints = { navController.navigate(SettingsRoutes.SHUANGPIN) },
             )

@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
-import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.settings.state.EngineOptionSetting
 import app.songyan.ime.settings.ui.EngineOptionsUiState
@@ -31,7 +30,6 @@ class InputOptionsScreenTest {
     val compose = createComposeRule()
 
     private var feedback = KeyFeedbackSettings()
-    private var size = CandidateTextSize.STANDARD
     private var placement = "row"
     private var longPress: Int? = null
     private var bottomGap = -1
@@ -50,8 +48,6 @@ class InputOptionsScreenTest {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 InputOptionsScreen(
-                    candidateTextSize = size,
-                    onCandidateTextSizeChanged = { size = it },
                     keyFeedback = feedback,
                     onKeyFeedbackChanged = { feedback = it },
                     keyboardFeel = feel.copy(readingPlacement = placement),
@@ -149,13 +145,6 @@ class InputOptionsScreenTest {
         show()
         compose.onNodeWithText(str(R.string.options_double_space_title)).performScrollTo().performClick()
         assertEquals(false, doubleSpace)
-    }
-
-    @Test
-    fun theCandidateSizeIsChosenFromAList() {
-        show()
-        compose.onNodeWithText(str(R.string.options_candidate_size_large)).performScrollTo().performClick()
-        assertEquals(CandidateTextSize.LARGE, size)
     }
 
     @Test

@@ -648,7 +648,10 @@ class SongyanInputMethodService : InputMethodService() {
         val container =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                background = KeyboardBackgroundDrawable(palette)
+                background =
+                    KeyboardBackgroundDrawable(palette).also { surface ->
+                        surface.onBottomToneChanged = { applyWindowAppearance() }
+                    }
             }
         container.addView(pad.view, LinearLayout.LayoutParams(-1, -2))
         root = container
@@ -718,15 +721,18 @@ class SongyanInputMethodService : InputMethodService() {
     /** Keeps the window bars in step with the keyboard palette in both themes. */
     private fun applyWindowAppearance() {
         val palette = KeyboardPalette.from(this)
-        (root?.background as? KeyboardBackgroundDrawable)?.palette = palette
+        val surface = root?.background as? KeyboardBackgroundDrawable
+        surface?.palette = palette
+        val light = surface?.bottomIsLight ?: palette.isLight
         window?.window?.apply {
             // A gradient or picture runs on under the navigation bar, which the container paints too.
             navigationBarColor = if (palette.surface == 0) Color.TRANSPARENT else palette.background
             isNavigationBarContrastEnforced = palette.surface != 0
             if (Build.VERSION.SDK_INT >= 30) {
                 insetsController?.setSystemBarsAppearance(
-                    // The bar sits on the keyboard's own surface: its icons follow that, not the system theme.
-                    if (palette.isLight) WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,
+                    // The bar sits on the keyboard's own surface (or its picture): its icons follow that,
+                    // not the system theme.
+                    if (light) WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS else 0,
                     WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
                 )
             }

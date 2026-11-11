@@ -10,6 +10,7 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
+import androidx.core.graphics.ColorUtils
 import app.songyan.ime.appearance.BackgroundFill
 
 /**
@@ -29,6 +30,16 @@ class KeyboardBackgroundDrawable(
             invalidateSelf()
         }
 
+    /**
+     * Whether the bottom of what is drawn is light: the navigation bar's icons sit on it, and a picture
+     * or gradient can be dark under a light palette or the other way round.
+     */
+    var bottomIsLight: Boolean = palette.isLight
+        private set
+
+    /** Called on the main thread when [bottomIsLight] changes, such as when a picture finishes decoding. */
+    var onBottomToneChanged: (() -> Unit)? = null
+
     private val fillPaint = Paint()
     private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val imageMatrix = Matrix()
@@ -45,8 +56,11 @@ class KeyboardBackgroundDrawable(
         val fill = palette.tokens.backgroundFill
         if (fill !is BackgroundFill.Image) BackgroundImageLoader.release()
         when (fill) {
-            null -> Unit
-            is BackgroundFill.Solid -> fillPaint.color = fill.color
+            null -> setTone(isLight(palette.background))
+            is BackgroundFill.Solid -> {
+                fillPaint.color = fill.color
+                setTone(isLight(over(fill.color)))
+            }
             is BackgroundFill.Gradient -> {
                 val endX = if (fill.direction == BackgroundFill.Direction.VERTICAL) bounds.left else bounds.right
                 val endY = if (fill.direction == BackgroundFill.Direction.HORIZONTAL) bounds.top else bounds.bottom
@@ -61,8 +75,21 @@ class KeyboardBackgroundDrawable(
                         null,
                         Shader.TileMode.CLAMP,
                     )
+                // A vertical gradient ends at the bottom; across, the bar sees every stop.
+                val bottom =
+                    if (fill.direction ==
+                        BackgroundFill.Direction.VERTICAL
+                    ) {
+                        fill.colors.takeLast(1)
+                    } else {
+                        fill.colors
+                    }
+                setTone(bottom.map { luminance(over(it)) }.average() > LIGHT_LUMINANCE)
             }
-            is BackgroundFill.Image -> placeImage(fill)
+            is BackgroundFill.Image -> {
+                setTone(isLight(palette.background))
+                placeImage(fill)
+            }
         }
     }
 
@@ -90,7 +117,44 @@ class KeyboardBackgroundDrawable(
                 }
         imageMatrix.setScale(scale, scale)
         imageMatrix.postTranslate(left, top)
+        setTone(bottomOf(bitmap, scale, left, top) > LIGHT_LUMINANCE)
     }
+
+    /** Mean luminance of the picture across the bottom tenth of the bounds, sampled on a coarse grid. */
+    private fun bottomOf(
+        bitmap: Bitmap,
+        scale: Float,
+        left: Float,
+        top: Float,
+    ): Double {
+        val bounds = bounds
+        var sum = 0.0
+        var count = 0
+        for (row in 0 until TONE_ROWS) {
+            val y = bounds.bottom - bounds.height() * BOTTOM_SHARE * (row + 0.5f) / TONE_ROWS
+            for (column in 0 until TONE_COLUMNS) {
+                val x = bounds.left + bounds.width() * (column + 0.5f) / TONE_COLUMNS
+                val px = ((x - left) / scale).toInt().coerceIn(0, bitmap.width - 1)
+                val py = ((y - top) / scale).toInt().coerceIn(0, bitmap.height - 1)
+                sum += luminance(over(bitmap.getPixel(px, py)))
+                count++
+            }
+        }
+        return sum / count
+    }
+
+    private fun setTone(light: Boolean) {
+        if (light == bottomIsLight) return
+        bottomIsLight = light
+        onBottomToneChanged?.invoke()
+    }
+
+    /** [color] composited over the panel colour, which is always painted first. */
+    private fun over(color: Int): Int = ColorUtils.compositeColors(color, palette.background)
+
+    private fun isLight(color: Int): Boolean = luminance(color) > LIGHT_LUMINANCE
+
+    private fun luminance(color: Int): Double = ColorUtils.calculateLuminance(color)
 
     override fun draw(canvas: Canvas) {
         canvas.drawColor(palette.background)
@@ -107,4 +171,11 @@ class KeyboardBackgroundDrawable(
 
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.OPAQUE
+
+    private companion object {
+        const val LIGHT_LUMINANCE = 0.5
+        const val BOTTOM_SHARE = 0.1f
+        const val TONE_ROWS = 3
+        const val TONE_COLUMNS = 8
+    }
 }

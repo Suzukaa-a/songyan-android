@@ -233,6 +233,7 @@ class KeyboardView(
     /** Black shadow under a resting keycap; only its alpha changes per key, so nothing allocates in onDraw. */
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).also { it.color = Color.BLACK }
     private val shadowBounds = RectF()
+    private val strokeBounds = RectF()
 
     /** Fills the keyboard surface when the skin draws a background; rebuilt only when the palette or size changes. */
     private val backgroundPaint = Paint()
@@ -760,9 +761,15 @@ class KeyboardView(
             val border = if (isLetter || isSpace) palette.keyBorder else palette.controlBorder
             if (border != 0 && (!railKey || railChosen)) {
                 paint.style = Paint.Style.STROKE
-                paint.strokeWidth = metrics.keyBorderWidthDp * density
+                val stroke = metrics.keyBorderWidthDp * density
+                paint.strokeWidth = stroke
                 paint.color = border
-                canvas.drawRoundRect(drawBounds, radius, radius, paint)
+                // Inside the cap, as iOS layer borders and the web editor's CSS borders are, so the
+                // gap between keys keeps the skin's width.
+                strokeBounds.set(drawBounds)
+                strokeBounds.inset(stroke / 2f, stroke / 2f)
+                val strokeRadius = (radius - stroke / 2f).coerceAtLeast(0f)
+                canvas.drawRoundRect(strokeBounds, strokeRadius, strokeRadius, paint)
                 paint.style = Paint.Style.FILL
             }
             val onAccent = (emphasized || railChosen) && !pressed

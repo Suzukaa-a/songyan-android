@@ -1,7 +1,10 @@
 package app.songyan.ime.ime
 
+import app.songyan.ime.appearance.AppearancePresets
 import app.songyan.ime.candidate.CandidateBarDefinition
 import app.songyan.ime.candidate.CandidateBarDefinition.Expanded.Mode
+import app.songyan.ime.ime.palette.KeyboardAppearanceRegistry
+import app.songyan.ime.ime.palette.KeyboardAppearanceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -75,5 +78,26 @@ class CandidateBarStyleTest {
     @Test
     fun noInstalledAppearanceMeansThePlatformLook() {
         assertEquals(CandidateBarStyle(), CandidateBarStyle.of(null))
+    }
+
+    @Test
+    fun theRowGrowsWithTheUsersTextSizeAndTheSystemFontScale() {
+        val skin = AppearancePresets.androidDefault.skin
+        val document =
+            AppearancePresets.androidDefault
+                .replacing(skin.copy(typography = skin.typography.copy(candidateSize = 30.0)))
+                .replacing(bar(height = 36.0))
+        KeyboardAppearanceRegistry.install(KeyboardAppearanceSettings(document = document, dynamicColor = false))
+        try {
+            assertEquals(41f, CandidateBarStyle.current().rowHeightDp!!, 0.001f)
+            CandidateBarStyle.textFactor = 1.3f
+            // 30 x 1.3 = 39 sp: ceil(39 x 1.25 + 3) = 52.
+            assertEquals(52f, CandidateBarStyle.current().rowHeightDp!!, 0.001f)
+            // The font scale counts up to the keyboard's 1.3 cap: 30 x 1.3 x 1.3 = 50.7 sp needs 67 dp.
+            assertEquals(67f, CandidateBarStyle.current(fontScale = 2f).rowHeightDp!!, 0.001f)
+        } finally {
+            CandidateBarStyle.textFactor = 1f
+            KeyboardAppearanceRegistry.install(KeyboardAppearanceSettings(document = null, dynamicColor = false))
+        }
     }
 }

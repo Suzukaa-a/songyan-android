@@ -37,10 +37,18 @@ data class CandidateBarStyle(
         const val DEFAULT_COLUMNS = 2
         private const val DEFAULT_CANDIDATE_SIZE = 17.0
 
-        /** The style of the installed appearance; the platform look until the app graph installs one. */
-        fun current(): CandidateBarStyle {
+        /** The user's candidate text size choice; set on the main thread by the keyboard's preference sync. */
+        var textFactor: Float = 1f
+
+        /**
+         * The style of the installed appearance; the platform look until the app graph installs one. The
+         * row is topped up for the text as drawn: the file's size times the user's size choice and the
+         * system font scale (capped as [ImeText] caps it).
+         */
+        fun current(fontScale: Float = 1f): CandidateBarStyle {
             val document = KeyboardAppearanceRegistry.current()?.document
-            return of(document?.candidateBar, document?.skin?.typography?.candidateSize)
+            val size = document?.skin?.typography?.candidateSize ?: DEFAULT_CANDIDATE_SIZE
+            return of(document?.candidateBar, size * textFactor * minOf(fontScale, ImeText.MAX_FONT_SCALE))
         }
 
         /**

@@ -145,7 +145,7 @@ class CandidateBarView(
     internal var metrics = palette.tokens.withCandidateTextFactor(1f)
 
     /** The applied appearance's candidate area: page-button placement and the expanded arrangement. */
-    internal var style = CandidateBarStyle.current()
+    internal var style = CandidateBarStyle.current(context.resources.configuration.fontScale)
     internal var textScale = textScaleFor(context)
 
     /** A reading row sits right above (14 / 18 keys): the candidate text then keeps a little distance from it. */
@@ -599,7 +599,7 @@ class CandidateBarView(
         palette = KeyboardPalette.from(context)
         metrics = palette.tokens.withCandidateTextFactor(textSizeFactor)
         applyTypeface()
-        style = CandidateBarStyle.current()
+        style = CandidateBarStyle.current(context.resources.configuration.fontScale)
         textScale = textScaleFor(context)
         icons.clear()
         rebuild()

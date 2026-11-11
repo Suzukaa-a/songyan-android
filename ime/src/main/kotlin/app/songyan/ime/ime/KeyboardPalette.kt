@@ -57,7 +57,7 @@ data class KeyboardPalette(
             val palette = KeyboardPalettes.current(context)
             // The appearance's single-row size applies before the window budget, which may still
             // shrink the bar in a short window.
-            val styled = CandidateBarStyle.current().applyTo(palette.tokens)
+            val styled = CandidateBarStyle.current(context.resources.configuration.fontScale).applyTo(palette.tokens)
             val tokens = KeyboardGeometry.applyTo(styled, context)
             return if (tokens === palette.tokens) palette else palette.copy(tokens = tokens)
         }

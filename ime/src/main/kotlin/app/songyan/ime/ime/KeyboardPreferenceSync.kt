@@ -118,7 +118,12 @@ internal fun KeyboardController.observePreferences() {
     }
     scope.launch {
         source.candidateTextSize.collect { value ->
-            candidates.textSizeFactor = CandidateTextSize.fromId(value).factor
+            val factor = CandidateTextSize.fromId(value).factor
+            if (CandidateBarStyle.textFactor == factor && candidates.textSizeFactor == factor) return@collect
+            CandidateBarStyle.textFactor = factor
+            candidates.textSizeFactor = factor
+            // Larger text may need a taller row, which every part of the keyboard lays out around.
+            refreshAppearance()
         }
     }
     scope.launch {

@@ -177,6 +177,9 @@ class KeyboardView(
     /** The flicked key turning into its hint; the popup layer's bubble reads the same progress. */
     internal val flickMorph = FlickMorph()
 
+    /** Fades every label while the space bar drags the caret. */
+    internal val labelFade = LabelFade()
+
     /** Magnified preview of a tapped key; the keyboard turns it off in a private editor. */
     var keyPreviewEnabled = true
 
@@ -572,6 +575,7 @@ class KeyboardView(
     fun setCursorDragging(active: Boolean) {
         if (cursorDragging == active) return
         cursorDragging = active
+        labelFade.set(active, SystemClock.uptimeMillis(), motionScale())
         invalidate()
     }
 
@@ -666,6 +670,10 @@ class KeyboardView(
                 animating = true
                 dirtyUnion(box)
             }
+            if (labelFade.animating(now, motionScale)) {
+                animating = true
+                dirtyUnion(box)
+            }
             val flicked = i == flickMorph.key
             if (flicked && flickMorph.animating(now, motionScale)) {
                 animating = true
@@ -744,6 +752,9 @@ class KeyboardView(
                 canvas.drawRoundRect(strokeBounds, strokeRadius, strokeRadius, paint)
                 paint.style = Paint.Style.FILL
             }
+            val labelAlpha = labelFade.value(now, motionScale)
+            if (labelAlpha <= 0f) continue
+            val fadeLayer = if (labelAlpha < 1f) canvas.saveLayerAlpha(drawBounds, (labelAlpha * 255).toInt()) else -1
             val onAccent = (emphasized || railChosen) && !pressed
             val contentColor = if (onAccent) palette.accentText else palette.text
             val morph = if (flicked) flickMorph.value(now, motionScale) else 0f
@@ -804,6 +815,7 @@ class KeyboardView(
                     drawHint(canvas, i, hint, drawBounds)
                 }
             }
+            if (fadeLayer >= 0) canvas.restoreToCount(fadeLayer)
         }
         drawKana12Preview(canvas)
         drawCursorCue(canvas)

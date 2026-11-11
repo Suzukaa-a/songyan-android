@@ -48,3 +48,51 @@ internal object CursorDrag {
         lastTick: Long,
     ): Boolean = now - lastTick >= TICK_INTERVAL_MS
 }
+
+/**
+ * Opacity of every key's labels and corner hints while the caret drag is active: one time-based
+ * value read by the view's draw pass, so no per-key animator exists and nothing allocates per frame.
+ * The keycaps stay drawn; only their text fades out over [DURATION_MS] and back in when the drag ends.
+ */
+internal class LabelFade {
+    private var from = 1f
+    private var to = 1f
+    private var startedAt = 0L
+
+    /** Whether the labels are heading to hidden (or already hidden). */
+    val hiding: Boolean get() = to == 0f
+
+    /** Heads for hidden or shown; returns true only when this changes the direction (the drag edge). */
+    fun set(
+        hidden: Boolean,
+        now: Long,
+        motionScale: Float,
+    ): Boolean {
+        val target = if (hidden) 0f else 1f
+        if (target == to) return false
+        from = value(now, motionScale)
+        to = target
+        startedAt = now
+        return true
+    }
+
+    /** Label opacity at [now]; an animator scale of 0 jumps straight to the target. */
+    fun value(
+        now: Long,
+        motionScale: Float,
+    ): Float {
+        val duration = DURATION_MS * motionScale
+        if (duration <= 0f) return to
+        val t = ((now - startedAt) / duration).coerceIn(0f, 1f)
+        return from + (to - from) * t
+    }
+
+    fun animating(
+        now: Long,
+        motionScale: Float,
+    ): Boolean = DURATION_MS * motionScale > 0f && now - startedAt < DURATION_MS * motionScale
+
+    companion object {
+        const val DURATION_MS = 150L
+    }
+}

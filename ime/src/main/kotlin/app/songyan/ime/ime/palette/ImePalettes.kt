@@ -15,7 +15,8 @@ internal object ImePalettes {
      * The design tokens of [palette].
      *
      * The skin's numbers are taken literally, so one file means the same on both apps: 1 pt is 1 dp
-     * (1 sp for text). The visible gap between two keys is twice the skin's inset. Row height stays
+     * (1 sp for text). Keys sit [CELL_GAP_DP] apart, as iPhone key cells do, and the skin's inset is taken
+     * off every side of that, so the visible gap is 4 dp plus twice the inset. Row height stays
      * the user's key-height setting, and on a dark palette the function keys get a hairline outline
      * unless the skin declares a border of its own.
      */
@@ -43,8 +44,8 @@ internal object ImePalettes {
                     keyRadiusDp = palette.keyRadiusDp.toFloat(),
                     keyBorderWidthDp = if (palette.keyBorderWidthDp > 0.0) palette.keyBorderWidthDp.toFloat() else 1f,
                     keyShadowOpacity = if (palette.drawsKeyShadow) KEY_SHADOW_OPACITY else 0f,
-                    keyGapHorizontalDp = (2 * palette.visualInsetXDp).toFloat(),
-                    keyGapVerticalDp = (2 * palette.visualInsetYDp).toFloat(),
+                    keyGapHorizontalDp = (CELL_GAP_DP + 2 * palette.visualInsetXDp).toFloat(),
+                    keyGapVerticalDp = (CELL_GAP_DP + 2 * palette.visualInsetYDp).toFloat(),
                     keyLabelTextSizeSp = palette.keyTextSizeSp.toFloat(),
                     keySecondaryLabelTextSizeSp = palette.secondaryTextSizeSp.toFloat(),
                     candidateTextSizeSp = palette.candidateTextSizeSp.toFloat(),
@@ -73,6 +74,9 @@ internal object ImePalettes {
         }
         return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
     }
+
+    /** The space between two iPhone key cells, before the skin's inset. */
+    private const val CELL_GAP_DP = 4.0
 
     /** The iOS keycap's resting shadow opacity. */
     private const val KEY_SHADOW_OPACITY = 0.18f

@@ -320,7 +320,7 @@ data class SkinDefinition(
                 id = SYSTEM_DEFAULT_ID,
                 name = SYSTEM_DEFAULT_ID,
                 // The numbers the Android keyboard draws: 1 pt is 1 dp (1 sp for text), the visible gap
-                // between two keys is twice the inset (5 dp across, 6.5 dp between rows).
+                // between two keys is 4 plus twice the inset (5 dp across, 6.5 dp between rows).
                 typography =
                     Typography(
                         family = "system",
@@ -330,7 +330,7 @@ data class SkinDefinition(
                         candidateSize = 18.0,
                     ),
                 keycap = Keycap(cornerRadius = 8.0, shadow = "none"),
-                spacing = Spacing(visualInsetX = 2.5, visualInsetY = 3.25),
+                spacing = Spacing(visualInsetX = 0.5, visualInsetY = 1.25),
                 variants =
                     Variants(
                         light =

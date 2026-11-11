@@ -100,9 +100,9 @@ class SkinLiteralRenderTest {
         val density = view.density
         assertEquals(12f, view.metrics.keyRadiusDp, 0.001f)
         assertEquals(2f, view.metrics.keyBorderWidthDp, 0.001f)
-        assertEquals(8f, view.metrics.keyGapVerticalDp, 0.001f)
-        // The cap retreats half the 8 dp row gap from its slot.
-        assertEquals(4f * density, view.insetY, 0.01f)
+        assertEquals(12f, view.metrics.keyGapVerticalDp, 0.001f)
+        // The cap retreats half the 12 dp row gap (4 dp between cells plus the 4 dp inset twice) from its slot.
+        assertEquals(6f * density, view.insetY, 0.01f)
         val box = view.bounds.first()
         val left = box.left + view.insetX
         val top = box.top + view.insetY
@@ -134,8 +134,8 @@ class SkinLiteralRenderTest {
 
     @Test
     fun theCandidateBarPaddingDoesNotShrinkKeyLabels() {
-        val narrow = draw(radius = 8.0, border = 0.0, inset = 2.5, candidatePadding = 4.0, letters = true)
-        val wide = draw(radius = 8.0, border = 0.0, inset = 2.5, candidatePadding = 24.0, letters = true)
+        val narrow = draw(radius = 8.0, border = 0.0, inset = 0.5, candidatePadding = 4.0, letters = true)
+        val wide = draw(radius = 8.0, border = 0.0, inset = 0.5, candidatePadding = 24.0, letters = true)
         assertEquals(24f, wide.view.metrics.candidateChipPaddingDp, 0.001f)
         assertTrue(narrow.view.labelSizes.contentEquals(wide.view.labelSizes))
     }

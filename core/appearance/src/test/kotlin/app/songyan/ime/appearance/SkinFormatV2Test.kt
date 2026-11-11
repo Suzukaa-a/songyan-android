@@ -120,4 +120,14 @@ class SkinFormatV2Test {
         val wrong = webp.copyOf().also { it[4] = 23 }
         assertEquals(BackgroundImage.Problem.UNREADABLE, problem(url(wrong, "webp")))
     }
+
+    @Test
+    fun sampleSizeNeverDropsBelowTheDrawnSize() {
+        assertEquals(1, BackgroundImage.coverSampleSize(1080, 700, 1080, 700))
+        assertEquals(1, BackgroundImage.coverSampleSize(1080, 700, 2000, 1200))
+        // A 4096 px square drawn into 1080 x 700 may be halved once: 2048 px still covers it.
+        assertEquals(2, BackgroundImage.coverSampleSize(4096, 4096, 1080, 700))
+        assertEquals(1, BackgroundImage.coverSampleSize(4096, 4096, 2100, 700))
+        assertEquals(4, BackgroundImage.coverSampleSize(4096, 4096, 1000, 700))
+    }
 }

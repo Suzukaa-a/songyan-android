@@ -62,7 +62,7 @@ internal object ImePalettes {
      */
     private fun ensureControlSeparation(tokens: KeyboardDesignTokens): KeyboardDesignTokens {
         val dark = luminance(tokens.background) < DARK_LUMINANCE
-        if (!dark || tokens.controlKeyBorder != 0L) return tokens
+        if (!dark || tokens.controlKeyBorder != 0L || (tokens.controlKey shr 24) and 0xFFL != 0xFFL) return tokens
         if (contrast(tokens.controlKey, tokens.background) >= MINIMUM_CONTROL_CONTRAST) return tokens
         return tokens.copy(controlKeyBorder = tokens.divider)
     }

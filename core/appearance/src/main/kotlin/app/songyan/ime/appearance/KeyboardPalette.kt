@@ -138,9 +138,23 @@ data class KeyboardPalette(
             return when (background.type) {
                 "solid" -> argb(background.color)?.let { BackgroundFill.Solid(it) }
                 "linearGradient" -> {
-                    val from = argb(background.from)
-                    val to = argb(background.to)
-                    if (from != null && to != null) BackgroundFill.VerticalGradient(from, to) else null
+                    val stops = background.colors ?: listOfNotNull(background.from, background.to)
+                    val colors = stops.mapNotNull(::argb)
+                    val direction = BackgroundFill.Direction.fromWire(background.direction)
+                    if (colors.size in 2..4 && colors.size == stops.size && direction != null) {
+                        BackgroundFill.Gradient(colors, direction)
+                    } else {
+                        null
+                    }
+                }
+                "image" -> {
+                    val data = background.image
+                    val align = BackgroundFill.Align.fromWire(background.align)
+                    if (data != null && align != null) {
+                        BackgroundFill.Image("${skin.id}:${data.length}:${data.hashCode()}", data, align)
+                    } else {
+                        null
+                    }
                 }
                 else -> null
             }
@@ -215,9 +229,44 @@ sealed interface BackgroundFill {
         val color: Int,
     ) : BackgroundFill
 
-    /** [from] at the top edge, [to] at the bottom edge. */
-    data class VerticalGradient(
-        val from: Int,
-        val to: Int,
+    /** Two to four [colors] spread evenly along [direction]. */
+    data class Gradient(
+        val colors: List<Int>,
+        val direction: Direction,
     ) : BackgroundFill
+
+    /**
+     * A picture. [cacheKey] names the appearance and the content, so a decoded bitmap is reused only
+     * for the same file; [dataUrl] is verified by the decoder and only read by the renderer.
+     */
+    data class Image(
+        val cacheKey: String,
+        val dataUrl: String,
+        val align: Align,
+    ) : BackgroundFill
+
+    enum class Direction(
+        val wire: String,
+    ) {
+        VERTICAL("vertical"),
+        HORIZONTAL("horizontal"),
+        DIAGONAL("diagonal"), ;
+
+        companion object {
+            fun fromWire(value: String?): Direction? = entries.firstOrNull { it.wire == value }
+        }
+    }
+
+    /** Which vertical edge of the picture stays visible when it is taller than the area. */
+    enum class Align(
+        val wire: String,
+    ) {
+        TOP("top"),
+        CENTER("center"),
+        BOTTOM("bottom"), ;
+
+        companion object {
+            fun fromWire(value: String?): Align? = entries.firstOrNull { it.wire == value }
+        }
+    }
 }

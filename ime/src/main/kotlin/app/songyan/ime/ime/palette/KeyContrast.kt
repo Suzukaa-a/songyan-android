@@ -26,6 +26,9 @@ internal object KeyContrast {
     const val CAPSULE_AGAINST_BAR = 1.25
 
     fun separate(tokens: KeyboardDesignTokens): KeyboardDesignTokens {
+        // A translucent fill is the skin's deliberate choice and its look depends on what is behind
+        // it, so there is no fixed colour to push apart; its text was already judged over the system surface.
+        if (isTranslucent(tokens.keySurface) || isTranslucent(tokens.controlKey)) return tokens
         var background = tokens.background
         var key = tokens.keySurface
         var function = tokens.controlKey
@@ -89,6 +92,8 @@ internal object KeyContrast {
             candidateSelectedText = Argb.readableOn(tokens.candidateSelectedText, capsule),
         )
     }
+
+    private fun isTranslucent(color: Long): Boolean = (color shr 24) and 0xFFL != 0xFFL
 
     /**
      * Moves [color] towards white or black until it reaches [minimum] against [other], or until it

@@ -1,9 +1,11 @@
 package app.songyan.ime.ime
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -245,21 +247,64 @@ class KeyboardView(
         measurePaint.typeface = face
     }
 
-    /** Builds the background paint and its gradient shader for the current palette and size. */
+    /** The picture behind the keys, drawn once its bitmap has been decoded off the main thread. */
+    private var imageFill: BackgroundFill.Image? = null
+    private var imageBitmap: Bitmap? = null
+    private val imageMatrix = Matrix()
+    private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG)
+
+    /** Builds the background paint, gradient shader and picture placement for the current palette and size. */
     private fun rebuildBackground() {
         backgroundPaint.shader = null
+        imageFill = null
         when (val fill = metrics.backgroundFill) {
             null -> drawsBackground = false
             is BackgroundFill.Solid -> {
                 backgroundPaint.color = fill.color
                 drawsBackground = true
             }
-            is BackgroundFill.VerticalGradient -> {
+            is BackgroundFill.Gradient -> {
+                val endX = if (fill.direction == BackgroundFill.Direction.VERTICAL) 0f else width.toFloat()
+                val endY = if (fill.direction == BackgroundFill.Direction.HORIZONTAL) 0f else height.toFloat()
                 backgroundPaint.shader =
-                    LinearGradient(0f, 0f, 0f, height.toFloat(), fill.from, fill.to, Shader.TileMode.CLAMP)
+                    LinearGradient(0f, 0f, endX, endY, fill.colors.toIntArray(), null, Shader.TileMode.CLAMP)
                 drawsBackground = true
             }
+            is BackgroundFill.Image -> {
+                // The panel colour shows until the bitmap arrives.
+                drawsBackground = false
+                imageFill = fill
+            }
         }
+        if (imageFill == null) {
+            imageBitmap = null
+            BackgroundImageLoader.release()
+        } else {
+            placeImage()
+        }
+    }
+
+    /** Asks for the bitmap at the current size and fits it to the key area (cover, centred, cropped by align). */
+    private fun placeImage() {
+        val fill = imageFill ?: return
+        val bitmap =
+            BackgroundImageLoader.request(fill, width, height) {
+                placeImage()
+                invalidate()
+            }
+        imageBitmap = bitmap
+        if (bitmap == null) return
+        val scale = maxOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
+        val left = (width - bitmap.width * scale) / 2f
+        val spare = height - bitmap.height * scale
+        val top =
+            when (fill.align) {
+                BackgroundFill.Align.TOP -> 0f
+                BackgroundFill.Align.CENTER -> spare / 2f
+                BackgroundFill.Align.BOTTOM -> spare
+            }
+        imageMatrix.setScale(scale, scale)
+        imageMatrix.postTranslate(left, top)
     }
 
     internal val measurePaint =
@@ -617,6 +662,7 @@ class KeyboardView(
         oldw: Int,
         oldh: Int,
     ) {
+        rebuildBackground()
         rebuild()
         logKeyBoundsOnce()
     }
@@ -673,6 +719,7 @@ class KeyboardView(
         } else {
             canvas.drawColor(palette.background)
         }
+        imageBitmap?.let { canvas.drawBitmap(it, imageMatrix, imagePaint) }
         notice?.let {
             drawNotice(canvas, it)
             return
@@ -744,7 +791,8 @@ class KeyboardView(
             val scale = if (pressed) KeyMotion.pressScale() else KeyMotion.releaseScale(now, releases[i], motionScale)
             if (scale < 1f) scaleAroundCenter(drawBounds, scale)
             val radius = metrics.keyRadiusDp * density
-            if (metrics.keyShadowOpacity > 0f && !(railKey && !railChosen)) {
+            // A translucent cap would show its own shadow through itself.
+            if (metrics.keyShadowOpacity > 0f && !(railKey && !railChosen) && Color.alpha(baseColor) == 0xFF) {
                 // The shadow tightens while the key is pressed, as on iOS: less opacity, half the offset.
                 val tighten = if (pressed) 1f else fade
                 val alpha = (metrics.keyShadowOpacity * (1f - SHADOW_PRESS_OPACITY_DROP * tighten) * 255f).toInt()

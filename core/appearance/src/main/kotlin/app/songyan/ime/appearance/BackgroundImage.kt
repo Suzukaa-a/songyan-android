@@ -190,5 +190,21 @@ object BackgroundImage {
         }
     }
 
+    /**
+     * The largest power-of-two `inSampleSize` that still leaves the picture at least as large as it is
+     * drawn. The picture covers the view, so the larger of the two scales is the one that matters.
+     */
+    fun coverSampleSize(
+        sourceWidth: Int,
+        sourceHeight: Int,
+        width: Int,
+        height: Int,
+    ): Int {
+        val cover = maxOf(width.toDouble() / sourceWidth, height.toDouble() / sourceHeight)
+        var sample = 1
+        while (cover * sample * 2 <= 1.0) sample *= 2
+        return sample
+    }
+
     private fun clamp(value: Long): Int = value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 }

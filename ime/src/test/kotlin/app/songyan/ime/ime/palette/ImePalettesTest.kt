@@ -125,8 +125,83 @@ class ImePalettesTest {
             )
         val skin = AppearancePresets.androidDefault.skin.run { copy(variants = variants.copy(light = variant)) }
         val fill = ImePalettes.tokensOf(AppearancePalette.of(skin, false)).backgroundFill
-        assertEquals(BackgroundFill.VerticalGradient(0xFF112233.toInt(), 0xFF445566.toInt()), fill)
+        assertEquals(
+            BackgroundFill.Gradient(
+                listOf(0xFF112233.toInt(), 0xFF445566.toInt()),
+                BackgroundFill.Direction.VERTICAL,
+            ),
+            fill,
+        )
         assertNull(ImePalettes.tokensOf(AppearancePalette.of(skin, true)).backgroundFill)
+    }
+
+    private fun lightSkinWith(
+        colors: Map<String, String>? = null,
+        background: SkinDefinition.Background? = null,
+    ): SkinDefinition {
+        val base = AppearancePresets.androidDefault.skin
+        val variant =
+            SkinDefinition.Variant(
+                colors =
+                    (base.variants.light?.colors ?: emptyMap()) + (colors ?: emptyMap()),
+                background = background,
+            )
+        return base.copy(variants = base.variants.copy(light = variant)).normalized()
+    }
+
+    @Test
+    fun aMultiStopGradientKeepsItsStopsAndDirection() {
+        val skin =
+            lightSkinWith(
+                background =
+                    SkinDefinition.Background(
+                        type = "linearGradient",
+                        colors = listOf("#102030", "#4060A080", "#A0B0C0"),
+                        direction = "diagonal",
+                    ),
+            )
+        val fill = ImePalettes.tokensOf(AppearancePalette.of(skin, false)).backgroundFill
+        assertEquals(
+            BackgroundFill.Gradient(
+                listOf(0xFF102030.toInt(), 0x804060A0.toInt(), 0xFFA0B0C0.toInt()),
+                BackgroundFill.Direction.DIAGONAL,
+            ),
+            fill,
+        )
+    }
+
+    @Test
+    fun anImageBackgroundCarriesItsPayloadAlignmentAndCacheKey() {
+        val png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg=="
+        val skin =
+            lightSkinWith(
+                background =
+                    SkinDefinition.Background(type = "image", image = "data:image/png;base64,$png", align = "bottom"),
+            )
+        val fill = ImePalettes.tokensOf(AppearancePalette.of(skin, false)).backgroundFill as BackgroundFill.Image
+        assertEquals(BackgroundFill.Align.BOTTOM, fill.align)
+        assertEquals("data:image/png;base64,$png", fill.dataUrl)
+        assertTrue(fill.cacheKey.startsWith(skin.id + ":"))
+        assertNull(ImePalettes.tokensOf(AppearancePalette.of(skin, true)).backgroundFill)
+    }
+
+    @Test
+    fun translucentKeyFillsKeepTheirAlphaAndAreNotPushedApart() {
+        val skin =
+            lightSkinWith(
+                colors =
+                    mapOf(
+                        "key" to "#FFFFFF99",
+                        "control" to "#0000004D",
+                        "accent" to "#145ACCCC",
+                        "pressed" to "#00000033",
+                    ),
+            )
+        val tokens = ImePalettes.tokensOf(AppearancePalette.of(skin, false))
+        assertEquals(0x99FFFFFFL, tokens.keySurface)
+        assertEquals(0x4D000000L, tokens.controlKey)
+        assertEquals(0xCC145ACCL, tokens.accent)
+        assertEquals(0x33000000L, tokens.pressed)
     }
 
     @Test

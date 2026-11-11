@@ -16,5 +16,9 @@ mkdir -p "$stage/Sources/SkinKit" "$stage/Sources/CandidateKit" "$stage/Sources/
 ln -s "$ios/Packages/SkinKit/Sources/SkinKit/SkinDefinition.swift" "$stage/Sources/SkinKit/"
 ln -s "$ios/Packages/CandidateKit/Sources/CandidateKit/CandidateBarDefinition.swift" "$stage/Sources/CandidateKit/"
 ln -s "$ios/Packages/AppearanceKit/Sources/AppearanceKit/AppearanceDocument.swift" "$stage/Sources/AppearanceKit/"
+# The format code words its errors through each package's own string catalog (Bundle.module).
+for kit in SkinKit CandidateKit AppearanceKit; do
+    ln -s "$ios/Packages/$kit/Sources/$kit/Resources" "$stage/Sources/$kit/Resources"
+done
 
 IOS_REPO="$ios" swift run --package-path "$stage" --scratch-path "$stage/.build" interop "$mode" "$dir"

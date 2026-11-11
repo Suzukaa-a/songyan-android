@@ -16,9 +16,11 @@ let package = Package(
         .package(path: ios + "/Packages/LayoutKit"),
     ],
     targets: [
-        .target(name: "SkinKit"),
-        .target(name: "CandidateKit", dependencies: [.product(name: "KeyboardCore", package: "KeyboardCore")]),
-        .target(name: "AppearanceKit", dependencies: ["SkinKit", "CandidateKit"]),
+        .target(name: "SkinKit", resources: [.process("Resources")]),
+        .target(
+            name: "CandidateKit", dependencies: [.product(name: "KeyboardCore", package: "KeyboardCore")],
+            resources: [.process("Resources")]),
+        .target(name: "AppearanceKit", dependencies: ["SkinKit", "CandidateKit"], resources: [.process("Resources")]),
         .executableTarget(
             name: "interop",
             dependencies: [

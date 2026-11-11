@@ -146,7 +146,13 @@ class GlobeHoldPickerDeviceTest {
         var quiet = 0
         while (quiet < 2) {
             check(SystemClock.elapsedRealtime() < deadline) { "a deploy kept running" }
-            quiet = if (shell("dumpsys activity services $DEPLOY_SERVICE").contains("ServiceRecord")) 0 else quiet + 1
+            // Only the deploy service's own record counts: the dump also lists the last ANR'd service,
+            // which can be any app's.
+            val running =
+                shell("dumpsys activity services $DEPLOY_SERVICE").lineSequence().any {
+                    it.trimStart().startsWith("ServiceRecord{") && it.contains(DEPLOY_SERVICE)
+                }
+            quiet = if (running) 0 else quiet + 1
             Thread.sleep(500)
         }
     }

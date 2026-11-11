@@ -52,7 +52,7 @@
     <string name="options_split_on_body">所有佈局都分成左右兩半。</string>
     <string name="options_split_off">不拆分</string>
     <string name="options_split_width_title">大螢幕寬度</string>
-    <string name="options_split_width_subtitle">鍵盤寬於 %1$d dp 時算作大螢幕</string>
+    <string name="options_split_width_subtitle">鍵盤寬度超過 %1$d dp 時視為大螢幕</string>
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_side_margin_title">大螢幕兩側留白</string>
     <string name="options_side_margin_none">無</string>

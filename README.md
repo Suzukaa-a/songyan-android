@@ -20,17 +20,17 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 - **Any RIME scheme.** Pick one from the recommended list on first launch (rime-ice, wanxiang,
   bopomofo, cangjie, quick, cantonese, the Japanese カギロイ), or import your own from a file, a
   folder or a link. Nothing is downloaded until you confirm.
-- **Layouts for every scheme:** 26, 14, 18 and 9 keys, plus zhuyin, cangjie, Japanese romaji and
+- **Layouts:** 26, 14, 18 and 9 keys, plus zhuyin, cangjie, Japanese romaji and
   kana pads. Edit any layout, or build your own pages for numbers and symbols.
 - **Simplified or Traditional output** (Taiwan and Hong Kong standards too), switchable per input
   method.
-- **Make it look your own:** dynamic color, built-in appearances, and your own made in the
+- **Appearance:** dynamic color, built-in appearances, or your own from the
   [appearance editor](https://suzukaa-a.github.io/songyan-themes/). Appearance files work on both Android and iOS.
-- **Fits big and small screens:** one-handed mode, adjustable key height, and on wide screens a
-  split keyboard with your own split width and side margins.
-- **Fast editing:** hold space and slide to move the cursor, or to move through the spelling you are
-  typing and fix one letter.
-- **Extras when you want them:** fuzzy pinyin, typo correction, prediction, grammar models,
+- **Screen sizes:** one-handed mode, adjustable key height, and on large screens a split keyboard
+  with adjustable split width and side margins.
+- **Cursor:** hold space and slide to move the cursor; while composing, the slide moves through the
+  spelling.
+- **Optional features:** fuzzy pinyin, typo correction, prediction, grammar models,
   phrases, clipboard history, emoji, and backups of the words it learned (shared with iOS).
 - Interface in English, Simplified Chinese, Traditional Chinese and Japanese.
 

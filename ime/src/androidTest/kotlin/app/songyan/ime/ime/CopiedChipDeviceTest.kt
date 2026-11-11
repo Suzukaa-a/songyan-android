@@ -3,14 +3,12 @@ package app.songyan.ime.ime
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
-import android.os.Build
 import android.os.PersistableBundle
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
 import androidx.autofill.inline.UiVersions
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.SdkSuppress
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -254,9 +252,6 @@ class CopiedChipDeviceTest {
             assertTrue(host.await { host.toolbarLabels().isNotEmpty() })
         }
 
-    // Inline suggestion specs exist from Android 11. SdkSuppress filters the test out; an assumption
-    // failure would be reported as a failed test by the Gradle connected-test report.
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R)
     @Test
     fun theInlineRequestIsBuiltInTheBarsSizeAndStyle() {
         val context =

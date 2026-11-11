@@ -10,7 +10,6 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
 import app.songyan.ime.ime.CandidateBarView.Companion.FADE_MS
@@ -314,10 +313,8 @@ private const val END_FADE_DP = 16f
 
 internal fun CandidateBarView.drawEdgeEffects(canvas: Canvas) {
     if (startEdge.isFinished && endEdge.isFinished) return
-    if (Build.VERSION.SDK_INT >= 29) {
-        startEdge.color = palette.muted
-        endEdge.color = palette.muted
-    }
+    startEdge.color = palette.muted
+    endEdge.color = palette.muted
     var more = false
     val checkpoint = canvas.save()
     canvas.clipRect(viewport)

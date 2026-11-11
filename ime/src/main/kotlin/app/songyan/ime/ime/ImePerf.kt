@@ -34,6 +34,7 @@ object ImePerf {
     /** A pending marker older than this lost its completion (cancelled press, hidden window). */
     private const val STALE_NS = 5_000_000_000L
 
+    // Always true on devices; SDK_INT is 0 in JVM unit tests, where Trace is not implemented.
     private val traceSupported = Build.VERSION.SDK_INT >= 29
 
     @Volatile private var logging = false

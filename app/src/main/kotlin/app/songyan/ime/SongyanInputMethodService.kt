@@ -229,7 +229,7 @@ class SongyanInputMethodService : InputMethodService() {
 
     private var controller: KeyboardController? = null
 
-    private val inputMethods by lazy { SystemInputMethods(this) { window?.window?.attributes?.token } }
+    private val inputMethods by lazy { SystemInputMethods(this) }
 
     /** Counts input starts, so a show never restarts the keyboard on an input it already started. */
     private var inputToken = 0

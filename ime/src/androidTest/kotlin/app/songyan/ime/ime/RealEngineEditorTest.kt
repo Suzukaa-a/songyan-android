@@ -7,7 +7,6 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
-import android.os.Build
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.text.InputType
@@ -3204,7 +3203,6 @@ class RealEngineEditorTest {
          */
         fun saveScreenshot(name: String) {
             if (InstrumentationRegistry.getArguments().getString("songyanScreenshots") != "true") return
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
             main {
                 val view = controller.view
                 val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)

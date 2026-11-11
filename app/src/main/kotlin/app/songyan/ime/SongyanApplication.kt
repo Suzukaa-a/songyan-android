@@ -1,7 +1,6 @@
 package app.songyan.ime
 
 import android.app.Application
-import android.os.Build
 import android.os.StrictMode
 import app.songyan.ime.appearance.AppearanceRepository
 import app.songyan.ime.content.DiagnosticsGatewayImpl
@@ -37,7 +36,6 @@ import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.userconfig.RimeConfigGatewayImpl
-import java.io.File
 
 class SongyanApplication : Application() {
     lateinit var storage: AppStorage
@@ -166,14 +164,7 @@ class SongyanApplication : Application() {
     /** Whether this process is the app's main process (the one that hosts the IME and the UI). */
     private fun isMainProcess(): Boolean = currentProcessName() == packageName
 
-    private fun currentProcessName(): String =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            getProcessName()
-        } else {
-            // API 26-27 have no Application.getProcessName(); the command line is the only source.
-            runCatching { File("/proc/self/cmdline").readText().trim('\u0000', '\n') }
-                .getOrDefault(packageName)
-        }
+    private fun currentProcessName(): String = getProcessName()
 
     /**
      * Returns null until the native engine is part of the build; the deploy

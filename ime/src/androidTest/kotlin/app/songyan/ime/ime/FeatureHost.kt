@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.Rect
-import android.os.Build
 import android.os.SystemClock
 import android.text.InputType
 import android.view.MotionEvent
@@ -404,8 +403,6 @@ internal class FeatureHost(
      * background app; the input method service is the default input method and always may read it.
      */
     fun allowClipboardReads() {
-        // Background clipboard reads are only restricted from Android 10; shell identity adoption does not exist before it.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.READ_CLIPBOARD_IN_BACKGROUND")
         shellIdentityAdopted = true
     }

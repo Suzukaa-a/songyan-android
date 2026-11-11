@@ -104,13 +104,7 @@ class DeployService : Service() {
                 this,
                 DeployNotifications.SERVICE_NOTIFICATION_ID,
                 DeployNotifications.progress(this, title, text),
-                if (Build.VERSION.SDK_INT >=
-                    Build.VERSION_CODES.Q
-                ) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                } else {
-                    0
-                },
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
             )
             return true
         } catch (e: IllegalStateException) {

@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.IBinder
 import android.os.Process
 import android.os.SystemClock
@@ -82,11 +81,7 @@ class KagiroiDeployProbeService : Service() {
                     .setContentText(mode ?: "-")
                     .setOngoing(true)
                     .build(),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                } else {
-                    0
-                },
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
             )
             true
         } catch (error: Exception) {

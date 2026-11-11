@@ -3,7 +3,6 @@ package app.songyan.ime.deploy
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Build
 import app.songyan.ime.BuildConfig
 import app.songyan.ime.rime.BuiltinSourceInstaller
 import app.songyan.ime.rime.RimeBindings
@@ -54,7 +53,5 @@ object BuildStamps {
         debug: Boolean,
     ): String = if (debug) (versionName ?: "0") + "/" + versionCode + "/" + lastUpdateTime else versionCode.toString()
 
-    @Suppress("DEPRECATION")
-    private fun versionCode(info: PackageInfo): Long =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else info.versionCode.toLong()
+    private fun versionCode(info: PackageInfo): Long = info.longVersionCode
 }

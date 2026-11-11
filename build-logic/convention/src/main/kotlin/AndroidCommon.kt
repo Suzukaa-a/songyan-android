@@ -15,7 +15,7 @@ internal fun ApplicationExtension.configureCommon() {
     compileSdk { version = release(37) }
     buildToolsVersion = "37.0.0"
     defaultConfig {
-        minSdk = 26
+        minSdk = 30
         targetSdk = 37
     }
     compileOptions {
@@ -29,7 +29,7 @@ internal fun ApplicationExtension.configureCommon() {
 internal fun LibraryExtension.configureCommon() {
     compileSdk { version = release(37) }
     buildToolsVersion = "37.0.0"
-    defaultConfig { minSdk = 26 }
+    defaultConfig { minSdk = 30 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -41,10 +41,9 @@ internal fun LibraryExtension.configureCommon() {
 internal fun TestExtension.configureCommon() {
     compileSdk { version = release(37) }
     buildToolsVersion = "37.0.0"
-    // Macrobenchmark and Baseline Profile generation need API 28+ on the device; the app is
-    // measured on the devices it ships to, not below.
+    // Matches the app: benchmarks run on the devices it ships to.
     defaultConfig {
-        minSdk = 28
+        minSdk = 30
         targetSdk = 37
     }
     compileOptions {

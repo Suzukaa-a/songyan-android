@@ -2,7 +2,6 @@ package app.songyan.ime.settings
 
 import android.app.Instrumentation
 import android.content.Intent
-import android.os.Build
 import android.os.StrictMode
 import android.os.SystemClock
 import androidx.compose.ui.test.hasClickAction
@@ -14,7 +13,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
@@ -102,7 +100,6 @@ class SettingsActivityDeviceTest {
     private fun has(text: String) = compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun usingTheQuickContentPageDoesNoDiskWorkOnTheMainThread() {
         watchStrictMode()
         ActivityScenario.launch<SongyanSettingsActivity>(settingsIntent(SettingsTarget.ADD_PHRASE)).use {
@@ -121,7 +118,6 @@ class SettingsActivityDeviceTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun startingTheSettingsActivityDoesNoDiskWorkOnTheMainThread() {
         watchStrictMode()
         ActivityScenario.launch<SongyanSettingsActivity>(settingsIntent()).use {
@@ -131,7 +127,6 @@ class SettingsActivityDeviceTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun startingTheKeyboardDoesNoDiskWorkOnTheMainThread() {
         shell("ime enable $KEYBOARD_ID")
         shell("ime set $KEYBOARD_ID")

@@ -2,8 +2,6 @@ package app.songyan.ime.engine
 
 import android.content.Context
 import android.inputmethodservice.InputMethodService
-import android.os.Build
-import android.os.IBinder
 import android.view.inputmethod.InputMethodInfo
 import android.view.inputmethod.InputMethodManager
 import app.songyan.ime.ime.ImeEntry
@@ -18,7 +16,6 @@ import app.songyan.ime.ime.VoiceInputMethods
  */
 class SystemInputMethods(
     private val service: InputMethodService,
-    private val windowToken: () -> IBinder?,
 ) : InputMethodAccess {
     private val manager = service.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
@@ -36,22 +33,19 @@ class SystemInputMethods(
     override fun options(): InputMethodOptions {
         val list = enabled()
         val others = list.any { it.packageName != service.packageName }
-        val offered = Build.VERSION.SDK_INT >= 28 && service.shouldOfferSwitchingToNextInputMethod()
+        val offered = service.shouldOfferSwitchingToNextInputMethod()
         val voice = VoiceInputMethods.find(list.map(::entry), service.packageName)
         return InputMethodOptions(canSwitch = others || offered, voiceLabel = voice?.label)
     }
 
     override fun switchToOther() {
-        if (Build.VERSION.SDK_INT >= 28) {
-            if (service.switchToPreviousInputMethod()) return
-            if (service.shouldOfferSwitchingToNextInputMethod() && service.switchToNextInputMethod(false)) return
-        }
+        if (service.switchToPreviousInputMethod()) return
+        if (service.shouldOfferSwitchingToNextInputMethod() && service.switchToNextInputMethod(false)) return
         pick()
     }
 
     override fun pick() = manager.showInputMethodPicker()
 
-    @Suppress("DEPRECATION")
     override fun startVoice(): Boolean {
         val list = enabled()
         val target = VoiceInputMethods.find(list.map(::entry), service.packageName) ?: return false
@@ -59,11 +53,7 @@ class SystemInputMethods(
         val subtype = info.getSubtypeAt(target.subtypeIndex)
         // A system that refuses the switch (no window yet, the input method vanished) is not a crash.
         return runCatching {
-            if (Build.VERSION.SDK_INT >= 28) {
-                service.switchInputMethod(info.id, subtype)
-            } else {
-                manager.setInputMethodAndSubtype(windowToken() ?: error("no window"), info.id, subtype)
-            }
+            service.switchInputMethod(info.id, subtype)
         }.isSuccess
     }
 }

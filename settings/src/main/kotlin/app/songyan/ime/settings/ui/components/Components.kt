@@ -73,6 +73,7 @@ fun SettingsScaffold(
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -80,6 +81,7 @@ fun SettingsScaffold(
         modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { SettingsTopBar(title = title, onBack = onBack, scrollBehavior = scrollBehavior, actions = actions) },
         snackbarHost = snackbarHost,
+        floatingActionButton = floatingActionButton,
         content = content,
     )
 }

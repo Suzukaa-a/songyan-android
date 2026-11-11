@@ -315,7 +315,6 @@
     <string name="options_engine_script_taiwan">Taiwan</string>
     <string name="options_engine_script_hong_kong">Hong Kong</string>
     <string name="composition_needs_scheme">Download or import an input scheme first.</string>
-    <string name="composition_get_scheme">Get an input scheme</string>
     <string name="layouts_action_use">Use</string>
     <string name="content_use_title">Use %1$s</string>
     <string name="content_use_target">Choose a keyboard</string>

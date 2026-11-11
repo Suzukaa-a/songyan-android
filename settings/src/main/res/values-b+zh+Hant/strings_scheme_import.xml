@@ -28,7 +28,6 @@
 
     <!-- 輸入方案 · 資料夾、連結、推薦、更新 -->
     <string name="schemes_add_title">新增輸入方案</string>
-    <string name="schemes_add_subtitle">推薦方案、檔案或連結</string>
     <string name="schemes_add_import_section">從檔案或連結匯入</string>
     <string name="schemes_add_busy">另一個下載或匯入還沒完成，完成後再來新增。</string>
     <string name="schemes_scheme_import_folder">匯入資料夾</string>

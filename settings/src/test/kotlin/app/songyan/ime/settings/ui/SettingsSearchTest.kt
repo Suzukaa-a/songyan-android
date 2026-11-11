@@ -61,6 +61,7 @@ class SettingsSearchTest {
                 SettingsRoutes.NINE_KEY_EDITOR,
                 SettingsRoutes.TRY_OUT,
                 SettingsRoutes.SCHEMES,
+                SettingsRoutes.ADD_SCHEME,
                 SettingsRoutes.KEYBOARDS,
                 SettingsRoutes.LAYOUTS,
                 SettingsRoutes.PAGES,

@@ -20,6 +20,8 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -60,7 +62,6 @@ import app.songyan.ime.settings.ui.components.ImportKind
 import app.songyan.ime.settings.ui.components.ImportStatusCard
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
-import app.songyan.ime.settings.ui.components.SettingsRow
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.importCardOf
@@ -218,13 +219,21 @@ fun SchemesScreen(
         title = stringResource(R.string.row_schemes_title),
         onBack = onBack,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // The page's main action, where Android users look for it; the list scrolls clear of it.
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onAddScheme,
+                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.schemes_add_title)) },
+            )
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            contentPadding = PaddingValues(bottom = 88.dp),
         ) {
             if (importCard != null) {
                 item(key = "import_card") {
@@ -256,14 +265,6 @@ fun SchemesScreen(
                         onOpen = { onOpenSource(source.id) },
                     )
                 }
-            }
-            item(key = "add_scheme") {
-                SettingsRow(
-                    title = stringResource(R.string.schemes_add_title),
-                    subtitle = stringResource(R.string.schemes_add_subtitle),
-                    icon = Icons.Outlined.Add,
-                    onClick = onAddScheme,
-                )
             }
             item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
             if (schemes.isEmpty()) {

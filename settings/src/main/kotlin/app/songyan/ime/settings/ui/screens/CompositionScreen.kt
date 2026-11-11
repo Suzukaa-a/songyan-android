@@ -1,11 +1,18 @@
 package app.songyan.ime.settings.ui.screens
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -140,8 +147,20 @@ fun CompositionEmptyScreen(
     SettingsScaffold(title = stringResource(R.string.composition_title), onBack = onBack) { padding ->
         Column(Modifier.padding(padding).padding(16.dp)) {
             Text(stringResource(R.string.composition_needs_scheme))
-            androidx.compose.material3.Button(onClick = onOpenSchemes) {
-                Text(stringResource(R.string.composition_get_scheme))
+            Button(
+                onClick = onOpenSchemes,
+                modifier = Modifier.padding(top = 16.dp),
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+            ) {
+                Icon(
+                    Icons.Outlined.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(
+                    Modifier.size(ButtonDefaults.IconSpacing),
+                )
+                Text(stringResource(R.string.schemes_add_title))
             }
         }
     }
@@ -229,7 +248,7 @@ fun UseContentScreen(
             }
             val key = targets.firstOrNull { it.rawValue == selected }
             if (key != null) {
-                androidx.compose.material3.Button(
+                Button(
                     enabled = !saving && applied != key.rawValue,
                     onClick = {
                         saving = true

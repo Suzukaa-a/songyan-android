@@ -213,6 +213,21 @@ object SettingsRoutes {
 }
 
 /**
+ * Opens the add page on top of the input scheme list, so starting a download or import lands on
+ * the list, whose card shows its progress, and Back from the add page goes there too.
+ */
+private fun NavHostController.openAddScheme() {
+    navigate(SettingsRoutes.SCHEMES) { launchSingleTop = true }
+    navigate(SettingsRoutes.ADD_SCHEME) { launchSingleTop = true }
+}
+
+/** After a download or import starts: back to the list beneath, or onto it when the add page was opened alone (search). */
+private fun NavHostController.showSchemesAfterAdding() {
+    if (popBackStack(SettingsRoutes.SCHEMES, inclusive = false)) return
+    navigate(SettingsRoutes.SCHEMES) { popUpTo(SettingsRoutes.ADD_SCHEME) { inclusive = true } }
+}
+
+/**
  * Whether the settings are drawn as list and detail side by side. Both layouts present the same
  * navigation graph and back stack; only how the home destination and the back arrows look differs.
  */
@@ -282,7 +297,7 @@ private fun NavGraphBuilder.settingsGraph(
             schemeImport = state.value.schemeImport,
             downloadAvailable = state.value.schemeImportAvailable,
             onDownload = viewModel::importRecommendedScheme,
-            onOtherSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+            onOtherSchemes = { navController.openAddScheme() },
             onCancelDownload = viewModel::cancelSchemeImport,
             onRetryDownload = viewModel::retrySchemeImport,
             onDismissDownload = viewModel::dismissSchemeImport,
@@ -382,7 +397,7 @@ private fun NavGraphBuilder.settingsGraph(
             onImportSchemeFolder = viewModel::importSchemeFolder,
             onImportSchemeFromLink = viewModel::importSchemeFromLink,
             onImportRecommendedScheme = viewModel::importRecommendedScheme,
-            onStarted = { navController.popBackStack(SettingsRoutes.SCHEMES, inclusive = false) },
+            onStarted = { navController.showSchemesAfterAdding() },
             onBack = { navController.popBackStack() },
         )
     }
@@ -433,7 +448,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
                 onOpenComposition = { navController.navigate(SettingsRoutes.COMPOSITION) },
-                onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+                onOpenSchemes = { navController.openAddScheme() },
                 onOpenMenu = { navController.navigate(SettingsRoutes.KEYBOARD_MENU) },
                 onBack = topBack(navController),
             )
@@ -529,7 +544,7 @@ private fun NavGraphBuilder.settingsGraph(
             sourcesLoaded = state.value.sourcesLoaded,
             onActivate = viewModel::activateKeyboard,
             onTryOut = { navController.navigate(SettingsRoutes.TRY_OUT) },
-            onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+            onOpenSchemes = { navController.openAddScheme() },
             onBack = { navController.popBackStack() },
         )
     }
@@ -541,7 +556,7 @@ private fun NavGraphBuilder.settingsGraph(
         } else if (key == null) {
             app.songyan.ime.settings.ui.screens.CompositionEmptyScreen(
                 onBack = topBack(navController),
-                onOpenSchemes = { navController.navigate(SettingsRoutes.SCHEMES) },
+                onOpenSchemes = { navController.openAddScheme() },
             )
         } else {
             CompositionScreen(

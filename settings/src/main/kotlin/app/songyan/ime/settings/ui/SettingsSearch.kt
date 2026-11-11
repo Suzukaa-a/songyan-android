@@ -120,8 +120,8 @@ object SettingsSearch {
                 R.string.rime_config_body,
             ),
             SearchEntry(SettingsRoutes.SCHEMES, R.string.schemes_dictionary_section, R.string.row_schemes_title),
-            SearchEntry(SettingsRoutes.SCHEMES, R.string.schemes_scheme_import_file, R.string.row_schemes_title),
-            SearchEntry(SettingsRoutes.SCHEMES, R.string.schemes_recommended_section, R.string.row_schemes_title),
+            SearchEntry(SettingsRoutes.ADD_SCHEME, R.string.schemes_scheme_import_file, R.string.schemes_add_title),
+            SearchEntry(SettingsRoutes.ADD_SCHEME, R.string.schemes_recommended_section, R.string.schemes_add_title),
             SearchEntry(SettingsRoutes.SCHEMES, R.string.schemes_sources_section, R.string.row_schemes_title),
             SearchEntry(SettingsRoutes.SCHEMES, R.string.schemes_methods_section, R.string.row_schemes_title),
             SearchEntry(

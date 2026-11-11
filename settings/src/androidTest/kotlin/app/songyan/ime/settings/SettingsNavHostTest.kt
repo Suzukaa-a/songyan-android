@@ -87,9 +87,63 @@ class SettingsNavHostTest {
         }
         compose.runOnIdle { navigation.navigate(app.songyan.ime.settings.ui.SettingsRoutes.COMPOSITION) }
         compose.onNodeWithText(str(R.string.composition_needs_scheme)).assertExists()
-        compose.onNodeWithText(str(R.string.composition_get_scheme)).performClick()
+        compose.onNodeWithText(str(R.string.schemes_add_title)).performClick()
+        compose.waitForIdle()
+        // Straight to the add page, with the input scheme list beneath it.
+        assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.ADD_SCHEME, navigation.currentDestination?.route)
+        compose.runOnIdle { navigation.popBackStack() }
+        assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.SCHEMES, navigation.currentDestination?.route)
+    }
+
+    @Test
+    fun anAddPageOpenedOnItsOwnStillLandsOnTheListOnceADownloadStarts() {
+        lateinit var navigation: androidx.navigation.NavHostController
+        val running = CompletableDeferred<app.songyan.ime.settings.state.SchemeImportResult>()
+        val gateway =
+            object : app.songyan.ime.settings.state.SchemeImportGateway {
+                override val available = true
+
+                override suspend fun importFromUri(uri: Uri) = running.await()
+
+                override suspend fun importFromLink(
+                    url: String,
+                    progress: (TransferProgress) -> Unit,
+                ) = running.await()
+            }
+        val model =
+            SettingsViewModel(
+                application = ApplicationProvider.getApplicationContext<Application>(),
+                appStateSource = InMemorySettingsAppStateSource(SettingsAppState(sourcesLoaded = true)),
+                imeStatusSource = { ImeStatus(true, true) },
+                preferences = preferences,
+                dictionaryGateway = UnavailableDictionaryImportGateway(),
+                schemeGateway = gateway,
+            )
+        compose.setContent {
+            navigation = androidx.navigation.compose.rememberNavController()
+            SongyanTheme(dynamicColor = false) {
+                SettingsNavHost(viewModel = model, versionName = "1", navController = navigation)
+            }
+        }
+        // As a search result opens it: the add page right above home, no list beneath.
+        compose.runOnIdle {
+            navigation.navigate(app.songyan.ime.settings.ui.SettingsRoutes.ADD_SCHEME) {
+                popUpTo(app.songyan.ime.settings.ui.SettingsRoutes.HOME)
+            }
+        }
+        compose
+            .onNode(hasText(str(R.string.schemes_scheme_import_link)) and hasClickAction())
+            .performScrollTo()
+            .performClick()
+        compose
+            .onNode(hasText(str(R.string.schemes_scheme_link_label)) and hasSetTextAction())
+            .performTextInput("https://github.com/iDvel/rime-ice")
+        compose.onNodeWithText(str(R.string.schemes_scheme_link_confirm)).performClick()
         compose.waitForIdle()
         assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.SCHEMES, navigation.currentDestination?.route)
+        compose.runOnIdle { navigation.popBackStack() }
+        assertEquals(app.songyan.ime.settings.ui.SettingsRoutes.HOME, navigation.currentDestination?.route)
+        running.cancel()
     }
 
     @Test

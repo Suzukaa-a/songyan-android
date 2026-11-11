@@ -9,10 +9,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -221,11 +223,13 @@ fun SchemesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         // The page's main action, where Android users look for it; the list scrolls clear of it.
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAddScheme,
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.schemes_add_title)) },
-            )
+            // The content overload: the icon-and-text one animates its label in a way that keeps
+            // it out of the button's merged semantics, so TalkBack read only "button".
+            ExtendedFloatingActionButton(onClick = onAddScheme) {
+                Icon(Icons.Outlined.Add, contentDescription = null)
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.schemes_add_title))
+            }
         },
     ) { innerPadding ->
         LazyColumn(

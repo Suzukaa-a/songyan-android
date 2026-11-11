@@ -44,6 +44,28 @@ class KeyboardFeelDeviceTest {
         }
 
     @Test
+    fun aSpaceDragWhileComposingMovesTheCaretInsideTheSpelling() =
+        withHost { host ->
+            host.start()
+            host.type("ludi")
+            host.awaitIdle()
+            assertTrue("composing", host.editor.composing)
+            val density = host.main2 { host.field.resources.displayMetrics.density }
+            // Hold space, then slide left: the caret walks back through "ludi" instead of
+            // confirming it and moving the editor's cursor.
+            host.holdAndSlide(host.string(R.string.ime_space), (1..10).map { -it * 7f * density to 0f }) { Unit }
+            assertTrue("the spelling is still being composed", host.editor.composing)
+            host.tap("e")
+            host.awaitIdle()
+            val spelling = host.text().filter { it.isLetter() }.replace('ü', 'u')
+            // The letter lands where the caret was taken, not at the end.
+            assertTrue(
+                spelling,
+                spelling.length == 5 && !spelling.endsWith("e") && spelling.replaceFirst("e", "") == "ludi",
+            )
+        }
+
+    @Test
     fun theKeyFlickPreferenceReachesAShownKeyboard() =
         withHost { host ->
             host.start()

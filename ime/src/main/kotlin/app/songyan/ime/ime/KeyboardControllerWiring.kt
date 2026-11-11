@@ -88,14 +88,19 @@ internal fun KeyboardController.wireViews() {
         }
     }
     keyboard.onCursor = { delta ->
-        // Cursor mode: the session confirms the composition through the engine before moving the
-        // caret, so holding space never drops what the user typed, and never strands a hidden
-        // spelling in the editor.
+        // Cursor mode. While a spelling is composed the drag walks the engine's caret through it,
+        // so a letter can be fixed in the middle ("lu'di" to "lue'di") without retyping; the caret
+        // stops at either end rather than confirming the composition. Otherwise it moves the
+        // editor's caret.
         enqueue {
             // A caret move is never the state the kana model predicted.
             kana12Reset()
             val active = session.takeIf { ready }
-            if (active != null) active.moveCursor(delta) else callbacks.moveCursor(delta)
+            when {
+                active == null -> callbacks.moveCursor(delta)
+                active.snapshot.isComposing -> active.moveCompositionCaret(delta)
+                else -> active.moveCursor(delta)
+            }
             resetEnglishWord()
         }
     }

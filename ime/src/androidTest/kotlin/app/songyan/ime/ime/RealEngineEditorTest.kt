@@ -2567,7 +2567,19 @@ class RealEngineEditorTest {
             host.preferences.widePosition.value = 25
             host.start(width = 2400)
             val density = host.density
-            val freePx = 2400f - WideSurface.CONTENT_MAXIMUM_DP.toFloat() * density
+            // The large-screen side margin comes off both sides first; the position shares what is left.
+            val marginPx =
+                host.main2 {
+                    val view = host.find(KeyboardView::class.java)
+                    WideSurface
+                        .sideMargin(
+                            2400.0 / density,
+                            view.sideMarginPerMille,
+                            view.splitWidthDp.toDouble(),
+                        ).toFloat() *
+                        density
+                }
+            val freePx = 2400f - 2 * marginPx - WideSurface.CONTENT_MAXIMUM_DP.toFloat() * density
 
             fun keyAreaLeft(): Float =
                 host.main2 {
@@ -2575,16 +2587,16 @@ class RealEngineEditorTest {
                     view.contentFrame(null).left
                 }
 
-            assertEquals(freePx * 0.25f, keyAreaLeft(), 1.5f)
+            assertEquals(marginPx + freePx * 0.25f, keyAreaLeft(), 1.5f)
             // The first key of the top row starts at the key area's edge, not at the screen edge.
             assertEquals(keyAreaLeft(), host.keyRect("q").left.toFloat(), 16f * density)
 
             host.main2 { host.preferences.widePosition.value = 100 }
             host.awaitIdle()
-            assertEquals(freePx, keyAreaLeft(), 1.5f)
+            assertEquals(marginPx + freePx, keyAreaLeft(), 1.5f)
             host.main2 { host.preferences.widePosition.value = 0 }
             host.awaitIdle()
-            assertEquals(0f, keyAreaLeft(), 1.5f)
+            assertEquals(marginPx, keyAreaLeft(), 1.5f)
         }
     }
 

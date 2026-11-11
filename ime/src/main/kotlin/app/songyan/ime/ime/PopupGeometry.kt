@@ -33,6 +33,15 @@ internal object PopupGeometry {
     /** Space kept between a key and the popup above it, so a thumb on the key does not cover it. */
     const val GAP_DP = 6f
 
+    /** How far above the key, in key heights, a popup rises at most: its lower half would sit under the finger. */
+    const val MAXIMUM_LIFT = 0.45f
+
+    /** The lift for a popup above [anchor] that leaves [spare] room over it; never negative. */
+    private fun lift(
+        anchor: KeyBounds,
+        spare: Float,
+    ): Float = max(0f, min(Math.round((anchor.bottom - anchor.top) * MAXIMUM_LIFT).toFloat(), spare))
+
     /** The shortest a popup may get when the key sits so high that the full height does not fit. */
     private const val MINIMUM_HEIGHT_DP = 36f
 
@@ -56,14 +65,17 @@ internal object PopupGeometry {
         val mirrored = count > 1 && firstLeft + width > layerWidth
         val rawLeft = if (mirrored) keyCenter + min(cellWidth, width) / 2 - width else firstLeft
         val left = rawLeft.coerceIn(0f, max(0f, layerWidth - width))
-        val bottom = anchor.top - gap
+        val bottom = anchor.top - gap - lift(anchor, anchor.top - gap - layerTop - cellHeight)
         val available = bottom - layerTop
         val height = if (available >= cellHeight) cellHeight else max(available, minimumHeight)
         val top = max(layerTop, bottom - height)
         return Alternates(KeyBounds(left, top, left + width, top + height), mirrored)
     }
 
-    /** The enlarged key preview above [anchor]: as wide as the key plus a little, centred on it. */
+    /**
+     * The enlarged key preview above [anchor]: as wide as the key plus a little, centred on it, and
+     * lifted clear of the finger pressing the key as far as the room above allows.
+     */
     fun preview(
         anchor: KeyBounds,
         width: Float,
@@ -74,7 +86,7 @@ internal object PopupGeometry {
     ): KeyBounds {
         val center = (anchor.left + anchor.right) / 2
         val left = (center - width / 2).coerceIn(0f, max(0f, layerWidth - width))
-        val bottom = anchor.top - gap
+        val bottom = anchor.top - gap - lift(anchor, anchor.top - gap - layerTop - height)
         val top = max(layerTop, bottom - height)
         return KeyBounds(left, top, left + width, top + height)
     }

@@ -25,7 +25,8 @@ class PopupGeometryTest {
         val keyCenter = (anchor.left + anchor.right) / 2
         val firstCenter = popup.bounds.left + cell / 2
         assertEquals(keyCenter, firstCenter, 0.01f)
-        assertEquals(anchor.top - gap, popup.bounds.bottom, 0.01f)
+        val lift = Math.round((anchor.bottom - anchor.top) * PopupGeometry.MAXIMUM_LIFT).toFloat()
+        assertEquals(anchor.top - gap - lift, popup.bounds.bottom, 0.01f)
         assertEquals(cellHeight, popup.bounds.bottom - popup.bounds.top, 0.01f)
     }
 
@@ -77,8 +78,29 @@ class PopupGeometryTest {
         val anchor = key(left = 100f, top = 200f)
         val preview = PopupGeometry.preview(anchor, 56f, 52f, layerWidth, 0f, 3f)
         assertEquals((anchor.left + anchor.right) / 2, (preview.left + preview.right) / 2, 0.01f)
-        assertEquals(anchor.top - 3f, preview.bottom, 0.01f)
+        val lift = Math.round((anchor.bottom - anchor.top) * PopupGeometry.MAXIMUM_LIFT).toFloat()
+        assertEquals(anchor.top - 3f - lift, preview.bottom, 0.01f)
         val edge = PopupGeometry.preview(key(left = 390f, top = 200f), 56f, 52f, layerWidth, 0f, 3f)
         assertTrue(edge.right <= layerWidth)
+    }
+
+    @Test
+    fun thePreviewRisesClearOfTheFingerOnlyAsFarAsTheRoomAllows() {
+        val anchor = key(left = 100f, top = 200f)
+        val keyHeight = anchor.bottom - anchor.top
+        val free = PopupGeometry.preview(anchor, 56f, 52f, layerWidth, 0f, 3f)
+        assertTrue(anchor.top - free.bottom > 3f + keyHeight / 3)
+        // A top-row key with only the bubble's own height above it gets no lift and keeps its full height.
+        val tight = PopupGeometry.preview(key(left = 100f, top = 55f), 56f, 52f, layerWidth, 0f, 3f)
+        assertEquals(52f, tight.bottom, 0.01f)
+        assertEquals(0f, tight.top, 0.01f)
+    }
+
+    @Test
+    fun theAlternatesRiseLikeThePreviewTheyExpandFrom() {
+        val anchor = key(left = 100f, top = 200f)
+        val preview = PopupGeometry.preview(anchor, 56f, cellHeight, layerWidth, 0f, gap)
+        val popup = PopupGeometry.alternates(anchor, 3, cell, cellHeight, layerWidth, 0f, gap)
+        assertEquals(preview.bottom, popup.bounds.bottom, 0.01f)
     }
 }

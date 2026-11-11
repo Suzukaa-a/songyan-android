@@ -2,67 +2,23 @@
 
 [English](README.md)
 
-松烟是一款基于 [RIME 中州韵](https://rime.im) 引擎的 Android 通用中文输入法，是 [松烟 iOS 版](https://github.com/Suzukaa-a/songyan-ios) 的 Android 姊妹项目：引擎、内置方案与数据格式相同，键盘和设置界面按 Android 的习惯重新设计。
+松烟是一款基于 [RIME 中州韵](https://rime.im) 引擎的 Android 中文输入法。任何 RIME 输入方案都能用，所有数据只留在你的手机上。引擎、输入方案和文件格式与 [松烟 iOS 版](https://github.com/Suzukaa-a/songyan-ios) 通用。
 
-## 功能
+## 安装
 
-- RIME 引擎（librime 1.17），包含 `lua`、`octagram`（语法模型）与 `predict` 插件和九键处理器，从源码为 Android 构建并链接成单个原生库。
-- 内置八种键盘布局：26 键、14 键、18 键、9 键，以及大千注音（41 键）、仓颉（26 键，速成也用这一布局）、日语罗马字（26 键）和日语十二键假名（12 键）。某个方案能用哪些布局，由它自己的键位决定。
-- 繁体输出：内置方案可以打出简体、繁体、台湾或香港用字，首次安装时按系统语言选好，之后可按输入方式切换。键名、候选字形与标点都跟着切换。
-- 可从文件或链接导入 RIME 输入方案与词库。推荐目录提供雾凇拼音、万象拼音、注音、仓颉、速成、粤拼与日语カギロイ，都是从上游仓库钉好版本的压缩包，你确认后才下载，并按你的语言排序。安装カギロイ时会补上键盘需要的翻页与标点修改。
-- 长按「中/英」打开键盘菜单，可切换输入方式和键盘布局，也包括其他输入方案里的输入方式。
-- 键盘外观、候选栏与键盘布局编辑；动态取色、单手模式、大屏与拆分键盘。外观与布局文件可与 iOS 版互相导入导出。
-- 可按需开启模糊音、错键纠正、联想（需自行导入 `predict.db`）和语法模型，并支持逐项开关 Lua 组件。
-- 符号库、常用语、剪贴板历史、表情面板，以及学习数据的备份与合并（备份格式与 iOS 版通用）。
-- 界面提供英语、简体中文、繁体中文与日语四种语言。
-- 遵循 Android 惯例：`EditorInfo` 与输入法动作、系统输入法切换、边到边 insets、TalkBack、Material 3 设置界面。
-- 隐私：输入法进程不发起任何网络请求，只有你在设置里主动操作时才会联网（通过链接导入，或下载词库、模型文件）。密码框和要求不做个性化学习的输入框不会学习，也不记录剪贴板。
+1. 从 [Releases](https://github.com/Suzukaa-a/songyan-android/releases) 下载 APK：`universal` 适用于所有手机，`arm64-v8a` 更小，适用于几乎所有近几年的手机。需要 Android 8.0 或更高版本。
+2. 打开松烟，按引导选一个输入方案并启用键盘（设置 > 系统 > 键盘 > 屏幕键盘，路径因机型而异）。
 
-## 环境要求
+## 能做什么
 
-- 运行：Android 10（API 29）及以上。
-- 构建：JDK 17 或更高版本（CI 用 21）、Android SDK 37（`platforms;android-37.0`、`build-tools;37.0.0`）、NDK 30.0.16248370、CMake 3.31.6。确切版本钉在 [gradle/libs.versions.toml](gradle/libs.versions.toml) 与 [core/rime/build.gradle.kts](core/rime/build.gradle.kts)。用不入库的 `local.properties`（`sdk.dir=...`）或 `ANDROID_HOME` 告诉 Gradle SDK 的位置。
-
-## 构建与安装
-
-```bash
-./gradlew assembleDebug                  # APK 位于 app/build/outputs/apk/debug/
-./gradlew ktlintCheck lint test          # 格式检查、Android Lint、全部 JVM 测试
-scripts/install-debug.sh --enable-ime    # 安装到已连接的设备并启用键盘
-```
-
-不用脚本时，运行 `./gradlew :app:installDebug`，再到「设置 > 系统 > 键盘 > 屏幕键盘 > 管理键盘」启用松烟（路径因机型而异）。
-
-ABI：引擎默认为 `arm64-v8a`、`x86_64`、`armeabi-v7a` 三种 ABI 构建。本机构建可用 `-Psongyan.abis=arm64-v8a`（逗号分隔）只编指定的 ABI；发布构建不要加。
-
-应用 ID：release 为 `app.songyan.ime`，debug 为 `app.songyan.ime.debug`，基准测试变体为 `app.songyan.ime.benchmark`，测试构建不会替换已安装的正式版。
-
-只有存在 `.local/release-signing.properties`（不入库；键为 `storeFile`、`storePassword`、`keyAlias`、`keyPassword`，`storeFile` 相对于仓库根目录）时，release 才会签名；否则 `assembleRelease` 产出未签名、已压缩的 APK。
-
-原生引擎：Rime 及其插件按 `native/*.env` 钉住的版本由 `native/android/CMakeLists.txt` 从源码构建，静态链接成单个 `libsongyan_rime.so`。`native/` 下的源码、内置方案、OpenCC 数据、示例布局与测试用例从 iOS 仓库同步，不在此仓库直接修改。
-
-## 目录
-
-| 目录 | 内容 |
-| --- | --- |
-| `app/` | 输入法服务、设置入口、部署服务、引擎运行时 |
-| `core/rime/` | 原生引擎构建、JNI、Kotlin 引擎接口、部署 |
-| `core/keyboard/` | 输入会话状态机、输入语言与方案族规则、假名模型、引擎契约（JVM） |
-| `core/layout/` | 布局 JSON 模型、内置布局、滑动与几何（JVM） |
-| `core/candidate/` | 候选栏模型与面板几何（JVM） |
-| `core/appearance/` | 键盘外观 / 皮肤模型（JVM） |
-| `core/content/` | 符号库、常用语、剪贴板历史（JVM） |
-| `core/packages/` | 方案包导入、方案清单 / 配套 schema 适配、模糊音、错键纠正、联想、词库导入（JVM） |
-| `ime/` | 自绘键盘、候选栏、编辑器桥接 |
-| `settings/` | Compose Material 3 设置界面 |
-| `native/` | 同步来的 C/C++ 引擎源码、补丁与 Android CMake |
-| `benchmark/`、`baselineprofile/` | Macrobenchmark 与 Baseline Profile 生成 |
-
-架构事实见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
-
-## 与 iOS 版的关系
-
-引擎版本钉、补丁、内置方案与数据格式来自 iOS 仓库，只通过 `scripts/sync-from-ios.sh` 更新，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。引擎行为的改动先在 iOS 仓库落地。
+- **任何 RIME 输入方案**：首次打开时从推荐列表里选（雾凇拼音、万象拼音、注音、仓颉、速成、粤拼、日语カギロイ），也可以从文件、文件夹或链接导入自己的方案。你确认后才会下载。
+- **每种方案都有合适的键盘布局**：26 键、14 键、18 键、9 键，以及注音、仓颉、日语罗马字和假名键盘。布局可以编辑，数字和符号页也能自己做。
+- **简体或繁体输出**（也有台湾、香港用字），可按输入方式分别切换。
+- **外观随你定**：动态取色、内置外观，外观文件 Android 和 iOS 通用。
+- **大屏小屏都合适**：单手模式、键盘高度可调；宽屏上可以拆分键盘，拆分宽度和两侧留白都能自己设。
+- **改字更快**：按住空格滑动可以移动光标；正在输入时，滑动还能在拼写里移动，改掉中间某个字母。
+- **需要时再开的功能**：模糊音、错键纠正、联想、语法模型、常用语、剪贴板记录、表情，以及学到的词的备份（与 iOS 版通用）。
+- 界面提供英语、简体中文、繁体中文和日语。
 
 ## 隐私政策
 
@@ -75,10 +31,15 @@ ABI：引擎默认为 `arm64-v8a`、`x86_64`、`armeabi-v7a` 三种 ABI 构建�
 - 权限：联网与网络状态用于上面的下载；准备输入方案时使用前台服务和通知；按键反馈使用振动。
 - 卸载应用会删除它的全部数据。有问题请在本仓库提 issue。
 
-## 参与贡献与安全
+## 从源码构建
 
-参见 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
+```bash
+./gradlew assembleDebug                  # APK 位于 app/build/outputs/apk/debug/
+scripts/install-debug.sh --enable-ime    # 安装到已连接的设备并启用键盘
+```
+
+工具链、检查命令和项目规则见 [CONTRIBUTING.md](CONTRIBUTING.md)，模块结构见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。安全问题请按 [SECURITY.md](SECURITY.md) 报告。
 
 ## 许可
 
-松烟采用 [GPL-3.0-only](LICENSE) 许可。第三方组件及其许可见应用内「设置 > 关于 > 第三方许可」，以及 `settings/src/main/assets/legal/`、`settings/src/main/assets/legal-android/`、`app/src/main/assets/rime/starter/`、`ime/src/main/assets/emoji/` 下的声明文件。
+[GPL-3.0-only](LICENSE)。第三方组件及其许可见应用内「设置 > 关于 > 第三方许可」。

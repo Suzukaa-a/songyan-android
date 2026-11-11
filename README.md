@@ -2,101 +2,36 @@
 
 [简体中文](README.zh-CN.md)
 
-Songyan is a general-purpose Chinese input method for Android built on the
-[RIME](https://rime.im) engine. It is the Android sibling of the
-[Songyan iOS keyboard](https://github.com/Suzukaa-a/songyan-ios): the same engine, built-in
-schemes and data formats, with a keyboard and settings app designed for Android.
+Songyan is a Chinese keyboard for Android built on the [RIME](https://rime.im) input method engine.
+It runs any RIME input scheme you give it and keeps everything on your phone. It shares its engine,
+schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/songyan-ios).
 
-## Features
+## Install
 
-- RIME engine (librime 1.17) with the `lua`, `octagram` (grammar model) and `predict` plugins and
-  the nine-key processor, built from source for Android and linked into one native library.
-- Eight built-in keyboard layouts: 26, 14, 18 and 9 keys, plus the Dachen zhuyin (41-key), cangjie
-  (26-key, also used for quick), Japanese romaji (26-key) and Japanese kana (12-key) boards. A
-  scheme's own key map decides which boards it is offered on.
-- Traditional output: the built-in schemes type Simplified, Traditional, Taiwan or Hong Kong text,
-  seeded from the system language on first install and switchable per input method. Key names,
-  candidate glyph forms and punctuation follow the choice.
-- Imports RIME schemes and dictionaries from files or links. A recommended catalog offers rime-ice,
-  wanxiang, bopomofo, cangjie, quick, cantonese and the Japanese kagiroi as pinned upstream
-  archives, downloaded only after you confirm and listed in your language's order. Installing
-  kagiroi adds the paging and punctuation patches the keyboard expects.
-- Press and hold 中/英 for the keyboard menu: switch input methods and boards, including the input
-  methods of your other schemes.
-- Appearance, candidate bar and key layout editors; dynamic color, one-handed mode, large-screen
-  and split layouts. Appearance and layout files are interchangeable with the iOS app.
-- Optional fuzzy pinyin, typo correction, prediction (bring your own `predict.db`), grammar
-  models and per-component Lua toggles.
-- Symbols, phrases, clipboard history, emoji panel, and learned-data backup and merge (the backup
-  format is shared with iOS).
+1. Download the APK from [Releases](https://github.com/Suzukaa-a/songyan-android/releases):
+   `universal` works on every phone, `arm64-v8a` is smaller and fits almost all recent ones.
+   Android 8.0 or later.
+2. Open Songyan. The guide walks you through picking an input scheme and turning the keyboard on
+   (Settings > System > Keyboard > On-screen keyboard; the path varies by phone).
+
+## What it does
+
+- **Any RIME scheme.** Pick one from the recommended list on first launch (rime-ice, wanxiang,
+  bopomofo, cangjie, quick, cantonese, the Japanese カギロイ), or import your own from a file, a
+  folder or a link. Nothing is downloaded until you confirm.
+- **Layouts for every scheme:** 26, 14, 18 and 9 keys, plus zhuyin, cangjie, Japanese romaji and
+  kana pads. Edit any layout, or build your own pages for numbers and symbols.
+- **Simplified or Traditional output** (Taiwan and Hong Kong standards too), switchable per input
+  method.
+- **Make it look your own:** dynamic color, built-in appearances, and appearance files that work on
+  both Android and iOS.
+- **Fits big and small screens:** one-handed mode, adjustable key height, and on wide screens a
+  split keyboard with your own split width and side margins.
+- **Fast editing:** hold space and slide to move the cursor, or to move through the spelling you are
+  typing and fix one letter.
+- **Extras when you want them:** fuzzy pinyin, typo correction, prediction, grammar models,
+  phrases, clipboard history, emoji, and backups of the words it learned (shared with iOS).
 - Interface in English, Simplified Chinese, Traditional Chinese and Japanese.
-- Follows Android conventions: `EditorInfo` and IME actions, system input method switching,
-  edge-to-edge insets, TalkBack, Material 3 settings.
-- Privacy: the input method process makes no network requests. Settings goes online only when you
-  ask it to (importing from a link, downloading a dictionary or model). Password fields and fields that ask for no personalized learning are never learned
-  from, and the clipboard is not recorded in them.
-
-## Requirements
-
-- Android 10 (API 29) or later to run.
-- To build: JDK 17 or later (CI uses 21), Android SDK 37 (`platforms;android-37.0`,
-  `build-tools;37.0.0`), NDK 30.0.16248370 and CMake 3.31.6. Exact versions are pinned in
-  [gradle/libs.versions.toml](gradle/libs.versions.toml) and
-  [core/rime/build.gradle.kts](core/rime/build.gradle.kts). Point Gradle at the SDK with a
-  git-ignored `local.properties` (`sdk.dir=...`) or `ANDROID_HOME`.
-
-## Build and install
-
-```bash
-./gradlew assembleDebug                  # APK in app/build/outputs/apk/debug/
-./gradlew ktlintCheck lint test          # formatting, Android Lint, all JVM tests
-scripts/install-debug.sh --enable-ime    # install on a connected device and enable the keyboard
-```
-
-Without the script, run `./gradlew :app:installDebug`, then enable Songyan under Settings >
-System > Keyboard > On-screen keyboard > Manage on-screen keyboards (the path varies by device).
-
-ABIs: the engine is built for `arm64-v8a`, `x86_64` and `armeabi-v7a` by default. For local
-builds, `-Psongyan.abis=arm64-v8a` (comma-separated list) builds only the ABIs you name; do not
-use it for releases.
-
-Application IDs: release is `app.songyan.ime`, debug is `app.songyan.ime.debug` and the
-benchmark variants are `app.songyan.ime.benchmark`, so test builds never replace a release
-install.
-
-Release builds are signed only if `.local/release-signing.properties` exists (git-ignored; keys
-`storeFile`, `storePassword`, `keyAlias`, `keyPassword`, with `storeFile` relative to the
-repository root). Otherwise `assembleRelease` produces an unsigned, shrunk APK.
-
-Native engine: the Rime engine and its plugins are built from sources pinned in `native/*.env` by
-`native/android/CMakeLists.txt` and linked into a single static `libsongyan_rime.so`. Sources under
-`native/`, the built-in schemes, OpenCC data, example layouts and fixtures are synced from the iOS
-repository and are not edited here.
-
-## Repository layout
-
-| Directory | Content |
-| --- | --- |
-| `app/` | Input method service, settings entry, deployment service, engine runtime |
-| `core/rime/` | Native engine build, JNI, Kotlin engine API, deployment |
-| `core/keyboard/` | Input session state machine, input language and layout-family rules, kana model, engine contract (JVM) |
-| `core/layout/` | Layout JSON models, built-in layouts, swipe and geometry (JVM) |
-| `core/candidate/` | Candidate bar models and panel geometry (JVM) |
-| `core/appearance/` | Keyboard appearance/skin models (JVM) |
-| `core/content/` | Symbols, phrases, clipboard history (JVM) |
-| `core/packages/` | Scheme-package import, recipe and compact-schema adapters, fuzzy pinyin, typo correction, prediction, dictionary import (JVM) |
-| `ime/` | Self-drawn keyboard, candidate bar, editor bridge |
-| `settings/` | Compose Material 3 settings app |
-| `native/` | Synced C/C++ engine sources, patches, Android CMake |
-| `benchmark/`, `baselineprofile/` | Macrobenchmarks and Baseline Profile generation |
-
-Architecture facts are indexed in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Relation to the iOS project
-
-The engine version pins, patches, built-in schemes and data formats come from the iOS repository
-and are updated only through `scripts/sync-from-ios.sh`; see [CONTRIBUTING.md](CONTRIBUTING.md).
-Engine behaviour changes land in the iOS repository first.
 
 ## Privacy policy
 
@@ -118,14 +53,18 @@ Songyan collects no personal data and sends nothing to its developers or to anyo
   notification while an input scheme is being prepared; vibration for key feedback.
 - Uninstalling the app deletes all of its data. Questions: open an issue in this repository.
 
-## Contributing and security
+## Build from source
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately as described in
+```bash
+./gradlew assembleDebug                  # APK in app/build/outputs/apk/debug/
+scripts/install-debug.sh --enable-ime    # install on a connected device and turn the keyboard on
+```
+
+Toolchain, checks and project rules are in [CONTRIBUTING.md](CONTRIBUTING.md); the module map is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Report security problems as described in
 [SECURITY.md](SECURITY.md).
 
 ## License
 
-Songyan is licensed under [GPL-3.0-only](LICENSE). Third-party components and their licenses are
-listed in the app (Settings > About > Open Source Licenses) and in the notice files under
-`settings/src/main/assets/legal/`, `settings/src/main/assets/legal-android/`, `app/src/main/assets/rime/starter/` and
-`ime/src/main/assets/emoji/`.
+[GPL-3.0-only](LICENSE). Third-party components and their licenses are listed in the app
+(Settings > About > Open Source Licenses).

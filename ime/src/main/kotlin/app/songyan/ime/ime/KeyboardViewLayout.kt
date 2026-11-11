@@ -177,9 +177,9 @@ internal class ContentFrame(
  * The key area of a view [width] px wide. Only tablets (and unfolded foldables) cap and dock it
  * at 600 dp: a phone turned sideways has no room to waste, and a centred narrow keyboard there reads
  * as a floating slab. A split keyboard takes the whole width, its halves kept within reach by the gutter.
- * The user's side margin applies on every device and page, before the split and cap decisions. In
- * one-handed mode this view is already the narrowed column, so the margin comes off that column
- * and the minimum key area still holds.
+ * The user's side margin applies only when the surface is wider than the split width. In one-handed
+ * mode this view is already the narrowed column, so the margin comes off that column and the minimum
+ * key area still holds.
  */
 internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): ContentFrame {
     val surfaceDp = width / density.toDouble()
@@ -198,15 +198,14 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
 
 /**
  * The split that applies to the page being drawn at the current width, or null for an unsplit keyboard.
- * The width is the key area's, after the side margin. The returned copy is resolved so the row solvers,
- * which see an even narrower inner width, do not apply the default threshold a second time.
+ * Judged on the full surface width, as [contentFrame] judges it. The returned copy is resolved so the
+ * row solvers, which see a narrower inner width, do not apply the default threshold a second time.
  */
 internal fun KeyboardView.activeSplit(): LayoutSplitConfiguration? {
     val surfaceDp = width / density.toDouble()
-    val keyAreaDp = surfaceDp - 2 * WideSurface.sideMargin(surfaceDp, sideMarginDp)
     return WideSurface
         .effectiveSplit(layout?.split, splitMode)
-        ?.resolvedForWidth(keyAreaDp, splitWidthDp.toDouble())
+        ?.resolvedForWidth(surfaceDp, splitWidthDp.toDouble())
 }
 
 /**

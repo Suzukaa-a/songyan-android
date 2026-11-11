@@ -50,10 +50,10 @@
     <string name="options_split_on">大屏上拆分</string>
     <string name="options_split_on_body">所有布局都分成左右两半。</string>
     <string name="options_split_off">不拆分</string>
-    <string name="options_split_width_title">自动拆分宽度</string>
-    <string name="options_split_width_subtitle">键盘宽于 %1$d dp 时拆分</string>
+    <string name="options_split_width_title">大屏宽度</string>
+    <string name="options_split_width_subtitle">键盘宽于 %1$d dp 时算作大屏</string>
     <string name="options_split_width_value">%1$d dp</string>
-    <string name="options_side_margin_title">两侧留白</string>
+    <string name="options_side_margin_title">大屏两侧留白</string>
     <string name="options_side_margin_none">无</string>
     <string name="options_side_margin_value">%1$d dp</string>
     <string name="options_reset_default">恢复默认</string>

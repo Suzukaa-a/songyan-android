@@ -222,13 +222,12 @@ fun KeyboardFeelSection(
                 onClick = { onSplitMode(mode) },
             )
         }
-        if (state.splitMode != "off") {
-            SettingsRow(
-                title = stringResource(R.string.options_split_width_title),
-                subtitle = stringResource(R.string.options_split_width_subtitle, state.splitWidthDp),
-                onClick = { splitWidthOpen = true },
-            )
-        }
+        // Shown even with splitting off: the same width decides where the side margin applies.
+        SettingsRow(
+            title = stringResource(R.string.options_split_width_title),
+            subtitle = stringResource(R.string.options_split_width_subtitle, state.splitWidthDp),
+            onClick = { splitWidthOpen = true },
+        )
         SettingsRow(
             title = stringResource(R.string.options_side_margin_title),
             subtitle =

@@ -242,10 +242,10 @@ class InputOptionsScreenTest {
     }
 
     @Test
-    fun theSplitWidthRowIsGoneWhileSplittingIsOff() {
-        feel = KeyboardFeelState(splitMode = "off")
+    fun theLargeScreenWidthStaysWhileSplittingIsOffBecauseTheMarginFollowsIt() {
+        feel = KeyboardFeelState(splitMode = "off", splitWidthDp = 720)
         show()
-        compose.onNodeWithText(str(R.string.options_split_width_title)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.options_split_width_subtitle, 720)).performScrollTo().assertExists()
     }
 
     @Test

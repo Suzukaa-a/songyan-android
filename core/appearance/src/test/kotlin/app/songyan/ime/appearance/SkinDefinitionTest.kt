@@ -121,7 +121,7 @@ class SkinDefinitionTest {
         assertEquals("system-default", SkinDefinition.systemDefault.id)
         // The name equals the id so the localized display name can come from resources.
         assertEquals("system-default", SkinDefinition.systemDefault.name)
-        assertEquals(21.0, SkinDefinition.systemDefault.typography.candidateSize, 0.001)
+        assertEquals(18.0, SkinDefinition.systemDefault.typography.candidateSize, 0.001)
         assertEquals("none", SkinDefinition.systemDefault.keycap.shadow)
     }
 

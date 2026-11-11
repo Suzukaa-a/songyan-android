@@ -52,6 +52,7 @@ internal class KeyPopupLayer(
     private var flickTextFactor = 1f
 
     init {
+        paint.typeface = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         isClickable = false
         isFocusable = false
@@ -90,6 +91,7 @@ internal class KeyPopupLayer(
 
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
+        paint.typeface = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
         textScale = ImeText.scale(resources)
         invalidate()
     }

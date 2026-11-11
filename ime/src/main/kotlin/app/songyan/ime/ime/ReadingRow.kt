@@ -156,7 +156,14 @@ internal class ReadingRowView(
     private var lastX = 0f
     private var dragging = false
 
+    private fun applyTypeface() {
+        val face = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        paint.typeface = face
+        textPaint.typeface = face
+    }
+
     init {
+        applyTypeface()
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         contentDescription = context.getString(R.string.ime_reading_row)
     }
@@ -175,6 +182,7 @@ internal class ReadingRowView(
 
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
+        applyTypeface()
         rebuild()
         invalidate()
     }

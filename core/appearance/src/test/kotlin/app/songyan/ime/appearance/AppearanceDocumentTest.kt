@@ -1,5 +1,6 @@
 package app.songyan.ime.appearance
 
+import app.songyan.ime.candidate.CandidateBarDefinition
 import org.junit.Test
 
 /**
@@ -188,10 +189,10 @@ class AppearanceDocumentTest {
         val document = AppearanceDocument.systemDefault
         assertEquals(AppearanceDocument.SYSTEM_DEFAULT_ID, document.id)
         assertEquals(SkinDefinition.systemDefault, document.skin)
-        assertEquals(CandidateBarDefinitionAlias.default(), document.candidateBar)
+        assertEquals(CandidateBarDefinition.androidDefault, document.candidateBar)
         assertTrue(document.identityIsConsistent)
         assertTrue(document.isSystemDefault)
-        assertEquals(21.0, document.candidateSize, 0.001)
+        assertEquals(18.0, document.candidateSize, 0.001)
         document.validate()
     }
 
@@ -233,9 +234,9 @@ class AppearanceDocumentTest {
                 ?.get("accent"),
         )
         assertEquals(1.0, songyan.skin.keycap.borderWidth, 0.001)
-        // Every built-in appearance keeps the system default candidate layout.
+        // Every built-in appearance carries the numbers the Android keyboard draws.
         for (preset in AppearancePresets.ALL_BUILT_IN) {
-            assertEquals(CandidateBarDefinitionAlias.default().collapsed, preset.candidateBar.collapsed, preset.id)
+            assertEquals(CandidateBarDefinition.androidDefault.collapsed, preset.candidateBar.collapsed, preset.id)
         }
     }
 }

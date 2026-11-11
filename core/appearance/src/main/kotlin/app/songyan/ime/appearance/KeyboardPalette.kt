@@ -91,6 +91,12 @@ data class KeyboardPalette(
     val popupElevationDp: Double = DEFAULT_POPUP_ELEVATION_DP,
     /** Alpha of the touch state layer drawn over a pressed key. */
     val pressStateLayerAlpha: Double = DEFAULT_PRESS_STATE_LAYER_ALPHA,
+    /** The skin's font family (`system`, `rounded`, `serif`, `monospaced`). */
+    val fontFamily: String = "system",
+    /** The skin's font weight (`regular`, `medium`, `semibold`). */
+    val fontWeight: String = "regular",
+    /** What the variant draws behind the keys; null leaves the plain [background] colour. */
+    val backgroundFill: BackgroundFill? = null,
 ) {
     /**
      * Short aliases matching the current `ime` Canvas palette field names. They exist so the P5
@@ -121,6 +127,24 @@ data class KeyboardPalette(
         private const val TRANSPARENT: Int = 0x00000000
         private const val SHADOW_ALPHA_LIGHT: Int = 0x24000000
         private const val SHADOW_ALPHA_DARK: Int = 0x59000000
+
+        private fun backgroundFillOf(
+            skin: SkinDefinition,
+            dark: Boolean,
+        ): BackgroundFill? {
+            val background = (if (dark) skin.variants.dark else skin.variants.light)?.background ?: return null
+
+            fun argb(hex: String?): Int? = hex?.let { SkinColor.fromHex(it) }?.toArgb()
+            return when (background.type) {
+                "solid" -> argb(background.color)?.let { BackgroundFill.Solid(it) }
+                "linearGradient" -> {
+                    val from = argb(background.from)
+                    val to = argb(background.to)
+                    if (from != null && to != null) BackgroundFill.VerticalGradient(from, to) else null
+                }
+                else -> null
+            }
+        }
 
         /** Resolves the palette of [document] for the current light/dark state. */
         fun of(
@@ -177,7 +201,23 @@ data class KeyboardPalette(
                 secondaryTextSizeSp = skin.typography.secondarySize,
                 candidateTextSizeSp = skin.typography.candidateSize,
                 candidateCommentTextSizeSp = skin.typography.secondarySize,
+                fontFamily = skin.typography.family,
+                fontWeight = skin.typography.weight,
+                backgroundFill = backgroundFillOf(skin, dark),
             )
         }
     }
+}
+
+/** What a skin variant draws behind the keys, as ARGB ints. */
+sealed interface BackgroundFill {
+    data class Solid(
+        val color: Int,
+    ) : BackgroundFill
+
+    /** [from] at the top edge, [to] at the bottom edge. */
+    data class VerticalGradient(
+        val from: Int,
+        val to: Int,
+    ) : BackgroundFill
 }

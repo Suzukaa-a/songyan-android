@@ -191,7 +191,11 @@ class ToolbarView(
     private var fadeAnimator: ValueAnimator? = null
     private var chipLayout: ChipLayout? = null
     private var noticeLayout: NoticeLayout? = null
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val textPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG).also {
+            it.typeface =
+                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        }
 
     override val itemCount: Int
         get() = notice?.items?.size ?: if (chip != null) CHIP_ITEMS else entries().size
@@ -211,6 +215,7 @@ class ToolbarView(
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
         metrics = palette.tokens
+        textPaint.typeface = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
         drawables.clear()
         chipLayout = null
         noticeLayout = null

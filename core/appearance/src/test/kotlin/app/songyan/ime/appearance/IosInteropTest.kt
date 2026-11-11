@@ -111,28 +111,48 @@ class IosInteropTest {
         for (ios in shared) {
             val android = AppearancePresets.ALL_BUILT_IN.firstOrNull { it.id == ios.id } ?: continue
             for (dark in listOf(false, true)) {
-                // The Android built-ins leave the keycap shadow at the format default while iOS writes
-                // "none"; every colour and metric must still agree.
-                val expected = KeyboardPalette.of(ios, dark).copy(drawsKeyShadow = false)
-                val actual = KeyboardPalette.of(android, dark).copy(drawsKeyShadow = false)
+                // The Android built-ins carry the numbers the Android keyboard draws (radius, gaps, sizes,
+                // font), so only the colours are compared.
+                val actual = KeyboardPalette.of(android, dark)
+                val expected =
+                    KeyboardPalette.of(ios, dark).copy(
+                        keyRadiusDp = actual.keyRadiusDp,
+                        drawsKeyShadow = actual.drawsKeyShadow,
+                        visualInsetXDp = actual.visualInsetXDp,
+                        visualInsetYDp = actual.visualInsetYDp,
+                        keyTextSizeSp = actual.keyTextSizeSp,
+                        secondaryTextSizeSp = actual.secondaryTextSizeSp,
+                        candidateTextSizeSp = actual.candidateTextSizeSp,
+                        candidateCommentTextSizeSp = actual.candidateCommentTextSizeSp,
+                        fontFamily = actual.fontFamily,
+                        fontWeight = actual.fontWeight,
+                    )
                 assertEquals(expected, actual, ios.id + " dark=" + dark)
             }
         }
     }
 
     @Test
-    fun aSharedBuiltInDiffersFromTheIosOneOnlyInThePagePositionAndTheName() {
+    fun aSharedBuiltInDiffersFromTheIosOneOnlyInThePagePositionTheNameAndTheCollapsedNumbers() {
         // The Android built-ins write the page buttons at the trailing end while the iOS built-ins
         // write their own value ("both"), so the comparison ignores exactly that field. The file-format
         // default stays iOS's "both", and an explicit value is honoured on import. The display name is the
         // other legitimate difference: the iOS file carries its localized name, Android resolves it by id.
+        // The collapsed row numbers are Android's own, so they are compared against the Android default.
         val shared = files(AppearanceDocument.FILE_EXTENSION).map { AppearanceDocument.decodeImported(it.readText()) }
         var compared = 0
         val neutral = CandidateBarDefinition.Controls.PagePosition.BOTH
         for (ios in shared) {
             val android = AppearancePresets.ALL_BUILT_IN.firstOrNull { it.id == ios.id } ?: continue
             compared++
-            val iosBar = ios.candidateBar.run { copy(name = "", controls = controls.copy(pagePosition = neutral)) }
+            val iosBar =
+                ios.candidateBar.run {
+                    copy(
+                        name = "",
+                        collapsed = CandidateBarDefinition.androidDefault.collapsed,
+                        controls = controls.copy(pagePosition = neutral),
+                    )
+                }
             val androidBar =
                 android.candidateBar.run {
                     copy(

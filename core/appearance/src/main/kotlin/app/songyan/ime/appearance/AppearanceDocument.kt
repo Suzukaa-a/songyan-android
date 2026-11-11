@@ -165,7 +165,7 @@ data class AppearanceDocument(
                 id = SYSTEM_DEFAULT_ID,
                 name = SYSTEM_DEFAULT_ID,
                 skin = SkinDefinition.systemDefault,
-                candidateBar = CandidateBarDefinition.systemDefault,
+                candidateBar = CandidateBarDefinition.androidDefault,
             )
 
         /** Strict decode of a stored project; mixed identities and unknown fields are rejected. */

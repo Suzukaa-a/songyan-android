@@ -219,7 +219,7 @@ object AppearancePresets {
             SkinDefinition.systemDefault.copy(
                 id = id,
                 name = id,
-                keycap = SkinDefinition.Keycap(borderWidth = borderWidth),
+                keycap = SkinDefinition.systemDefault.keycap.copy(borderWidth = borderWidth),
                 variants =
                     SkinDefinition.Variants(
                         light = SkinDefinition.Variant(colors = light),
@@ -231,7 +231,7 @@ object AppearancePresets {
                 id = id,
                 name = id,
                 skin = skin,
-                candidateBar = CandidateBarDefinition.systemDefault,
+                candidateBar = CandidateBarDefinition.androidDefault,
             ).normalized()
     }
 }

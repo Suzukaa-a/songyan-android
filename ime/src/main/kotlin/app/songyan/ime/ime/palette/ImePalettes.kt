@@ -14,10 +14,10 @@ internal object ImePalettes {
     /**
      * The design tokens of [palette].
      *
-     * The appearance model carries the iOS skin's key geometry and type sizes, but on Android the
-     * keyboard's metrics are a platform spec, not a skin property: heights, gutters, radii and text
-     * sizes stay the design tokens' own values so every skin keeps the same comfortable touch
-     * targets and the same row rhythm. Only the colour roles come from the appearance.
+     * The skin's numbers are taken literally, so one file means the same on both apps: 1 pt is 1 dp
+     * (1 sp for text). The visible gap between two keys is twice the skin's inset. Row height stays
+     * the user's key-height setting, and the platform still adds a hairline outline where a dark
+     * control key would otherwise vanish.
      */
     fun tokensOf(palette: AppearancePalette): KeyboardDesignTokens =
         ensureControlSeparation(
@@ -40,6 +40,17 @@ internal object ImePalettes {
                     popupBackground = argb(palette.popupBackground),
                     popupSelected = argb(palette.popupSelected),
                     popupShadow = argb(palette.popupShadow),
+                    keyRadiusDp = palette.keyRadiusDp.toFloat(),
+                    keyBorderWidthDp = if (palette.keyBorderWidthDp > 0.0) palette.keyBorderWidthDp.toFloat() else 1f,
+                    keyShadowOpacity = if (palette.drawsKeyShadow) KEY_SHADOW_OPACITY else 0f,
+                    keyGapHorizontalDp = (2 * palette.visualInsetXDp).toFloat(),
+                    keyGapVerticalDp = (2 * palette.visualInsetYDp).toFloat(),
+                    keyLabelTextSizeSp = palette.keyTextSizeSp.toFloat(),
+                    keySecondaryLabelTextSizeSp = palette.secondaryTextSizeSp.toFloat(),
+                    candidateTextSizeSp = palette.candidateTextSizeSp.toFloat(),
+                    fontFamily = palette.fontFamily,
+                    fontWeight = palette.fontWeight,
+                    backgroundFill = palette.backgroundFill,
                 ),
             ),
         )
@@ -74,6 +85,9 @@ internal object ImePalettes {
         return (maxOf(first, second) + 0.05) / (minOf(first, second) + 0.05)
     }
 
+    /** The iOS keycap's resting shadow opacity. */
+    private const val KEY_SHADOW_OPACITY = 0.18f
+
     /** Canvas luminance below which the palette is treated as the dark theme. */
     private const val DARK_LUMINANCE = 0.2
 
@@ -92,6 +106,10 @@ internal object ImePalettes {
             keyGapHorizontalDp = appearance.keyGapHorizontalDp,
             keyGapVerticalDp = appearance.keyGapVerticalDp,
             keyRadiusDp = appearance.keyRadiusDp,
+            keyBorderWidthDp = appearance.keyBorderWidthDp,
+            keyShadowOpacity = appearance.keyShadowOpacity,
+            fontFamily = appearance.fontFamily,
+            fontWeight = appearance.fontWeight,
             minTouchTargetDp = appearance.minTouchTargetDp,
             candidateTextSizeSp = appearance.candidateTextSizeSp,
             candidateCommentTextSizeSp = appearance.candidateCommentTextSizeSp,

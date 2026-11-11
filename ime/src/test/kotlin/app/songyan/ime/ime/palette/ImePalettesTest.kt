@@ -2,8 +2,11 @@ package app.songyan.ime.ime.palette
 
 import app.songyan.ime.appearance.AppearanceDocument
 import app.songyan.ime.appearance.AppearancePresets
+import app.songyan.ime.appearance.BackgroundFill
+import app.songyan.ime.appearance.SkinDefinition
 import app.songyan.ime.ime.KeyboardDesignTokens
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import app.songyan.ime.appearance.KeyboardPalette as AppearancePalette
@@ -62,17 +65,76 @@ class ImePalettesTest {
     }
 
     @Test
-    fun metricsAreTheDesignTokensOwnNotTheSkins() {
-        // Key geometry and type sizes are an Android keyboard spec: a skin may recolour the keys but
-        // must not move the touch targets or the row rhythm.
-        val tokens = ImePalettes.of(AppearancePalette.of(AppearancePresets.androidDefault, false)).tokens
-        assertEquals(8f, tokens.keyRadiusDp)
-        assertEquals(5f, tokens.keyGapHorizontalDp)
-        assertEquals(56f, tokens.rowHeightDp)
-        assertEquals(22f, tokens.keyLabelTextSizeSp)
-        assertEquals(11f, tokens.keySecondaryLabelTextSizeSp)
-        assertEquals(18f, tokens.candidateTextSizeSp)
-        assertEquals(12f, tokens.candidateCommentTextSizeSp)
+    fun everyBuiltInSkinCarriesTheMetricsTheKeyboardHadBeforeSkinsWereLiteral() {
+        val legacy = KeyboardDesignTokens.light()
+        for (document in AppearancePresets.ALL_BUILT_IN) {
+            for (dark in listOf(false, true)) {
+                val tokens = ImePalettes.tokensOf(AppearancePalette.of(document, dark))
+                val label = document.id + " dark=" + dark
+                assertEquals(label, legacy.keyRadiusDp, tokens.keyRadiusDp)
+                assertEquals(label, legacy.keyGapHorizontalDp, tokens.keyGapHorizontalDp)
+                assertEquals(label, legacy.keyGapVerticalDp, tokens.keyGapVerticalDp)
+                assertEquals(label, legacy.keyLabelTextSizeSp, tokens.keyLabelTextSizeSp)
+                assertEquals(label, legacy.keySecondaryLabelTextSizeSp, tokens.keySecondaryLabelTextSizeSp)
+                assertEquals(label, legacy.candidateTextSizeSp, tokens.candidateTextSizeSp)
+                assertEquals(label, legacy.candidateCommentTextSizeSp, tokens.candidateCommentTextSizeSp)
+                assertEquals(label, 0f, tokens.keyShadowOpacity)
+                assertEquals(label, "system", tokens.fontFamily)
+                assertEquals(label, "regular", tokens.fontWeight)
+                assertEquals(label, 1f, tokens.keyBorderWidthDp)
+            }
+        }
+    }
+
+    @Test
+    fun aCustomSkinIsReadLiterallyInDpAndSp() {
+        val skin =
+            AppearancePresets.androidDefault.skin.run {
+                copy(
+                    keycap = SkinDefinition.Keycap(cornerRadius = 12.0, borderWidth = 2.0, shadow = "subtle"),
+                    spacing = SkinDefinition.Spacing(visualInsetX = 4.0, visualInsetY = 3.0),
+                    typography =
+                        SkinDefinition.Typography(
+                            family = "serif",
+                            weight = "semibold",
+                            keySize = 25.0,
+                            secondarySize = 13.0,
+                            candidateSize = 24.0,
+                        ),
+                )
+            }
+        val tokens = ImePalettes.tokensOf(AppearancePalette.of(skin, false))
+        assertEquals(12f, tokens.keyRadiusDp)
+        assertEquals(2f, tokens.keyBorderWidthDp)
+        assertEquals(0.18f, tokens.keyShadowOpacity)
+        assertEquals(8f, tokens.keyGapHorizontalDp)
+        assertEquals(6f, tokens.keyGapVerticalDp)
+        assertEquals(25f, tokens.keyLabelTextSizeSp)
+        assertEquals(13f, tokens.keySecondaryLabelTextSizeSp)
+        assertEquals(24f, tokens.candidateTextSizeSp)
+        assertEquals("serif", tokens.fontFamily)
+        assertEquals("semibold", tokens.fontWeight)
+    }
+
+    @Test
+    fun theBackgroundOfTheVariantReachesTheTokens() {
+        val variant =
+            SkinDefinition.Variant(
+                colors =
+                    AppearancePresets.androidDefault.skin.variants.light
+                        ?.colors,
+                background =
+                    SkinDefinition.Background(
+                        type = "linearGradient",
+                        from = "#112233",
+                        to = "#445566",
+                        direction = "vertical",
+                    ),
+            )
+        val skin = AppearancePresets.androidDefault.skin.run { copy(variants = variants.copy(light = variant)) }
+        val fill = ImePalettes.tokensOf(AppearancePalette.of(skin, false)).backgroundFill
+        assertEquals(BackgroundFill.VerticalGradient(0xFF112233.toInt(), 0xFF445566.toInt()), fill)
+        assertNull(ImePalettes.tokensOf(AppearancePalette.of(skin, true)).backgroundFill)
     }
 
     @Test

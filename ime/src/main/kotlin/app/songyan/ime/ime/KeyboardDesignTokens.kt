@@ -129,6 +129,15 @@ data class KeyboardDesignTokens(
     val popupElevationDp: Float = 6f,
     /** Alpha for touch ripple / highlight layer overlay. */
     val pressStateLayerAlpha: Float = 0.12f,
+    /** Stroke width of a keycap border (dp), when the key has a border colour. */
+    val keyBorderWidthDp: Float = 1f,
+    /** Opacity of the black 1 dp drop shadow under a resting keycap; 0 draws none. */
+    val keyShadowOpacity: Float = 0f,
+    /** The skin's font family and weight, resolved to a typeface by [KeyboardTypefaces]. */
+    val fontFamily: String = "system",
+    val fontWeight: String = "regular",
+    /** What the keyboard draws behind the keys instead of the plain [background]; null for none. */
+    val backgroundFill: app.songyan.ime.appearance.BackgroundFill? = null,
 ) {
     /** Helper to convert a 64-bit ARGB Long to a 32-bit signed Int for Android Canvas Paint. */
     fun toArgbInt(color: Long): Int = color.toInt()

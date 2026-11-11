@@ -57,6 +57,15 @@ class AppearanceStoreControllerTest {
     }
 
     @Test
+    fun anAppliedBuiltInIsReadAsTheShippedDefinitionNotTheStoredCopy() {
+        // A copy stored by an older release carries that release's numbers.
+        val shipped = AppearancePresets.androidDefault
+        val stale = shipped.copy(skin = shipped.skin.copy(keycap = shipped.skin.keycap.copy(cornerRadius = 3.0)))
+        AppearanceStore(directory.absolutePath).apply(stale)
+        assertEquals(shipped, controller.read(dynamicColor = false).document)
+    }
+
+    @Test
     fun selectingAnUnknownIdThrowsNotFound() {
         val error = assertThrows(AppearanceError::class.java) { controller.select("missing", dynamicColor = false) }
         assertEquals(AppearanceErrorCode.NOT_FOUND, error.code)

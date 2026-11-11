@@ -3,10 +3,12 @@ package app.songyan.ime.ime
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.os.SystemClock
 import android.text.Layout
@@ -18,6 +20,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import app.songyan.ime.appearance.BackgroundFill
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.KeyboardPageKind
@@ -56,7 +59,11 @@ class KeyboardView(
 ) : AccessibleCanvasView(context) {
     internal val density = resources.displayMetrics.density
     internal var palette = KeyboardPalette.from(context)
-    internal val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    internal val paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).also {
+            it.typeface =
+                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        }
     internal val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     internal val iconPath = Path()
     internal var textScale = ImeText.scale(resources)
@@ -222,7 +229,43 @@ class KeyboardView(
 
     /** Per key: the solved shuangpin hint line, or null when the key carries none. */
     internal var syllableLines: Array<SyllableHintLine?> = emptyArray()
-    internal val measurePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** Black shadow under a resting keycap; only its alpha changes per key, so nothing allocates in onDraw. */
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).also { it.color = Color.BLACK }
+    private val shadowBounds = RectF()
+
+    /** Fills the keyboard surface when the skin draws a background; rebuilt only when the palette or size changes. */
+    private val backgroundPaint = Paint()
+    private var drawsBackground = false
+
+    private fun applyTypeface() {
+        val face = KeyboardTypefaces.of(metrics.fontFamily, metrics.fontWeight)
+        paint.typeface = face
+        measurePaint.typeface = face
+    }
+
+    /** Builds the background paint and its gradient shader for the current palette and size. */
+    private fun rebuildBackground() {
+        backgroundPaint.shader = null
+        when (val fill = metrics.backgroundFill) {
+            null -> drawsBackground = false
+            is BackgroundFill.Solid -> {
+                backgroundPaint.color = fill.color
+                drawsBackground = true
+            }
+            is BackgroundFill.VerticalGradient -> {
+                backgroundPaint.shader =
+                    LinearGradient(0f, 0f, 0f, height.toFloat(), fill.from, fill.to, Shader.TileMode.CLAMP)
+                drawsBackground = true
+            }
+        }
+    }
+
+    internal val measurePaint =
+        Paint(Paint.ANTI_ALIAS_FLAG).also {
+            it.typeface =
+                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        }
     internal var pressedFlags = BooleanArray(0)
 
     /**
@@ -462,6 +505,7 @@ class KeyboardView(
             } else {
                 emptyList()
             }
+        rebuildBackground()
         rebuild()
         logKeyBoundsOnce()
         invalidate()
@@ -623,7 +667,11 @@ class KeyboardView(
 
     override fun onDraw(canvas: Canvas) {
         if (ImePerf.isLogging) logKeyBoundsIfMoved()
-        canvas.drawColor(palette.background)
+        if (drawsBackground) {
+            canvas.drawPaint(backgroundPaint)
+        } else {
+            canvas.drawColor(palette.background)
+        }
         notice?.let {
             drawNotice(canvas, it)
             return
@@ -695,13 +743,24 @@ class KeyboardView(
             val scale = if (pressed) KeyMotion.pressScale() else KeyMotion.releaseScale(now, releases[i], motionScale)
             if (scale < 1f) scaleAroundCenter(drawBounds, scale)
             val radius = metrics.keyRadiusDp * density
+            if (metrics.keyShadowOpacity > 0f && !(railKey && !railChosen)) {
+                // The shadow tightens while the key is pressed, as on iOS: less opacity, half the offset.
+                val tighten = if (pressed) 1f else fade
+                val alpha = (metrics.keyShadowOpacity * (1f - SHADOW_PRESS_OPACITY_DROP * tighten) * 255f).toInt()
+                if (alpha > 0) {
+                    shadowPaint.alpha = alpha
+                    shadowBounds.set(drawBounds)
+                    shadowBounds.offset(0f, density * (1f - SHADOW_PRESS_OFFSET_DROP * tighten))
+                    canvas.drawRoundRect(shadowBounds, radius, radius, shadowPaint)
+                }
+            }
             paint.style = Paint.Style.FILL
             paint.color = fill
             canvas.drawRoundRect(drawBounds, radius, radius, paint)
             val border = if (isLetter || isSpace) palette.keyBorder else palette.controlBorder
             if (border != 0 && (!railKey || railChosen)) {
                 paint.style = Paint.Style.STROKE
-                paint.strokeWidth = density
+                paint.strokeWidth = metrics.keyBorderWidthDp * density
                 paint.color = border
                 canvas.drawRoundRect(drawBounds, radius, radius, paint)
                 paint.style = Paint.Style.FILL
@@ -809,9 +868,12 @@ class KeyboardView(
             box.left.toInt() - 1,
             box.top.toInt() - 1,
             box.right.toInt() + 2,
-            box.bottom.toInt() + 2,
+            box.bottom.toInt() + 2 + shadowExtentPx(),
         )
     }
+
+    /** Room below a key's slot that its shadow can reach. */
+    private fun shadowExtentPx(): Int = if (metrics.keyShadowOpacity > 0f) kotlin.math.ceil(density).toInt() else 0
 
     /** Redraws only [index]'s slot; a press never repaints the whole keyboard. */
     internal fun invalidateKey(index: Int) {
@@ -820,13 +882,20 @@ class KeyboardView(
             invalidate()
             return
         }
-        invalidate(box.left.toInt() - 1, box.top.toInt() - 1, box.right.toInt() + 2, box.bottom.toInt() + 2)
+        invalidate(
+            box.left.toInt() - 1,
+            box.top.toInt() - 1,
+            box.right.toInt() + 2,
+            box.bottom.toInt() + 2 + shadowExtentPx(),
+        )
     }
 
     /** Picks up a day/night or font-scale change: colors and text scale are read at draw time only. */
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
         metrics = palette.tokens
+        applyTypeface()
+        rebuildBackground()
         textScale = ImeText.scale(resources)
         labels = keys.map { face(it, false) }
         spokenLabels = keys.map { face(it, true) }
@@ -1096,6 +1165,10 @@ class KeyboardView(
 
         /** How far a letter rises over its shuangpin hint; one value so a row keeps one baseline. */
         const val SYLLABLE_LIFT_DP = 4f
+
+        /** A pressed key's shadow keeps this share less opacity and offset (iOS: 0.35 and 0.5 of rest). */
+        const val SHADOW_PRESS_OPACITY_DROP = 0.65f
+        const val SHADOW_PRESS_OFFSET_DROP = 0.5f
 
         /** A shuangpin hint shrinks to this before it wraps onto a second line. */
         const val MIN_SYLLABLE_TEXT_SIZE_SP = 7f

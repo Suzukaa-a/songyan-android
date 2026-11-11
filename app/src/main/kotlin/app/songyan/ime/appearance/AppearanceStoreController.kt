@@ -22,7 +22,11 @@ class AppearanceStoreController(
         val result = store.read()
         val document =
             if (result.source == AppearanceSnapshotSource.APPLIED) {
-                result.snapshot.document
+                // A built-in is always the shipped definition, not the copy stored when it was applied,
+                // so a new release's numbers reach everyone who already uses it.
+                result.snapshot.document.let { stored ->
+                    AppearancePresets.ALL_BUILT_IN.firstOrNull { it.id == stored.id } ?: stored
+                }
             } else {
                 fallback
             }

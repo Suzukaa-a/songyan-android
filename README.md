@@ -27,7 +27,7 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 - **Appearance:** dynamic color, built-in appearances, or your own from the
   [appearance editor](https://suzukaa-a.github.io/songyan-themes/). Appearance files work on both Android and iOS.
 - **Screen sizes:** one-handed mode, adjustable key height, and on large screens a split keyboard
-  with adjustable split width and side margins.
+  with an adjustable large-screen width and side margins.
 - **Cursor:** hold space and slide to move the cursor; while composing, the slide moves through the
   spelling.
 - **Optional features:** fuzzy pinyin, typo correction, prediction, grammar models,

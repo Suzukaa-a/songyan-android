@@ -30,7 +30,7 @@
     <string name="appearance_export_failed">Could not export this appearance.</string>
     <string name="appearance_import_done">Imported "%1$s".</string>
     <string name="appearance_import_unreadable">Could not read this file.</string>
-    <string name="appearance_import_too_large">This file is too large. Appearance files are at most 256 KB, or 2 MB with a background picture.</string>
+    <string name="appearance_import_too_large">File too large. The limit is 256 KB, or 2 MB with a background picture.</string>
     <string name="appearance_import_not_appearance">This is not an appearance file.</string>
     <string name="appearance_import_invalid">This file has content the keyboard cannot use (%1$s).</string>
     <string name="appearance_import_invalid_plain">This file has content the keyboard cannot use.</string>

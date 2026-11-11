@@ -30,7 +30,7 @@
     <string name="appearance_export_failed">沒能匯出這個外觀。</string>
     <string name="appearance_import_done">已匯入「%1$s」。</string>
     <string name="appearance_import_unreadable">無法讀取這個檔案。</string>
-    <string name="appearance_import_too_large">檔案太大，外觀檔案不能超過 256 KB，帶背景圖片的不能超過 2 MB。</string>
+    <string name="appearance_import_too_large">檔案太大。上限 256 KB，帶背景圖片 2 MB。</string>
     <string name="appearance_import_not_appearance">這不是外觀檔案。</string>
     <string name="appearance_import_invalid">檔案裡有鍵盤無法使用的內容（%1$s）。</string>
     <string name="appearance_import_invalid_plain">檔案裡有鍵盤無法使用的內容。</string>

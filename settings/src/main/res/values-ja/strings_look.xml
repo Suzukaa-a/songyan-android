@@ -29,7 +29,7 @@
     <string name="appearance_export_failed">この外観をエクスポートできませんでした。</string>
     <string name="appearance_import_done">「%1$s」をインポートしました。</string>
     <string name="appearance_import_unreadable">このファイルを読み取れませんでした。</string>
-    <string name="appearance_import_too_large">ファイルが大きすぎます。外観ファイルは 256 KB まで、背景画像つきは 2 MB までです。</string>
+    <string name="appearance_import_too_large">ファイルが大きすぎます。上限は 256 KB、背景画像つきは 2 MB です。</string>
     <string name="appearance_import_not_appearance">これは外観ファイルではありません。</string>
     <string name="appearance_import_invalid">キーボードで使えない内容がファイルにあります（%1$s）。</string>
     <string name="appearance_import_invalid_plain">キーボードで使えない内容がファイルにあります。</string>

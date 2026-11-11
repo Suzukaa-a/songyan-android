@@ -232,4 +232,32 @@ class CandidateLayoutsTest {
         assertEquals(0, InlineStrip.hit(130f, scroll = 0f, lefts = candidateLefts, widths = listOf(50f, 50f)))
         assertEquals(1, InlineStrip.hit(130f, scroll = 50f, lefts = candidateLefts, widths = listOf(50f, 50f)))
     }
+
+    @Test
+    fun theExpandedFirstRowIsTheCollapsedRow() {
+        val natural = listOf(52f, 20f, 70f, 56f, 500f, 64f, 90f, 60f, 80f)
+        val collapsed = CollapsedRowLayout.layout(natural, 370f, start, end, 3f, min)
+        val expanded =
+            ExpandedFlowLayout.layout(
+                natural,
+                available = 370f,
+                gap = 9f,
+                rowHeight = 48f,
+                minWidth = min,
+                rowGap = 4f,
+                start = start,
+                end = end,
+                firstRowGap = 3f,
+            )
+        val firstRow = expanded.cells.filter { it.top == 0f }
+        assertTrue(firstRow.size >= 4)
+        for (cell in firstRow) {
+            assertEquals(collapsed.lefts[cell.index], cell.left, 0.001f)
+            assertEquals(collapsed.widths[cell.index], cell.right - cell.left, 0.001f)
+        }
+        assertTrue("the rest wraps below", expanded.cells.any { it.top > 0f })
+        // Later rows start at the same inset and use the user's column gap.
+        val second = expanded.cells.filter { it.top > 0f }
+        assertEquals(start, second.first().left, 0.001f)
+    }
 }

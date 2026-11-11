@@ -1,6 +1,8 @@
 package app.songyan.ime.ime
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -114,5 +116,69 @@ class CandidateBarLayoutTest {
         assertEquals("one step captured per hold", 2, steps.size)
         assertFalse("the finished touch's step must not delete", firstTouch!!())
         assertFalse("a step dies with its own touch too", secondTouch!!())
+    }
+
+    /** Expanding must read as the bar growing: row 1 of the grid is the collapsed row, pixel for pixel. */
+    @Test
+    fun theExpandedFirstRowIsDrawnExactlyWhereTheCollapsedRowWas() {
+        val words = listOf("你好", "拟好", "你", "泥", "妮好啊", "逆", "尼", "霓虹灯下", "匿", "腻")
+        var collapsedPixels: Bitmap? = null
+        var expandedPixels: Bitmap? = null
+        var collapsedCells = emptyList<android.graphics.RectF>()
+        var expandedCells = emptyList<android.graphics.RectF>()
+        var rowHeight = 0
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val bar = CandidateBarView(context)
+            bar.update(
+                EngineSnapshot(
+                    schemaID = "s",
+                    rawInput = "nihao",
+                    isComposing = true,
+                    candidates = words.mapIndexed { i, w -> Candidate(i, w) },
+                    pageSize = 10,
+                    isLastPage = true,
+                ),
+            )
+
+            fun lay(height: Int) {
+                bar.measure(
+                    View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+                )
+                bar.layout(0, 0, 1080, bar.measuredHeight)
+            }
+
+            fun shot(): Bitmap =
+                Bitmap.createBitmap(1080, bar.height, Bitmap.Config.ARGB_8888).also { bar.draw(Canvas(it)) }
+            lay(300)
+            collapsedPixels = shot()
+            collapsedCells = bar.cells.map { android.graphics.RectF(it) }
+            rowHeight = bar.height
+            bar.setExpanded(true)
+            lay(rowHeight * 4)
+            expandedPixels = shot()
+            expandedCells = bar.cells.map { android.graphics.RectF(it) }
+        }
+        val firstRow = expandedCells.indices.filter { expandedCells[it].top == 0f }
+        assertTrue(firstRow.size >= 5)
+        for (i in firstRow) {
+            assertEquals("cell $i left", collapsedCells[i].left, expandedCells[i].left, 0.01f)
+            assertEquals("cell $i width", collapsedCells[i].width(), expandedCells[i].width(), 0.01f)
+        }
+        val a = collapsedPixels!!
+        val b = expandedPixels!!
+        // The collapsed strip fades and clips what runs past its end and the grid wraps it, so the
+        // comparison stops where the last whole cell of row 1 begins.
+        val compareTo = expandedCells[firstRow.last()].left.toInt()
+        var differing = 0
+        val box = android.graphics.Rect(Int.MAX_VALUE, Int.MAX_VALUE, -1, -1)
+        for (y in 0 until rowHeight) {
+            for (x in 0 until compareTo) {
+                if (a.getPixel(x, y) == b.getPixel(x, y)) continue
+                differing++
+                box.union(x, y, x + 1, y + 1)
+            }
+        }
+        assertEquals("pixels of row 1 that moved, in $box of row height $rowHeight", 0, differing)
     }
 }

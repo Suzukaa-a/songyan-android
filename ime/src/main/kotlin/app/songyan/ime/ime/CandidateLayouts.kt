@@ -51,7 +51,9 @@ internal object CollapsedRowLayout {
  *
  * Candidates flow left to right at their own width and wrap when a row is full, so short ones are
  * not spread across fixed columns and a long one gets a row of its own, capped to the grid width.
- * Rows share one pitch, which is the candidate touch-target height.
+ * Rows share one pitch, which is the candidate touch-target height. The first row takes the
+ * collapsed strip's [start] inset, [end] inset and [firstRowGap], so it is the collapsed row with
+ * the rest unrolled below it.
  */
 internal object ExpandedFlowLayout {
     data class Cell(
@@ -74,20 +76,26 @@ internal object ExpandedFlowLayout {
         rowHeight: Float,
         minWidth: Float,
         rowGap: Float = 0f,
+        start: Float = 0f,
+        end: Float = 0f,
+        firstRowGap: Float = gap,
     ): Result {
         if (intrinsic.isEmpty() || available <= 0f || rowHeight <= 0f) return Result(emptyList(), 0f)
         val pitch = rowHeight + rowGap
         val cells = ArrayList<Cell>(intrinsic.size)
+        // The same cap as a collapsed cell, so a candidate keeps its width when the bar expands.
+        val cap = max(minWidth, available - start - end)
+        val limit = available - end
         var row = 0
-        var left = 0f
+        var left = start
         for ((index, natural) in intrinsic.withIndex()) {
-            val width = min(max(minWidth, natural), available)
-            if (left > 0f && left + width > available) {
+            val width = min(max(minWidth, natural), cap)
+            if (left > start && left + width > limit) {
                 row++
-                left = 0f
+                left = start
             }
             cells += Cell(index, left, row * pitch, left + width, row * pitch + rowHeight)
-            left += width + gap
+            left += width + if (row == 0) firstRowGap else gap
         }
         return Result(cells, row * pitch + rowHeight)
     }

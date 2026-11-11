@@ -118,7 +118,8 @@ internal fun CandidateBarView.drawChip(
     val pressedNow = index == down
     val fading = index == fadeCell && fadeAlpha > 0f
     val radius = metrics.candidateChipRadiusDp * density
-    val inset = if (expanded) chipGapPx / 2 else 5 * density
+    // One pill height in both states, so the first row's highlight does not change size on expanding.
+    val inset = 5 * density
     chipBounds.set(box.left + chipGapPx / 2, box.top + inset, box.right - chipGapPx / 2, box.bottom - inset)
     // The chip follows the text drop so the label stays centred in it.
     chipBounds.offset(0f, candidateDropDp() * density)
@@ -183,11 +184,8 @@ internal fun CandidateBarView.drawCandidateText(
 
 /** How far collapsed candidate text sits below its row's centre; see [BarContentLine]. */
 internal fun CandidateBarView.candidateDropDp(): Float =
-    when {
-        // Expanded cells are a grid of their own; their text stays centred in each cell.
-        expanded -> 0f
-        else -> BarContentBox.dropDp(underReadingRow)
-    }
+    // Expanded too, so the grid's first row keeps the collapsed row's baseline.
+    BarContentBox.dropDp(underReadingRow && !expanded)
 
 internal fun CandidateBarView.drawControls(canvas: Canvas) {
     if (expanded && controlCells.isNotEmpty()) {

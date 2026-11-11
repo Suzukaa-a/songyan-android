@@ -356,7 +356,9 @@ class CandidateBarView(
     internal val controlWidthPx: Float get() = CONTROL_TOUCH_DP * density
     internal val iconPx: Int get() = (ICON_DP * density).toInt()
     internal val minChipWidthPx: Float get() = metrics.candidateMinChipWidthDp * density
-    internal val columnWidthPx: Float get() = EXPANDED_COLUMN_DP * density
+
+    // As wide as the collapsed control area, so row 1 keeps its right edge when the bar expands.
+    internal val columnWidthPx: Float get() = controlWidthPx
 
     /** Chips and controls count as items only while a candidate page is drawn. */
     private val barItemCount: Int
@@ -1088,9 +1090,6 @@ class CandidateBarView(
 
         /** Material icons are 24 dp. */
         const val ICON_DP = 24f
-
-        /** Width of the fixed column (Back, Backspace, Retype) beside the expanded grid. */
-        const val EXPANDED_COLUMN_DP = 56f
 
         /** Pressed fill fade-out after release (iOS: 150 ms for candidates). */
         const val FADE_MS = 150L

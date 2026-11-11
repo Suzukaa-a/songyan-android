@@ -145,6 +145,10 @@ internal fun CandidateBarView.layoutExpanded() {
                     rowHeight = barPx,
                     minWidth = minChipWidthPx,
                     rowGap = gapY,
+                    start = stripInsetPx,
+                    end = stripInsetPx,
+                    // Row 1 is the collapsed row, so it keeps the collapsed spacing; later rows use the user's column gap.
+                    firstRowGap = cellSpacingPx,
                 )
             CandidateBarDefinition.Expanded.Mode.LIST ->
                 ExpandedFlowLayout.columns(entries.size, 1, viewport.width().toFloat(), gapX, barPx, gapY)

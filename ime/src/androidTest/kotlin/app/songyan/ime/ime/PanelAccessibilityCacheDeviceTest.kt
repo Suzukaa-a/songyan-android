@@ -64,7 +64,10 @@ class PanelAccessibilityCacheDeviceTest {
             host.start()
             activity = startWindow(host)
             SystemClock.sleep(SETTLE_MS)
-            assertTrue("letter keys never appeared", host.await { "q" in windowLabels(automation) })
+            assertTrue(
+                "letter keys never appeared; windows: " + windowSummary(automation),
+                awaitWindow { "q" in windowLabels(automation) },
+            )
 
             host.tapNumbersPage()
 
@@ -122,8 +125,8 @@ class PanelAccessibilityCacheDeviceTest {
                 // A screen reader only sees the panel once its window is queryable; wait for the
                 // tree itself, still on the phrases section the client will be seeded with.
                 assertTrue(
-                    "the panel never appeared in the window's tree",
-                    host.await {
+                    "the panel never appeared in the window's tree; windows: " + windowSummary(automation),
+                    awaitWindow {
                         val labels = panelLabels(automation, rail)
                         labels != null && returnToLetters in labels && PHRASE in labels
                     },
@@ -224,6 +227,24 @@ class PanelAccessibilityCacheDeviceTest {
         }
     }
 
+    /**
+     * The first query of a freshly shown window crosses into the accessibility service, which on a
+     * slow emulator can take far longer than an in-process view check.
+     */
+    private fun awaitWindow(condition: () -> Boolean): Boolean {
+        val deadline = SystemClock.uptimeMillis() + WINDOW_TIMEOUT_MS
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (condition()) return true
+            SystemClock.sleep(WINDOW_POLL_MS)
+        }
+        return condition()
+    }
+
+    private fun windowSummary(automation: UiAutomation): String =
+        automation.windows.joinToString { window ->
+            "${window.type}/${window.title}/${window.root?.packageName}/active=${window.isActive}"
+        }
+
     private fun windowLabels(automation: UiAutomation): List<String> {
         val root = applicationRoot(automation) ?: return emptyList()
         val labels = ArrayList<String>()
@@ -291,6 +312,8 @@ class PanelAccessibilityCacheDeviceTest {
         /** A window needs a moment for the announcements its first layout queues. */
         private const val SETTLE_MS = 500L
         private const val MAX_DEPTH = 24
+        private const val WINDOW_TIMEOUT_MS = 30_000L
+        private const val WINDOW_POLL_MS = 100L
 
         /** The five date formats the app offers, with previews a fixed instant would produce. */
         private val QUICK_DATE_ROWS =

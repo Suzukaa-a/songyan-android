@@ -137,8 +137,8 @@ class AppearanceScreenTest {
                     ),
                 ).fetchSemanticsNodes()
                 .size
-        // One theme-mode entry, one colour entry and one candidate size.
-        assertEquals(3, markedRows)
+        // One theme-mode entry and one colour entry.
+        assertEquals(2, markedRows)
     }
 
     @Test

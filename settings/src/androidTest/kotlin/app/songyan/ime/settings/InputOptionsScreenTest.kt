@@ -217,7 +217,11 @@ class InputOptionsScreenTest {
     @Test
     fun theBottomGapRowSaysNoneByDefaultAndTheDialogStoresTheChoice() {
         show()
-        compose.onNodeWithText(str(R.string.options_bottom_gap_none)).performScrollTo().assertExists()
+        // The side margin row says the same word; only the bottom gap row is meant here.
+        compose
+            .onNode(hasText(str(R.string.options_bottom_gap_title)) and hasText(str(R.string.options_bottom_gap_none)))
+            .performScrollTo()
+            .assertExists()
         compose.onNodeWithText(str(R.string.options_bottom_gap_title)).performScrollTo().performClick()
         compose.onNode(hasText(str(R.string.action_ok)) and hasAnyAncestor(isDialog())).performClick()
         assertEquals(0, bottomGap)

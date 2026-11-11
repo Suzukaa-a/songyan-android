@@ -3,6 +3,7 @@ package app.songyan.ime.settings.ui.screens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -36,8 +38,11 @@ import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.KeyboardPageMarkCoverage
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.KeyboardLayoutOption
+import app.songyan.ime.settings.state.displayPercent
 import app.songyan.ime.settings.state.familiesOfSchemes
+import app.songyan.ime.settings.state.hasProgress
 import app.songyan.ime.settings.state.layoutDisplayName
 import app.songyan.ime.settings.state.pageDisplayName
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
@@ -139,28 +144,65 @@ fun CompositionScreen(
     }
 }
 
+/**
+ * Shown while no input scheme is in use. A scheme that was just added has no keyboard to set up
+ * until it is prepared, so the page waits for it instead of offering to add another one; once
+ * preparation ends the caller swaps this page for the real one.
+ */
 @Composable
 fun CompositionEmptyScreen(
+    engine: EngineStatus,
+    hasSchemes: Boolean,
     onBack: (() -> Unit)?,
-    onOpenSchemes: () -> Unit,
+    onAddScheme: () -> Unit,
+    onChooseScheme: () -> Unit,
 ) {
     SettingsScaffold(title = stringResource(R.string.composition_title), onBack = onBack) { padding ->
         Column(Modifier.padding(padding).padding(16.dp)) {
-            Text(stringResource(R.string.composition_needs_scheme))
-            Button(
-                onClick = onOpenSchemes,
-                modifier = Modifier.padding(top = 16.dp),
-                contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-            ) {
-                Icon(
-                    Icons.Outlined.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(
-                    Modifier.size(ButtonDefaults.IconSpacing),
-                )
-                Text(stringResource(R.string.schemes_add_title))
+            when {
+                engine is EngineStatus.Preparing -> {
+                    Text(
+                        if (engine.hasProgress) {
+                            stringResource(R.string.home_engine_preparing, engine.displayPercent)
+                        } else {
+                            stringResource(R.string.home_engine_preparing_unknown)
+                        },
+                    )
+                    if (engine.hasProgress) {
+                        LinearProgressIndicator(
+                            progress = { engine.displayPercent / 100f },
+                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                        )
+                    } else {
+                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 16.dp))
+                    }
+                }
+
+                hasSchemes -> {
+                    Text(stringResource(R.string.composition_no_scheme_in_use))
+                    Button(onClick = onChooseScheme, modifier = Modifier.padding(top = 16.dp)) {
+                        Text(stringResource(R.string.composition_choose_scheme))
+                    }
+                }
+
+                else -> {
+                    Text(stringResource(R.string.composition_needs_scheme))
+                    Button(
+                        onClick = onAddScheme,
+                        modifier = Modifier.padding(top = 16.dp),
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize),
+                        )
+                        Spacer(
+                            Modifier.size(ButtonDefaults.IconSpacing),
+                        )
+                        Text(stringResource(R.string.schemes_add_title))
+                    }
+                }
             }
         }
     }
@@ -175,6 +217,8 @@ fun UseContentScreen(
     onActivate: suspend (KeyboardCompositionKey) -> Unit,
     onTryOut: () -> Unit,
     onOpenSchemes: () -> Unit,
+    onChooseScheme: () -> Unit,
+    engine: EngineStatus,
     onBack: () -> Unit,
     viewModel: LayoutLibraryViewModel = viewModel(factory = LayoutLibraryViewModel.Factory()),
 ) {
@@ -186,7 +230,7 @@ fun UseContentScreen(
         return
     }
     if (schemes.isEmpty()) {
-        CompositionEmptyScreen(onBack, onOpenSchemes)
+        CompositionEmptyScreen(engine, schemes.isNotEmpty(), onBack, onOpenSchemes, onChooseScheme)
         return
     }
     val families = familiesOfSchemes(schemes)
@@ -199,7 +243,7 @@ fun UseContentScreen(
             else -> null
         }
     if (name == null) {
-        CompositionEmptyScreen(onBack, onOpenSchemes)
+        CompositionEmptyScreen(engine, schemes.isNotEmpty(), onBack, onOpenSchemes, onChooseScheme)
         return
     }
     val targets =

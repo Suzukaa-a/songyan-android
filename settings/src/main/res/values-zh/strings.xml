@@ -315,6 +315,8 @@
     <string name="options_engine_script_taiwan">臺灣</string>
     <string name="options_engine_script_hong_kong">香港</string>
     <string name="composition_needs_scheme">请先下载或导入输入方案。</string>
+    <string name="composition_no_scheme_in_use">还没有正在使用的输入方案。</string>
+    <string name="composition_choose_scheme">选择输入方案</string>
     <string name="layouts_action_use">使用</string>
     <string name="content_use_title">使用「%1$s」</string>
     <string name="content_use_target">选择键盘</string>

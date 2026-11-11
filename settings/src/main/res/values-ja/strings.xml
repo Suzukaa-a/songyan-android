@@ -314,6 +314,8 @@
     <string name="options_engine_script_taiwan">台湾繁体字</string>
     <string name="options_engine_script_hong_kong">香港繁体字</string>
     <string name="composition_needs_scheme">先に入力パックをダウンロードするか、インポートしてください。</string>
+    <string name="composition_no_scheme_in_use">使用中の入力パックがまだありません。</string>
+    <string name="composition_choose_scheme">入力パックを選ぶ</string>
     <string name="layouts_action_use">使う</string>
     <string name="content_use_title">「%1$s」を使う</string>
     <string name="content_use_target">キーボードを選択</string>

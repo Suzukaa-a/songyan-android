@@ -545,6 +545,8 @@ private fun NavGraphBuilder.settingsGraph(
             onActivate = viewModel::activateKeyboard,
             onTryOut = { navController.navigate(SettingsRoutes.TRY_OUT) },
             onOpenSchemes = { navController.openAddScheme() },
+            onChooseScheme = { navController.navigate(SettingsRoutes.SCHEMES) { launchSingleTop = true } },
+            engine = state.value.engine,
             onBack = { navController.popBackStack() },
         )
     }
@@ -555,8 +557,11 @@ private fun NavGraphBuilder.settingsGraph(
             LoadingScreen(stringResource(R.string.composition_title), topBack(navController))
         } else if (key == null) {
             app.songyan.ime.settings.ui.screens.CompositionEmptyScreen(
+                engine = state.value.engine,
+                hasSchemes = state.value.schemes.isNotEmpty(),
                 onBack = topBack(navController),
-                onOpenSchemes = { navController.openAddScheme() },
+                onAddScheme = { navController.openAddScheme() },
+                onChooseScheme = { navController.navigate(SettingsRoutes.SCHEMES) { launchSingleTop = true } },
             )
         } else {
             CompositionScreen(

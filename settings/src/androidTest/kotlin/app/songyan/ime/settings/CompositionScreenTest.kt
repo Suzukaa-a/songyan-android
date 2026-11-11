@@ -1,5 +1,8 @@
 package app.songyan.ime.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,9 +15,11 @@ import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.ui.LayoutLibraryViewModel
+import app.songyan.ime.settings.ui.screens.CompositionEmptyScreen
 import app.songyan.ime.settings.ui.screens.CompositionScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
 import org.junit.Assert.assertEquals
@@ -75,6 +80,8 @@ class CompositionScreenTest {
                     },
                     onTryOut = { tried = true },
                     onOpenSchemes = {},
+                    onChooseScheme = {},
+                    engine = EngineStatus.Ready,
                     onBack = {},
                     viewModel = model,
                 )
@@ -151,6 +158,8 @@ class CompositionScreenTest {
                     onActivate = {},
                     onTryOut = {},
                     onOpenSchemes = {},
+                    onChooseScheme = {},
+                    engine = EngineStatus.Ready,
                     onBack = {},
                     viewModel = model,
                 )
@@ -205,5 +214,31 @@ class CompositionScreenTest {
         compose
             .onNodeWithText(str(R.string.composition_missing_marks, keypadMisses.joinToString(" ")))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun theEmptyPageWaitsForASchemeBeingPreparedAndNeverOffersToAddAnother() {
+        var engine by mutableStateOf<EngineStatus>(EngineStatus.Preparing(40))
+        var hasSchemes by mutableStateOf(false)
+        var added = 0
+        var chosen = 0
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                CompositionEmptyScreen(engine, hasSchemes, null, { added++ }, { chosen++ })
+            }
+        }
+        compose.onNodeWithText(str(R.string.composition_needs_scheme)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.schemes_add_title)).assertDoesNotExist()
+
+        // Prepared, but nothing in use: the way out is the scheme list, not another download.
+        engine = EngineStatus.Ready
+        hasSchemes = true
+        compose.onNodeWithText(str(R.string.composition_needs_scheme)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.composition_choose_scheme)).performClick()
+        assertEquals(1, chosen)
+
+        hasSchemes = false
+        compose.onNodeWithText(str(R.string.schemes_add_title)).performClick()
+        assertEquals(1, added)
     }
 }

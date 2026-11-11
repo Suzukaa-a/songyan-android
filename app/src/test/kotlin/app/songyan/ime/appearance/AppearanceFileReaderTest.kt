@@ -7,13 +7,13 @@ import org.junit.Test
 class AppearanceFileReaderTest {
     @Test
     fun aFileAtTheBudgetIsRead() {
-        val bytes = ByteArray(AppearanceDocument.MAX_BYTES) { 'a'.code.toByte() }
-        assertEquals(AppearanceDocument.MAX_BYTES, AppearanceFileReader.decode(bytes).length)
+        val bytes = ByteArray(AppearanceDocument.MAX_BYTES_WITH_IMAGE) { 'a'.code.toByte() }
+        assertEquals(AppearanceDocument.MAX_BYTES_WITH_IMAGE, AppearanceFileReader.decode(bytes).length)
     }
 
     @Test
     fun aFileOverTheBudgetIsRejectedAsOversize() {
-        val bytes = ByteArray(AppearanceDocument.MAX_BYTES + 1)
+        val bytes = ByteArray(AppearanceDocument.MAX_BYTES_WITH_IMAGE + 1)
         val error = assertThrows(AppearanceError::class.java) { AppearanceFileReader.decode(bytes) }
         assertEquals(AppearanceErrorCode.OVERSIZE, error.code)
     }

@@ -50,6 +50,9 @@ data class AppearanceDocument(
     /** Whether the three identities agree (skin, candidate bar, project). */
     val identityIsConsistent: Boolean get() = id == skin.id && id == candidateBar.id
 
+    /** Whether a variant draws an image background (raises the byte budget). */
+    val usesImage: Boolean get() = skin.usesImage
+
     /** Stable identity string for diagnostics; contains no user-visible text. */
     val identityDescription: String get() = id + "|" + skin.id + "|" + candidateBar.id
 
@@ -59,11 +62,13 @@ data class AppearanceDocument(
     /** Uniform name and materialized colours; the candidate area and skin are re-attached to this identity. */
     fun normalized(): AppearanceDocument {
         val trimmed = name.trim()
+        val normalizedSkin = reidentified(skin, id, trimmed).normalized()
+        // The version follows the features in use, on the document and both parts alike.
         return copy(
-            formatVersion = FORMAT_VERSION,
+            formatVersion = normalizedSkin.formatVersion,
             name = trimmed,
-            skin = reidentified(skin, id, trimmed).normalized(),
-            candidateBar = reidentified(candidateBar, id, trimmed),
+            skin = normalizedSkin,
+            candidateBar = reidentified(candidateBar, id, trimmed).copy(formatVersion = normalizedSkin.formatVersion),
         )
     }
 
@@ -90,11 +95,11 @@ data class AppearanceDocument(
     /** Replaces the skin; the candidate layout and all three identities stay in lockstep. */
     fun replacing(skin: SkinDefinition): AppearanceDocument = copy(skin = reidentified(skin, id, name))
 
-    fun validate() {
-        requireField(formatVersion == FORMAT_VERSION, "$.formatVersion")
+    fun validate(verifyImage: Boolean = true) {
+        requireField(formatVersion in SUPPORTED_VERSIONS, "$.formatVersion")
         requireField(id.isNotEmpty() && id.all { it in ID_CHARS }, "$.id")
         requireField(name.isNotBlank(), "$.name")
-        skin.validate()
+        skin.validate(verifyImage)
         // The candidate area validates in its own format; this API only exposes one error type, and
         // the offending path is preserved so the UI can still point at the field.
         try {
@@ -107,22 +112,36 @@ data class AppearanceDocument(
         requireField(id == candidateBar.id, "$.candidateBar.id")
     }
 
-    fun encode(): String {
-        validate()
+    fun encode(verifyImage: Boolean = true): String {
+        validate(verifyImage)
         val text = StrictJsonShared.encoder.encodeToString(serializer(), normalized())
-        if (text.encodeToByteArray().size > MAX_BYTES) {
+        if (text.encodeToByteArray().size > (if (usesImage) MAX_BYTES_WITH_IMAGE else MAX_BYTES)) {
             throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
         }
         return text
     }
 
     companion object {
+        /** The version a document without any version 2 feature is written as. */
         const val FORMAT_VERSION: Int = 1
+        val SUPPORTED_VERSIONS: IntRange = 1..2
         const val SYSTEM_DEFAULT_ID: String = "system-default"
         const val FILE_EXTENSION: String = ".songyanappearance.json"
 
         /** Byte budget of one appearance project. */
         const val MAX_BYTES: Int = 256 * 1024
+
+        /** Byte budget of a project with an image background. */
+        const val MAX_BYTES_WITH_IMAGE: Int = 2_097_152
+
+        /** Rejects input above the hard limit, and input above the plain limit that cannot hold an image. */
+        private fun checkSize(text: String): Int {
+            val size = text.encodeToByteArray().size
+            if (size > MAX_BYTES_WITH_IMAGE || (size > MAX_BYTES && !text.contains("\"image\""))) {
+                throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
+            }
+            return size
+        }
 
         private const val ID_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
 
@@ -169,18 +188,20 @@ data class AppearanceDocument(
             )
 
         /** Strict decode of a stored project; mixed identities and unknown fields are rejected. */
-        fun decode(text: String): AppearanceDocument {
-            if (text.encodeToByteArray().size > MAX_BYTES) {
-                throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
-            }
+        fun decode(
+            text: String,
+            verifyImage: Boolean = true,
+        ): AppearanceDocument {
+            val size = checkSize(text)
             val source = parseObject(text)
             for ((key, _) in source) {
                 if (key !in TOP_LEVEL_FIELDS) {
                     throw AppearanceError(AppearanceErrorCode.UNKNOWN_FIELD, "$." + key)
                 }
             }
-            val version = (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content
-            if (version != FORMAT_VERSION.toString()) {
+            val declared =
+                (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toIntOrNull()
+            if (declared == null || declared !in SUPPORTED_VERSIONS) {
                 throw AppearanceError(AppearanceErrorCode.UNSUPPORTED_VERSION, "$.formatVersion")
             }
             val id = (source["id"] as? JsonPrimitive)?.takeIf { it.isString }?.content
@@ -195,8 +216,20 @@ data class AppearanceDocument(
                 source["candidateBar"] as? JsonObject
                     ?: throw AppearanceError(AppearanceErrorCode.INVALID_VALUE, "$.candidateBar")
 
+            // A version 1 document cannot hold a version 2 part.
+            for ((key, part) in listOf("skin" to skinNode, "candidateBar" to barNode)) {
+                val partVersion =
+                    (part["formatVersion"] as? JsonPrimitive)
+                        ?.takeIf { !it.isString }
+                        ?.content
+                        ?.toIntOrNull()
+                if (partVersion != null && partVersion > declared) {
+                    throw AppearanceError(AppearanceErrorCode.INVALID_VALUE, "$.$key.formatVersion")
+                }
+            }
             // Each child keeps its own package's strict decoding (unknown fields, invalid values, versions).
-            val skin = SkinDefinition.decode(StrictJsonShared.encoder.encodeToString(JsonObject.serializer(), skinNode))
+            val skin = SkinDefinition.decode(skinNode, verifyImage)
+            if (size > MAX_BYTES && !skin.usesImage) throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
             val bar =
                 try {
                     CandidateBarDefinition.decode(
@@ -239,7 +272,7 @@ data class AppearanceDocument(
                     skin = skin,
                     candidateBar = bar,
                 )
-            document.validate()
+            document.validate(verifyImage)
             return document.normalized()
         }
 
@@ -253,9 +286,7 @@ data class AppearanceDocument(
          * the read-only built-in.
          */
         fun decodeImported(text: String): AppearanceDocument {
-            if (text.encodeToByteArray().size > MAX_BYTES) {
-                throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
-            }
+            checkSize(text)
             val source = parseObject(text)
             // A snapshot (selection plus content) is not an importable configuration.
             val snapshotKeys = setOf("selectedSkinID", "selectedBarID", "selectedID")

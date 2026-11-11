@@ -32,7 +32,7 @@ class AppearanceDocumentTest {
         assertEquals(document, AppearanceDocument.decode(document.encode()))
         val rejected =
             listOf(
-                """{"formatVersion":2,"id":"x","name":"x","skin":{},"candidateBar":{}}""",
+                """{"formatVersion":3,"id":"x","name":"x","skin":{},"candidateBar":{}}""",
                 """{"formatVersion":1,"id":"x","name":"x","renderer":"evil","skin":{},"candidateBar":{}}""",
                 """{"formatVersion":1,"id":"x","name":"x","skin":{}}""",
                 """{"formatVersion":1,"id":"x","name":"x","appearance":"sepia","skin":{},"candidateBar":{}}""",

@@ -174,7 +174,8 @@ data class CandidateBarDefinition(
 
     /** Rejects values the format cannot represent; called before every encode and after every decode. */
     fun validate() {
-        requireField(formatVersion == FORMAT_VERSION, "$.formatVersion")
+        // Version 2 adds nothing to this part; it only tracks the appearance document it belongs to.
+        requireField(formatVersion in SUPPORTED_VERSIONS, "$.formatVersion")
         requireField(id.isNotEmpty() && id.all { it in ID_CHARS }, "$.id")
         requireField(name.isNotBlank(), "$.name")
         requireField(collapsed.height.isFinite(), "$.collapsed.height")
@@ -214,6 +215,7 @@ data class CandidateBarDefinition(
 
     companion object {
         const val FORMAT_VERSION: Int = 1
+        val SUPPORTED_VERSIONS: IntRange = 1..2
         const val SYSTEM_DEFAULT_ID: String = "system-default"
 
         /** Byte budget of one candidate-area document (over-budget inputs are rejected, not truncated). */
@@ -280,8 +282,8 @@ data class CandidateBarDefinition(
             StrictJson.rejectUnknownFields(source, "$", ::allowedFields) { path ->
                 throw CandidateBarError(CandidateBarErrorCode.UNKNOWN_FIELD, path)
             }
-            val version = (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content
-            if (version != FORMAT_VERSION.toString()) {
+            val version = (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toIntOrNull()
+            if (version == null || version !in SUPPORTED_VERSIONS) {
                 throw CandidateBarError(CandidateBarErrorCode.UNSUPPORTED_VERSION, "$.formatVersion")
             }
 

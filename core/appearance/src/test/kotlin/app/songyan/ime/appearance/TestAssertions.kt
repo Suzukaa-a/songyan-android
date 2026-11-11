@@ -60,6 +60,11 @@ fun assertNull(
 
 fun assertNotNull(actual: Any?) = Assert.assertNotNull(actual)
 
+fun assertNotNull(
+    actual: Any?,
+    message: String,
+) = Assert.assertNotNull(message, actual)
+
 /** Runs [block], returns the thrown error, and fails when nothing matching [T] is thrown. */
 inline fun <reified T : Throwable> assertFailsWith(
     message: String? = null,

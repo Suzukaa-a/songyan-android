@@ -108,7 +108,7 @@ class AppearanceStore(
     @Throws(AppearanceError::class)
     private fun readProject(file: Path): AppearanceDocument {
         val text =
-            readBounded(file, AppearanceDocument.MAX_BYTES)
+            readBounded(file, AppearanceDocument.MAX_BYTES_WITH_IMAGE)
                 ?: throw AppearanceError(AppearanceErrorCode.UNREADABLE_SOURCE, file.fileName.toString())
         val document = AppearanceDocument.decode(text)
         val stem = file.fileName.toString().removeSuffix(AppearanceDocument.FILE_EXTENSION)
@@ -215,8 +215,10 @@ class AppearanceStore(
             } catch (error: IllegalArgumentException) {
                 throw AppearanceError(AppearanceErrorCode.MALFORMED_JSON, "$")
             }
-        // Strict decoding of the embedded document rejects unknown fields, wrong versions and mixed identities.
-        val decoded = AppearanceDocument.decode(snapshot.document.encode())
+        // Strict decoding of the embedded document rejects unknown fields, wrong versions and mixed
+        // identities. The image payload was verified when the snapshot was applied; decoding it again on
+        // every read would cost the keyboard a pass over up to a megabyte.
+        val decoded = AppearanceDocument.decode(snapshot.document.encode(verifyImage = false), verifyImage = false)
         if (decoded != snapshot.document.normalized()) {
             throw AppearanceError(AppearanceErrorCode.INCONSISTENT_SNAPSHOT, "$.document")
         }
@@ -275,8 +277,8 @@ class AppearanceStore(
         /** The applied snapshot's file name. */
         const val ACTIVE_FILE_NAME: String = "active.json"
 
-        /** Byte budget of the applied snapshot. */
-        const val SNAPSHOT_MAX_BYTES: Int = 512 * 1024
+        /** Byte budget of the applied snapshot: a project with an image plus the snapshot's own fields. */
+        const val SNAPSHOT_MAX_BYTES: Int = AppearanceDocument.MAX_BYTES_WITH_IMAGE + 64 * 1024
 
         private const val SAFE_ID_CHARS: String =
             "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"

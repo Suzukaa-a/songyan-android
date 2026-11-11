@@ -31,7 +31,7 @@ class CandidateBarDefinitionTest {
     fun unknownFieldsWrongVersionsAndInvalidValuesAreRejected() {
         val rejected =
             listOf(
-                """{"formatVersion":2,"id":"x","name":"x"}""",
+                """{"formatVersion":3,"id":"x","name":"x"}""",
                 """{"formatVersion":1,"id":"../x","name":"x"}""",
                 """{"formatVersion":1,"id":"x","name":"x","collapsed":{"height":60}}""",
                 """{"formatVersion":1,"id":"x","name":"x","expanded":{"columns":5}}""",

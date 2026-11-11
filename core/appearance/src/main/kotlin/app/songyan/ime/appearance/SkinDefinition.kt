@@ -37,8 +37,9 @@ data class SkinDefinition(
     )
 
     /**
-     * Background drawing of one variant: a solid colour or a vertical two-stop gradient. The
-     * validation rule keeps exactly one shape populated, so the renderer never has to guess.
+     * Background drawing of one variant: a solid colour, a gradient or an image. The validation rule
+     * keeps exactly one shape populated, so the renderer never has to guess. [colors], [image] and
+     * [align] are format version 2.
      */
     @Serializable
     data class Background(
@@ -47,6 +48,9 @@ data class SkinDefinition(
         val from: String? = null,
         val to: String? = null,
         val direction: String? = null,
+        val colors: List<String>? = null,
+        val image: String? = null,
+        val align: String? = null,
     )
 
     @Serializable
@@ -71,8 +75,38 @@ data class SkinDefinition(
         val visualInsetY: Double = 2.0,
     )
 
-    fun validate() {
-        requireField(formatVersion == FORMAT_VERSION, "$.formatVersion")
+    /** Path of the first format version 2 feature in use, or null when the skin is plain version 1. */
+    val firstVersion2FeaturePath: String?
+        get() {
+            for ((mode, variant) in listOf("light" to variants.light, "dark" to variants.dark)) {
+                for (name in COLOR_NAMES) {
+                    if (variant?.colors?.get(name)?.length == 9) return "$.variants.$mode.colors.$name"
+                }
+                val background = variant?.background ?: continue
+                val base = "$.variants.$mode.background"
+                if (background.type == "image" || background.image != null) return "$base.type"
+                if (background.colors != null) return "$base.colors"
+                val flat = listOf("color" to background.color, "from" to background.from, "to" to background.to)
+                for ((key, value) in flat) {
+                    if (value?.length == 9) return "$base.$key"
+                }
+            }
+            return null
+        }
+
+    /** Whether a variant draws an image background (raises the file size limit). */
+    val usesImage: Boolean
+        get() =
+            listOf(variants.light, variants.dark).any {
+                it?.background?.image != null || it?.background?.type == "image"
+            }
+
+    /**
+     * Checks the whole skin. [verifyImage] false skips decoding the image payload (readers of an
+     * already verified snapshot); the data-URL shape is still checked.
+     */
+    fun validate(verifyImage: Boolean = true) {
+        requireField(formatVersion in SUPPORTED_VERSIONS, "$.formatVersion")
         requireField(id.isNotEmpty() && id.all { it in ID_CHARS }, "$.id")
         requireField(name.isNotBlank(), "$.name")
         requireField(typography.family in FAMILIES, "$.typography.family")
@@ -98,24 +132,56 @@ data class SkinDefinition(
                 requireField(SkinColor.fromHex(value) != null, "$.variants." + mode + ".colors." + key)
             }
             val background = variant?.background ?: continue
-            requireField(backgroundIsValid(background), "$.variants." + mode + ".background")
+            validateBackground(background, "$.variants." + mode + ".background", verifyImage)
         }
     }
 
-    private fun backgroundIsValid(background: SkinDefinition.Background): Boolean =
-        when (background.type) {
-            "solid" ->
-                background.color?.let { SkinColor.fromHex(it) != null } == true &&
-                    background.from == null &&
-                    background.to == null &&
-                    background.direction == null
-            "linearGradient" ->
-                background.from?.let { SkinColor.fromHex(it) != null } == true &&
-                    background.to?.let { SkinColor.fromHex(it) != null } == true &&
-                    background.direction == "vertical" &&
-                    background.color == null
-            else -> false
+    private fun validateBackground(
+        b: Background,
+        base: String,
+        verifyImage: Boolean,
+    ) {
+        fun valid(hex: String?): Boolean = hex?.let { SkinColor.fromHex(it) != null } == true
+        when (b.type) {
+            "solid" -> {
+                requireField(valid(b.color), "$base.color")
+                requireField(
+                    b.from == null &&
+                        b.to == null &&
+                        b.direction == null &&
+                        b.colors == null &&
+                        b.image == null &&
+                        b.align == null,
+                    base,
+                )
+            }
+            "linearGradient" -> {
+                requireField(b.color == null && b.image == null && b.align == null, base)
+                val stops = b.colors
+                if (stops != null) {
+                    requireField(b.from == null && b.to == null, base)
+                    requireField(stops.size in 2..4, "$base.colors")
+                    stops.forEachIndexed { index, stop -> requireField(valid(stop), "$base.colors[$index]") }
+                    requireField(b.direction in GRADIENT_DIRECTIONS, "$base.direction")
+                } else {
+                    requireField(valid(b.from) && valid(b.to), base)
+                    requireField(b.direction == "vertical", "$base.direction")
+                }
+            }
+            "image" -> {
+                requireField(
+                    b.color == null && b.from == null && b.to == null && b.direction == null && b.colors == null,
+                    base,
+                )
+                requireField(b.align in ALIGNMENTS, "$base.align")
+                requireField(
+                    b.image != null && BackgroundImage.inspect(b.image, verifyImage) is BackgroundImage.Result.Ok,
+                    "$base.image",
+                )
+            }
+            else -> requireField(false, "$base.type")
         }
+    }
 
     /**
      * Fills every colour role from the platform defaults, overlaid by the skin's own colours, and
@@ -127,9 +193,13 @@ data class SkinDefinition(
         for ((key, value) in (if (dark) variants.dark else variants.light)?.colors ?: emptyMap()) {
             SkinColor.fromHex(value)?.let { colors[key] = it }
         }
-        colors.getValue("text").let { colors["text"] = it.contrasting(colors.getValue("key")) }
-        colors.getValue("secondaryText").let { colors["secondaryText"] = it.contrasting(colors.getValue("key")) }
-        colors.getValue("accentText").let { colors["accentText"] = it.contrasting(colors.getValue("accent")) }
+        // Translucent keys sit on the system surface, so contrast is judged against the composite.
+        val surface = SkinColor.systemSurface(dark)
+        colors.getValue("text").let { colors["text"] = it.contrasting(colors.getValue("key"), surface) }
+        colors.getValue("secondaryText").let {
+            colors["secondaryText"] = it.contrasting(colors.getValue("key"), surface)
+        }
+        colors.getValue("accentText").let { colors["accentText"] = it.contrasting(colors.getValue("accent"), surface) }
         return colors
     }
 
@@ -146,7 +216,8 @@ data class SkinDefinition(
                     result.copy(variants = result.variants.copy(light = resolved))
                 }
         }
-        return result
+        // The version follows the features in use, so a file without any stays byte-identical version 1.
+        return result.copy(formatVersion = if (result.firstVersion2FeaturePath != null) 2 else 1)
     }
 
     /** A duplicate with a fresh identity and the caller's localized copy suffix. */
@@ -162,18 +233,26 @@ data class SkinDefinition(
     fun encode(): String {
         validate()
         val text = StrictJsonShared.encoder.encodeToString(serializer(), normalized())
-        if (text.encodeToByteArray().size > MAX_BYTES) {
+        if (text.encodeToByteArray().size > (if (usesImage) MAX_BYTES_WITH_IMAGE else MAX_BYTES)) {
             throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
         }
         return text
     }
 
     companion object {
+        /** The version a skin without any version 2 feature is written as. */
         const val FORMAT_VERSION: Int = 1
+        val SUPPORTED_VERSIONS: IntRange = 1..2
         const val SYSTEM_DEFAULT_ID: String = "system-default"
 
         /** Byte budget of one skin document. */
         const val MAX_BYTES: Int = 128 * 1024
+
+        /** Byte budget of a skin with an image background. */
+        const val MAX_BYTES_WITH_IMAGE: Int = 2_097_152
+
+        private val GRADIENT_DIRECTIONS = setOf("vertical", "horizontal", "diagonal")
+        private val ALIGNMENTS = setOf("top", "center", "bottom")
 
         /**
          * The colour roles a skin file can carry. Kept identical to the iOS set: adding a role here
@@ -296,7 +375,8 @@ data class SkinDefinition(
                 path == "$.keycap" -> setOf("cornerRadius", "borderWidth", "shadow")
                 path == "$.spacing" -> setOf("visualInsetX", "visualInsetY")
                 path.endsWith(".colors") -> COLOR_NAMES.toSet()
-                path.endsWith(".background") -> setOf("type", "color", "from", "to", "direction")
+                path.endsWith(".background") ->
+                    setOf("type", "color", "from", "to", "direction", "colors", "image", "align")
                 else -> emptySet()
             }
 
@@ -304,8 +384,13 @@ data class SkinDefinition(
          * Strict decode: unknown fields, wrong versions and invalid values are rejected; omitted
          * fields keep the format's documented defaults.
          */
-        fun decode(text: String): SkinDefinition {
-            if (text.encodeToByteArray().size > MAX_BYTES) {
+        fun decode(
+            text: String,
+            verifyImage: Boolean = true,
+        ): SkinDefinition {
+            val size = text.encodeToByteArray().size
+            // Above the plain limit only a file that can hold an image is parsed; the content is checked below.
+            if (size > MAX_BYTES_WITH_IMAGE || (size > MAX_BYTES && !text.contains("\"image\""))) {
                 throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
             }
             val source =
@@ -314,12 +399,22 @@ data class SkinDefinition(
                 } catch (error: IllegalArgumentException) {
                     throw AppearanceError(AppearanceErrorCode.MALFORMED_JSON, "$")
                 } ?: throw AppearanceError(AppearanceErrorCode.NOT_AN_OBJECT, "$")
+            val skin = decode(source, verifyImage)
+            if (size > MAX_BYTES && !skin.usesImage) throw AppearanceError(AppearanceErrorCode.OVERSIZE, "$")
+            return skin
+        }
 
+        /** Decodes an already parsed object; the caller owns the file size limit. */
+        fun decode(
+            source: JsonObject,
+            verifyImage: Boolean = true,
+        ): SkinDefinition {
             StrictJsonShared.rejectUnknownFields(source, "$", ::allowedNestedFields) { path ->
                 throw AppearanceError(AppearanceErrorCode.UNKNOWN_FIELD, path)
             }
-            val version = (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content
-            if (version != FORMAT_VERSION.toString()) {
+            val declared =
+                (source["formatVersion"] as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toIntOrNull()
+            if (declared == null || declared !in SUPPORTED_VERSIONS) {
                 throw AppearanceError(AppearanceErrorCode.UNSUPPORTED_VERSION, "$.formatVersion")
             }
 
@@ -330,7 +425,11 @@ data class SkinDefinition(
                 } catch (error: IllegalArgumentException) {
                     throw AppearanceError(AppearanceErrorCode.INVALID_VALUE, "$")
                 }
-            decoded.validate()
+            // A version 1 file must stay within version 1 features.
+            if (declared == 1) {
+                decoded.firstVersion2FeaturePath?.let { throw AppearanceError(AppearanceErrorCode.INVALID_VALUE, it) }
+            }
+            decoded.validate(verifyImage)
             return decoded.normalized()
         }
 

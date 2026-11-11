@@ -22,7 +22,7 @@ class SkinDefinitionTest {
     fun unknownFieldsWrongVersionsAndInvalidValuesAreRejected() {
         val rejected =
             listOf(
-                """{"formatVersion":2,"id":"x","name":"x"}""",
+                """{"formatVersion":3,"id":"x","name":"x"}""",
                 """{"formatVersion":1,"id":"../x","name":"x"}""",
                 """{"formatVersion":1,"id":"x","name":"x","variants":{"light":{"code":"a"}}}""",
                 """{"formatVersion":1,"id":"x","name":"x","spacing":{"visualInsetX":7}}""",

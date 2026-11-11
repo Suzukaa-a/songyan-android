@@ -1,16 +1,12 @@
 package app.songyan.ime.ime
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.os.SystemClock
 import android.text.Layout
@@ -22,7 +18,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
-import app.songyan.ime.appearance.BackgroundFill
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.KeyboardPageKind
@@ -237,74 +232,10 @@ class KeyboardView(
     private val shadowBounds = RectF()
     private val strokeBounds = RectF()
 
-    /** Fills the keyboard surface when the skin draws a background; rebuilt only when the palette or size changes. */
-    private val backgroundPaint = Paint()
-    private var drawsBackground = false
-
     private fun applyTypeface() {
         val face = KeyboardTypefaces.of(metrics.fontFamily, metrics.fontWeight)
         paint.typeface = face
         measurePaint.typeface = face
-    }
-
-    /** The picture behind the keys, drawn once its bitmap has been decoded off the main thread. */
-    private var imageFill: BackgroundFill.Image? = null
-    private var imageBitmap: Bitmap? = null
-    private val imageMatrix = Matrix()
-    private val imagePaint = Paint(Paint.FILTER_BITMAP_FLAG)
-
-    /** Builds the background paint, gradient shader and picture placement for the current palette and size. */
-    private fun rebuildBackground() {
-        backgroundPaint.shader = null
-        imageFill = null
-        when (val fill = metrics.backgroundFill) {
-            null -> drawsBackground = false
-            is BackgroundFill.Solid -> {
-                backgroundPaint.color = fill.color
-                drawsBackground = true
-            }
-            is BackgroundFill.Gradient -> {
-                val endX = if (fill.direction == BackgroundFill.Direction.VERTICAL) 0f else width.toFloat()
-                val endY = if (fill.direction == BackgroundFill.Direction.HORIZONTAL) 0f else height.toFloat()
-                backgroundPaint.shader =
-                    LinearGradient(0f, 0f, endX, endY, fill.colors.toIntArray(), null, Shader.TileMode.CLAMP)
-                drawsBackground = true
-            }
-            is BackgroundFill.Image -> {
-                // The panel colour shows until the bitmap arrives.
-                drawsBackground = false
-                imageFill = fill
-            }
-        }
-        if (imageFill == null) {
-            imageBitmap = null
-            BackgroundImageLoader.release()
-        } else {
-            placeImage()
-        }
-    }
-
-    /** Asks for the bitmap at the current size and fits it to the key area (cover, centred, cropped by align). */
-    private fun placeImage() {
-        val fill = imageFill ?: return
-        val bitmap =
-            BackgroundImageLoader.request(fill, width, height) {
-                placeImage()
-                invalidate()
-            }
-        imageBitmap = bitmap
-        if (bitmap == null) return
-        val scale = maxOf(width.toFloat() / bitmap.width, height.toFloat() / bitmap.height)
-        val left = (width - bitmap.width * scale) / 2f
-        val spare = height - bitmap.height * scale
-        val top =
-            when (fill.align) {
-                BackgroundFill.Align.TOP -> 0f
-                BackgroundFill.Align.CENTER -> spare / 2f
-                BackgroundFill.Align.BOTTOM -> spare
-            }
-        imageMatrix.setScale(scale, scale)
-        imageMatrix.postTranslate(left, top)
     }
 
     internal val measurePaint =
@@ -551,7 +482,6 @@ class KeyboardView(
             } else {
                 emptyList()
             }
-        rebuildBackground()
         rebuild()
         logKeyBoundsOnce()
         invalidate()
@@ -662,7 +592,6 @@ class KeyboardView(
         oldw: Int,
         oldh: Int,
     ) {
-        rebuildBackground()
         rebuild()
         logKeyBoundsOnce()
     }
@@ -714,12 +643,7 @@ class KeyboardView(
 
     override fun onDraw(canvas: Canvas) {
         if (ImePerf.isLogging) logKeyBoundsIfMoved()
-        if (drawsBackground) {
-            canvas.drawPaint(backgroundPaint)
-        } else {
-            canvas.drawColor(palette.background)
-        }
-        imageBitmap?.let { canvas.drawBitmap(it, imageMatrix, imagePaint) }
+        canvas.drawColor(palette.surface)
         notice?.let {
             drawNotice(canvas, it)
             return
@@ -950,7 +874,6 @@ class KeyboardView(
         palette = KeyboardPalette.from(context)
         metrics = palette.tokens
         applyTypeface()
-        rebuildBackground()
         textScale = ImeText.scale(resources)
         labels = keys.map { face(it, false) }
         spokenLabels = keys.map { face(it, true) }

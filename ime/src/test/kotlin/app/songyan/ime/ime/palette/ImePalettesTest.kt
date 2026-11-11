@@ -186,6 +186,24 @@ class ImePalettesTest {
     }
 
     @Test
+    fun aSkinBackgroundLeavesTheViewsInsideTheKeyboardSeeThrough() {
+        val plain = ImePalettes.of(AppearancePalette.of(lightSkinWith(), false))
+        assertEquals(plain.background, plain.surface)
+        val gradient =
+            lightSkinWith(
+                background =
+                    SkinDefinition.Background(
+                        type = "linearGradient",
+                        colors = listOf("#102030", "#A0B0C0"),
+                        direction = "vertical",
+                    ),
+            )
+        val painted = ImePalettes.of(AppearancePalette.of(gradient, false))
+        assertEquals(0, painted.surface)
+        assertEquals(plain.background, painted.background)
+    }
+
+    @Test
     fun translucentKeyFillsKeepTheirAlphaAndAreNotPushedApart() {
         val skin =
             lightSkinWith(

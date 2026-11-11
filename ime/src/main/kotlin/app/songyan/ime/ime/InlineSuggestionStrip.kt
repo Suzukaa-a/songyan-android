@@ -48,7 +48,7 @@ class InlineSuggestionStrip(
 
     init {
         clipToPadding = true
-        setBackgroundColor(palette.background)
+        setBackgroundColor(palette.surface)
         isHorizontalScrollBarEnabled = false
         overScrollMode = OVER_SCROLL_NEVER
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
@@ -56,7 +56,7 @@ class InlineSuggestionStrip(
 
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
-        setBackgroundColor(palette.background)
+        setBackgroundColor(palette.surface)
         requestLayout()
     }
 

@@ -6,6 +6,8 @@ import android.animation.ValueAnimator
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
@@ -279,34 +281,36 @@ internal fun CandidateBarView.drawStartFade(canvas: Canvas) {
 }
 
 /**
- * A fade into the keyboard colour over the [END_FADE_DP] left of [edge], the full row height. The
- * shader lives in the fade's own coordinates, so it is rebuilt only when the colour or the density
- * changes, never per frame or per edge.
+ * A fade into the keyboard colour over the [END_FADE_DP] left of [edge], the full row height. Over a
+ * skin's gradient or picture the fade erases the row inside the layer [CandidateBarView.onDraw] opened
+ * instead, so the background shows through rather than a band of panel colour. The shader lives in the
+ * fade's own coordinates, so it is rebuilt only when the colour or the density changes, never per
+ * frame or per edge.
  */
 internal fun CandidateBarView.drawFade(
     canvas: Canvas,
     edge: Float,
 ) {
     val fade = END_FADE_DP * density
-    if (fade != endFadeWidth || palette.background != endFadeColor) {
+    val erases = palette.surface == 0
+    val colour = if (erases) ERASE_COLOUR else palette.background
+    if (fade != endFadeWidth || colour != endFadeColor) {
         endFadeWidth = fade
-        endFadeColor = palette.background
+        endFadeColor = colour
         endFadePaint.shader =
-            LinearGradient(
-                -fade,
-                0f,
-                0f,
-                0f,
-                palette.background and 0x00FFFFFF,
-                palette.background,
-                Shader.TileMode.CLAMP,
-            )
+            LinearGradient(-fade, 0f, 0f, 0f, colour and 0x00FFFFFF, colour, Shader.TileMode.CLAMP)
     }
+    endFadePaint.xfermode = if (erases) ERASE else null
     val checkpoint = canvas.save()
     canvas.translate(edge, 0f)
     canvas.drawRect(-fade, 0f, 0f, height.toFloat(), endFadePaint)
     canvas.restoreToCount(checkpoint)
 }
+
+/** Only the alpha of an erasing fade matters. */
+private const val ERASE_COLOUR = 0xFF000000.toInt()
+
+private val ERASE = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
 
 /** How much of a section's end fades out while more of it follows. */
 private const val END_FADE_DP = 16f

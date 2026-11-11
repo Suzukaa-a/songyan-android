@@ -114,7 +114,7 @@ internal class OneHandShell(
         var palette: KeyboardPalette = KeyboardPalette.from(context)
             set(value) {
                 field = value
-                setBackgroundColor(value.background)
+                setBackgroundColor(value.surface)
                 swap.palette = value
                 restore.palette = value
             }
@@ -124,7 +124,7 @@ internal class OneHandShell(
         init {
             orientation = VERTICAL
             gravity = Gravity.BOTTOM
-            setBackgroundColor(palette.background)
+            setBackgroundColor(palette.surface)
             val target = (TARGET_DP * resources.displayMetrics.density).toInt()
             addView(swap, LayoutParams(LayoutParams.MATCH_PARENT, target))
             addView(restore, LayoutParams(LayoutParams.MATCH_PARENT, target))

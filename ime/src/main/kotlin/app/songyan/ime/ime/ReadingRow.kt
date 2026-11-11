@@ -223,7 +223,7 @@ internal class ReadingRowView(
     }
 
     override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(palette.background)
+        canvas.drawColor(palette.surface)
         if (items.isEmpty()) return
         paint.textSize = textSizePx()
         paint.textAlign = Paint.Align.CENTER

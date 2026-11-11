@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
  *
  * The keyboard draws its panel colour until [onReady] fires, so a 1 MiB file never delays the first
  * frame or a key press. The bitmap is sampled down to the view's size (the picture is only ever
- * drawn to fill the key area) and dropped as soon as another appearance is shown. It is never
+ * drawn to cover the keyboard window) and dropped as soon as another appearance is shown. It is never
  * recycled explicitly: a frame already recorded may still reference it, so the garbage collector
  * frees it once nothing draws it.
  */

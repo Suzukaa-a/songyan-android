@@ -250,7 +250,7 @@ class ToolbarView(
     }
 
     override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(palette.background)
+        canvas.drawColor(palette.surface)
         notice?.let {
             drawNotice(canvas, it)
             return

@@ -217,7 +217,7 @@ class KeyboardController(
     internal val content =
         LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(KeyboardPalette.from(context).background)
+            setBackgroundColor(KeyboardPalette.from(context).surface)
         }
     internal val popupLayer = KeyPopupLayer(context)
 
@@ -853,14 +853,14 @@ class KeyboardController(
 
     /** Re-reads the palette after a day/night or font-scale change without rebuilding the session. */
     fun refreshAppearance() {
-        val tokens = KeyboardPalette.from(context).tokens
-        rowHeightDp = tokens.rowHeightDp
+        val palette = KeyboardPalette.from(context)
+        rowHeightDp = palette.tokens.rowHeightDp
         recomputeReadingRow()
         readingRow.refreshAppearance()
-        content.setBackgroundColor(tokens.background.toInt())
+        content.setBackgroundColor(palette.surface)
         popupLayer.refreshAppearance()
-        shell.setBackgroundColor(tokens.background.toInt())
-        shell.refreshAppearance(KeyboardPalette.from(context))
+        shell.setBackgroundColor(palette.surface)
+        shell.refreshAppearance(palette)
         candidates.refreshAppearance()
         toolbar.refreshAppearance()
         inlineSuggestions.refreshAppearance()

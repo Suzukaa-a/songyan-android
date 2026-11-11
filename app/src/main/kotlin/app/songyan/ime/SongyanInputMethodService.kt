@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.Bundle
@@ -50,6 +51,7 @@ import app.songyan.ime.ime.EngineNoticeAction
 import app.songyan.ime.ime.ImePerf
 import app.songyan.ime.ime.ImeViewOwners
 import app.songyan.ime.ime.InlineAutofill
+import app.songyan.ime.ime.KeyboardBackgroundDrawable
 import app.songyan.ime.ime.KeyboardController
 import app.songyan.ime.ime.KeyboardGeometry
 import app.songyan.ime.ime.KeyboardPalette
@@ -646,7 +648,7 @@ class SongyanInputMethodService : InputMethodService() {
         val container =
             LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(palette.background)
+                background = KeyboardBackgroundDrawable(palette)
             }
         container.addView(pad.view, LinearLayout.LayoutParams(-1, -2))
         root = container
@@ -716,9 +718,11 @@ class SongyanInputMethodService : InputMethodService() {
     /** Keeps the window bars in step with the keyboard palette in both themes. */
     private fun applyWindowAppearance() {
         val palette = KeyboardPalette.from(this)
-        root?.setBackgroundColor(palette.background)
+        (root?.background as? KeyboardBackgroundDrawable)?.palette = palette
         window?.window?.apply {
-            navigationBarColor = palette.background
+            // A gradient or picture runs on under the navigation bar, which the container paints too.
+            navigationBarColor = if (palette.surface == 0) Color.TRANSPARENT else palette.background
+            isNavigationBarContrastEnforced = palette.surface != 0
             if (Build.VERSION.SDK_INT >= 30) {
                 insetsController?.setSystemBarsAppearance(
                     // The bar sits on the keyboard's own surface: its icons follow that, not the system theme.

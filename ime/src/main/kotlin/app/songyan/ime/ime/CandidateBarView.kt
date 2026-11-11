@@ -832,7 +832,7 @@ class CandidateBarView(
     override fun onDraw(canvas: Canvas) {
         // Same colour as the keyboard canvas: the candidate bar is the top of the keyboard, not a
         // separate grey strip.
-        canvas.drawColor(palette.background)
+        canvas.drawColor(palette.surface)
         drawStatus(canvas)
         val noticeText = notice
         val reveal = revealProgress
@@ -841,6 +841,19 @@ class CandidateBarView(
         // area, so the IME window height never changes during the transition. The first row never
         // moves or hides, so the candidates under the finger stay put.
         canvas.clipRect(0f, 0f, width.toFloat(), revealedHeight(height.toFloat(), barPx, reveal))
+        // Over a skin's background the fades erase the row, which needs a layer of its own.
+        val fades =
+            if (palette.surface == 0 && !expanded) {
+                canvas.saveLayer(
+                    viewport.left.toFloat(),
+                    viewport.top.toFloat(),
+                    viewport.right.toFloat(),
+                    viewport.bottom.toFloat(),
+                    null,
+                )
+            } else {
+                -1
+            }
         val rows = canvas.save()
         canvas.clipRect(viewport)
         if (expanded) canvas.translate(0f, -scroll) else canvas.translate(-scroll, 0f)
@@ -848,6 +861,7 @@ class CandidateBarView(
         canvas.restoreToCount(rows)
         drawStartFade(canvas)
         drawEndFade(canvas)
+        if (fades >= 0) canvas.restoreToCount(fades)
         if (!expanded) drawReadingSection(canvas)
         drawEdgeEffects(canvas)
         if (snapshot.candidates.isNotEmpty()) drawControls(canvas)

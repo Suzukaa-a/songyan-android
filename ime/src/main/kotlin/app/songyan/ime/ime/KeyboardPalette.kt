@@ -30,6 +30,12 @@ data class KeyboardPalette(
      */
     val isLight: Boolean get() = luminance(background) > LIGHT_LUMINANCE
 
+    /**
+     * What a view inside the keyboard paints behind itself: the panel colour, or nothing when the
+     * skin has a gradient or picture, which [KeyboardBackgroundDrawable] paints once for the window.
+     */
+    val surface: Int get() = if (tokens.backgroundFill != null) 0 else background
+
     companion object {
         private const val LIGHT_LUMINANCE = 0.5
 

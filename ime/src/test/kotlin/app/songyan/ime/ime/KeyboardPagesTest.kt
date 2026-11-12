@@ -519,8 +519,9 @@ class KeyboardPagesTest {
         val on = letters.copy(showsGlobe = true)
         for (page in listOf(null, KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS)) {
             assertTrue(LayoutActionKind.GLOBE !in types(letters, page))
-            assertEquals(LayoutActionKind.GLOBE, types(on, page).first())
-            assertEquals(types(letters, page), types(on, page).drop(1))
+            // It sits after the page key, as on the system keyboard.
+            assertEquals(LayoutActionKind.GLOBE, types(on, page)[1])
+            assertEquals(types(letters, page), types(on, page).filterIndexed { index, _ -> index != 1 })
         }
         // The key takes its width from the space bar, so the row keeps its total width.
         val width = { config: KeyboardPages.Config ->

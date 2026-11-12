@@ -350,14 +350,14 @@ class PhoneKeypadLayoutTest {
         assertTrue(bottomKeys.first().top >= shell.keys.single { it.key.label == "8" }.bottom - 0.001f)
         assertTrue(shell.keys.none { globe(it.key) })
 
-        // The globe takes the cell under the rail, and 返回 and 中/英 share the next, in that order.
+        // 返回 keeps the cell under the rail, and the globe and 中/英 share the next, in that order.
         val withGlobe = requireNotNull(PhoneKeypadLayout.build(config(numeric = true).copy(showsGlobe = true)))
-        assertEquals(rail, withGlobe.edges(globe))
-        val (backLeft, backRight) = withGlobe.edges(back)
+        assertEquals(rail, withGlobe.edges(back))
+        val (globeLeft, globeRight) = withGlobe.edges(globe)
         val (languageLeft, languageRight) = withGlobe.edges(language)
-        assertEquals(withGlobe.column("7").first, backLeft, 0.001f)
+        assertEquals(withGlobe.column("7").first, globeLeft, 0.001f)
         assertEquals(withGlobe.column("7").second, languageRight, 0.001f)
-        assertTrue(backRight < languageLeft)
+        assertTrue(globeRight < languageLeft)
         assertEquals(withGlobe.column("8"), withGlobe.edges(space))
 
         // A cell without its key goes to the key beside it: no hole in the row.

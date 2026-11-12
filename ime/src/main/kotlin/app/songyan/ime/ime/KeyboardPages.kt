@@ -908,8 +908,8 @@ internal object KeyboardPages {
         spaceLeft: LayoutKey,
     ): List<LayoutKey> =
         buildList {
-            // The switch key takes its share from the space bar so the other keys keep their places.
-            if (globe) add(GLOBE_KEY)
+            // The switch key sits after the page key, as on the system keyboard (in the corner it
+            // took the thumb's aim for the page key), and takes its share from the space bar.
             val second =
                 if (languageSwitch) {
                     footerKey(
@@ -922,6 +922,7 @@ internal object KeyboardPages {
                     beside
                 }
             if (pageReachable) add(page)
+            if (globe) add(GLOBE_KEY)
             add(if (pageReachable) second else second.copy(width = FooterWeight.PAGE_ALONE))
             add(spaceLeft)
             add(if (globe) SPACE_KEY.copy(width = FooterWeight.SPACE - FooterWeight.GLOBE) else SPACE_KEY)

@@ -80,7 +80,7 @@ class SchemePadPagesTest {
             definition.rows[3].keys.map { it.label },
         )
         assertEquals(
-            listOf("🌐", "123", "中/英", "，", "空格", "。", "⏎"),
+            listOf("123", "🌐", "中/英", "，", "空格", "。", "⏎"),
             definition.rows
                 .last()
                 .keys
@@ -134,7 +134,7 @@ class SchemePadPagesTest {
         assertEquals(LayoutActionKind.BACKSPACE, lastRow.last().action.type)
         // The same footer as every other 26-key board: the marks bracket the space bar, no second Delete.
         assertEquals(
-            listOf("🌐", "123", "中/英", "，", "空格", "。", "⏎"),
+            listOf("123", "🌐", "中/英", "，", "空格", "。", "⏎"),
             definition.rows
                 .last()
                 .keys

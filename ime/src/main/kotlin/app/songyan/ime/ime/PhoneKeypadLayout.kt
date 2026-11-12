@@ -267,10 +267,11 @@ object PhoneKeypadLayout {
         val enterLeft = metrics.contentWidth - metrics.railWidth
         val left =
             buildList {
-                if (config.showsGlobe) add(LayoutKey("🌐", action = LayoutAction(LayoutActionKind.GLOBE)))
+                // 返回 keeps the whole cell under the rail; the globe shares the next one with 中/英.
                 if (config.lettersReachable) {
                     add(LayoutKey(config.labels.back, action = LayoutAction.pageSwitch(LayoutPageTarget.LETTERS)))
                 }
+                if (config.showsGlobe) add(LayoutKey("🌐", action = LayoutAction(LayoutActionKind.GLOBE)))
                 if (config.languageSwitch) {
                     add(
                         LayoutKey(config.labels.language, action = LayoutAction.languageSwitch()),

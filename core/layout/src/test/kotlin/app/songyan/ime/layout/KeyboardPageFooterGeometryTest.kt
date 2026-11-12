@@ -48,6 +48,19 @@ class KeyboardPageFooterGeometryTest {
     }
 
     @Test
+    fun footersSavedWithTheGlobeFirstKeepTheirWidths() {
+        val keys = footer(KeyboardPagePresets.englishQwerty)
+        val globe = keys.single { it.action.type == LayoutActionKind.GLOBE }
+        val saved = listOf(globe) + keys.filter { it !== globe }
+        val policy = lettersPolicy()
+        val geometry = KeyboardPageFooterGeometry.resolve(390.0, saved, policy)
+        assertTrue(geometry.usesControlRowBudget)
+        val metrics = policy.metrics(390.0)
+        assertEquals("", metrics[KeyboardControlPolicy.Slot.GLOBE], geometry.keyWidths[0], 0.001)
+        assertEquals("", metrics[KeyboardControlPolicy.Slot.SPACE], geometry.keyWidths[3], 0.001)
+    }
+
+    @Test
     fun hiddenGlobeUsesTheSameBudgetWithoutItsWidth() {
         val metricsKeys =
             footer(KeyboardPagePresets.englishQwerty).filter {

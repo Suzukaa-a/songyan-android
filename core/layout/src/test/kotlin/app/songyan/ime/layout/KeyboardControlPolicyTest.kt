@@ -39,8 +39,8 @@ class KeyboardControlPolicyTest {
         val full = policy(KeyboardControlPolicy.Page.LETTERS)
         assertEquals(
             listOf(
-                KeyboardControlPolicy.Slot.GLOBE,
                 KeyboardControlPolicy.Slot.PAGE,
+                KeyboardControlPolicy.Slot.GLOBE,
                 KeyboardControlPolicy.Slot.LANGUAGE,
                 KeyboardControlPolicy.Slot.SPACE,
                 KeyboardControlPolicy.Slot.UTILITY,

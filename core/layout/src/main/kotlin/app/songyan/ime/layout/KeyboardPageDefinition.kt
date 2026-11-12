@@ -585,12 +585,12 @@ data class KeyboardPageDefinition(
         private fun rowsChrome(kind: KeyboardPageKind): KeyboardPageChrome =
             when (kind) {
                 KeyboardPageKind.ENGLISH ->
-                    // globe, 123, 中英, space, comma, Return
+                    // 123, globe, 中英, space, comma, Return
                     KeyboardPageChrome(
                         bottom =
                             listOf(
-                                GLOBE_KEY,
                                 pageSwitchKey(LayoutPageTarget.NUMERIC),
+                                GLOBE_KEY,
                                 LANGUAGE_SWITCH_KEY,
                                 SPACE_KEY,
                                 COMMA_KEY,
@@ -598,12 +598,12 @@ data class KeyboardPageDefinition(
                             ),
                     )
                 KeyboardPageKind.NUMERIC, KeyboardPageKind.SYMBOLS ->
-                    // globe, 返回, 中英, space, comma, Return; the 123/symbol switch opens the third row.
+                    // 返回, globe, 中英, space, comma, Return; the 123/symbol switch opens the third row.
                     KeyboardPageChrome(
                         bottom =
                             listOf(
-                                GLOBE_KEY,
                                 pageSwitchKey(LayoutPageTarget.LETTERS),
+                                GLOBE_KEY,
                                 LANGUAGE_SWITCH_KEY,
                                 SPACE_KEY,
                                 COMMA_KEY,
@@ -621,8 +621,8 @@ data class KeyboardPageDefinition(
                 bottom =
                     listOf(
                         // The categorized default return keeps the native language/tools menu.
-                        GLOBE_KEY,
                         RETURN_TO_LETTERS_LANGUAGE_KEY,
+                        GLOBE_KEY,
                         pageSwitchKey(LayoutPageTarget.NUMERIC),
                         SPACE_KEY,
                         SYMBOL_LOCK_KEY,
@@ -650,14 +650,14 @@ data class KeyboardPageDefinition(
          * The digit pad on the nine-key letter shell's grid: three marks beside the digit rows;
          * Delete, 0 and the comma down the right; and the bottom row 返回, 中英, space, 符号 and
          * Return under the rail, the three digit columns and the right column (the input-method
-         * switch, when shown, first).
+         * switch, when shown, after 返回).
          */
         internal fun keypadChrome(marks: KeyboardNumericMarks): KeyboardPageChrome =
             KeyboardPageChrome(
                 bottom =
                     listOf(
-                        GLOBE_KEY,
                         pageSwitchKey(LayoutPageTarget.LETTERS),
+                        GLOBE_KEY,
                         LANGUAGE_SWITCH_KEY,
                         // One digit column wide, not the control row's wide space bar.
                         functionKey("空格", LayoutAction(LayoutActionKind.SPACE)),

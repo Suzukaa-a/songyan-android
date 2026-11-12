@@ -91,18 +91,18 @@ data class KeyboardControlPolicy(
     val slots: List<Slot>
         get() =
             if (isDigitPad) {
-                listOf(Slot.GLOBE, Slot.PAGE, Slot.LANGUAGE, Slot.SPACE, Slot.SYMBOL_PAGE, Slot.ENTER)
+                listOf(Slot.PAGE, Slot.GLOBE, Slot.LANGUAGE, Slot.SPACE, Slot.SYMBOL_PAGE, Slot.ENTER)
                     .filter { it != Slot.GLOBE || hasGlobe }
             } else {
-                listOf(Slot.GLOBE, Slot.PAGE, Slot.LANGUAGE, Slot.SPACE, Slot.UTILITY, Slot.ENTER)
+                listOf(Slot.PAGE, Slot.GLOBE, Slot.LANGUAGE, Slot.SPACE, Slot.UTILITY, Slot.ENTER)
                     .filter { (it != Slot.GLOBE || hasGlobe) && (it != Slot.ENTER || includesBottomEnter) }
             }
 
     /**
      * The phone digit pad's row is a grid row, not a control row: 返回 under the rail, then 中/英,
      * the space bar and 符号 under the three digit columns and Return under the trailing column,
-     * which holds Delete, 0 and the comma above it. The globe, when shown, takes the cell under the
-     * rail and 返回 and 中/英 share the first column's.
+     * which holds Delete, 0 and the comma above it. The globe, when shown, shares the first digit
+     * column with 中/英, so 返回 keeps its whole cell.
      */
     val isDigitPad: Boolean get() = isBundledPhonePad && page == Page.NUMERIC
 
@@ -285,8 +285,8 @@ data class KeyboardControlPolicy(
             /**
              * The digit pad row: one cell under the rail ([rail] wide, or a fifth of the row without
              * the shell's columns), three equal cells under the digit columns and one under the
-             * trailing column, as wide as the rail. With the globe, the globe takes the first cell
-             * and 返回 and 中/英 split the second.
+             * trailing column, as wide as the rail. With the globe, 返回 keeps the first cell and the
+             * globe and 中/英 split the second.
              */
             fun forDigitPad(
                 width: Double,
@@ -299,9 +299,9 @@ data class KeyboardControlPolicy(
                 val shared = maxOf(0.0, (cell - SPACING) / 2)
                 return Metrics(
                     spacing = SPACING,
-                    page = if (hasGlobe) shared else side,
+                    page = side,
                     language = if (hasGlobe) shared else cell,
-                    globe = if (hasGlobe) side else 0.0,
+                    globe = if (hasGlobe) shared else 0.0,
                     space = cell,
                     utility = 0.0,
                     enter = side,

@@ -166,13 +166,25 @@ object KeyboardPagePresets {
             name = name,
             defaultSymbolMarks = if (ascii) KeyboardNumericMarks.ASCII else KeyboardNumericMarks.CHINESE,
         )
-        listOf(
-            numericKeypad.copy(chrome = KeyboardPageDefinition.previousKeypadChrome(KeyboardNumericMarks.CHINESE)),
-            old(NUMERIC_CHINESE_ID, "中文 123", KeyboardPageKind.NUMERIC, ascii = false),
-            old(NUMERIC_ENGLISH_ID, "英文 123", KeyboardPageKind.NUMERIC, ascii = true),
-            old(SYMBOLS_CHINESE_ID, "中文符号", KeyboardPageKind.SYMBOLS, ascii = false),
-            old(SYMBOLS_ENGLISH_ID, "英文符号", KeyboardPageKind.SYMBOLS, ascii = true),
-        )
+        val pages =
+            listOf(
+                numericKeypad.copy(chrome = KeyboardPageDefinition.previousKeypadChrome(KeyboardNumericMarks.CHINESE)),
+                old(NUMERIC_CHINESE_ID, "中文 123", KeyboardPageKind.NUMERIC, ascii = false),
+                old(NUMERIC_ENGLISH_ID, "英文 123", KeyboardPageKind.NUMERIC, ascii = true),
+                old(SYMBOLS_CHINESE_ID, "中文符号", KeyboardPageKind.SYMBOLS, ascii = false),
+                old(SYMBOLS_ENGLISH_ID, "英文符号", KeyboardPageKind.SYMBOLS, ascii = true),
+            )
+        // Every preset also shipped with the globe first in its footer.
+        pages + (pages + numericKeypad).mapNotNull(::withGlobeFirst)
+    }
+
+    /** The page as it shipped while the footer's globe came first; null when that was no different. */
+    private fun withGlobeFirst(page: KeyboardPageDefinition): KeyboardPageDefinition? {
+        val chrome = page.chrome ?: return null
+        val index = chrome.bottom.indexOfFirst { it.action.type == LayoutActionKind.GLOBE }
+        if (index <= 0) return null
+        val moved = listOf(chrome.bottom[index]) + chrome.bottom.filterIndexed { i, _ -> i != index }
+        return page.copy(chrome = chrome.copy(bottom = moved))
     }
 
     /**

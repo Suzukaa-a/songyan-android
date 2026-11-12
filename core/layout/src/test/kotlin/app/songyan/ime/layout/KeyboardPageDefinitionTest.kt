@@ -42,8 +42,8 @@ class KeyboardPageDefinitionTest {
 
         val bottom = requireNotNull(page.chrome).bottom
         assertEquals(6, bottom.size)
-        assertEquals(LayoutActionKind.GLOBE, bottom[0].action.type)
-        assertEquals(LayoutPageTarget.NUMERIC, bottom[1].action.pageSwitchTarget)
+        assertEquals(LayoutPageTarget.NUMERIC, bottom[0].action.pageSwitchTarget)
+        assertEquals(LayoutActionKind.GLOBE, bottom[1].action.type)
         assertEquals(LayoutActionKind.LANGUAGE_SWITCH, bottom[2].action.type)
         assertEquals(LayoutActionKind.SPACE, bottom[3].action.type)
         assertEquals(4.0, bottom[3].width ?: 0.0, 0.0)
@@ -100,12 +100,12 @@ class KeyboardPageDefinitionTest {
         assertEquals("Delete is a side key as wide as on the ABC page", 1.5, delete.width ?: 0.0, 0.0)
         assertEquals(LayoutKeyTitleMode.AUTOMATIC, delete.titleMode)
         assertEquals(KeyboardNumericMarks.CHINESE, chinese.defaultSymbolMarks)
-        // Frozen default footer: globe, 返回, 中英, space, comma, Return.
+        // Frozen default footer: 返回, globe, 中英, space, comma, Return.
         val bottom = requireNotNull(chinese.chrome).bottom
         assertEquals(
             listOf(
-                LayoutActionKind.GLOBE,
                 LayoutActionKind.PAGE_SWITCH,
+                LayoutActionKind.GLOBE,
                 LayoutActionKind.LANGUAGE_SWITCH,
                 LayoutActionKind.SPACE,
                 LayoutActionKind.LITERAL,
@@ -113,9 +113,9 @@ class KeyboardPageDefinitionTest {
             ),
             bottom.map { it.action.type },
         )
-        assertEquals("返回", bottom[1].label)
-        assertEquals(LayoutPageTarget.LETTERS, bottom[1].action.pageSwitchTarget)
-        assertEquals(LayoutKeyTitleMode.AUTOMATIC, bottom[1].titleMode)
+        assertEquals("返回", bottom[0].label)
+        assertEquals(LayoutPageTarget.LETTERS, bottom[0].action.pageSwitchTarget)
+        assertEquals(LayoutKeyTitleMode.AUTOMATIC, bottom[0].titleMode)
         assertNull(bottom[2].action.languageSwitchBehavior)
         assertEquals("，", bottom[4].action.value)
         // The marks are an explicit bilingual pair: Chinese value, ASCII counterpart, initial label.
@@ -196,7 +196,7 @@ class KeyboardPageDefinitionTest {
         )
         val bottom = requireNotNull(page.chrome).bottom
         assertEquals(6, bottom.size)
-        assertEquals(LayoutPageTarget.LETTERS, bottom[1].action.pageSwitchTarget)
+        assertEquals(LayoutPageTarget.LETTERS, bottom[0].action.pageSwitchTarget)
         page.validate()
     }
 
@@ -229,18 +229,18 @@ class KeyboardPageDefinitionTest {
         assertEquals(5, chrome.bottom.size)
         assertEquals(
             listOf(
-                LayoutActionKind.GLOBE,
                 LayoutActionKind.LANGUAGE_SWITCH,
+                LayoutActionKind.GLOBE,
                 LayoutActionKind.PAGE_SWITCH,
                 LayoutActionKind.SPACE,
                 LayoutActionKind.SYMBOL_LOCK,
             ),
             chrome.bottom.map { it.action.type },
         )
-        assertEquals("返回", chrome.bottom[1].label)
+        assertEquals("返回", chrome.bottom[0].label)
         assertEquals(
             LayoutLanguageSwitchBehavior.LETTERS,
-            chrome.bottom[1].action.languageSwitchBehavior,
+            chrome.bottom[0].action.languageSwitchBehavior,
         )
         assertEquals(LayoutPageTarget.NUMERIC, chrome.bottom[2].action.pageSwitchTarget)
         assertEquals(
@@ -275,13 +275,13 @@ class KeyboardPageDefinitionTest {
         assertTrue(keypad.rows.flatMap { it.keys }.all { it.action.type == LayoutActionKind.LITERAL })
         val chrome = requireNotNull(keypad.chrome)
         // The letter shell's grid: three marks beside the digit rows, Delete, 0 and the comma down
-        // the right, and the globe, 返回, 中英, space, 符号 and Return along the bottom.
+        // the right, and 返回, the globe, 中英, space, 符号 and Return along the bottom.
         assertEquals(3, chrome.leading.size)
         assertTrue(chrome.leading.all { it.action.type == LayoutActionKind.LITERAL })
         assertEquals(
             listOf<Any?>(
-                LayoutActionKind.GLOBE,
                 LayoutPageTarget.LETTERS,
+                LayoutActionKind.GLOBE,
                 LayoutActionKind.LANGUAGE_SWITCH,
                 LayoutActionKind.SPACE,
                 LayoutPageTarget.SYMBOLS,

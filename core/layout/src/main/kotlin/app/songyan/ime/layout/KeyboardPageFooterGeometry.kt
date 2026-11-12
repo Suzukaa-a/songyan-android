@@ -31,8 +31,8 @@ data class KeyboardPageFooterGeometry(
             if (keys.isEmpty()) {
                 return KeyboardPageFooterGeometry(emptyList(), metrics.spacing, false)
             }
-            val slots = policy.slots
-            if (keys.size == slots.size && isDefaultFooter(keys, policy)) {
+            val slots = defaultFooterSlots(keys, policy)
+            if (slots != null) {
                 return KeyboardPageFooterGeometry(
                     keyWidths = slots.map { metrics[it] },
                     spacing = metrics.spacing,
@@ -53,14 +53,30 @@ data class KeyboardPageFooterGeometry(
         }
 
         /**
-         * The frozen default footer shape: globe first, then the control row's slots in order, with
-         * space at width 4 and every other default key at its native budget width.
+         * The slots of a default footer: the control row's slots in order, or the order pages were
+         * saved with while the globe sat first, so a stored copy keeps its native widths.
+         */
+        private fun defaultFooterSlots(
+            keys: List<LayoutKey>,
+            policy: KeyboardControlPolicy,
+        ): List<KeyboardControlPolicy.Slot>? {
+            val slots = policy.slots
+            if (isDefaultFooter(keys, slots, policy)) return slots
+            val globeFirst =
+                slots.filter { it == KeyboardControlPolicy.Slot.GLOBE } +
+                    slots.filter { it != KeyboardControlPolicy.Slot.GLOBE }
+            return globeFirst.takeIf { it != slots && isDefaultFooter(keys, it, policy) }
+        }
+
+        /**
+         * The frozen default footer shape: the given slots in order, with space at width 4 and
+         * every other default key at its native budget width.
          */
         private fun isDefaultFooter(
             keys: List<LayoutKey>,
+            slots: List<KeyboardControlPolicy.Slot>,
             policy: KeyboardControlPolicy,
         ): Boolean {
-            val slots = policy.slots
             if (keys.size != slots.size) return false
             for ((key, slot) in keys.zip(slots)) {
                 // The digit pad's space bar is one digit column, not the control row's wide one.

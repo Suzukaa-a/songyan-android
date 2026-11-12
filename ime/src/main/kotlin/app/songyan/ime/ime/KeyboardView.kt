@@ -325,6 +325,9 @@ class KeyboardView(
 
     /** True while anything is being typed, including raw input with no composition yet. */
     var typing: () -> Boolean = { false }
+
+    // Panels and menus own their touches even while the underlying keys remain in the view tree.
+    internal var cursorDragIdle: () -> Boolean = { true }
     var onDoubleShift: () -> Unit = {}
     var onLanguageMenu: () -> Unit = {}
 
@@ -400,6 +403,8 @@ class KeyboardView(
         var held: Boolean = false,
         /** Caret mode is on for this press: a hold armed it, or a deliberate sideways drag started it. */
         var cursorEntered: Boolean = false,
+        // Closing an overlay must not let the same finger start or resume a caret drag.
+        var cursorDragBlocked: Boolean = false,
         /** The caret drag's last speed sample: where and when, and whether it was fast. */
         var cursorSampleX: Float = 0f,
         var cursorSampleAt: Long = 0L,

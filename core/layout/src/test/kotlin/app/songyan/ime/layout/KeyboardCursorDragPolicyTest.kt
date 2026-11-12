@@ -42,14 +42,33 @@ class KeyboardCursorDragPolicyTest {
         assertFalse(starts(isDelete = true))
     }
 
+    @Test
+    fun anOverlayOrPopupKeepsTheKeyboardOutOfCaretMode() {
+        assertTrue(starts())
+        for (distance in listOf(14f, 18f, 72f)) {
+            assertFalse(starts(isIdle = false, dxDp = distance))
+            assertFalse(starts(isIdle = false, dxDp = -distance))
+        }
+    }
+
     private fun starts(
         settingOn: Boolean = true,
         isComposing: Boolean = false,
+        isIdle: Boolean = true,
         ownsSidewaysGesture: Boolean = false,
         isSpace: Boolean = false,
         isDelete: Boolean = false,
         dxDp: Float = 30f,
         dyDp: Float = 0f,
     ): Boolean =
-        KeyboardCursorDragPolicy.starts(settingOn, isComposing, ownsSidewaysGesture, isSpace, isDelete, dxDp, dyDp)
+        KeyboardCursorDragPolicy.starts(
+            settingOn,
+            isComposing,
+            isIdle,
+            ownsSidewaysGesture,
+            isSpace,
+            isDelete,
+            dxDp,
+            dyDp,
+        )
 }

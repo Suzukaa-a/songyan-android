@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import kotlinx.coroutines.CancellationException
@@ -116,6 +117,16 @@ internal fun KeyboardController.wireViews() {
     // Pending raw input counts as typing for the caret-drag choice only: holds and delete keep
     // their own composing contract.
     keyboard.typing = { session?.snapshot?.let { it.isComposing || it.rawInput.isNotEmpty() } == true }
+    keyboard.cursorDragIdle = {
+        !menuOpen &&
+            panels?.isShowing != true &&
+            panelSearch == null &&
+            page != KeyboardPageKind.SYMBOLS &&
+            !candidates.expanded &&
+            !candidates.popupOpen &&
+            candidates.pressed == null &&
+            !selectingCandidate
+    }
     keyboard.onReleaseFeedback = { feedback.release(keyboard) }
     candidates.onPressFeedback = { feedback.press(candidates) }
     readingRow.onPressFeedback = { feedback.press(readingRow) }

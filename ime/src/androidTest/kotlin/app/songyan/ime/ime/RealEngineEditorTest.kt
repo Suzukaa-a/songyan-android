@@ -21,6 +21,7 @@ import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.EditText
+import android.widget.HorizontalScrollView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.content.CommonPhrase
@@ -29,6 +30,7 @@ import app.songyan.ime.ime.panels.EditPanelView
 import app.songyan.ime.ime.panels.PhraseClipboardPanelView
 import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
+import app.songyan.ime.ime.panels.QuickContentPanelView
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.layout.CompactFold
@@ -1523,6 +1525,229 @@ class RealEngineEditorTest {
             slideLeftOnKey(host, "l")
             assertEquals("a slow 72 dp slide is three characters", 7, host.field.selectionStart)
             assertEquals("the slide types nothing", "abcdefghij", host.text())
+        }
+
+    @Test
+    fun withTheChoiceOnALanguageHoldKeepsItsMenuAndDoesNotMoveTheCaret() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            host.main { host.controller.keyboard.cursorSwipeAnywhere = true }
+            val key = host.keyCenterWhere { it.action.type == LayoutActionKind.LANGUAGE_SWITCH }
+            val keyboard = host.controller.keyboard
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, key) }
+            SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
+            host.main {
+                assertTrue(host.controller.menuOpen)
+                val end = key.first - 72f * host.density to key.second
+                for (action in listOf(MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP)) {
+                    val event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, end.first, end.second, 0)
+                    keyboard.dispatchTouchEvent(event)
+                    event.recycle()
+                }
+                host.relayout()
+                val row = host.find(HorizontalScrollView::class.java)
+                val down = SystemClock.uptimeMillis()
+                for ((index, action) in listOf(
+                    MotionEvent.ACTION_DOWN,
+                    MotionEvent.ACTION_MOVE,
+                    MotionEvent.ACTION_UP,
+                ).withIndex()) {
+                    val event =
+                        MotionEvent.obtain(
+                            down,
+                            down + index * 32L,
+                            action,
+                            row.width * 0.7f - index * 36f * host.density,
+                            row.height / 2f,
+                            0,
+                        )
+                    row.dispatchTouchEvent(event)
+                    event.recycle()
+                }
+                val rows = ArrayList<View>()
+                host.controller.menu.findViewsWithText(
+                    rows,
+                    host.string(R.string.ime_menu_keyboard_settings),
+                    View.FIND_VIEWS_WITH_TEXT,
+                )
+                assertTrue((rows.single().parent as View).performClick())
+            }
+            host.awaitIdle()
+            assertTrue(host.main2 { host.controller.panels!!.isShowing })
+            assertEquals("abcdefghij", host.text())
+            assertEquals(10, host.field.selectionStart)
+        }
+
+    @Test
+    fun withTheChoiceOnALetterHoldKeepsSidewaysAlternateSelection() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            host.main {
+                host.controller.keyboard.cursorSwipeAnywhere = true
+                host.field.setSelection(5)
+                host.report(oldStart = 10, newStart = 5, candidatesStart = -1, candidatesEnd = -1)
+            }
+            val key = host.keyCenter("b")
+            val start = SystemClock.uptimeMillis()
+            host.main { host.touch(start, MotionEvent.ACTION_DOWN, key) }
+            SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + LONG_HOLD_MARGIN_MS)
+            var alternate = ""
+            host.main {
+                val keyboard = host.controller.keyboard
+                assertTrue(keyboard.popupOpen)
+                assertTrue(keyboard.popupOptions.size >= 2)
+                alternate = requireNotNull(keyboard.popupOptions[1].action.value)
+                val direction = if (keyboard.popupMirrored) -1 else 1
+                val dx = direction * keyboard.metrics.popupCellWidthDp * host.density
+                val target = key.first + dx to key.second
+                host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, target, downTime = start)
+                assertEquals(1, keyboard.popupIndex)
+                assertEquals("selecting an alternate does not move the caret", 5, host.field.selectionStart)
+                host.touch(SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, target, downTime = start)
+            }
+            host.awaitField("abcde" + alternate + "fghij")
+            assertEquals(5 + alternate.length, host.field.selectionStart)
+        }
+
+    @Test
+    fun withTheChoiceOnADiagonalKeyFlickKeepsItsTypingPriority() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            host.main {
+                host.controller.keyboard.cursorSwipeAnywhere = true
+                host.field.setSelection(5)
+                host.report(oldStart = 10, newStart = 5, candidatesStart = -1, candidatesEnd = -1)
+            }
+            val key = host.keyCenter("a")
+            val end = key.first + 72f * host.density to key.second - 30f * host.density
+            val start = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(start, MotionEvent.ACTION_DOWN, key)
+                host.touch(start + 16, MotionEvent.ACTION_MOVE, end, downTime = start)
+                assertEquals(5, host.field.selectionStart)
+                host.touch(start + 40, MotionEvent.ACTION_UP, end, downTime = start)
+            }
+            host.awaitField("abcde，fghij")
+            assertEquals(6, host.field.selectionStart)
+        }
+
+    @Test
+    fun withTheChoiceOnOpenPanelsKeepTheirDragsAndBlockCaretTakeover() {
+        for (panelKind in listOf("settings", "symbols", "emoji", "symbol-page")) {
+            withHost { host ->
+                host.start(initial = "abcdefghij")
+                host.main { host.controller.keyboard.cursorSwipeAnywhere = true }
+                val key = host.keyCenter("l")
+                val keyboard = host.controller.keyboard
+                val start = SystemClock.uptimeMillis()
+                host.main {
+                    host.touch(start, MotionEvent.ACTION_DOWN, key)
+                    when (panelKind) {
+                        "settings" -> host.controller.openKeyboardSettingsPanel()
+                        "symbols" -> host.controller.openSymbolPanel()
+                        "emoji" -> host.controller.openEmojiPanel()
+                        "symbol-page" -> host.controller.enqueueKey(LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS))
+                    }
+                }
+                host.awaitIdle()
+                host.main {
+                    host.relayout()
+                    for (action in listOf(MotionEvent.ACTION_MOVE, MotionEvent.ACTION_CANCEL)) {
+                        val event =
+                            MotionEvent.obtain(
+                                start,
+                                SystemClock.uptimeMillis(),
+                                action,
+                                key.first - 72f * host.density,
+                                key.second,
+                                0,
+                            )
+                        keyboard.dispatchTouchEvent(event)
+                        event.recycle()
+                    }
+                    val panel = host.find(QuickContentPanelView::class.java)
+                    val down = SystemClock.uptimeMillis()
+                    for ((index, action) in listOf(
+                        MotionEvent.ACTION_DOWN,
+                        MotionEvent.ACTION_MOVE,
+                        MotionEvent.ACTION_UP,
+                    ).withIndex()) {
+                        val event =
+                            MotionEvent.obtain(
+                                down,
+                                down + index * 32L,
+                                action,
+                                panel.width * 0.7f - index * 36f * host.density,
+                                panel.height * 0.6f - index * 20f * host.density,
+                                0,
+                            )
+                        assertTrue(panel.dispatchTouchEvent(event))
+                        event.recycle()
+                    }
+                    assertSame(panel, host.find(QuickContentPanelView::class.java))
+                }
+                host.awaitIdle()
+                assertEquals(panelKind, "abcdefghij", host.text())
+                assertEquals(panelKind, 10, host.field.selectionStart)
+            }
+        }
+    }
+
+    @Test
+    fun anOverlayStopsAnInFlightCaretDragWithoutTypingOnRelease() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            host.main { host.controller.keyboard.cursorSwipeAnywhere = true }
+            val key = host.keyCenter("l")
+            val keyboard = host.controller.keyboard
+            val start = SystemClock.uptimeMillis()
+            host.main {
+                host.touch(start, MotionEvent.ACTION_DOWN, key)
+                host.touch(
+                    start + 16,
+                    MotionEvent.ACTION_MOVE,
+                    key.first - 24f * host.density to key.second,
+                    downTime = start,
+                )
+            }
+            host.awaitIdle()
+            assertEquals(9, host.field.selectionStart)
+            host.main { host.controller.openKeyboardSettingsPanel() }
+            host.awaitIdle()
+            host.main {
+                val event =
+                    MotionEvent.obtain(
+                        start,
+                        SystemClock.uptimeMillis(),
+                        MotionEvent.ACTION_MOVE,
+                        key.first - 48f * host.density,
+                        key.second,
+                        0,
+                    )
+                keyboard.dispatchTouchEvent(event)
+                event.recycle()
+                host.controller.closePanels()
+            }
+            host.awaitToolbar()
+            host.main {
+                for (action in listOf(MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP)) {
+                    val event =
+                        MotionEvent.obtain(
+                            start,
+                            SystemClock.uptimeMillis(),
+                            action,
+                            key.first - 72f * host.density,
+                            key.second,
+                            0,
+                        )
+                    keyboard.dispatchTouchEvent(event)
+                    event.recycle()
+                }
+            }
+            host.awaitIdle()
+            assertEquals("abcdefghij", host.text())
+            assertEquals(9, host.field.selectionStart)
         }
 
     @Test

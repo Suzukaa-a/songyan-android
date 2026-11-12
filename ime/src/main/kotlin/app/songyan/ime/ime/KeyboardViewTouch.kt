@@ -66,6 +66,7 @@ internal fun KeyboardView.handleDown(
 ) {
     val x = event.getX(pointerIndex)
     val y = event.getY(pointerIndex)
+    val interactionClaimed = popupKey >= 0 || !cursorDragIdle()
     // A new finger takes the surface over: an open popup is cancelled and its highlight dropped.
     if (popupKey >= 0) dismissPopup(animated = true)
     stopAccessibilityRepeat()
@@ -83,6 +84,7 @@ internal fun KeyboardView.handleDown(
             startY = y,
             key = slot,
             lastX = x,
+            cursorDragBlocked = interactionClaimed,
         )
     val codes = press.snapshot.swipeCodes
     if (codes != null && codes.size > 1) press.tracker = LetterSwipeTracker(codes.size)
@@ -386,15 +388,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         val press = pointers.get(event.getPointerId(i)) ?: continue
         val x = event.getX(i)
         val y = event.getY(i)
-        if (startsCursorSwipe(press, x, y)) {
-            // Taking over must suppress the key's release and preview for the rest of the drag.
-            press.task?.let { timers.removeCallbacks(it) }
-            popupLayer?.hidePreview(0)
-            endFlick(press.key)
-            invalidateKey(press.key)
-            dragCursor(press, x, y, event.eventTime)
-            continue
-        }
+        if (!cursorDragIdle() || popupKey >= 0 || press.held) press.cursorDragBlocked = true
         // A kana press follows its own cross preview; no other gesture route sees it.
         if (trackKana12Flick(press, x, y)) continue
         val tracker = press.tracker
@@ -407,6 +401,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
             continue
         }
         if (popupKey < 0 && !press.held && !press.cursorEntered) flickMove(press, y)
+        if (press.flickArmed || press.flickVoid) press.cursorDragBlocked = true
         when {
             popupKey >= 0 && popupOwner == press.pointerId -> {
                 val next = popupSelection(press, x, y)
@@ -417,7 +412,10 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                     popupLayer?.select(next)
                 }
             }
-            press.snapshot.isSpace || press.cursorEntered -> dragCursor(press, x, y, event.eventTime)
+            press.snapshot.isSpace -> dragCursor(press, x, y, event.eventTime)
+            press.cursorEntered -> {
+                if (!press.cursorDragBlocked) dragCursor(press, x, y, event.eventTime)
+            }
             else -> {
                 val slop = TOUCH_SLOP_DP * density
                 val past = abs(x - press.startX) > slop || abs(y - press.startY) > slop
@@ -430,6 +428,14 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                     press.moved = true
                     // Off Delete before the hold began: no repeat. The DOWN's delete stands.
                     if (press.snapshot.isBackspace) BackspaceTrace.record(BackspaceTrace.Event.TOUCH_LEFT_KEY)
+                }
+                if (startsCursorSwipe(press, x, y)) {
+                    // Taking over must suppress the key's release and preview for the rest of the drag.
+                    press.task?.let { timers.removeCallbacks(it) }
+                    popupLayer?.hidePreview(0)
+                    endFlick(press.key)
+                    invalidateKey(press.key)
+                    dragCursor(press, x, y, event.eventTime)
                 }
             }
         }
@@ -445,6 +451,7 @@ internal fun KeyboardView.startsCursorSwipe(
     return KeyboardCursorDragPolicy.starts(
         settingOn = cursorSwipeAnywhere,
         isComposing = typing(),
+        isIdle = cursorDragIdle() && !press.cursorDragBlocked,
         ownsSidewaysGesture = press.tracker != null || isKana12FlickPress(press) || press.snapshot.railPosition >= 0,
         isSpace = press.snapshot.isSpace,
         isDelete = press.snapshot.isBackspace,
@@ -686,6 +693,8 @@ internal fun KeyboardView.handleUp(
         val y = event.getY(pointerIndex)
         val now = SystemClock.uptimeMillis()
         when {
+            // An overlay appearing after takeover must not turn the consumed release into a key or alternate.
+            press.cursorEntered && !press.snapshot.isSpace -> Unit
             popupKey >= 0 && popupOwner == pointerId -> finishPopup(press, x, y)
             // A kana press types the direction its cross preview resolved to; it types nothing else.
             // The release point is the last sample, even when no MOVE announced it.
@@ -703,8 +712,6 @@ internal fun KeyboardView.handleUp(
                     press.flickArmed -> press.flickTarget?.let { onAction(it.action) }
                     press.railDragged -> Unit
                     press.flickVoid -> Unit
-                    // A slide that moved the caret types nothing, wherever it ends.
-                    press.cursorEntered && !press.snapshot.isSpace -> Unit
                     // Delete already acted at its DOWN (and on every repeat); the release adds nothing.
                     press.snapshot.isBackspace -> Unit
                     !press.held && !press.moved -> activate(press.snapshot)

@@ -1,0 +1,60 @@
+"""Behaviour tests for scripts/check-instrumented-results.py.
+
+Run with: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests
+"""
+
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+CHECK = REPO / "scripts" / "check-instrumented-results.py"
+
+
+def suite_xml(tests: int, failures: int = 0) -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f'<testsuites><testsuite name="suite" tests="{tests}" failures="{failures}" errors="0"/></testsuites>'
+    )
+
+
+class InstrumentedResultsCheckTest(unittest.TestCase):
+    def run_check(self, minimum, content):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "result.xml").write_text(content, encoding="utf-8")
+            return subprocess.run(
+                [sys.executable, str(CHECK), str(minimum), directory],
+                capture_output=True,
+                text=True,
+            )
+
+    def test_enough_passing_tests_pass(self):
+        result = self.run_check(2, suite_xml(3))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("3 passed", result.stdout)
+
+    def test_zero_tests_fail(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                [sys.executable, str(CHECK), "1", directory],
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no connected-test results", result.stderr)
+
+    def test_too_few_tests_fail(self):
+        result = self.run_check(5, suite_xml(3))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("expected at least 5", result.stderr)
+
+    def test_failures_fail(self):
+        result = self.run_check(1, suite_xml(3, failures=1))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("1 failure", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

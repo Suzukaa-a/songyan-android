@@ -172,6 +172,8 @@ class StringResourceParityTest {
                 "settings/keyboard_title",
                 "settings/layout_jump_target",
                 "settings/learning_backup_detail",
+                // The size · license line: only the separator is fixed, both sides are data.
+                "settings/onboarding_scheme_metadata",
                 "settings/options_bottom_gap_value",
                 "settings/options_side_margin_value",
                 "settings/options_split_width_value",

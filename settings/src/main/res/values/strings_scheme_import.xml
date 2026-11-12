@@ -52,7 +52,7 @@
     <string name="schemes_recommended_kagiroi_detail">Type Japanese with romaji or kana</string>
     <string name="schemes_recommended_license">License: %1$s</string>
     <string name="schemes_recommended_size">About %1$s to download</string>
-    <string name="schemes_recommended_homepage">Open the upstream page</string>
+    <string name="schemes_recommended_homepage">Open the project page</string>
     <string name="schemes_recommended_confirm_title">Download “%1$s”?</string>
     <string name="schemes_recommended_confirm_body">This downloads the input scheme from GitHub. It is large, so use Wi-Fi if you can.</string>
     <string name="schemes_recommended_confirm">Download</string>
@@ -96,7 +96,7 @@
     <string name="schemes_detail_builtin_note">The built-in input scheme is updated with Songyan and cannot be deleted.</string>
     <string name="schemes_detail_stop_using">Stop using</string>
     <string name="schemes_detail_stop_using_note">After you stop using it, the keyboard switches to “%1$s”.</string>
-    <string name="onboarding_more_schemes">More input schemes (%1$d)</string>
+    <string name="onboarding_more_schemes">More input methods (%1$d)</string>
     <string name="onboarding_scheme_metadata">%1$s · %2$s</string>
     <string name="onboarding_download_scheme">Download %1$s</string>
     <string name="onboarding_schemes_expanded">Expanded</string>

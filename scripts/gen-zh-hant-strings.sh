@@ -135,6 +135,9 @@ key_replacements["options_wide_note"] = [
 for key in ("shuangpin_error_id", "rime_config_script_name_rule"):
     key_replacements[key] = [("下劃線", "底線"), ("下划线", "底線")]
 
+key_replacements["schemes_recommended_homepage"] = [("檢視", "查看"), ("主頁", "首頁")]
+key_replacements["onboarding_schemes_collapsed"] = [("已收起", "已收合")]
+
 comment_replacements = [("表情面板", "表情符號面板")]
 
 string_re = re.compile(r"(<string\b([^>]*)>)(.*?)(</string>)", re.S)

@@ -45,9 +45,9 @@
 
     <!-- セットアップ -->
     <string name="onboarding_title">松煙を有効にする</string>
-    <string name="onboarding_intro">入力方式をダウンロードしてから松煙を有効にすると、入力できます。</string>
-    <string name="onboarding_step_download_title">入力方式をダウンロード</string>
-    <string name="onboarding_step_download_body">最初に使うものを選んでください。</string>
+    <string name="onboarding_intro">入力パックをダウンロードしてから松煙を有効にすると、入力できます。</string>
+    <string name="onboarding_step_download_title">入力パックをダウンロード</string>
+    <string name="onboarding_step_download_body">最初に使う入力パックを選んでください。</string>
     <string name="onboarding_other_schemes">ファイルまたはリンクから読み込む</string>
     <string name="onboarding_step_enable_title">松煙キーボードを有効にする</string>
     <string name="onboarding_step_enable_body">システム設定で松煙キーボードを有効にしてください。</string>

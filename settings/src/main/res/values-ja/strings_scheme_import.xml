@@ -53,7 +53,7 @@
     <string name="schemes_recommended_size">ダウンロード約 %1$s</string>
     <string name="schemes_recommended_homepage">プロジェクトページを開く</string>
     <string name="schemes_recommended_confirm_title">「%1$s」をダウンロードしますか？</string>
-    <string name="schemes_recommended_confirm_body">GitHub からこの入力方式をダウンロードします。ファイルが大きいので、Wi-Fi での接続をおすすめします。</string>
+    <string name="schemes_recommended_confirm_body">GitHub からこの入力パックをダウンロードします。ファイルが大きいので、Wi-Fi での接続をおすすめします。</string>
     <string name="schemes_recommended_confirm">ダウンロード</string>
     <string name="schemes_incoming_title">受け取った入力パックをインポートしますか？</string>
     <string name="schemes_incoming_body">ほかのアプリが、ZIP ファイルを入力パックとして松煙にインポートしようとしています。</string>
@@ -94,7 +94,7 @@
     <string name="schemes_detail_builtin_note">内蔵の入力パックは松煙と一緒に更新され、削除できません。</string>
     <string name="schemes_detail_stop_using">使用をやめる</string>
     <string name="schemes_detail_stop_using_note">使用をやめると、キーボードは「%1$s」に切り替わります。</string>
-    <string name="onboarding_more_schemes">その他の入力方式（%1$d）</string>
+    <string name="onboarding_more_schemes">その他の入力パック（%1$d）</string>
     <string name="onboarding_scheme_metadata">%1$s · %2$s</string>
     <string name="onboarding_download_scheme">%1$s をダウンロード</string>
     <string name="onboarding_schemes_expanded">展開中</string>

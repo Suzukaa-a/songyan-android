@@ -96,4 +96,9 @@
     <string name="schemes_detail_builtin_note">内置输入方案随松烟一起更新，不能删除。</string>
     <string name="schemes_detail_stop_using">停止使用</string>
     <string name="schemes_detail_stop_using_note">停止使用后，键盘将改用「%1$s」。</string>
+    <string name="onboarding_more_schemes">其他输入方案（%1$d）</string>
+    <string name="onboarding_scheme_metadata">%1$s · %2$s</string>
+    <string name="onboarding_download_scheme">下载「%1$s」</string>
+    <string name="onboarding_schemes_expanded">已展开</string>
+    <string name="onboarding_schemes_collapsed">已收起</string>
 </resources>

@@ -94,4 +94,9 @@
     <string name="schemes_detail_builtin_note">内蔵の入力パックは松煙と一緒に更新され、削除できません。</string>
     <string name="schemes_detail_stop_using">使用をやめる</string>
     <string name="schemes_detail_stop_using_note">使用をやめると、キーボードは「%1$s」に切り替わります。</string>
+    <string name="onboarding_more_schemes">その他の入力方式（%1$d）</string>
+    <string name="onboarding_scheme_metadata">%1$s · %2$s</string>
+    <string name="onboarding_download_scheme">%1$s をダウンロード</string>
+    <string name="onboarding_schemes_expanded">展開中</string>
+    <string name="onboarding_schemes_collapsed">折りたたみ中</string>
 </resources>

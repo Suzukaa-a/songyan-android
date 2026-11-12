@@ -28,6 +28,8 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -209,7 +211,7 @@ class LargeFontTest {
     fun theOnboardingGuideShowsEveryStepTitleInFull() {
         show {
             OnboardingScreen(
-                progress = onboardingProgress(ImeStatus(enabled = false, selected = false), false),
+                progress = onboardingProgress(ImeStatus(enabled = false, selected = false), false, schemeReady = false),
                 onOpenInputMethodSettings = {},
                 onShowPicker = {},
                 onRetry = {},
@@ -217,7 +219,24 @@ class LargeFontTest {
                 onBack = {},
             )
         }
-        assertEveryLanguageFits()
+        for ((tag, _) in APP_LANGUAGES) {
+            compose.runOnIdle { language.value = tag }
+            compose.waitForIdle()
+            assertNoTruncatedText(tag)
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val configuration =
+                Configuration(context.resources.configuration).apply {
+                    setLocales(LocaleList.forLanguageTags(tag))
+                }
+            val localized = context.createConfigurationContext(configuration)
+            val more =
+                localized.getString(
+                    R.string.onboarding_more_schemes,
+                    app.songyan.ime.settings.state.RecommendedSchemes.catalog.size - 1,
+                )
+            compose.onNodeWithText(more).performScrollTo().performClick()
+            assertNoTruncatedText(tag)
+        }
     }
 
     @Test

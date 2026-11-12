@@ -96,4 +96,9 @@
     <string name="schemes_detail_builtin_note">The built-in input scheme is updated with Songyan and cannot be deleted.</string>
     <string name="schemes_detail_stop_using">Stop using</string>
     <string name="schemes_detail_stop_using_note">After you stop using it, the keyboard switches to “%1$s”.</string>
+    <string name="onboarding_more_schemes">More input schemes (%1$d)</string>
+    <string name="onboarding_scheme_metadata">%1$s · %2$s</string>
+    <string name="onboarding_download_scheme">Download %1$s</string>
+    <string name="onboarding_schemes_expanded">Expanded</string>
+    <string name="onboarding_schemes_collapsed">Collapsed</string>
 </resources>

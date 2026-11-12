@@ -78,50 +78,70 @@ fun ImportStatusCard(
                 contentColor = if (failed) colors.onErrorContainer else colors.onSecondaryContainer,
             ),
     ) {
-        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp)) {
-            Text(text = card.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
-            card.offer?.let { offer ->
-                Text(
-                    text = offer.question,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp, end = 8.dp),
-                )
-            }
-            if (card.phase == ImportPhase.RUNNING) {
-                TransferIndicator(
-                    card.transfer,
-                    Modifier.fillMaxWidth().padding(top = 12.dp, end = 8.dp, bottom = 4.dp),
-                )
-                card.note?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                when (card.phase) {
-                    ImportPhase.RUNNING ->
-                        if (card.cancellable) {
-                            TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
-                        }
+        ImportStatusContent(
+            card,
+            onCancel,
+            onRetry,
+            onDismiss,
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp),
+            onAnswerOffer = onAnswerOffer,
+        )
+    }
+}
 
-                    ImportPhase.FAILED -> {
-                        if (card.retryable) {
-                            TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
-                        }
-                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
+/** The same import controls can sit inside an existing surface without nesting cards. */
+@Composable
+fun ImportStatusContent(
+    card: ImportCard,
+    onCancel: () -> Unit,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    onAnswerOffer: (Boolean) -> Unit = {},
+) {
+    Column(modifier = modifier) {
+        Text(text = card.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
+        card.offer?.let { offer ->
+            Text(
+                text = offer.question,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp, end = 8.dp),
+            )
+        }
+        if (card.phase == ImportPhase.RUNNING) {
+            TransferIndicator(
+                card.transfer,
+                Modifier.fillMaxWidth().padding(top = 12.dp, end = 8.dp, bottom = 4.dp),
+            )
+            card.note?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            when (card.phase) {
+                ImportPhase.RUNNING ->
+                    if (card.cancellable) {
+                        TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
                     }
 
-                    ImportPhase.SUCCEEDED ->
-                        if (card.offer != null) {
-                            TextButton(onClick = { onAnswerOffer(false) }) { Text(card.offer.decline) }
-                            TextButton(onClick = { onAnswerOffer(true) }) { Text(card.offer.accept) }
-                        } else {
-                            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
-                        }
+                ImportPhase.FAILED -> {
+                    if (card.retryable) {
+                        TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+                    }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
                 }
+
+                ImportPhase.SUCCEEDED ->
+                    if (card.offer != null) {
+                        TextButton(onClick = { onAnswerOffer(false) }) { Text(card.offer.decline) }
+                        TextButton(onClick = { onAnswerOffer(true) }) { Text(card.offer.accept) }
+                    } else {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
+                    }
             }
         }
     }

@@ -7,10 +7,22 @@ import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -87,3 +99,83 @@ fun openWebPage(
     } catch (_: ActivityNotFoundException) {
         false
     }
+
+/** A quiet row for alternatives; the first recommendation gets its own tonal surface. */
+@Composable
+fun RecommendedSchemeChoice(
+    scheme: RecommendedScheme,
+    featured: Boolean,
+    enabled: Boolean,
+    onDownload: () -> Unit,
+    progress: (@Composable () -> Unit)? = null,
+) {
+    val name = stringResource(scheme.nameRes)
+    val details: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(scheme.detailRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                stringResource(
+                    R.string.onboarding_scheme_metadata,
+                    downloadSizeLabel(scheme.downloadBytes),
+                    scheme.licenses.joinToString(" · "),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    val content: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (featured) {
+                Text(
+                    stringResource(R.string.schemes_recommended_section),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Icon(
+                    Icons.Default.Keyboard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp).size(24.dp),
+                )
+                Column(Modifier.weight(1f)) { details() }
+                if (!featured && progress == null) {
+                    IconButton(onClick = onDownload, enabled = enabled) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = stringResource(R.string.onboarding_download_scheme, name),
+                        )
+                    }
+                }
+            }
+            if (progress != null) {
+                progress()
+            } else if (featured) {
+                Button(onClick = onDownload, enabled = enabled) {
+                    Text(stringResource(R.string.schemes_recommended_confirm))
+                }
+            }
+        }
+    }
+    if (featured) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(16.dp)) { content() }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) { content() }
+    }
+}

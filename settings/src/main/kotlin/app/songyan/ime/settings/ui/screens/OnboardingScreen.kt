@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -33,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.songyan.ime.settings.R
@@ -40,10 +43,12 @@ import app.songyan.ime.settings.state.OnboardingProgress
 import app.songyan.ime.settings.state.OnboardingStep
 import app.songyan.ime.settings.state.RecommendedScheme
 import app.songyan.ime.settings.ui.DictionaryImportUiState
+import app.songyan.ime.settings.ui.RecommendedSchemeChoice
 import app.songyan.ime.settings.ui.RecommendedSchemeDownloadDetails
 import app.songyan.ime.settings.ui.RecommendedSchemeSummary
 import app.songyan.ime.settings.ui.SchemeImportUiState
 import app.songyan.ime.settings.ui.components.ImportStatusCard
+import app.songyan.ime.settings.ui.components.ImportStatusContent
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.TryOutField
 import app.songyan.ime.settings.ui.components.importCardOf
@@ -76,10 +81,13 @@ fun OnboardingScreen(
     val nextStep = progress.nextStep
     var showWarning by rememberSaveable { mutableStateOf(false) }
     var recommendedId by rememberSaveable { mutableStateOf<String?>(null) }
+    var downloadingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showMoreSchemes by rememberSaveable { mutableStateOf(false) }
     // The guide and the 输入方案 page show the same order: the device's own language decides it.
     val recommendedCatalog = recommendedSchemes()
     val importCard = importCardOf(DictionaryImportUiState.Idle, schemeImport)
     val downloading = schemeImport is SchemeImportUiState.Running
+    val inlineProgress = downloading && downloadingId != null && nextStep == OnboardingStep.DOWNLOAD_SCHEME
     SettingsScaffold(
         title = stringResource(R.string.onboarding_title),
         onBack = onBack,
@@ -115,7 +123,7 @@ fun OnboardingScreen(
                 return@Column
             }
 
-            if (importCard != null) {
+            if (importCard != null && !inlineProgress) {
                 ImportStatusCard(
                     card = importCard,
                     onCancel = onCancelDownload,
@@ -133,15 +141,55 @@ fun OnboardingScreen(
                 actionLabel = null,
                 onAction = null,
             ) {
-                for (entry in recommendedCatalog) {
-                    OutlinedButton(
-                        onClick = { recommendedId = entry.id },
-                        enabled = downloadAvailable && !downloading,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(entry.nameRes))
+                val featured = recommendedCatalog.first()
+                val inlineStatus: @Composable () -> Unit = {
+                    if (importCard != null) {
+                        ImportStatusContent(importCard, onCancelDownload, onRetryDownload, onDismissDownload)
                     }
-                    RecommendedSchemeSummary(entry)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    RecommendedSchemeChoice(
+                        scheme = featured,
+                        featured = true,
+                        enabled = downloadAvailable && !downloading,
+                        onDownload = { recommendedId = featured.id },
+                        progress = inlineStatus.takeIf { inlineProgress && downloadingId == featured.id },
+                    )
+                    val expandedDescription =
+                        stringResource(
+                            if (showMoreSchemes) {
+                                R.string.onboarding_schemes_expanded
+                            } else {
+                                R.string.onboarding_schemes_collapsed
+                            },
+                        )
+                    TextButton(
+                        onClick = { showMoreSchemes = !showMoreSchemes },
+                        enabled = !(inlineProgress && downloadingId != featured.id),
+                        modifier = Modifier.fillMaxWidth().semantics { stateDescription = expandedDescription },
+                    ) {
+                        Text(
+                            stringResource(R.string.onboarding_more_schemes, recommendedCatalog.size - 1),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(
+                            if (showMoreSchemes) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                        )
+                    }
+                    if (showMoreSchemes) {
+                        Column {
+                            for (entry in recommendedCatalog.drop(1)) {
+                                RecommendedSchemeChoice(
+                                    scheme = entry,
+                                    featured = false,
+                                    enabled = downloadAvailable && !downloading,
+                                    onDownload = { recommendedId = entry.id },
+                                    progress = inlineStatus.takeIf { inlineProgress && downloadingId == entry.id },
+                                )
+                            }
+                        }
+                    }
                 }
                 TextButton(onClick = onOtherSchemes, enabled = !downloading) {
                     Text(stringResource(R.string.onboarding_other_schemes))
@@ -221,6 +269,7 @@ fun OnboardingScreen(
             confirmButton = {
                 TextButton(onClick = {
                     recommendedId = null
+                    downloadingId = recommended.id
                     onDownload(recommended)
                 }) {
                     Text(stringResource(R.string.schemes_recommended_confirm))

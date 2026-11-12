@@ -79,6 +79,7 @@ import app.songyan.ime.settings.ui.screens.AppearanceScreen
 import app.songyan.ime.settings.ui.screens.CandidateBarScreen
 import app.songyan.ime.settings.ui.screens.CompositionScreen
 import app.songyan.ime.settings.ui.screens.EngineFeaturesScreen
+import app.songyan.ime.settings.ui.screens.ExtensionsScreen
 import app.songyan.ime.settings.ui.screens.GrammarModelCardInput
 import app.songyan.ime.settings.ui.screens.HomeScreen
 import app.songyan.ime.settings.ui.screens.InputOptionsScreen
@@ -96,9 +97,13 @@ import app.songyan.ime.settings.ui.screens.QuickContentScreen
 import app.songyan.ime.settings.ui.screens.RimeFileEditorScreen
 import app.songyan.ime.settings.ui.screens.SchemeDetailScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
+import app.songyan.ime.settings.ui.screens.ScriptConfirmScreen
+import app.songyan.ime.settings.ui.screens.ScriptDetailScreen
+import app.songyan.ime.settings.ui.screens.ScriptsScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
 import app.songyan.ime.settings.ui.screens.ToolbarScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
+import app.songyan.ime.settings.ui.screens.VoiceInputScreen
 import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
 
@@ -159,6 +164,11 @@ object SettingsRoutes {
     ): String = "useContent/" + (if (page) "page" else "layout") + "/" + Uri.encode(id)
 
     const val QUICK_CONTENT = "quickContent?addPhrase={addPhrase}"
+    const val SCRIPTS = "scripts"
+    const val VOICE_INPUT = "voiceInput"
+    const val EXTENSIONS = "extensions"
+    const val SCRIPT_DETAIL = "scripts/{id}"
+    const val SCRIPT_CONFIRM = "scripts/{id}/confirm"
     const val TRY_OUT = "tryOut"
     const val LEARNING = "learning"
     const val ABOUT = "about"
@@ -187,6 +197,11 @@ object SettingsRoutes {
         }
 
     fun quickContent(addPhrase: Boolean = false): String = "quickContent?addPhrase=$addPhrase"
+
+    /** Ids are registry-assigned and URL-safe, but the argument travels encoded like every other. */
+    fun scriptDetail(id: String): String = "scripts/" + Uri.encode(id)
+
+    fun scriptConfirm(id: String): String = "scripts/" + Uri.encode(id) + "/confirm"
 
     fun licenseDetail(index: Int): String = "licenses/$index"
 
@@ -649,6 +664,43 @@ private fun NavGraphBuilder.settingsGraph(
             onBack = topBack(navController),
             startWithAddPhrase = entry.arguments?.getBoolean("addPhrase") == true,
         )
+    }
+
+    composable(SettingsRoutes.SCRIPTS) {
+        ScriptsScreen(
+            onBack = topBack(navController),
+            onOpen = { id -> navController.navigate(SettingsRoutes.scriptDetail(id)) },
+            onOpenConfirmation = { id -> navController.navigate(SettingsRoutes.scriptConfirm(id)) },
+        )
+    }
+
+    composable(
+        route = SettingsRoutes.SCRIPT_DETAIL,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+    ) { entry ->
+        ScriptDetailScreen(
+            scriptId = entry.arguments?.getString("id").orEmpty(),
+            onBack = { navController.popBackStack() },
+            onOpenConfirmation = { id -> navController.navigate(SettingsRoutes.scriptConfirm(id)) },
+        )
+    }
+
+    composable(
+        route = SettingsRoutes.SCRIPT_CONFIRM,
+        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+    ) { entry ->
+        ScriptConfirmScreen(
+            scriptId = entry.arguments?.getString("id").orEmpty(),
+            onDone = { navController.popBackStack() },
+        )
+    }
+
+    composable(SettingsRoutes.VOICE_INPUT) {
+        VoiceInputScreen(onBack = topBack(navController))
+    }
+
+    composable(SettingsRoutes.EXTENSIONS) {
+        ExtensionsScreen(onBack = topBack(navController))
     }
 
     composable(SettingsRoutes.CANDIDATE_BAR) {

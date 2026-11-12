@@ -157,7 +157,7 @@
     <string name="rime_config_error_unavailable">現在沒法應用更改，請稍後再試。</string>
     <string name="rime_config_skipped">你的配置不適用於使用中的輸入方案，這個方案現在按原樣使用。</string>
     <string name="rime_config_refused_read_only">這個資料夾只能檢視。把檔案放進「我的配置」，再到松煙設定裡點「應用更改」。</string>
-    <string name="rime_config_refused_folder">「我的配置」裡只能放一個 lua 資料夾，用來放擴充套件指令碼。其餘檔案直接放進去。</string>
+    <string name="rime_config_refused_folder">「我的配置」裡只能放一個 lua 資料夾，用來放 Lua 指令碼。其餘檔案直接放進去。</string>
     <string name="rime_config_refused_type">「%1$s」放不進來。「我的配置」只收 .yaml 和 .txt 檔案。</string>
     <string name="rime_config_refused_script_type">「%1$s」放不進來。這個資料夾只收 .lua 檔案。</string>
     <string name="rime_config_refused_large">「%1$s」太大，沒法在這裡修改。每個檔案不超過 4 MB。</string>
@@ -173,4 +173,5 @@
     <string name="package_learning_not_in_use">沒能切換到這個輸入方案，用詞記錄沒有併入。</string>
     <string name="package_learning_nothing">方案包裡的用詞記錄與它的詞庫對不上，沒有併入。</string>
     <string name="package_learning_gone">這些用詞記錄已經不在了。</string>
+    <string name="addon_panel_failed">擴充套件面板無法開啟。</string>
 </resources>

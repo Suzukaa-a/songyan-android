@@ -146,6 +146,9 @@ dependencies {
     implementation(project(":core:appearance"))
     implementation(project(":core:content"))
     implementation(project(":core:packages"))
+    implementation(project(":script"))
+    // The external-addon contract (Apache-2.0): the host side of the service protocol.
+    implementation(project(":addon-api"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -166,6 +169,9 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.rules)
+    // Integration tests reach the keyboard's tool pipeline and the script host through the app.
+    androidTestImplementation(project(":ime"))
+    androidTestImplementation(project(":script"))
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.androidx.test.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))

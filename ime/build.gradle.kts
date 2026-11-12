@@ -19,6 +19,7 @@ dependencies {
     api(project(":core:candidate"))
     api(project(":core:appearance"))
     api(project(":core:content"))
+    implementation(project(":core:tools"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.autofill)
@@ -38,4 +39,5 @@ dependencies {
     // Editor behaviour is tested against the real engine, never a stub that does the engine's work.
     androidTestImplementation(project(":core:rime"))
     androidTestImplementation(project(":core:packages"))
+    androidTestImplementation(project(":core:tools"))
 }

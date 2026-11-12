@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The probe host: a disposable input method that binds to the addon probe and embeds its panel.
+     Only ever installed on the private API 36 probe emulator. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.songyan.addonprobe.host">
+
+    <!-- Android 11 package visibility: an addon APK is a separate package, so the host must
+         declare the packages/services it intends to bind to. Songyan's own manifest needs the same
+         <queries> entry for the addon service action. -->
+    <queries>
+        <package android:name="app.songyan.addonprobe.addon" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="Addon probe host">
+
+        <activity
+            android:name=".ProbeActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".ProbeIme"
+            android:exported="true"
+            android:label="Addon probe IME"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+    </application>
+
+</manifest>

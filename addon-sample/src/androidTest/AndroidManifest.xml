@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The test binds to the sample addon's exported service. -->
+    <queries>
+        <package android:name="app.songyan.ime.addon.sample" />
+    </queries>
+
+</manifest>

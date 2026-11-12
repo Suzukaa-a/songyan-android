@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">松烟示例 Addon</string>
+    <string name="addon_name">示例 Addon</string>
+    <string name="tool_uppercase">大写</string>
+    <string name="tool_book_title">加书名号</string>
+    <string name="tool_delay">延迟返回（仅调试）</string>
+    <string name="tool_crash">让 Addon 崩溃（仅调试）</string>
+    <string name="panel_title">示例面板</string>
+    <string name="panel_commit">上屏「面板里的文字」</string>
+    <string name="panel_plain_text">面板里的文字</string>
+    <string name="panel_refused">输入框没有接受这次编辑</string>
+    <string name="panel_delete">向前删除一个字</string>
+    <string name="panel_read">读取选区</string>
+    <string name="panel_resize">请求更高的空间</string>
+    <string name="panel_close">关闭面板</string>
+    <string name="panel_context">输入框类型 %1$d · %2$d × %3$d 像素</string>
+    <string name="panel_no_text">没有选区</string>
+    <string name="panel_committed">已上屏：%1$s</string>
+    <string name="panel_deleted">已向前删除一个字</string>
+    <string name="panel_read_result">读到：%1$s</string>
+    <string name="sample_explain">这个 APK 是松烟的外部 Addon 示例。它就是一个普通应用：安装后到松烟「设置 → 扩展」里打开。松烟只绑定它的服务，不加载它的代码。</string>
+    <string name="sample_tools">文字工具：大写、加书名号</string>
+    <string name="sample_panel">自带面板：画在键盘窗口里</string>
+    <string name="sample_voice">语音输入：一段模拟的听写流程</string>
+    <string name="voice_partial">示例语音</string>
+    <string name="voice_final">示例语音转写结果</string>
+    <string name="settings_title">示例 Addon 设置</string>
+    <string name="settings_explain">Addon 可以声明自己的设置页。这个示例没有可设置的内容；真正的设置属于 Addon，不属于松烟。</string>
+</resources>

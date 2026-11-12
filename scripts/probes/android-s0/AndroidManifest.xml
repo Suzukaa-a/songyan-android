@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.songyan.s0probe">
+
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="37" />
+
+    <!-- Declared so the probe can show what an isolated process does not inherit, and so the
+         IME and foreground-service scenarios can record audio. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:label="S0 Probe"
+        android:debuggable="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- Started only by the host script over adb, which holds DUMP; an ordinary app does not,
+             so another app cannot arm the probe or make it measure anything. -->
+        <activity
+            android:name=".ControlActivity"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
+        <activity
+            android:name=".ProbeActivity"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
+        <activity
+            android:name=".HostActivity"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize" />
+
+        <!-- A real input method, bound by the system with BIND_INPUT_METHOD, which is the
+             context the plan asks about for recording and editor text length. -->
+        <service
+            android:name=".ProbeIme"
+            android:exported="true"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <!-- Keeps the probe process alive between the control activity and the field the user taps. -->
+        <service
+            android:name=".HoldService"
+            android:exported="false" />
+
+        <!-- Runs with no permissions of its own; only binder calls reach it. -->
+        <service
+            android:name=".IsolatedEcho"
+            android:exported="false"
+            android:isolatedProcess="true" />
+
+        <service
+            android:name=".MicService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
+</manifest>

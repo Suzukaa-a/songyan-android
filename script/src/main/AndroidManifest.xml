@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two processes: the proxy (ordinary, owns storage, secrets and the network transport) and the
+     isolated service (no permissions, runs the JS engine and nothing else). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The proxy process performs the scripts' declared network requests; the IME process never
+         holds this permission's use for script fetches (it does not load the engine at all). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Cleartext is allowed at the platform level only because the script transport is the one
+         place the plan tolerates plain HTTP: ScriptAddressPolicy still restricts it to declared
+         loopback / link-local / site-local hosts, and settings downloads stay HTTPS-only in code. -->
+    <application android:usesCleartextTraffic="true">
+        <service
+            android:name="app.songyan.ime.script.ScriptIsolatedService"
+            android:exported="false"
+            android:isolatedProcess="true" />
+        <service
+            android:name="app.songyan.ime.script.ScriptProxyService"
+            android:exported="false"
+            android:process=":script" />
+    </application>
+
+</manifest>

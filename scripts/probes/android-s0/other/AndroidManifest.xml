@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.songyan.s0probe.other">
+
+    <!-- Holds no permissions at all, so it is the "ordinary app" side of the control-entry test.
+         It declares the probe package so Android 11 package visibility does not turn the start
+         into ActivityNotFoundException before the permission is even checked. -->
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="37" />
+
+    <queries>
+        <package android:name="app.songyan.s0probe" />
+    </queries>
+
+    <application
+        android:label="S0 Other"
+        android:debuggable="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".RefusalActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

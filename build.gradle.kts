@@ -9,4 +9,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ktlint) apply false
+    // Registers checkDependencyBoundaries: :ime must not reach :script and :core:tools stays JVM-only.
+    id("app.songyan.boundary")
 }

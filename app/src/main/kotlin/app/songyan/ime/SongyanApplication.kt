@@ -2,6 +2,9 @@ package app.songyan.ime
 
 import android.app.Application
 import android.os.StrictMode
+import app.songyan.ime.addons.AddonRegistryHolder
+import app.songyan.ime.addons.AddonSettingsGatewayImpl
+import app.songyan.ime.addons.createAddonRegistry
 import app.songyan.ime.appearance.AppearanceRepository
 import app.songyan.ime.content.DiagnosticsGatewayImpl
 import app.songyan.ime.content.DictionaryImportGatewayImpl
@@ -16,6 +19,10 @@ import app.songyan.ime.engine.EngineOwnership
 import app.songyan.ime.engine.PublishedEngineFactory
 import app.songyan.ime.learning.LearningBackupService
 import app.songyan.ime.learning.LearningSnapshots
+import app.songyan.ime.script.ScriptHostCapability
+import app.songyan.ime.script.ScriptProxyRegistry
+import app.songyan.ime.script.ScriptRegistryHolder
+import app.songyan.ime.settings.state.AddonSettingsHolder
 import app.songyan.ime.settings.state.DiagnosticsHolder
 import app.songyan.ime.settings.state.DictionaryImportHolder
 import app.songyan.ime.settings.state.EngineFeaturesHolder
@@ -97,6 +104,19 @@ class SongyanApplication : Application() {
         // Directory creation happens on the IO paths that own each directory (deploy,
         // publication, repositories); doing it here would write to disk on the main thread.
         storage = AppStorage(filesDir)
+        // The script host lives in the app's processes; the proxy process itself must not install a
+        // registry that would bind back into itself. Creating this object is cheap (no I/O, no
+        // process, no engine): it only answers once asked, and catalog reads stay on the cache.
+        // The input method offers text tools and records audio for voice input, so scripts that
+        // declare `@input audio` are runnable here (their `availableOnThisHost` comes from this set).
+        if (isMainProcess()) {
+            ScriptRegistryHolder.install(
+                ScriptProxyRegistry(
+                    this,
+                    setOf(ScriptHostCapability.TEXT, ScriptHostCapability.AUDIO),
+                ),
+            )
+        }
         rimeDeployRunner = createRimeDeployRunner()
         publishedEngineFactory = createPublishedEngineFactory()
         if (BuildConfig.DEBUG) {
@@ -138,6 +158,13 @@ class SongyanApplication : Application() {
             LinkDownloadHolder.install(LinkDownloadGatewayImpl(this, storage))
             RimeConfigHolder.install(RimeConfigGatewayImpl(this, storage))
             DiagnosticsHolder.install(DiagnosticsGatewayImpl(this, storage))
+            // External addons: the 扩展 page and the keyboard share this process, so one registry
+            // serves both. Warming only reads the cached handshakes; binding happens on the page's
+            // scan and when the user runs a tool.
+            val addons = createAddonRegistry(this)
+            AddonRegistryHolder.install(addons)
+            AddonSettingsHolder.install(AddonSettingsGatewayImpl(addons))
+            addons.warm()
             LearningBackupHolder.install(
                 LearningBackupGatewayImpl(
                     this,

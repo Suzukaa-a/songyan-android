@@ -162,6 +162,24 @@ object SettingsSearch {
                 R.string.row_quick_content_title,
             ),
             SearchEntry(
+                SettingsRoutes.SCRIPTS,
+                R.string.row_scripts_title,
+                R.string.section_content,
+                R.string.row_scripts_subtitle,
+            ),
+            SearchEntry(
+                SettingsRoutes.VOICE_INPUT,
+                R.string.row_voice_title,
+                R.string.section_content,
+                R.string.row_voice_subtitle,
+            ),
+            SearchEntry(
+                SettingsRoutes.EXTENSIONS,
+                R.string.row_extensions_title,
+                R.string.section_content,
+                R.string.row_extensions_subtitle,
+            ),
+            SearchEntry(
                 SettingsRoutes.ONBOARDING,
                 R.string.row_onboarding_title,
                 R.string.section_other,

@@ -341,4 +341,44 @@
     <string name="t9_symbols_inherit">Use inherited order</string>
     <string name="layout_error_t9_behavior">This first-key behavior needs a 9-key layout.</string>
     <string name="layout_error_t9_symbols">Quick symbols need a 9-key layout and up to 12 distinct characters, with no spaces.</string>
+    <!-- Voice input -->
+    <string name="row_voice_title">Voice input</string>
+    <string name="row_voice_subtitle">Speak instead of typing</string>
+    <string name="voice_title">Voice input</string>
+    <string name="voice_body">The keyboard records what you say and hands the recording to the script you choose; the text the script returns is typed at the cursor. Add the script under Scripts, and it must declare audio input to appear here.</string>
+    <string name="voice_switch_title">Microphone button</string>
+    <string name="voice_switch_subtitle">Show the microphone in the keyboard toolbar</string>
+    <string name="voice_scripts_section">Voice script</string>
+    <string name="voice_scripts_empty">No voice script yet. Add one under Scripts.</string>
+    <string name="voice_scripts_loading">Reading scripts…</string>
+
+    <!-- 设置 → 扩展: external addons installed as separate APKs. -->
+    <string name="row_extensions_title">Extensions</string>
+    <string name="row_extensions_subtitle">Addons installed on this device</string>
+    <string name="extensions_title">Extensions</string>
+    <string name="extensions_body">Extensions are separate apps you install from the system. Songyan only binds to their services: it never downloads, installs or loads their code. Every extension is off until you turn it on here.</string>
+    <string name="extensions_loading">Looking for installed extensions…</string>
+    <string name="extensions_empty_title">No extensions installed</string>
+    <string name="extensions_empty_body">Install an extension app, then come back here to turn it on.</string>
+    <string name="extensions_not_available">The extension list is not available in this build.</string>
+    <string name="extensions_rescan">Scan again</string>
+    <string name="extensions_scan_failed">Could not read the installed extensions.</string>
+    <string name="extensions_compatible">Compatible</string>
+    <string name="extensions_incompatible">Incompatible</string>
+    <string name="extensions_unknown">Not verified</string>
+    <string name="extensions_version">Version %1$s</string>
+    <string name="extensions_signer">Signature %1$s</string>
+    <string name="extensions_permissions">Permissions: %1$s</string>
+    <string name="extensions_no_permissions">Permissions: none extra</string>
+    <string name="extensions_tools">Text tools: %1$s</string>
+    <string name="extensions_panel">Provides its own panel</string>
+    <string name="extensions_voice">Provides voice input</string>
+    <string name="extensions_last_call">Last call: %1$s · %2$d ms</string>
+    <string name="extensions_last_call_error">Last call: %1$s · %2$d ms · %3$s</string>
+    <string name="extensions_call_kind_text">text tool</string>
+    <string name="extensions_call_kind_voice">voice input</string>
+    <string name="extensions_call_kind_panel">own panel</string>
+    <string name="extensions_switch">Turn on %1$s</string>
+    <string name="voice_addon_option">%1$s (extension)</string>
+    <string name="extensions_toggle_failed">Could not save the switch. Nothing was changed.</string>
 </resources>

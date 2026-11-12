@@ -156,7 +156,7 @@
     <string name="rime_config_error_unavailable">今は変更を適用できません。しばらくしてからやり直してください。</string>
     <string name="rime_config_skipped">この設定は使用中の入力パックに合わないため、パックはもとの設定のまま使われます。</string>
     <string name="rime_config_refused_read_only">このフォルダは読み取り専用です。ファイルを「マイ設定」に置いてから、松煙の設定で「変更を適用」をタップしてください。</string>
-    <string name="rime_config_refused_folder">「マイ設定」に置けるのは、スクリプト用の lua フォルダ 1 つだけです。ほかのファイルは直接置いてください。</string>
+    <string name="rime_config_refused_folder">「マイ設定」に置けるのは、Lua スクリプト用の lua フォルダ 1 つだけです。ほかのファイルは直接置いてください。</string>
     <string name="rime_config_refused_type">「%1$s」はここに置けません。「マイ設定」は .yaml と .txt ファイルを受け付けます。</string>
     <string name="rime_config_refused_script_type">「%1$s」はここに置けません。このフォルダは .lua ファイルを受け付けます。</string>
     <string name="rime_config_refused_large">「%1$s」は大きすぎるため、ここでは編集できません。1 ファイルあたり 4 MB までです。</string>
@@ -174,4 +174,5 @@
     <string name="package_learning_gone">この学習した語はもうありません。</string>
 
     <!-- 処理結果をもとの場所に書き戻せず、クリップボードに入れたとき -->
+    <string name="addon_panel_failed">拡張機能のパネルを開けませんでした。</string>
 </resources>

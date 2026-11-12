@@ -57,6 +57,42 @@ class ToolbarActionsTest {
     }
 
     @Test
+    fun theMicrophoneAppearsOnlyWhileVoiceIsOffered() {
+        assertEquals(false, a.VOICE_INPUT in assemble())
+
+        val offered =
+            ToolbarActions.assemble(ToolbarLayout.DEFAULT, false, false, true, voiceAvailable = true)
+        assertEquals(a.VOICE_INPUT, offered.dropLast(1).last())
+        assertEquals(a.HIDE, offered.last())
+
+        // After a committed result the same slot offers undo instead of another take.
+        val undo =
+            ToolbarActions.assemble(
+                ToolbarLayout.DEFAULT,
+                false,
+                false,
+                true,
+                voiceAvailable = true,
+                voiceUndoAvailable = true,
+            )
+        assertEquals(a.VOICE_UNDO, undo.dropLast(1).last())
+        assertEquals(false, a.VOICE_INPUT in undo)
+    }
+
+    @Test
+    fun theMicrophoneSitsBeforeTheSystemSwitcher() {
+        val shown =
+            ToolbarActions.assemble(
+                ToolbarLayout.DEFAULT,
+                false,
+                switcher = true,
+                oneHandAvailable = true,
+                voiceAvailable = true,
+            )
+        assertEquals(listOf(a.VOICE_INPUT, a.SWITCH_INPUT_METHOD, a.HIDE), shown.takeLast(3))
+    }
+
+    @Test
     fun onlyTheUsersChoicesMayBeDroppedForWidth() {
         assertEquals(true, a.CLIPBOARD.chosen)
         assertEquals(false, a.HIDE.chosen)

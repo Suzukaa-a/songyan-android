@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The addon-speaking side of the probe: an exported service that the probe input method binds
+     to, plus a panel it draws with SurfaceControlViewHost. Only ever installed on the private API
+     36 probe emulator. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.songyan.addonprobe.addon">
+
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:allowBackup="false"
+        android:label="Addon probe addon">
+
+        <service
+            android:name=".ProbeAddonService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.songyan.addonprobe.SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

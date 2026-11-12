@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home entry -->
+    <string name="row_scripts_title">指令碼</string>
+    <string name="row_scripts_subtitle">單檔案小工具：文字進，文字出</string>
+
+    <!-- Scripts list -->
+    <string name="scripts_title">指令碼</string>
+    <string name="scripts_refresh">重新整理</string>
+    <string name="scripts_add">新增指令碼</string>
+    <string name="scripts_cancel">取消</string>
+    <string name="scripts_ok">好</string>
+    <string name="scripts_delete">刪除</string>
+    <string name="scripts_edit">編輯</string>
+    <string name="scripts_export">分享</string>
+    <string name="scripts_check_update">檢查更新</string>
+    <string name="scripts_move_up">上移</string>
+    <string name="scripts_move_down">下移</string>
+    <string name="scripts_origin_pasted">貼上匯入</string>
+    <string name="scripts_origin_file">來自檔案：%1$s</string>
+    <string name="scripts_origin_link">來自連結</string>
+    <string name="scripts_origin_edited">在此編輯</string>
+
+    <!-- Add sheet -->
+    <string name="scripts_add_paste">貼上指令碼文字</string>
+    <string name="scripts_add_file">選擇檔案</string>
+    <string name="scripts_add_link">從 HTTPS 連結</string>
+    <string name="scripts_add_editor">在這裡寫一個</string>
+    <string name="scripts_add_paste_title">貼上指令碼</string>
+    <string name="scripts_add_paste_label">指令碼文字</string>
+    <string name="scripts_add_link_title">從連結新增</string>
+    <string name="scripts_add_link_label">HTTPS 連結</string>
+    <string name="scripts_add_link_body">連結只會在現在下載一次。更新只在你要求時檢查。</string>
+    <string name="scripts_import_failed_title">未匯入</string>
+
+    <!-- Empty state -->
+    <string name="scripts_empty_title">還沒有指令碼</string>
+    <string name="scripts_empty_body">指令碼是一個單檔案：收到你選中的文字，返回處理後的文字。把說明覆制給 AI 讓它寫一個，或從下面的例子開始。</string>
+    <string name="scripts_copy_guide">複製給 AI 的說明</string>
+    <string name="scripts_guide_copied">說明已複製。貼上到和 AI 的對話裡即可。</string>
+    <string name="scripts_guide_failed">讀取說明失敗，請重試。</string>
+    <string name="scripts_guide_clipboard_label">給 AI 的說明</string>
+    <string name="scripts_example_title">例子（不聯網）</string>
+
+    <!-- Confirmation page -->
+    <string name="scripts_confirm_title">確認指令碼</string>
+    <string name="scripts_confirm_section_what">它是什麼</string>
+    <string name="scripts_confirm_name">名字</string>
+    <string name="scripts_confirm_reads">能讀什麼</string>
+    <string name="scripts_confirm_reads_body">執行時你選中的文字，僅此而已。</string>
+    <string name="scripts_confirm_section_connects">會連的網站</string>
+    <string name="scripts_confirm_connects_none">沒有宣告網站</string>
+    <string name="scripts_confirm_connects_none_body">這個指令碼不會連線網路。</string>
+    <string name="scripts_confirm_section_settings">要填的設定</string>
+    <string name="scripts_confirm_action">確認</string>
+    <string name="scripts_confirm_note">讀完上面的清單再確認。金鑰只存在這臺裝置上，不會寫進分享出去的檔案。</string>
+    <string name="scripts_pending_title">需要確認</string>
+    <string name="scripts_pending_body">這個指令碼的宣告變了。使用前請再讀一遍。</string>
+    <string name="scripts_unavailable_title">在這臺裝置上不可用</string>
+    <string name="scripts_unavailable_body">這個指令碼需要的輸入是此鍵盤無法提供的，所以在這裡無法執行。</string>
+
+    <!-- Settings fields -->
+    <string name="scripts_setting_kind_text">文字</string>
+    <string name="scripts_setting_kind_url">地址</string>
+    <string name="scripts_setting_kind_choice">選項</string>
+    <string name="scripts_secret_suffix">（金鑰）</string>
+    <string name="scripts_secret_toggle">顯示或隱藏</string>
+
+    <!-- Trial run -->
+    <string name="scripts_test_section">試一試</string>
+    <string name="scripts_test_input_label">要傳送的文字</string>
+    <string name="scripts_test_run">執行</string>
+    <string name="scripts_test_outputs">輸出</string>
+    <string name="scripts_test_no_output">指令碼沒有返回內容。</string>
+    <string name="scripts_test_console">控制檯</string>
+    <string name="scripts_test_console_truncated">（有省略）</string>
+    <string name="scripts_test_cancelled">執行已取消。</string>
+
+    <!-- Detail page -->
+    <string name="scripts_about_section">關於</string>
+    <string name="scripts_origin">來源</string>
+    <string name="scripts_description">描述</string>
+    <string name="scripts_connects">網站</string>
+    <string name="scripts_settings_fields">設定</string>
+    <string name="scripts_editor_title">編輯指令碼</string>
+    <string name="scripts_editor_new_title">寫一個指令碼</string>
+    <string name="scripts_editor_save">儲存</string>
+    <string name="scripts_editor_body">指令碼按編輯後的內容儲存。新的宣告需要再次確認才會執行。</string>
+    <string name="scripts_delete_title">刪除這個指令碼？</string>
+    <string name="scripts_delete_body">%1$s 會從這臺裝置移除，無法撤銷。</string>
+    <string name="scripts_delete_confirm">刪除</string>
+
+    <!-- Notices -->
+    <string name="scripts_notice_deleted">指令碼已刪除。</string>
+    <string name="scripts_notice_up_to_date">已是最新。</string>
+    <string name="scripts_notice_updated">發現更新。使用前請讀一讀改了什麼。</string>
+    <string name="scripts_notice_exported">已分享。</string>
+    <string name="scripts_notice_export_failed">分享失敗，請重試。</string>
+
+    <!-- Engine refusals, one wording per machine code -->
+    <string name="scripts_error_timeout">指令碼執行太久，已停止。</string>
+    <string name="scripts_error_out_of_memory">指令碼佔用記憶體過多，已停止。</string>
+    <string name="scripts_error_address_not_allowed">指令碼嘗試訪問它沒有宣告的網站。</string>
+    <string name="scripts_error_network_failure">網路請求失敗。</string>
+    <string name="scripts_error_bad_header">檔案開頭的宣告不合法。</string>
+    <string name="scripts_error_unsupported_api">這個指令碼需要更新版本的松煙輸入法。</string>
+    <string name="scripts_error_capability">這個指令碼需要的輸入是此鍵盤無法提供的。</string>
+    <string name="scripts_error_unavailable">指令碼宿主未安裝。</string>
+    <string name="scripts_error_generic">指令碼失敗：%1$s</string>
+    <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
+</resources>

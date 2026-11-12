@@ -42,7 +42,7 @@
     <string name="appearance_import_version">這個檔案來自鍵盤不支援的版本。</string>
     <string name="appearance_import_storage">沒能儲存外觀，請稍後再試。</string>
     <string name="options_wide_position_section">大螢幕鍵盤位置</string>
-    <string name="options_wide_note">在寬度超過 600 dp 的螢幕上生效，例如平板和展開的摺疊螢幕。自訂時，0% 靠最左，50% 居中，100% 靠最右。</string>
+    <string name="options_wide_note" formatted="false">在寬度超過 600 dp 的螢幕上生效，例如平板和展開的摺疊螢幕。自訂時，0% 靠最左，50% 居中，100% 靠最右。</string>
     <string name="options_nine_key_side_section">9 鍵候選區</string>
     <string name="options_nine_key_side_note">螢幕夠寬時，9 鍵的候選在鍵盤旁展開，鍵盤移到另一側。</string>
     <string name="options_nine_key_side_left">左側</string>
@@ -210,7 +210,7 @@
     <string name="layout_error_candidate_area">這個佈局的候選列設定和它的按鍵對不上。</string>
     <string name="layout_error_key_label_width">每個按鍵都要有標題，寬度要大於 0。</string>
     <string name="layout_error_long_press_label">每個長按選項都要有文字。</string>
-    <string name="layout_error_split_gap">拆分間距應在 0% 到 85% 之間。</string>
+    <string name="layout_error_split_gap" formatted="false">拆分間距應在 0% 到 85% 之間。</string>
     <string name="layout_editor_arrangement_section">鍵盤排列</string>
     <string name="layout_editor_arrangement_whole">不拆分</string>
     <string name="layout_editor_arrangement_split">拆分時</string>

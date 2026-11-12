@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home entry -->
+    <string name="row_scripts_title">Scripts</string>
+    <string name="row_scripts_subtitle">One-file helpers: text in, text out</string>
+
+    <!-- Scripts list -->
+    <string name="scripts_title">Scripts</string>
+    <string name="scripts_refresh">Refresh</string>
+    <string name="scripts_add">Add script</string>
+    <string name="scripts_cancel">Cancel</string>
+    <string name="scripts_ok">OK</string>
+    <string name="scripts_delete">Delete</string>
+    <string name="scripts_edit">Edit</string>
+    <string name="scripts_export">Share</string>
+    <string name="scripts_check_update">Check for update</string>
+    <string name="scripts_move_up">Move up</string>
+    <string name="scripts_move_down">Move down</string>
+    <string name="scripts_origin_pasted">Pasted</string>
+    <string name="scripts_origin_file">From file: %1$s</string>
+    <string name="scripts_origin_link">From link</string>
+    <string name="scripts_origin_edited">Edited here</string>
+
+    <!-- Add sheet -->
+    <string name="scripts_add_paste">Paste script text</string>
+    <string name="scripts_add_file">Choose a file</string>
+    <string name="scripts_add_link">From an HTTPS link</string>
+    <string name="scripts_add_editor">Write one here</string>
+    <string name="scripts_add_paste_title">Paste the script</string>
+    <string name="scripts_add_paste_label">Script text</string>
+    <string name="scripts_add_link_title">Add from a link</string>
+    <string name="scripts_add_link_label">HTTPS link</string>
+    <string name="scripts_add_link_body">The link is downloaded once, now. Updates are checked only when you ask.</string>
+    <string name="scripts_import_failed_title">Not imported</string>
+
+    <!-- Empty state -->
+    <string name="scripts_empty_title">No scripts yet</string>
+    <string name="scripts_empty_body">A script is a single file: it receives the text you select and returns text. Ask an AI to write one, or start from the example below.</string>
+    <string name="scripts_copy_guide">Copy guide for AI</string>
+    <string name="scripts_guide_copied">Guide copied. Paste it into a chat with an AI.</string>
+    <string name="scripts_guide_failed">Unable to read the guide. Please try again.</string>
+    <string name="scripts_guide_clipboard_label">Guide for AI</string>
+    <string name="scripts_example_title">Example (no network)</string>
+
+    <!-- Confirmation page -->
+    <string name="scripts_confirm_title">Confirm script</string>
+    <string name="scripts_confirm_section_what">What it is</string>
+    <string name="scripts_confirm_name">Name</string>
+    <string name="scripts_confirm_reads">What it can read</string>
+    <string name="scripts_confirm_reads_body">The text you select when you run it. Nothing else.</string>
+    <string name="scripts_confirm_section_connects">Sites it may connect to</string>
+    <string name="scripts_confirm_connects_none">No sites declared</string>
+    <string name="scripts_confirm_connects_none_body">This script never connects to the network.</string>
+    <string name="scripts_confirm_section_settings">Settings it asks for</string>
+    <string name="scripts_confirm_action">Confirm</string>
+    <string name="scripts_confirm_note">Confirm only after reading the list above. Secrets stay on this device and are never included in a share.</string>
+    <string name="scripts_pending_title">Needs confirmation</string>
+    <string name="scripts_pending_body">What this script declares has changed. Read it again before using it.</string>
+    <string name="scripts_unavailable_title">Not available on this device</string>
+    <string name="scripts_unavailable_body">This script needs an input this keyboard cannot offer, so it cannot run here.</string>
+
+    <!-- Settings fields -->
+    <string name="scripts_setting_kind_text">Text</string>
+    <string name="scripts_setting_kind_url">Address</string>
+    <string name="scripts_setting_kind_choice">Choice</string>
+    <string name="scripts_secret_suffix"> (secret)</string>
+    <string name="scripts_secret_toggle">Show or hide</string>
+
+    <!-- Trial run -->
+    <string name="scripts_test_section">Trial run</string>
+    <string name="scripts_test_input_label">Text to send</string>
+    <string name="scripts_test_run">Run</string>
+    <string name="scripts_test_outputs">Outputs</string>
+    <string name="scripts_test_no_output">The script returned nothing.</string>
+    <string name="scripts_test_console">Console</string>
+    <string name="scripts_test_console_truncated"> (shortened)</string>
+    <string name="scripts_test_cancelled">The run was cancelled.</string>
+
+    <!-- Detail page -->
+    <string name="scripts_about_section">About</string>
+    <string name="scripts_origin">Source</string>
+    <string name="scripts_description">Description</string>
+    <string name="scripts_connects">Sites</string>
+    <string name="scripts_settings_fields">Settings</string>
+    <string name="scripts_editor_title">Edit script</string>
+    <string name="scripts_editor_new_title">Write a script</string>
+    <string name="scripts_editor_save">Save</string>
+    <string name="scripts_editor_body">The script is stored as edited. New declarations need confirming before it runs again.</string>
+    <string name="scripts_delete_title">Delete this script?</string>
+    <string name="scripts_delete_body">%1$s will be removed from this device. This cannot be undone.</string>
+    <string name="scripts_delete_confirm">Delete</string>
+
+    <!-- Notices -->
+    <string name="scripts_notice_deleted">Script deleted.</string>
+    <string name="scripts_notice_up_to_date">Already up to date.</string>
+    <string name="scripts_notice_updated">Update found. Read what changed before using it.</string>
+    <string name="scripts_notice_exported">Shared.</string>
+    <string name="scripts_notice_export_failed">Unable to share. Please try again.</string>
+
+    <!-- Engine refusals, one wording per machine code -->
+    <string name="scripts_error_timeout">The script ran too long and was stopped.</string>
+    <string name="scripts_error_out_of_memory">The script used too much memory and was stopped.</string>
+    <string name="scripts_error_address_not_allowed">The script tried to reach a site it did not declare.</string>
+    <string name="scripts_error_network_failure">The network request failed.</string>
+    <string name="scripts_error_bad_header">The file\'s header declarations are not valid.</string>
+    <string name="scripts_error_unsupported_api">This script needs a newer version of Songyan.</string>
+    <string name="scripts_error_capability">This script needs an input this keyboard cannot offer.</string>
+    <string name="scripts_error_unavailable">The script host is not installed.</string>
+    <string name="scripts_error_generic">The script failed: %1$s</string>
+    <string name="scripts_error_at_line">%1$s (line %2$d)</string>
+</resources>

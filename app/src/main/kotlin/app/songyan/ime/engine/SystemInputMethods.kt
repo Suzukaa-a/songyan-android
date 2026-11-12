@@ -11,8 +11,9 @@ import app.songyan.ime.ime.VoiceInputMethods
 
 /**
  * The keyboard's way out to other input methods, against the platform and guarded by API level
- * (minSdk 26): the 28+ service calls where they exist, the input method manager before them. Voice
- * input methods are discovered, never assumed: any enabled input method with a `voice` subtype counts.
+ * (minSdk 30): the 28+ service calls are always available, and the input method manager is the
+ * fallback for a switch the platform refuses. Voice input methods are discovered, never assumed:
+ * any enabled input method with a `voice` subtype counts.
  */
 class SystemInputMethods(
     private val service: InputMethodService,

@@ -78,6 +78,29 @@
     <string name="ime_glyph_delete" translatable="false">⌫</string>
     <string name="ime_toolbar_input_methods">Keyboard layout and input method</string>
     <string name="ime_toolbar_hide">Hide keyboard</string>
+    <string name="ime_toolbar_tools">Tools</string>
+    <string name="ime_tool_panel_title">Tools</string>
+    <string name="ime_tool_panel_unavailable">Tools are unavailable in this field.</string>
+    <string name="ime_tool_panel_select_hint">Choose a tool or a result.</string>
+    <string name="ime_tool_panel_running">Running…</string>
+    <string name="ime_tool_panel_cancel">Cancel</string>
+    <string name="ime_tool_panel_copy">Copy</string>
+    <string name="ime_tool_panel_replace">Replace</string>
+    <string name="ime_tool_panel_insert">Insert</string>
+    <string name="ime_tool_panel_undo">Undo</string>
+    <string name="ime_tool_panel_close">Close</string>
+    <string name="ime_tool_panel_written">Inserted.</string>
+    <string name="ime_tool_panel_truncated">The text is long; only its end was used.</string>
+    <string name="ime_tool_panel_no_text">This field has no usable text.</string>
+    <string name="ime_tool_panel_cancelled">The tool was cancelled.</string>
+    <string name="ime_tool_panel_field_changed">The input field changed; nothing was written.</string>
+    <string name="ime_tool_panel_edited">The text changed after the write; it was not touched.</string>
+    <string name="ime_tool_panel_partial">Only the end of the text was read; this write is not supported.</string>
+    <string name="ime_tool_panel_undo_expired">Undo is no longer available.</string>
+    <string name="ime_tool_panel_selection">Inserting here would replace the selected text, so it is not supported.</string>
+    <string name="ime_tool_panel_timeout">The tool timed out; try again.</string>
+    <string name="ime_tool_panel_no_result">The tool returned no result.</string>
+    <string name="ime_tool_panel_failed">The tool did not run.</string>
     <string name="ime_toolbar_switch_input_method">Switch input method</string>
     <string name="ime_toolbar_voice_input">Voice input</string>
     <string name="ime_menu_switch_package">Switch to %2$s in %1$s</string>
@@ -120,4 +143,19 @@
     <string name="ime_panel_clipboard_enable">Turn on</string>
     <string name="ime_cursor_left">Move cursor left</string>
     <string name="ime_cursor_right">Move cursor right</string>
+    <!-- Voice input -->
+    <string name="ime_voice_recording">Recording. Tap the microphone again to stop.</string>
+    <string name="ime_voice_transcribing">Turning the recording into text…</string>
+    <string name="ime_voice_permission_needed">Microphone access is off. Allow it in the dialog to use voice input.</string>
+    <string name="ime_voice_no_microphone">This device has no microphone.</string>
+    <string name="ime_voice_device_busy">The microphone is in use by another app.</string>
+    <string name="ime_voice_failed">Voice input failed. Please try again.</string>
+    <string name="ime_voice_script_failed">The voice script failed. Please try again.</string>
+    <string name="ime_voice_nothing_heard">Nothing was recognized. Please try again.</string>
+    <string name="ime_voice_finish_input">Finish the current input first.</string>
+    <string name="ime_voice_undo_unavailable">The text has changed, so it cannot be undone.</string>
+    <string name="ime_voice_undone">Undone.</string>
+    <string name="ime_voice_no_script">Choose a voice script in Settings first.</string>
+    <string name="ime_toolbar_voice_undo">Undo voice input</string>
+    <string name="ime_menu_extensions">Extensions</string>
 </resources>

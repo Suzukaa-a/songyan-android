@@ -32,5 +32,9 @@ gradlePlugin {
             id = "app.songyan.android.compose"
             implementationClass = "AndroidComposeConventionPlugin"
         }
+        create("dependencyBoundary") {
+            id = "app.songyan.boundary"
+            implementationClass = "DependencyBoundaryPlugin"
+        }
     }
 }

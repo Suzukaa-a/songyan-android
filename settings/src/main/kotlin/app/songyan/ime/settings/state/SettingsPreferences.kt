@@ -177,6 +177,16 @@ interface SettingsPreferences {
     /** Whether the notification permission explanation has already been shown. */
     val notificationRationaleShown: Flow<Boolean>
 
+    /** Whether the keyboard offers its own voice input (the microphone in the toolbar). */
+    val voiceInputEnabled: Flow<Boolean>
+
+    /** The script the keyboard runs for voice input; null until one is picked. */
+    val voiceInputScriptId: Flow<String?>
+
+    suspend fun setVoiceInputEnabled(value: Boolean)
+
+    suspend fun setVoiceInputScriptId(id: String?)
+
     suspend fun setActiveSchemaId(value: String)
 
     suspend fun setLayoutId(value: String)
@@ -491,6 +501,20 @@ class InMemorySettingsPreferences(
     override val keyFeedback: Flow<KeyFeedbackSettings> = feedback.asStateFlow()
     override val onboardingShown: Flow<Boolean> = onboarding.asStateFlow()
     override val notificationRationaleShown: Flow<Boolean> = rationale.asStateFlow()
+
+    private val voiceEnabled = MutableStateFlow(false)
+    private val voiceScript = MutableStateFlow<String?>(null)
+
+    override val voiceInputEnabled: Flow<Boolean> = voiceEnabled.asStateFlow()
+    override val voiceInputScriptId: Flow<String?> = voiceScript.asStateFlow()
+
+    override suspend fun setVoiceInputEnabled(value: Boolean) {
+        voiceEnabled.value = value
+    }
+
+    override suspend fun setVoiceInputScriptId(id: String?) {
+        voiceScript.value = id
+    }
 
     override suspend fun setActiveSchemaId(value: String) {
         schema.value = value

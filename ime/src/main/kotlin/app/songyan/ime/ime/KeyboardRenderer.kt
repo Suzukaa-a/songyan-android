@@ -422,6 +422,9 @@ internal fun KeyboardController.syncToolbar() {
             hidden = hideIdleToolbar,
             switcher = customSwitcherRequested && options.canSwitch,
             oneHandAvailable = oneHandAvailable,
+            toolsAvailable = toolPanel?.isAvailable() == true,
+            voiceAvailable = voiceInput.available(),
+            voiceUndoAvailable = voiceInput.undoAvailable(),
         )
     menu.setInputMethodOptions(options)
     menu.setToolbarShortcuts(shown = hideIdleToolbar, oneHandAvailable = oneHandAvailable, oneHand = oneHandMode)

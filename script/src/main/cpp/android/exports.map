@@ -1,0 +1,9 @@
+# Debug builds additionally export the CLI test entry (runCli) and the fopen interposer the
+# case harness needs; see the version note below. Production exports only the guard.
+{
+  global:
+    JNI_OnLoad;
+    Java_app_songyan_ime_script_*;
+  local:
+    *;
+};

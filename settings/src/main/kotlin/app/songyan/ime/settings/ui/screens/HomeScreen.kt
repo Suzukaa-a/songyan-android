@@ -15,9 +15,12 @@ import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -207,6 +210,27 @@ fun HomeScreen(
                         icon = Icons.Outlined.Widgets,
                         onClick = { onOpen(SettingsRoutes.quickContent()) },
                         selected = selectedRoute == SettingsRoutes.QUICK_CONTENT,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.row_scripts_title),
+                        subtitle = stringResource(R.string.row_scripts_subtitle),
+                        icon = Icons.Outlined.Code,
+                        onClick = { onOpen(SettingsRoutes.SCRIPTS) },
+                        selected = selectedRoute == SettingsRoutes.SCRIPTS,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.row_voice_title),
+                        subtitle = stringResource(R.string.row_voice_subtitle),
+                        icon = Icons.Outlined.Mic,
+                        onClick = { onOpen(SettingsRoutes.VOICE_INPUT) },
+                        selected = selectedRoute == SettingsRoutes.VOICE_INPUT,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.row_extensions_title),
+                        subtitle = stringResource(R.string.row_extensions_subtitle),
+                        icon = Icons.Outlined.Extension,
+                        onClick = { onOpen(SettingsRoutes.EXTENSIONS) },
+                        selected = selectedRoute == SettingsRoutes.EXTENSIONS,
                     )
                     SettingsRow(
                         title = stringResource(R.string.row_learning_title),

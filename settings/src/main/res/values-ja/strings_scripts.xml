@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home entry -->
+    <string name="row_scripts_title">スクリプト</string>
+    <string name="row_scripts_subtitle">1 ファイルの便利ツール：文字を入れて文字を取り出す</string>
+
+    <!-- Scripts list -->
+    <string name="scripts_title">スクリプト</string>
+    <string name="scripts_refresh">更新</string>
+    <string name="scripts_add">スクリプトを追加</string>
+    <string name="scripts_cancel">キャンセル</string>
+    <string name="scripts_ok">OK</string>
+    <string name="scripts_delete">削除</string>
+    <string name="scripts_edit">編集</string>
+    <string name="scripts_export">共有</string>
+    <string name="scripts_check_update">更新を確認</string>
+    <string name="scripts_move_up">上へ移動</string>
+    <string name="scripts_move_down">下へ移動</string>
+    <string name="scripts_origin_pasted">貼り付けから</string>
+    <string name="scripts_origin_file">ファイルから：%1$s</string>
+    <string name="scripts_origin_link">リンクから</string>
+    <string name="scripts_origin_edited">この画面で編集</string>
+
+    <!-- Add sheet -->
+    <string name="scripts_add_paste">スクリプトの文字を貼り付け</string>
+    <string name="scripts_add_file">ファイルを選択</string>
+    <string name="scripts_add_link">HTTPS リンクから</string>
+    <string name="scripts_add_editor">ここで書く</string>
+    <string name="scripts_add_paste_title">スクリプトを貼り付け</string>
+    <string name="scripts_add_paste_label">スクリプトの文字</string>
+    <string name="scripts_add_link_title">リンクから追加</string>
+    <string name="scripts_add_link_label">HTTPS リンク</string>
+    <string name="scripts_add_link_body">リンクは今 1 回だけダウンロードされます。更新は自分で頼んだときだけ確認します。</string>
+    <string name="scripts_import_failed_title">読み込まれませんでした</string>
+
+    <!-- Empty state -->
+    <string name="scripts_empty_title">スクリプトはまだありません</string>
+    <string name="scripts_empty_body">スクリプトは 1 つのファイルです。選択した文字を受け取り、処理した文字を返します。AI に説明を渡して書いてもらうか、下の例から始めましょう。</string>
+    <string name="scripts_copy_guide">AI 用の説明をコピー</string>
+    <string name="scripts_guide_copied">説明をコピーしました。AI とのチャットに貼り付けてください。</string>
+    <string name="scripts_guide_failed">説明を読み込めませんでした。もう一度お試しください。</string>
+    <string name="scripts_guide_clipboard_label">AI 用の説明</string>
+    <string name="scripts_example_title">例（ネットワーク接続なし）</string>
+
+    <!-- Confirmation page -->
+    <string name="scripts_confirm_title">スクリプトを確認</string>
+    <string name="scripts_confirm_section_what">これは何か</string>
+    <string name="scripts_confirm_name">名前</string>
+    <string name="scripts_confirm_reads">読み取れるもの</string>
+    <string name="scripts_confirm_reads_body">実行時に選択した文字だけです。</string>
+    <string name="scripts_confirm_section_connects">接続できるサイト</string>
+    <string name="scripts_confirm_connects_none">宣言されたサイトはありません</string>
+    <string name="scripts_confirm_connects_none_body">このスクリプトはネットワークに接続しません。</string>
+    <string name="scripts_confirm_section_settings">入力を求める設定</string>
+    <string name="scripts_confirm_action">確認</string>
+    <string name="scripts_confirm_note">上の内容を読んでから確認してください。シークレットはこの端末にのみ保存され、共有ファイルには含まれません。</string>
+    <string name="scripts_pending_title">確認が必要です</string>
+    <string name="scripts_pending_body">このスクリプトの宣言が変わりました。使う前にもう一度お読みください。</string>
+    <string name="scripts_unavailable_title">この端末では利用できません</string>
+    <string name="scripts_unavailable_body">このスクリプトが必要とする入力をこのキーボードは提供できないため、ここでは実行できません。</string>
+
+    <!-- Settings fields -->
+    <string name="scripts_setting_kind_text">テキスト</string>
+    <string name="scripts_setting_kind_url">アドレス</string>
+    <string name="scripts_setting_kind_choice">選択</string>
+    <string name="scripts_secret_suffix">（シークレット）</string>
+    <string name="scripts_secret_toggle">表示 / 非表示</string>
+
+    <!-- Trial run -->
+    <string name="scripts_test_section">試してみる</string>
+    <string name="scripts_test_input_label">送る文字</string>
+    <string name="scripts_test_run">実行</string>
+    <string name="scripts_test_outputs">出力</string>
+    <string name="scripts_test_no_output">スクリプトは何も返しませんでした。</string>
+    <string name="scripts_test_console">コンソール</string>
+    <string name="scripts_test_console_truncated">（省略あり）</string>
+    <string name="scripts_test_cancelled">実行はキャンセルされました。</string>
+
+    <!-- Detail page -->
+    <string name="scripts_about_section">情報</string>
+    <string name="scripts_origin">ソース</string>
+    <string name="scripts_description">説明</string>
+    <string name="scripts_connects">サイト</string>
+    <string name="scripts_settings_fields">設定</string>
+    <string name="scripts_editor_title">スクリプトを編集</string>
+    <string name="scripts_editor_new_title">スクリプトを書く</string>
+    <string name="scripts_editor_save">保存する</string>
+    <string name="scripts_editor_body">スクリプトは編集内容で保存されます。新しい宣言は、再確認しないと実行されません。</string>
+    <string name="scripts_delete_title">このスクリプトを削除しますか？</string>
+    <string name="scripts_delete_body">%1$s はこの端末から削除されます。元に戻せません。</string>
+    <string name="scripts_delete_confirm">削除</string>
+
+    <!-- Notices -->
+    <string name="scripts_notice_deleted">スクリプトを削除しました。</string>
+    <string name="scripts_notice_up_to_date">最新です。</string>
+    <string name="scripts_notice_updated">更新があります。使う前に何が変わったかお読みください。</string>
+    <string name="scripts_notice_exported">共有しました。</string>
+    <string name="scripts_notice_export_failed">共有できませんでした。もう一度お試しください。</string>
+
+    <!-- Engine refusals, one wording per machine code -->
+    <string name="scripts_error_timeout">スクリプトの実行が長すぎるため停止しました。</string>
+    <string name="scripts_error_out_of_memory">スクリプトがメモリを使いすぎたため停止しました。</string>
+    <string name="scripts_error_address_not_allowed">スクリプトが宣言していないサイトへ接続しようとしました。</string>
+    <string name="scripts_error_network_failure">ネットワークリクエストに失敗しました。</string>
+    <string name="scripts_error_bad_header">ファイル先頭の宣言が正しくありません。</string>
+    <string name="scripts_error_unsupported_api">このスクリプトには新しいバージョンの松煙が必要です。</string>
+    <string name="scripts_error_capability">このスクリプトが必要とする入力をこのキーボードは提供できません。</string>
+    <string name="scripts_error_unavailable">スクリプトのホストがインストールされていません。</string>
+    <string name="scripts_error_generic">スクリプトが失敗しました：%1$s</string>
+    <string name="scripts_error_at_line">%1$s（%2$d 行目）</string>
+</resources>

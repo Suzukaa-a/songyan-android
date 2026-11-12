@@ -2,6 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
+        <!-- Debug-only host window for the extension panel device test; not in release builds. -->
+        <activity
+            android:name="app.songyan.ime.addons.AddonPanelHostProbeActivity"
+            android:exported="false" />
+        <!-- Debug-only editor for smoke checks of the real keyboard window (adb starts it). -->
+        <activity
+            android:name="app.songyan.ime.addons.AddonImeProbeActivity"
+            android:exported="true"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+
         <service
             android:name=".deploy.probe.KagiroiDeployProbeService"
             android:exported="false"

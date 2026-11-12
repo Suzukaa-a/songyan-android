@@ -76,12 +76,21 @@ internal class KeyboardSwitcherPanel(
     var onSwitchInputMethod: () -> Unit = {}
     var onPickInputMethod: () -> Unit = {}
     var onVoiceInput: () -> Unit = {}
+
+    /** [packageName] of an extension whose own panel the user picked. */
+    var onExtensionPanel: (String) -> Unit = {}
     internal val scroll: ScrollView
     private var switchRows: List<View> = emptyList()
     private var voiceRows: List<View> = emptyList()
     private var shortcutRows: List<View> = emptyList()
     private var oneHandRows: List<View> = emptyList()
     private var oneHandLabel: TextView? = null
+
+    /** Extensions that offer their own panel; the section only exists while there are any. */
+    private var extensionSection: LinearLayout? = null
+    private var extensionDivider: View? = null
+    private var extensionTitle: TextView? = null
+    private var extensionEntries: List<Pair<String, String>> = emptyList()
 
     init {
         orientation = VERTICAL
@@ -143,6 +152,19 @@ internal class KeyboardSwitcherPanel(
         body.addView(voiceRow)
         switchRows = listOf(switchDivider, switchRow, pickRow)
         voiceRows = listOf(voiceDivider, voiceRow)
+        // Extensions with their own panel: one row each, added only when the host reports any.
+        val extensionsDivider = divider()
+        val extensionsTitle = title(context.getString(R.string.ime_menu_extensions))
+        val extensionsSection = LinearLayout(context).apply { orientation = VERTICAL }
+        extensionsDivider.visibility = View.GONE
+        extensionsTitle.visibility = View.GONE
+        extensionsSection.visibility = View.GONE
+        body.addView(extensionsDivider)
+        body.addView(extensionsTitle)
+        body.addView(extensionsSection)
+        extensionDivider = extensionsDivider
+        extensionTitle = extensionsTitle
+        extensionSection = extensionsSection
         setInputMethodOptions(InputMethodOptions())
         update(defaultSchemaId, defaultLayout)
     }
@@ -282,6 +304,35 @@ internal class KeyboardSwitcherPanel(
             layoutRow.addView(view)
         }
         update(currentSchema, currentLayout)
+    }
+
+    /**
+     * The extensions with their own panel, as (package name, label). Rebuilt when the list changes;
+     * an empty list hides the whole section so the menu stays as short as before.
+     */
+    fun setExtensionPanels(entries: List<Pair<String, String>>) {
+        val section = extensionSection ?: return
+        if (entries == extensionEntries) return
+        extensionEntries = entries
+        val removed = mutableListOf<View>()
+        for (index in section.childCount - 1 downTo 0) {
+            removed += section.getChildAt(index)
+            section.removeViewAt(index)
+        }
+        if (removed.isNotEmpty()) {
+            val removedSet = removed.toSet()
+            actionRows.removeAll(removedSet)
+            actionLabels.removeAll(removedSet)
+            actionChevrons.removeAll(removedSet)
+            actionDividers.removeAll(removedSet)
+        }
+        val visible = entries.isNotEmpty()
+        extensionDivider?.visibility = if (visible) VISIBLE else GONE
+        extensionTitle?.visibility = if (visible) VISIBLE else GONE
+        section.visibility = if (visible) VISIBLE else GONE
+        for ((packageName, label) in entries) {
+            section.addView(actionRow(label) { onExtensionPanel(packageName) })
+        }
     }
 
     /** Shows the input method rows the system can serve: switching, and voice when a voice input method exists. */

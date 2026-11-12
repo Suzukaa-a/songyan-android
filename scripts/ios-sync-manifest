@@ -27,6 +27,18 @@ Packages/PackageManager/Sources/PackageManager/Resources/RimePrelude/ core/rime/
 Resources/Legal/ThirdPartyNotices.txt settings/src/main/assets/legal/ThirdPartyNotices.txt
 Resources/Legal/licenses/ settings/src/main/assets/legal/licenses/
 
+# --- Shared script runtime (P10) -----------------------------------------
+# The contract, bridge, JS bootstrap, test corpus, minimal example and AI guide are one shared
+# artefact; both platforms' tests read the same files. The engine pin is shared too, so the two
+# builds cannot drift onto different QuickJS versions.
+Tools/Script/include/ script/src/main/cpp/include/
+Tools/Script/src/ script/src/main/cpp/src/
+Tools/Script/tests/cases/ script/src/androidTest/assets/script-cases/
+Tools/Script/tests/execution/ script/src/androidTest/assets/script-execution/
+Tools/Script/resources/ai-guide.txt script/src/main/assets/script/ai-guide.txt
+Tools/Script/examples/ script/src/main/assets/script/examples/
+Tools/BuildRimeIOS/QUICKJS-VERSIONS.env script/src/main/cpp/QUICKJS-VERSIONS.env
+
 # --- Reusable UI data ----------------------------------------------------
 Resources/Layouts/ core/layout/src/main/resources/layouts/
 Packages/QuickContentKit/Sources/QuickContentKit/Resources/default-symbols.json core/content/src/main/resources/default-symbols.json

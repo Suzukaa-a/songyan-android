@@ -341,4 +341,44 @@
     <string name="t9_symbols_inherit">使用继承的顺序</string>
     <string name="layout_error_t9_behavior">这种首键行为需要九键布局。</string>
     <string name="layout_error_t9_symbols">快捷符号需要九键布局，最多 12 个不重复的字符，不能包含空格。</string>
+    <!-- Voice input -->
+    <string name="row_voice_title">语音输入</string>
+    <string name="row_voice_subtitle">说话代替打字</string>
+    <string name="voice_title">语音输入</string>
+    <string name="voice_body">键盘会录下你说的话，交给你选的脚本；脚本返回的文字会输入到光标处。声音脚本在「脚本」页添加，并要声明接收声音，才会出现在这里。</string>
+    <string name="voice_switch_title">麦克风按钮</string>
+    <string name="voice_switch_subtitle">在键盘工具栏显示麦克风</string>
+    <string name="voice_scripts_section">声音脚本</string>
+    <string name="voice_scripts_empty">还没有声音脚本。先在「脚本」页添加一个。</string>
+    <string name="voice_scripts_loading">正在读取脚本…</string>
+
+    <!-- 设置 → 扩展：以独立 APK 安装的外部 Addon。 -->
+    <string name="row_extensions_title">扩展</string>
+    <string name="row_extensions_subtitle">这台设备上安装的 Addon</string>
+    <string name="extensions_title">扩展</string>
+    <string name="extensions_body">扩展是用户自己从系统安装的独立应用。松烟只绑定它的服务，不下载、不安装、不加载它的代码。每一项默认关闭，在这里打开后才生效。</string>
+    <string name="extensions_loading">正在查找已安装的扩展…</string>
+    <string name="extensions_empty_title">还没有安装扩展</string>
+    <string name="extensions_empty_body">先安装扩展应用，再回到这里打开。</string>
+    <string name="extensions_not_available">这个版本里没有扩展列表。</string>
+    <string name="extensions_rescan">重新扫描</string>
+    <string name="extensions_scan_failed">没能读取已安装的扩展。</string>
+    <string name="extensions_compatible">可用</string>
+    <string name="extensions_incompatible">不兼容</string>
+    <string name="extensions_unknown">未能验证</string>
+    <string name="extensions_version">版本 %1$s</string>
+    <string name="extensions_signer">签名 %1$s</string>
+    <string name="extensions_permissions">权限：%1$s</string>
+    <string name="extensions_no_permissions">权限：无额外权限</string>
+    <string name="extensions_tools">文字工具：%1$s</string>
+    <string name="extensions_panel">提供自带面板</string>
+    <string name="extensions_voice">提供语音输入</string>
+    <string name="extensions_last_call">最近调用：%1$s · %2$d 毫秒</string>
+    <string name="extensions_last_call_error">最近调用：%1$s · %2$d 毫秒 · %3$s</string>
+    <string name="extensions_call_kind_text">文字工具</string>
+    <string name="extensions_call_kind_voice">语音输入</string>
+    <string name="extensions_call_kind_panel">自带面板</string>
+    <string name="extensions_switch">打开或关闭 %1$s</string>
+    <string name="voice_addon_option">%1$s（扩展）</string>
+    <string name="extensions_toggle_failed">开关未能保存，扩展状态未改变。</string>
 </resources>

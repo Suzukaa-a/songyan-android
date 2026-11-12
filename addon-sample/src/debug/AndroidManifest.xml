@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Debug-only configuration: the addon services run in their own ":addon" process so the
+      integration tests cross a real process boundary (a release addon is a separate APK anyway),
+      and the host window used to embed the panel lives in the app's main process, like the
+      keyboard's window does.
+    -->
+    <application>
+        <activity
+            android:name="app.songyan.ime.addon.sample.debug.PanelHostActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <service
+            android:name=".SampleAddonService"
+            android:process=":addon" />
+
+        <service
+            android:name=".debug.FutureProtocolAddonService"
+            android:exported="true"
+            android:process=":addon">
+            <intent-filter>
+                <action android:name="app.songyan.ime.addon.SERVICE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".debug.StrictCallerAddonService"
+            android:exported="true"
+            android:process=":addon">
+            <intent-filter>
+                <action android:name="app.songyan.ime.addon.SERVICE" />
+            </intent-filter>
+        </service>
+
+        <!-- Debug-only: opens a panel but never hands back its surface (host timeout path). -->
+        <service
+            android:name=".debug.StalledPanelAddonService"
+            android:exported="true"
+            android:process=":addon">
+            <intent-filter>
+                <action android:name="app.songyan.ime.addon.SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

@@ -1,6 +1,8 @@
 package app.songyan.ime.ime
 
 import android.animation.ValueAnimator
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +26,12 @@ import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.ime.panels.QuickSettingsState
+import app.songyan.ime.ime.tools.ToolEditorBridge
+import app.songyan.ime.ime.tools.ToolExecutor
+import app.songyan.ime.ime.tools.ToolPanelController
+import app.songyan.ime.ime.tools.ToolPanelView
+import app.songyan.ime.ime.voice.VoiceInputController
+import app.songyan.ime.ime.voice.VoiceInputHost
 import app.songyan.ime.keyboard.engine.CandidateReadingFilter
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.InputLanguage
@@ -72,6 +80,17 @@ class KeyboardController(
     private val quickInsert: QuickInsertHost? = null,
     /** Where the toolbar's copied-text chip comes from; null shows none. */
     internal val copiedChipSource: CopiedChipSource? = null,
+    /** Tools the host offers; null, or no executor with them, keeps the toolbar entry hidden. */
+    private val toolBridge: ToolEditorBridge? = null,
+    private val toolExecutor: ToolExecutor? = null,
+    /** Recording, the microphone permission and the audio script runner; the app implements it. */
+    private val voiceInputHost: VoiceInputHost = VoiceInputHost.NONE,
+    /** Where voice hints go; null keeps them in the candidate row. */
+    private val onVoiceMessage: ((String) -> Unit)? = null,
+    /** Extensions that offer their own panel, as (package name, label); empty hides the menu section. */
+    internal val extensionPanels: () -> List<Pair<String, String>> = { emptyList() },
+    /** The user picked one of those panels from the input-method menu. */
+    internal val onOpenExtensionPanel: (String) -> Unit = {},
 ) {
     internal val keyNames = KeyNames(context)
 
@@ -273,6 +292,40 @@ class KeyboardController(
      */
     internal val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
     internal var session: InputSession? = null
+
+    /** Whether the user turned voice input on in settings. */
+    internal var voiceInputEnabled = false
+
+    /** The script the user picked for voice input; null until one is picked. */
+    internal var voiceInputScriptId: String? = null
+
+    /**
+     * The microphone button's behaviour: the app records and runs the audio script, this controller
+     * commits the returned text and offers to take it back. Nothing runs before the user presses it.
+     */
+    internal val voiceInput: VoiceInputController =
+        VoiceInputController(
+            context = context,
+            scope = scope,
+            host = voiceInputHost,
+            canWrite = { policy.fieldKind != FieldKind.PASSWORD },
+            isComposing = { session?.snapshot?.isComposing == true },
+            insert = { text -> callbacks.commit(text, false) },
+            replaceBeforeCursor = { expected, replacement -> callbacks.replaceBeforeCursor(expected, replacement) },
+            onChanged = {
+                syncToolbar()
+                render()
+            },
+            onMessage = { message ->
+                if (onVoiceMessage !=
+                    null
+                ) {
+                    onVoiceMessage.invoke(message)
+                } else {
+                    candidates.flash(message)
+                }
+            },
+        )
 
     /**
      * The input language of the active scheme, read from the session's cached profile.
@@ -643,6 +696,16 @@ class KeyboardController(
             )
         }
 
+    /** The tool panel controller; null until the host injects a catalog and an executor. */
+    internal val toolPanel: ToolPanelController? =
+        if (toolBridge != null && toolExecutor != null) {
+            ToolPanelController(toolBridge, toolExecutor, scope)
+        } else {
+            null
+        }
+
+    private var toolPanelView: ToolPanelView? = null
+
     init {
         wireViews()
     }
@@ -828,6 +891,8 @@ class KeyboardController(
     ) {
         // Search spelling belongs to the query, even when the editor itself survives a restart.
         val keepEditorComposition = keepComposition && panelSearch == null
+        // A voice take and its undo offer belong to the editor they were made in.
+        voiceInput.onEditorChanged()
         generation++
         // Reads queued under the old generation are dropped without running.
         candidates.abandonLoad()
@@ -980,6 +1045,7 @@ class KeyboardController(
     /** The keyboard window went away: the chip and the inline suggestions go with it. */
     fun onWindowHidden() {
         windowShown = false
+        voiceInput.onWindowHidden()
         copiedChipSource?.onInputFinished()
         inlineSuggestions.clear()
         syncBand()
@@ -1068,6 +1134,40 @@ class KeyboardController(
         callbacks.panelsChanged(true)
     }
 
+    /**
+     * Opens the tool panel (the toolbar's tools entry). Only offered while the injected host has
+     * tools and the focused editor may show them; the panel itself renders the model's state.
+     */
+    fun openToolPanel() {
+        val quick = panels ?: return
+        val controller = toolPanel ?: return
+        if (retired || !controller.isAvailable()) return
+        closeKeyboardMenu()
+        val view =
+            toolPanelView
+                ?: ToolPanelView(context).also { panel ->
+                    panel.onRun = controller::start
+                    panel.onSelect = controller::selectResult
+                    panel.onCopy = {
+                        controller.copy()?.let { text ->
+                            context
+                                .getSystemService(ClipboardManager::class.java)
+                                ?.setPrimaryClip(ClipData.newPlainText(null, text))
+                        }
+                    }
+                    panel.onReplace = controller::replace
+                    panel.onInsert = controller::insert
+                    panel.onUndo = controller::undo
+                    panel.onCancel = controller::cancel
+                    panel.onCloseRequested = { closePanels() }
+                    controller.onChanged = panel::render
+                    toolPanelView = panel
+                }
+        controller.open()
+        quick.openTools(view)
+        callbacks.panelsChanged(true)
+    }
+
     /** Opens the in-keyboard settings panel (from the input-method menu). */
     fun openKeyboardSettingsPanel() {
         val quick = panels ?: return
@@ -1084,6 +1184,9 @@ class KeyboardController(
 
     /** Closes everything the keyboard has open: a new editor or a hidden keyboard starts clean. */
     fun closeAll() {
+        // A tool run belongs to the editor it read; closing or replacing that editor ends it.
+        toolPanel?.onEditorChanged()
+        voiceInput.onEditorChanged()
         keyboard.closePopup()
         popupLayer.clear()
         candidates.dismissPopup()
@@ -1135,6 +1238,8 @@ class KeyboardController(
 
     fun retire() {
         retired = true
+        voiceInput.dispose()
+        toolPanel?.close()
         noticeTimer.removeCallbacks(endSwitchNotice)
         switchFade?.cancel()
         copiedChipSource?.stop()
@@ -1151,6 +1256,7 @@ class KeyboardController(
         panels?.settle()
         syncMenu()
         refreshInputMethodOptions()
+        menu.setExtensionPanels(extensionPanels())
         menuOpen = true
         // The menu replaces the whole key surface, so it takes that surface's exact height: a
         // shorter menu would resize the IME window and scroll the editor under the user's text.

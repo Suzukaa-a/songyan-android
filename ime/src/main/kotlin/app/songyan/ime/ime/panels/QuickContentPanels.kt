@@ -1,6 +1,7 @@
 package app.songyan.ime.ime.panels
 
 import android.content.Context
+import android.view.View
 import app.songyan.ime.content.EmojiCatalog
 import app.songyan.ime.content.QuickInsertDateFormat
 import app.songyan.ime.ime.EditAction
@@ -253,6 +254,9 @@ class QuickContentPanels(
 
     /** The panel the keyboard last opened; null before the first one and after [close]. */
     private var shown: QuickContentPanelView? = null
+
+    /** The tool panel, when that panel is the one showing; it is a plain view, not a quick-content one. */
+    private var toolPanelView: View? = null
     private var content: QuickContentPanelContent? = null
 
     /**
@@ -329,6 +333,13 @@ class QuickContentPanels(
                 panel.update(catalog.categories, recents)
             }
         }
+    }
+
+    /** The tool panel: a plain view over the same host, closed by Back like every other panel. */
+    fun openTools(view: View) {
+        shown = null
+        toolPanelView = view
+        host.show(view)
     }
 
     /** The edit panel: arrows, select, select all, copy, cut, paste, undo. */
@@ -422,6 +433,7 @@ class QuickContentPanels(
         if (!host.isShowing) return false
         host.hide()
         shown = null
+        toolPanelView = null
         edit.initializedValue?.reset()
         emoji.initializedValue?.reset()
         return true

@@ -37,11 +37,13 @@ class ToolbarView(
         INPUT_METHODS(R.drawable.ic_toolbar_keyboard, R.string.ime_toolbar_input_methods),
         EMOJI(R.drawable.ic_toolbar_emoji, R.string.ime_toolbar_emoji),
         EDIT(R.drawable.ic_toolbar_edit, R.string.ime_toolbar_edit),
+        TOOLS(R.drawable.ic_toolbar_tools, R.string.ime_toolbar_tools),
         ONE_HAND(R.drawable.ic_qs_one_hand_off, R.string.ime_qs_one_hand),
         SETTINGS(R.drawable.ic_toolbar_settings, R.string.ime_menu_keyboard_settings),
         HIDE(R.drawable.ic_toolbar_hide, R.string.ime_toolbar_hide),
         SWITCH_INPUT_METHOD(R.drawable.ic_toolbar_globe, R.string.ime_toolbar_switch_input_method),
         VOICE_INPUT(R.drawable.ic_toolbar_mic, R.string.ime_toolbar_voice_input),
+        VOICE_UNDO(R.drawable.ic_edit_undo, R.string.ime_toolbar_voice_undo),
         ;
 
         /** The user-chosen item this action stands for; null for the collapse button and system-driven entries. */

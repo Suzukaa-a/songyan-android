@@ -171,10 +171,12 @@ internal fun KeyboardController.wireViews() {
             ToolbarView.Action.ONE_HAND -> toggleOneHand()
             ToolbarView.Action.EMOJI -> openEmojiPanel()
             ToolbarView.Action.EDIT -> openEditPanel()
+            ToolbarView.Action.TOOLS -> openToolPanel()
             ToolbarView.Action.SETTINGS -> openKeyboardSettingsPanel()
             ToolbarView.Action.HIDE -> callbacks.hideKeyboard()
             ToolbarView.Action.SWITCH_INPUT_METHOD -> callbacks.inputMethods.switchToOther()
-            ToolbarView.Action.VOICE_INPUT -> callbacks.inputMethods.startVoice()
+            ToolbarView.Action.VOICE_INPUT -> voiceInput.onPressed()
+            ToolbarView.Action.VOICE_UNDO -> voiceInput.undo()
         }
     }
     toolbar.onNoticeItem = { item ->
@@ -227,6 +229,10 @@ internal fun KeyboardController.wireViews() {
     menu.onVoiceInput = {
         closeKeyboardMenu()
         callbacks.inputMethods.startVoice()
+    }
+    menu.onExtensionPanel = { packageName ->
+        closeKeyboardMenu()
+        onOpenExtensionPanel(packageName)
     }
     observePreferences()
     observeKana12Preferences()

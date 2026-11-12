@@ -180,6 +180,18 @@ internal fun KeyboardController.observePreferences() {
             enqueue { render() }
         }
     }
+    scope.launch {
+        source.voiceInputEnabled.collect {
+            voiceInputEnabled = it
+            voiceInput.configure(voiceInputEnabled, voiceInputScriptId)
+        }
+    }
+    scope.launch {
+        source.voiceInputScriptId.collect {
+            voiceInputScriptId = it
+            voiceInput.configure(voiceInputEnabled, voiceInputScriptId)
+        }
+    }
 }
 
 /** Renders again whenever the layout catalog is installed: a new layout, page or pairing shows at once. */

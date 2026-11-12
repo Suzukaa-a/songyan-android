@@ -16,6 +16,7 @@ dependencies {
     api(project(":core:appearance"))
     api(project(":core:content"))
     api(project(":core:packages"))
+    implementation(project(":script"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

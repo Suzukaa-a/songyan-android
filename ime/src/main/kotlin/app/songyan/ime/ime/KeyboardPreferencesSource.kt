@@ -147,4 +147,10 @@ interface KeyboardPreferencesSource {
     val kana12FlickOnly: Flow<Boolean> get() = flowOf(false)
 
     suspend fun setKana12FlickOnly(value: Boolean) = Unit
+
+    /** Whether the keyboard offers its own voice input (the microphone in the toolbar). */
+    val voiceInputEnabled: Flow<Boolean> get() = flowOf(false)
+
+    /** The script the keyboard runs for voice input; null until the user picks one. */
+    val voiceInputScriptId: Flow<String?> get() = flowOf(null)
 }

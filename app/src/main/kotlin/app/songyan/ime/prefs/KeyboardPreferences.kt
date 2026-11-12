@@ -104,6 +104,20 @@ class KeyboardPreferences(
             .map { NineKeyCandidateSide.resolve(it[KEY_NINE_KEY_CANDIDATE_SIDE]).wire }
             .distinctUntilChanged()
 
+    /** Whether the keyboard offers its own voice input (the microphone in the toolbar). */
+    val voiceInputEnabled: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_VOICE_INPUT_ENABLED] ?: false }
+            .distinctUntilChanged()
+
+    /** The script the keyboard runs for voice input; null until the user picks one. */
+    val voiceInputScriptId: Flow<String?> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_VOICE_INPUT_SCRIPT_ID] }
+            .distinctUntilChanged()
+
     /** "off" / "left" / "right"; one-handed mode is a keyboard presentation choice. */
     val oneHand: Flow<String> =
         appContext.keyboardDataStore.data
@@ -593,6 +607,17 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_NOTIFICATION_RATIONALE_SHOWN] = true }
     }
 
+    suspend fun setVoiceInputEnabled(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_VOICE_INPUT_ENABLED] = value }
+    }
+
+    /** Null forgets the pick; the keyboard offers no microphone until another script is chosen. */
+    suspend fun setVoiceInputScriptId(id: String?) {
+        appContext.keyboardDataStore.edit { prefs ->
+            if (id == null) prefs.remove(KEY_VOICE_INPUT_SCRIPT_ID) else prefs[KEY_VOICE_INPUT_SCRIPT_ID] = id
+        }
+    }
+
     suspend fun setKeyFeedback(value: KeyFeedbackSettings) {
         appContext.keyboardDataStore.edit { prefs ->
             prefs.putOrRemove(KEY_SOUND_ENABLED, value.soundEnabled)
@@ -696,6 +721,8 @@ class KeyboardPreferences(
         private val KEY_RELEASE_HAPTIC = booleanPreferencesKey("release_haptic")
         private val KEY_ONBOARDING_SHOWN = booleanPreferencesKey("onboarding_shown")
         private val KEY_NOTIFICATION_RATIONALE_SHOWN = booleanPreferencesKey("notification_rationale_shown")
+        private val KEY_VOICE_INPUT_ENABLED = booleanPreferencesKey("voice_input_enabled")
+        private val KEY_VOICE_INPUT_SCRIPT_ID = stringPreferencesKey("voice_input_script_id")
         private val KEY_CANDIDATE_TEXT_SIZE = stringPreferencesKey("candidate_text_size")
         private val KEY_COLLAPSED_CANDIDATE_COMMENTS = booleanPreferencesKey("collapsed_candidate_comments")
         private val KEY_SOUND_ENABLED = booleanPreferencesKey("key_sound_enabled")

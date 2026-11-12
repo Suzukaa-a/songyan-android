@@ -157,7 +157,7 @@
     <string name="rime_config_error_unavailable">Couldn\'t apply the changes right now. Try again later.</string>
     <string name="rime_config_skipped">Your configuration doesn\'t work with the input scheme in use, so the scheme is used as it comes.</string>
     <string name="rime_config_refused_read_only">This folder is read-only. Put your files in “My configuration”, then tap Apply changes in Songyan settings.</string>
-    <string name="rime_config_refused_folder">“My configuration” only holds a “lua” folder, for scripts. Put the other files in it directly.</string>
+    <string name="rime_config_refused_folder">“My configuration” only holds a “lua” folder, for Lua scripts. Put the other files in it directly.</string>
     <string name="rime_config_refused_type">“%1$s” can\'t go here. “My configuration” takes .yaml and .txt files.</string>
     <string name="rime_config_refused_script_type">“%1$s” can\'t go here. This folder takes .lua files.</string>
     <string name="rime_config_refused_large">“%1$s” is too large to edit here. Each file can be up to 4 MB.</string>
@@ -173,4 +173,5 @@
     <string name="package_learning_not_in_use">Could not switch to this input scheme, so its learned words were not merged.</string>
     <string name="package_learning_nothing">The learned words in this package do not match its dictionaries. Nothing was merged.</string>
     <string name="package_learning_gone">These learned words are no longer there.</string>
+    <string name="addon_panel_failed">The extension panel could not open.</string>
 </resources>

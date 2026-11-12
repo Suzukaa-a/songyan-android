@@ -118,6 +118,13 @@ class AppSettingsPreferences(
     override val onboardingShown: Flow<Boolean> = preferences.onboardingShown
     override val notificationRationaleShown: Flow<Boolean> = preferences.notificationRationaleShown
 
+    override val voiceInputEnabled: Flow<Boolean> = preferences.voiceInputEnabled
+    override val voiceInputScriptId: Flow<String?> = preferences.voiceInputScriptId
+
+    override suspend fun setVoiceInputEnabled(value: Boolean) = preferences.setVoiceInputEnabled(value)
+
+    override suspend fun setVoiceInputScriptId(id: String?) = preferences.setVoiceInputScriptId(id)
+
     override suspend fun setOnboardingShown() {
         preferences.setOnboardingShown()
     }

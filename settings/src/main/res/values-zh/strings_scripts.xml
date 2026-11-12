@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home entry -->
+    <string name="row_scripts_title">脚本</string>
+    <string name="row_scripts_subtitle">单文件小工具：文字进，文字出</string>
+
+    <!-- Scripts list -->
+    <string name="scripts_title">脚本</string>
+    <string name="scripts_refresh">刷新</string>
+    <string name="scripts_add">添加脚本</string>
+    <string name="scripts_cancel">取消</string>
+    <string name="scripts_ok">好</string>
+    <string name="scripts_delete">删除</string>
+    <string name="scripts_edit">编辑</string>
+    <string name="scripts_export">分享</string>
+    <string name="scripts_check_update">检查更新</string>
+    <string name="scripts_move_up">上移</string>
+    <string name="scripts_move_down">下移</string>
+    <string name="scripts_origin_pasted">粘贴导入</string>
+    <string name="scripts_origin_file">来自文件：%1$s</string>
+    <string name="scripts_origin_link">来自链接</string>
+    <string name="scripts_origin_edited">在此编辑</string>
+
+    <!-- Add sheet -->
+    <string name="scripts_add_paste">粘贴脚本文字</string>
+    <string name="scripts_add_file">选择文件</string>
+    <string name="scripts_add_link">从 HTTPS 链接</string>
+    <string name="scripts_add_editor">在这里写一个</string>
+    <string name="scripts_add_paste_title">粘贴脚本</string>
+    <string name="scripts_add_paste_label">脚本文字</string>
+    <string name="scripts_add_link_title">从链接添加</string>
+    <string name="scripts_add_link_label">HTTPS 链接</string>
+    <string name="scripts_add_link_body">链接只会在现在下载一次。更新只在你要求时检查。</string>
+    <string name="scripts_import_failed_title">未导入</string>
+
+    <!-- Empty state -->
+    <string name="scripts_empty_title">还没有脚本</string>
+    <string name="scripts_empty_body">脚本是一个单文件：收到你选中的文字，返回处理后的文字。把说明复制给 AI 让它写一个，或从下面的例子开始。</string>
+    <string name="scripts_copy_guide">复制给 AI 的说明</string>
+    <string name="scripts_guide_copied">说明已复制。粘贴到和 AI 的对话里即可。</string>
+    <string name="scripts_guide_failed">读取说明失败，请重试。</string>
+    <string name="scripts_guide_clipboard_label">给 AI 的说明</string>
+    <string name="scripts_example_title">例子（不联网）</string>
+
+    <!-- Confirmation page -->
+    <string name="scripts_confirm_title">确认脚本</string>
+    <string name="scripts_confirm_section_what">它是什么</string>
+    <string name="scripts_confirm_name">名字</string>
+    <string name="scripts_confirm_reads">能读什么</string>
+    <string name="scripts_confirm_reads_body">运行时你选中的文字，仅此而已。</string>
+    <string name="scripts_confirm_section_connects">会连的网站</string>
+    <string name="scripts_confirm_connects_none">没有声明网站</string>
+    <string name="scripts_confirm_connects_none_body">这个脚本不会连接网络。</string>
+    <string name="scripts_confirm_section_settings">要填的设置</string>
+    <string name="scripts_confirm_action">确认</string>
+    <string name="scripts_confirm_note">读完上面的清单再确认。密钥只存在这台设备上，不会写进分享出去的文件。</string>
+    <string name="scripts_pending_title">需要确认</string>
+    <string name="scripts_pending_body">这个脚本的声明变了。使用前请再读一遍。</string>
+    <string name="scripts_unavailable_title">在这台设备上不可用</string>
+    <string name="scripts_unavailable_body">这个脚本需要的输入是此键盘无法提供的，所以在这里无法运行。</string>
+
+    <!-- Settings fields -->
+    <string name="scripts_setting_kind_text">文字</string>
+    <string name="scripts_setting_kind_url">地址</string>
+    <string name="scripts_setting_kind_choice">选项</string>
+    <string name="scripts_secret_suffix">（密钥）</string>
+    <string name="scripts_secret_toggle">显示或隐藏</string>
+
+    <!-- Trial run -->
+    <string name="scripts_test_section">试一试</string>
+    <string name="scripts_test_input_label">要发送的文字</string>
+    <string name="scripts_test_run">运行</string>
+    <string name="scripts_test_outputs">输出</string>
+    <string name="scripts_test_no_output">脚本没有返回内容。</string>
+    <string name="scripts_test_console">控制台</string>
+    <string name="scripts_test_console_truncated">（有省略）</string>
+    <string name="scripts_test_cancelled">运行已取消。</string>
+
+    <!-- Detail page -->
+    <string name="scripts_about_section">关于</string>
+    <string name="scripts_origin">来源</string>
+    <string name="scripts_description">描述</string>
+    <string name="scripts_connects">网站</string>
+    <string name="scripts_settings_fields">设置</string>
+    <string name="scripts_editor_title">编辑脚本</string>
+    <string name="scripts_editor_new_title">写一个脚本</string>
+    <string name="scripts_editor_save">保存</string>
+    <string name="scripts_editor_body">脚本按编辑后的内容保存。新的声明需要再次确认才会运行。</string>
+    <string name="scripts_delete_title">删除这个脚本？</string>
+    <string name="scripts_delete_body">%1$s 会从这台设备移除，无法撤销。</string>
+    <string name="scripts_delete_confirm">删除</string>
+
+    <!-- Notices -->
+    <string name="scripts_notice_deleted">脚本已删除。</string>
+    <string name="scripts_notice_up_to_date">已是最新。</string>
+    <string name="scripts_notice_updated">发现更新。使用前请读一读改了什么。</string>
+    <string name="scripts_notice_exported">已分享。</string>
+    <string name="scripts_notice_export_failed">分享失败，请重试。</string>
+
+    <!-- Engine refusals, one wording per machine code -->
+    <string name="scripts_error_timeout">脚本运行太久，已停止。</string>
+    <string name="scripts_error_out_of_memory">脚本占用内存过多，已停止。</string>
+    <string name="scripts_error_address_not_allowed">脚本尝试访问它没有声明的网站。</string>
+    <string name="scripts_error_network_failure">网络请求失败。</string>
+    <string name="scripts_error_bad_header">文件开头的声明不合法。</string>
+    <string name="scripts_error_unsupported_api">这个脚本需要更新版本的松烟输入法。</string>
+    <string name="scripts_error_capability">这个脚本需要的输入是此键盘无法提供的。</string>
+    <string name="scripts_error_unavailable">脚本宿主未安装。</string>
+    <string name="scripts_error_generic">脚本失败：%1$s</string>
+    <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
+</resources>

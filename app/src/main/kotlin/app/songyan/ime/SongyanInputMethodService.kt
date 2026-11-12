@@ -19,11 +19,21 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.LinearLayout
+import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import app.songyan.ime.addons.AddonEditorAccess
+import app.songyan.ime.addons.AddonPanelController
+import app.songyan.ime.addons.AddonRegistryHolder
+import app.songyan.ime.addons.AddonToolCatalog
+import app.songyan.ime.addons.AddonToolExecutor
+import app.songyan.ime.addons.CombinedToolCatalog
+import app.songyan.ime.addons.CombinedToolExecutor
 import app.songyan.ime.appearance.AppearanceRepository
+import app.songyan.ime.audio.VoiceInputHostImpl
+import app.songyan.ime.audio.VoiceRecorder
 import app.songyan.ime.content.ClipboardHistoryRecorder
 import app.songyan.ime.content.QuickContentEvents
 import app.songyan.ime.content.QuickContentRepository
@@ -47,7 +57,9 @@ import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.CopiedChipSource
 import app.songyan.ime.ime.EditorConnection
 import app.songyan.ime.ime.EditorPolicy
+import app.songyan.ime.ime.EditorToolGatewayBridge
 import app.songyan.ime.ime.EngineNoticeAction
+import app.songyan.ime.ime.FieldKind
 import app.songyan.ime.ime.ImePerf
 import app.songyan.ime.ime.ImeViewOwners
 import app.songyan.ime.ime.InlineAutofill
@@ -70,6 +82,11 @@ import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.prefs.LogAndContinue
 import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
+import app.songyan.ime.script.ScriptCatalogCache
+import app.songyan.ime.script.ScriptRegistryHolder
+import app.songyan.ime.scripttools.ScriptToolCatalog
+import app.songyan.ime.scripttools.ScriptToolExecutor
+import app.songyan.ime.scripttools.ToolPipelineLimits
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.ui.theme.ThemeMode
 import app.songyan.ime.storage.AppStorage
@@ -241,7 +258,19 @@ class SongyanInputMethodService : InputMethodService() {
 
     private var controller: KeyboardController? = null
 
+    /** The extension panel currently hosting a SurfaceView in this keyboard window. */
+    private var addonPanel: AddonPanelController? = null
+
     private val inputMethods by lazy { SystemInputMethods(this) }
+
+    /** The script catalog snapshot: the tool catalog and voice input read it, the proxy writes it. */
+    private val scriptCatalogCache by lazy { ScriptCatalogCache(this) }
+
+    /** Voice input takes; one at a time, recorded in this process. */
+    private val voiceRecorder by lazy { VoiceRecorder(this) }
+
+    /** The app side of the keyboard's voice input: recording, RECORD_AUDIO and the audio script. */
+    private val voiceInputHost by lazy { VoiceInputHostImpl(this, voiceRecorder, scriptCatalogCache) }
 
     /** Counts input starts, so a show never restarts the keyboard on an input it already started. */
     private var inputToken = 0
@@ -593,6 +622,52 @@ class SongyanInputMethodService : InputMethodService() {
         DeploymentStarter.requestRedeployActive(this)
     }
 
+    /** The editor operations the extension panel may use, on top of the keyboard's EditorConnection. */
+    private fun addonEditorAccess(): AddonEditorAccess =
+        object : AddonEditorAccess {
+            override val hasEditor: Boolean
+                get() = currentInputConnection != null
+
+            override val isPassword: Boolean
+                get() = policy.fieldKind == FieldKind.PASSWORD
+
+            override val isComposing: Boolean
+                get() = editor.composing
+
+            override val selection: IntRange?
+                get() {
+                    if (!editor.selection.known) return null
+                    val start = minOf(editor.selection.start, editor.selection.end)
+                    val end = maxOf(editor.selection.start, editor.selection.end)
+                    return start until end
+                }
+
+            override fun selectedText(): String? = currentInputConnection?.getSelectedText(0)?.toString()
+
+            override fun textBeforeCursor(maxUnits: Int): String? =
+                currentInputConnection?.getTextBeforeCursor(maxUnits, 0)?.toString()
+
+            override fun insert(text: String) {
+                editor.update("", listOf(text))
+            }
+
+            override fun deleteBefore(units: Int) {
+                editor.deleteBeforeCursor(units)
+            }
+        }
+
+    /** Enabled extensions that offer their own panel, for the input-method menu's extension section. */
+    private fun addonPanelEntries(): List<Pair<String, String>> =
+        AddonRegistryHolder.current
+            ?.enabledCompatible()
+            ?.mapNotNull { entry ->
+                if (entry.handshake?.supportsPanel == true) {
+                    entry.packageName to entry.facts.label.ifBlank { entry.packageName }
+                } else {
+                    null
+                }
+            }.orEmpty()
+
     /**
      * Opens settings on [target]. CLEAR_TOP reuses a running settings screen instead of stacking a
      * second one, and the target makes it land on that page rather than wherever it was left.
@@ -607,7 +682,10 @@ class SongyanInputMethodService : InputMethodService() {
 
     private fun updatePanelBack(visible: Boolean) {
         if (Build.VERSION.SDK_INT < 33) return
-        val callback = panelBack ?: OnBackInvokedCallback { controller?.closePanels() }.also { panelBack = it }
+        val callback =
+            panelBack ?: OnBackInvokedCallback {
+                if (addonPanel?.close() != true) controller?.closePanels()
+            }.also { panelBack = it }
         backDispatcher?.unregisterOnBackInvokedCallback(callback)
         backDispatcher = null
         if (visible) {
@@ -617,6 +695,42 @@ class SongyanInputMethodService : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
+        // Script tools: the catalog only reads the host's cached metadata (no proxy, no script bytes);
+        // the executor starts the proxy and the engine only when the user runs a tool.
+        // Cold-start metadata: one small snapshot file the proxy refreshes after every catalog
+        // change; reading it binds nothing and never touches a script or the engine.
+        // One tool list, three kinds of implementations: scripts, built-in modules and installed
+        // extensions. The extension catalog only reads the cached handshake (no binding); its
+        // executor binds on the press, enforces its own deadline and disconnects again.
+        val scriptCatalog = ScriptToolCatalog { scriptCatalogCache.enabledEntries() }
+        val addons = AddonRegistryHolder.current
+        val toolCatalog =
+            if (addons == null) {
+                scriptCatalog
+            } else {
+                CombinedToolCatalog(listOf(scriptCatalog, AddonToolCatalog(addons)))
+            }
+        val toolBridge =
+            EditorToolGatewayBridge(
+                editor = editor,
+                catalog = toolCatalog,
+                toolLimits = ToolPipelineLimits.PRODUCTION,
+                info = { currentInputEditorInfo },
+            )
+        val scriptExecutor = ScriptToolExecutor { ScriptRegistryHolder.current }
+        val toolExecutor =
+            if (addons == null) {
+                scriptExecutor
+            } else {
+                CombinedToolExecutor(
+                    scriptExecutor,
+                    AddonToolExecutor(
+                        this,
+                        addons,
+                        timeoutMillis = ToolPipelineLimits.PRODUCTION.timeoutMillis - 500,
+                    ),
+                )
+            }
         val pad =
             KeyboardController(
                 this,
@@ -648,6 +762,11 @@ class SongyanInputMethodService : InputMethodService() {
                 quickContentDataSource = panelDataSource,
                 quickInsert = quickInsertHost,
                 copiedChipSource = CopiedChipSource(getSystemService(android.content.ClipboardManager::class.java)),
+                toolBridge = toolBridge,
+                toolExecutor = toolExecutor,
+                voiceInputHost = voiceInputHost,
+                extensionPanels = ::addonPanelEntries,
+                onOpenExtensionPanel = { packageName -> addonPanel?.open(packageName) },
             )
         controller?.retire()
         controller = pad
@@ -666,6 +785,24 @@ class SongyanInputMethodService : InputMethodService() {
         container.addView(pad.view, LinearLayout.LayoutParams(-1, -2))
         root = container
         viewOwners.install(container)
+        // The extension panel shares this window: the keyboard view is hidden while a panel is shown
+        // and a SurfaceView takes its place, so the IME window keeps the height it already had.
+        addonPanel?.destroy()
+        addonPanel =
+            AddonRegistryHolder.current?.let { registry ->
+                AddonPanelController(
+                    context = this,
+                    container = container,
+                    keyboardView = pad.view,
+                    editorAccess = addonEditorAccess(),
+                    editorInfo = { currentInputEditorInfo },
+                    registry = registry,
+                    onShownChanged = { shown -> updatePanelBack(shown) },
+                    onFailed = {
+                        Toast.makeText(this, R.string.addon_panel_failed, Toast.LENGTH_SHORT).show()
+                    },
+                )
+            }
         // A view rebuilt for a configuration change continues the composition the editor still shows.
         backend?.let { pad.bind(it, keepComposition = editor.composing) }
         pad.configure(policy)
@@ -756,6 +893,7 @@ class SongyanInputMethodService : InputMethodService() {
         // already-built views with yesterday's palette.
         controller?.refreshAppearance()
         applyWindowAppearance()
+        addonPanel?.updatePanelContext()
     }
 
     /** The application hands over its single prebuilt engine after asynchronous preparation. */
@@ -794,6 +932,8 @@ class SongyanInputMethodService : InputMethodService() {
         restarting: Boolean,
     ) {
         super.onStartInputView(info, restarting)
+        // A panel belonged to the editor that was focused before; the new show starts on the keys.
+        addonPanel?.close()
         snapshotJob?.cancel()
         ImePerf.refresh()
         ImePerf.showStart()
@@ -869,6 +1009,7 @@ class SongyanInputMethodService : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         clipboardRecorder.setCaptureAllowed(false)
+        addonPanel?.close()
         controller?.onWindowHidden()
         // Hidden while the editor stays (Back, a hardware keyboard): nothing may keep composing unseen.
         if (finishingInput) controller?.closeAll() else controller?.hideInput()
@@ -961,7 +1102,10 @@ class SongyanInputMethodService : InputMethodService() {
         keyCode: Int,
         event: KeyEvent,
     ): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && controller?.closePanels() == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (addonPanel?.close() == true) return true
+            if (controller?.closePanels() == true) return true
+        }
         return super.onKeyDown(keyCode, event)
     }
 
@@ -973,6 +1117,8 @@ class SongyanInputMethodService : InputMethodService() {
         unregisterReceiver(quickContentReceiver)
         runtime?.shutdown()
         updatePanelBack(false)
+        addonPanel?.destroy()
+        addonPanel = null
         controller?.retire()
         scope.cancel()
         super.onDestroy()

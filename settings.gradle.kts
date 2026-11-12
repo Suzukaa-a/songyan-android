@@ -56,6 +56,10 @@ include(
     ":core:appearance",
     ":core:content",
     ":core:packages",
+    ":core:tools",
+    ":script",
+    ":addon-api",
+    ":addon-sample",
     ":baselineprofile",
     ":benchmark",
 )

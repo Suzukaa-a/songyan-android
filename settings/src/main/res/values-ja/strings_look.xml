@@ -41,7 +41,7 @@
     <string name="appearance_import_version">このファイルは、キーボードが対応していないバージョンで作られています。</string>
     <string name="appearance_import_storage">外観を保存できませんでした。しばらくしてからやり直してください。</string>
     <string name="options_wide_position_section">大画面でのキーボードの位置</string>
-    <string name="options_wide_note">幅が 600 dp を超える画面（タブレットや開いた状態の折りたたみ端末など）で反映されます。カスタムでは、0% が左端、50% が中央、100% が右端です。</string>
+    <string name="options_wide_note" formatted="false">幅が 600 dp を超える画面（タブレットや開いた状態の折りたたみ端末など）で反映されます。カスタムでは、0% が左端、50% が中央、100% が右端です。</string>
     <string name="options_nine_key_side_section">9キーの候補エリア</string>
     <string name="options_nine_key_side_note">画面に余裕があるとき、9キーの候補をキーボードの横に広げ、キーボードは反対側に寄せます。</string>
     <string name="options_nine_key_side_left">左</string>
@@ -209,7 +209,7 @@
     <string name="layout_error_candidate_area">このキー配列の候補バーの設定が、キーと合っていません。</string>
     <string name="layout_error_key_label_width">すべてのキーにタイトルが必要で、幅は 0 より大きくしてください。</string>
     <string name="layout_error_long_press_label">すべての長押しの選択肢にテキストが必要です。</string>
-    <string name="layout_error_split_gap">分割の間隔は 0% から 85% の間にしてください。</string>
+    <string name="layout_error_split_gap" formatted="false">分割の間隔は 0% から 85% の間にしてください。</string>
     <string name="layout_editor_arrangement_section">キーの配置</string>
     <string name="layout_editor_arrangement_whole">分割しない</string>
     <string name="layout_editor_arrangement_split">分割するとき</string>

@@ -1,0 +1,547 @@
+@file:OptIn(ExperimentalTestApi::class)
+
+package app.songyan.ime.settings
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import app.songyan.ime.script.ScriptEntry
+import app.songyan.ime.script.ScriptHeader
+import app.songyan.ime.script.ScriptRegistry
+import app.songyan.ime.script.ScriptRunOutcome
+import app.songyan.ime.script.ScriptSettingField
+import app.songyan.ime.script.ScriptSettingKind
+import app.songyan.ime.script.ScriptSourceOrigin
+import app.songyan.ime.settings.ui.ScriptsViewModel
+import app.songyan.ime.settings.ui.screens.ScriptConfirmScreen
+import app.songyan.ime.settings.ui.screens.ScriptDetailScreen
+import app.songyan.ime.settings.ui.screens.ScriptsScreen
+import app.songyan.ime.settings.ui.theme.SongyanTheme
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+
+/**
+ * 设置 → 脚本 as the user sees it: the empty page that starts the flow, the four ways a script can
+ * come in, the confirmation page with what the script declares, and the update check that sends
+ * the user back to confirmation when the declarations changed.
+ *
+ * The screens take their ViewModel from the caller and the ViewModel takes the registry, so the
+ * [FakeScriptRegistry] below replaces the proxy process: no engine, no network, no storage.
+ */
+class ScriptsScreenTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private fun showFlow(registry: FakeScriptRegistry = FakeScriptRegistry()): ScriptsViewModel {
+        val viewModel = ScriptsViewModel(registry, Dispatchers.Unconfined)
+        compose.setContent {
+            ScriptsFlow(viewModel)
+        }
+        return viewModel
+    }
+
+    private fun showConfirmation(
+        registry: FakeScriptRegistry,
+        scriptId: String = "script-1",
+    ) {
+        val viewModel = ScriptsViewModel(registry, Dispatchers.Unconfined)
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                ScriptConfirmScreen(scriptId = scriptId, onDone = {}, viewModel = viewModel)
+            }
+        }
+    }
+
+    private fun addSheet(): SemanticsMatcher = hasAnyAncestor(isDialog())
+
+    private fun dialogTextField(): SemanticsMatcher = hasSetTextAction() and addSheet()
+
+    /** The add sheet's own "Add script" is not in a dialog body with a click action; the import
+     *  dialogs' confirm button is. */
+    private fun importDialogConfirm(): SemanticsMatcher =
+        hasText(str(R.string.scripts_add)) and hasClickAction() and addSheet()
+
+    private fun waitForOne(matcher: SemanticsMatcher) {
+        compose.waitUntilExactlyOneExists(matcher, timeoutMillis = 5_000)
+    }
+
+    private fun waitUntilGone(matcher: SemanticsMatcher) {
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    // --- the empty page and the ways in ---
+
+    @Test
+    fun theEmptyPageOffersTheGuideForAiAndTheMinimalExample() {
+        showFlow()
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_empty_body)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_copy_guide)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_add)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_example_title)).assertExists()
+    }
+
+    @Test
+    fun theAddSheetOffersEveryWayToAddAScript() {
+        showFlow()
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_add)).performClick()
+
+        compose.onNodeWithText(str(R.string.scripts_add_paste)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_add_file)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_add_link)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_add_editor)).assertIsDisplayed()
+    }
+
+    @Test
+    fun pastingAScriptOpensTheConfirmationPageWithWhatItDeclares() {
+        val registry = FakeScriptRegistry().apply { imported = declaredEntry() }
+        showFlow(registry)
+
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_add)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_add_paste)).performClick()
+        waitForOne(hasText(str(R.string.scripts_add_paste_title)))
+        compose.onNodeWithText(str(R.string.scripts_add_paste_label)).assertExists()
+        compose.onNode(dialogTextField()).performTextInput(SCRIPT_SOURCE)
+        compose.onNode(importDialogConfirm()).assertIsEnabled().performClick()
+
+        waitForOne(hasText(str(R.string.scripts_confirm_title)))
+        val pasted = registry.adds.single().first
+        assertEquals(SCRIPT_SOURCE, pasted.toString(Charsets.UTF_8))
+        // Name, what it reads, which sites it may reach, and the settings it asks for.
+        compose.onNodeWithText(str(R.string.scripts_confirm_name)).assertExists()
+        compose.onNodeWithText(SCRIPT_NAME).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.scripts_confirm_reads)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_confirm_section_connects)).assertExists()
+        DECLARED_SITES.forEach { compose.onNodeWithText(it).assertExists() }
+        compose.onNodeWithText(str(R.string.scripts_confirm_section_settings)).assertExists()
+        compose.onNodeWithText(DECLARED_SETTINGS[0].label + str(R.string.scripts_secret_suffix)).assertExists()
+        compose.onNodeWithText(DECLARED_SETTINGS[1].label).assertExists()
+        compose.onNodeWithText(DECLARED_SETTINGS[2].label).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_setting_kind_url)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_setting_kind_choice)).assertExists()
+        compose.onNodeWithContentDescription(str(R.string.scripts_secret_toggle)).assertExists()
+    }
+
+    @Test
+    fun aLinkIsAddedThroughItsOwnDialog() {
+        val registry = FakeScriptRegistry().apply { imported = declaredEntry(name = "链接脚本") }
+        showFlow(registry)
+
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_add)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_add_link)).performClick()
+
+        waitForOne(hasText(str(R.string.scripts_add_link_title)))
+        compose.onNodeWithText(str(R.string.scripts_add_link_label)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_add_link_body)).assertIsDisplayed()
+        val confirm = compose.onNode(importDialogConfirm())
+        confirm.assertIsNotEnabled()
+        compose.onNode(dialogTextField()).performTextInput(LINK)
+        confirm.assertIsEnabled().performClick()
+
+        waitForOne(hasText(str(R.string.scripts_confirm_title)))
+        assertEquals(listOf(LINK), registry.links)
+        compose.onNodeWithText("链接脚本").assertIsDisplayed()
+    }
+
+    @Test
+    fun theEditorEntryOpensTheInAppEditor() {
+        showFlow()
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_add)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_add_editor)).performClick()
+
+        waitForOne(hasText(str(R.string.scripts_editor_new_title)))
+        compose.onNodeWithText(str(R.string.scripts_editor_body)).assertExists()
+    }
+
+    // --- confirmation and the list it comes back to ---
+
+    @Test
+    fun confirmingAScriptStoresItsSettingsAndBringsItBackToTheListToEnable() {
+        val gate = CompletableDeferred<Unit>()
+        val registry =
+            FakeScriptRegistry().apply {
+                imported = declaredEntry()
+                confirmGate = gate
+            }
+        showFlow(registry)
+
+        waitForOne(hasText(str(R.string.scripts_empty_title)))
+        compose.onNodeWithText(str(R.string.scripts_add)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_add_paste)).performClick()
+        waitForOne(hasText(str(R.string.scripts_add_paste_title)))
+        compose.onNode(dialogTextField()).performTextInput(SCRIPT_SOURCE)
+        compose.onNode(importDialogConfirm()).performClick()
+
+        waitForOne(hasText(str(R.string.scripts_confirm_title)))
+        compose.onNode(hasSetTextAction() and passwordField()).performTextInput(SECRET)
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
+
+        // The confirmation takes a moment: the page waits, then closes by itself. A first import
+        // arrives already enabled, without the user or the screen flipping the switch.
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).assertIsNotEnabled()
+        gate.complete(Unit)
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(isToggleable()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(
+            mapOf(
+                DECLARED_SETTINGS[0].key to SECRET,
+                DECLARED_SETTINGS[1].key to "",
+                DECLARED_SETTINGS[2].key to "",
+            ),
+            registry.confirms.single().second,
+        )
+        compose.onNodeWithText(str(R.string.scripts_empty_title)).assertDoesNotExist()
+        compose.onNode(isToggleable()).assertIsOn()
+        assertEquals(emptyList<Pair<String, Boolean>>(), registry.enabled)
+
+        // The switch in the list still works after that.
+        compose.onNode(isToggleable()).performClick()
+        compose.onNode(isToggleable()).assertIsOff()
+        assertEquals(listOf("script-1" to false), registry.enabled)
+    }
+
+    @Test
+    fun aSecretFieldIsAMaskedInputWithARevealToggle() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(declaredEntry(settings = listOf(DECLARED_SETTINGS[0])))
+            }
+        showConfirmation(registry)
+
+        waitForOne(hasText(DECLARED_SETTINGS[0].label + str(R.string.scripts_secret_suffix)))
+        // A masked field is what the platform (autofill, accessibility) is told it is; the
+        // reveal button is the affordance the user has for looking at what they typed.
+        compose.onNode(hasSetTextAction() and passwordField()).assertExists()
+        compose
+            .onNodeWithContentDescription(str(R.string.scripts_secret_toggle))
+            .assertHasClickAction()
+    }
+
+    // --- the update check ---
+
+    @Test
+    fun anUpdateWithChangedDeclarationsSendsTheUserBackToConfirmation() {
+        val link = ScriptSourceOrigin.Link(LINK, LINK)
+        val before =
+            declaredEntry(
+                name = "链接脚本",
+                enabled = true,
+                pending = false,
+                connects = listOf("https://a.test"),
+                origin = link,
+            )
+        val gate = CompletableDeferred<Unit>()
+        val registry =
+            FakeScriptRegistry().apply {
+                store(before)
+                checkedUpdate = before.copy(connects = listOf("https://b.test"), confirmationPending = true)
+                confirmGate = gate
+            }
+        showFlow(registry)
+
+        waitForOne(hasText("链接脚本"))
+        compose.onNodeWithText("链接脚本").performClick()
+
+        // The script's own page carries the update check for a link origin.
+        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        compose.onNodeWithContentDescription(str(R.string.scripts_check_update)).performClick()
+
+        // New declarations are unconfirmed again: the page says so and leads back to confirmation.
+        waitForOne(hasText(str(R.string.scripts_pending_title)))
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
+        waitForOne(hasText(str(R.string.scripts_confirm_title)))
+        compose.onNodeWithText("https://b.test").assertExists()
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).assertIsNotEnabled()
+        gate.complete(Unit)
+
+        // Confirming the new declarations closes the page and clears the pending banner.
+        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        compose.onNodeWithText(str(R.string.scripts_pending_title)).assertDoesNotExist()
+        assertEquals(listOf("script-1"), registry.updates)
+        assertEquals("script-1", registry.confirms.single().first)
+
+        // A re-confirmation after an update keeps the switch as the user left it: still on, and
+        // the screen never calls the enable action itself.
+        compose.onNodeWithContentDescription(str(R.string.action_back)).performClick()
+        waitForOne(hasText("链接脚本"))
+        compose.onNode(isToggleable()).assertIsOn()
+        assertEquals(emptyList<Pair<String, Boolean>>(), registry.enabled)
+
+        // The same holds the other way: a script the user switched off comes back off after
+        // another update is confirmed.
+        compose.onNode(isToggleable()).performClick()
+        compose.onNode(isToggleable()).assertIsOff()
+        compose.onNodeWithText("链接脚本").performClick()
+        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        compose.onNodeWithContentDescription(str(R.string.scripts_check_update)).performClick()
+        waitForOne(hasText(str(R.string.scripts_pending_title)))
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
+        waitForOne(hasText(str(R.string.scripts_confirm_title)))
+        val secondGate = CompletableDeferred<Unit>()
+        registry.confirmGate = secondGate
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).assertIsNotEnabled()
+        secondGate.complete(Unit)
+        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        compose.onNodeWithContentDescription(str(R.string.action_back)).performClick()
+        waitForOne(hasText("链接脚本"))
+        compose.onNode(isToggleable()).assertIsOff()
+        // Only the user's own switch tap reached the enable action.
+        assertEquals(listOf("script-1" to false), registry.enabled)
+    }
+
+    // --- the flow harness ---
+
+    /** The pages the production graph navigates between, stacked the same way: the list opens a
+     *  script or a confirmation, and each page goes back to the one before it. */
+    @Composable
+    private fun ScriptsFlow(viewModel: ScriptsViewModel) {
+        var stack by remember { mutableStateOf(listOf(ScriptsPage.LIST)) }
+        var scriptId by remember { mutableStateOf("") }
+        SongyanTheme(dynamicColor = false) {
+            when (stack.last()) {
+                ScriptsPage.LIST ->
+                    ScriptsScreen(
+                        onBack = null,
+                        onOpen = { id ->
+                            scriptId = id
+                            stack = stack + ScriptsPage.DETAIL
+                        },
+                        onOpenConfirmation = { id ->
+                            scriptId = id
+                            stack = stack + ScriptsPage.CONFIRM
+                        },
+                        viewModel = viewModel,
+                    )
+
+                ScriptsPage.DETAIL ->
+                    ScriptDetailScreen(
+                        scriptId = scriptId,
+                        onBack = { stack = stack.dropLast(1) },
+                        onOpenConfirmation = { id ->
+                            scriptId = id
+                            stack = stack + ScriptsPage.CONFIRM
+                        },
+                        viewModel = viewModel,
+                    )
+
+                ScriptsPage.CONFIRM ->
+                    ScriptConfirmScreen(
+                        scriptId = scriptId,
+                        onDone = { if (stack.size > 1) stack = stack.dropLast(1) },
+                        viewModel = viewModel,
+                    )
+            }
+        }
+    }
+
+    private enum class ScriptsPage { LIST, DETAIL, CONFIRM }
+
+    private fun passwordField(): SemanticsMatcher = SemanticsMatcher.keyIsDefined(SemanticsProperties.Password)
+
+    // --- the fake registry and its fixtures ---
+
+    /**
+     * The registry the screens talk to. Every call is recorded so the test can assert what the UI
+     * handed over; [imported] is what the next import produces, [checkedUpdate] what an update
+     * check brings back. Like the store, the first confirmation turns a script on, while a
+     * re-confirmation after an update keeps the switch as the user left it.
+     */
+    private class FakeScriptRegistry : ScriptRegistry {
+        private val stored = mutableListOf<ScriptEntry>()
+        private val confirmedBefore = mutableSetOf<String>()
+
+        override var entries: List<ScriptEntry> = emptyList()
+            private set
+
+        override val refreshing: Boolean = false
+
+        var imported: ScriptEntry = declaredEntry()
+        var checkedUpdate: ScriptEntry? = null
+        var confirmGate: CompletableDeferred<Unit>? = null
+
+        val adds = mutableListOf<Pair<ByteArray, ScriptSourceOrigin>>()
+        val links = mutableListOf<String>()
+        val confirms = mutableListOf<Pair<String, Map<String, String>>>()
+        val enabled = mutableListOf<Pair<String, Boolean>>()
+        val updates = mutableListOf<String>()
+
+        fun store(vararg scripts: ScriptEntry) {
+            stored.clear()
+            stored += scripts
+            // A seed that is no longer pending has been confirmed before, so confirming it again
+            // is a re-confirmation and must leave its switch alone.
+            scripts.filterNot { it.confirmationPending }.forEach { confirmedBefore += it.id }
+            entries = stored.toList()
+        }
+
+        override suspend fun reload() {
+            entries = stored.toList()
+        }
+
+        override suspend fun inspect(source: ByteArray): ScriptHeader = error("inspect is not used by this screen")
+
+        override suspend fun add(
+            source: ByteArray,
+            origin: ScriptSourceOrigin,
+        ): ScriptEntry {
+            adds += source to origin
+            val entry =
+                imported.copy(
+                    id = "script-" + (stored.size + 1),
+                    order = stored.size,
+                    sourceOrigin = origin,
+                    enabled = false,
+                )
+            stored += entry
+            entries = stored.toList()
+            return entry
+        }
+
+        override suspend fun addFromLink(url: String): ScriptEntry {
+            links += url
+            return add(ByteArray(0), ScriptSourceOrigin.Link(url, url))
+        }
+
+        override suspend fun confirm(
+            id: String,
+            settings: Map<String, String>,
+        ): ScriptEntry {
+            confirms += id to settings
+            confirmGate?.await()
+            val first = id !in confirmedBefore
+            confirmedBefore += id
+            return replace(id) { it.copy(confirmationPending = false, enabled = if (first) true else it.enabled) }
+        }
+
+        override suspend fun updateSettings(
+            id: String,
+            settings: Map<String, String>,
+        ): ScriptEntry = confirm(id, settings)
+
+        override suspend fun setEnabled(
+            id: String,
+            enabled: Boolean,
+        ): ScriptEntry {
+            this.enabled += id to enabled
+            return replace(id) { it.copy(enabled = enabled) }
+        }
+
+        override suspend fun reorder(orderedIds: List<String>) = Unit
+
+        override suspend fun source(id: String): ByteArray? = null
+
+        override suspend fun export(id: String): ByteArray? = null
+
+        override suspend fun checkUpdate(id: String): ScriptEntry {
+            updates += id
+            // The update replaces the declarations, never the switch the user chose.
+            val fresh = checkedUpdate ?: return replace(id) { it.copy(confirmationPending = false) }
+            return replace(id) { fresh.copy(id = id, order = it.order, enabled = it.enabled) }
+        }
+
+        override suspend fun delete(id: String) {
+            stored.removeAll { it.id == id }
+            entries = stored.toList()
+        }
+
+        override suspend fun runForTest(
+            id: String,
+            text: String,
+        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
+
+        override suspend fun run(
+            id: String,
+            text: String,
+        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
+
+        override suspend fun runAudio(
+            id: String,
+            wav: ByteArray,
+        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
+
+        override suspend fun cancel(id: String) = Unit
+
+        private fun replace(
+            id: String,
+            change: (ScriptEntry) -> ScriptEntry,
+        ): ScriptEntry {
+            val index = stored.indexOfFirst { it.id == id }
+            check(index >= 0) { "no script " + id }
+            stored[index] = change(stored[index])
+            entries = stored.toList()
+            return stored[index]
+        }
+    }
+
+    private companion object {
+        const val SCRIPT_SOURCE = "// @api 1 @name 加书名号 export default async ({ text }) => text;"
+        const val SCRIPT_NAME = "加书名号"
+        const val SECRET = "hunter2"
+        const val LINK = "https://example.com/rent.js"
+
+        val DECLARED_SITES = listOf("https://api.example.com/v1", "https://second.example.com")
+        val DECLARED_SETTINGS =
+            listOf(
+                ScriptSettingField("token", ScriptSettingKind.TEXT, "API token", secret = true),
+                ScriptSettingField("endpoint", ScriptSettingKind.URL, "Endpoint", secret = false),
+                ScriptSettingField("mode", ScriptSettingKind.CHOICE, "Mode", secret = false),
+            )
+
+        fun declaredEntry(
+            name: String = SCRIPT_NAME,
+            enabled: Boolean = false,
+            pending: Boolean = true,
+            connects: List<String> = DECLARED_SITES,
+            origin: ScriptSourceOrigin = ScriptSourceOrigin.Pasted,
+            settings: List<ScriptSettingField> = DECLARED_SETTINGS,
+        ) = ScriptEntry(
+            id = "script-1",
+            name = name,
+            description = "把选中的文字两边加上书名号",
+            enabled = enabled,
+            order = 0,
+            apiVersion = 1,
+            connects = connects,
+            needsAudio = false,
+            availableOnThisHost = true,
+            confirmationPending = pending,
+            settings = settings,
+            sourceOrigin = origin,
+        )
+    }
+}

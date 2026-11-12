@@ -42,7 +42,7 @@
     <string name="appearance_import_version">This file was made by a version the keyboard does not support.</string>
     <string name="appearance_import_storage">Could not save the appearance. Try again later.</string>
     <string name="options_wide_position_section">Keyboard position on large screens</string>
-    <string name="options_wide_note">Applies on screens wider than 600 dp, such as tablets and unfolded phones. With Custom, 0% is flush left, 50% centered, 100% flush right.</string>
+    <string name="options_wide_note" formatted="false">Applies on screens wider than 600 dp, such as tablets and unfolded phones. With Custom, 0% is flush left, 50% centered, 100% flush right.</string>
     <string name="options_nine_key_side_section">9-key candidates</string>
     <string name="options_nine_key_side_note">On a wide enough screen the 9-key keyboard lists its candidates beside the keys, which move to the other side.</string>
     <string name="options_nine_key_side_left">Left</string>
@@ -210,7 +210,7 @@
     <string name="layout_error_candidate_area">The candidate bar settings of this layout do not fit its keys.</string>
     <string name="layout_error_key_label_width">Every key needs a title, and its width must be greater than 0.</string>
     <string name="layout_error_long_press_label">Every long-press choice needs a text.</string>
-    <string name="layout_error_split_gap">The split gap must be between 0% and 85%.</string>
+    <string name="layout_error_split_gap" formatted="false">The split gap must be between 0% and 85%.</string>
     <string name="layout_editor_arrangement_section">Keyboard arrangement</string>
     <string name="layout_editor_arrangement_whole">Not split</string>
     <string name="layout_editor_arrangement_split">When split</string>

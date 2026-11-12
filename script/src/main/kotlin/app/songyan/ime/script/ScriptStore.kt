@@ -109,6 +109,7 @@ class ScriptStore(
         settings: Map<String, String>,
         fields: List<ScriptSettingField>,
         hostCapabilities: Set<ScriptHostCapability> = ScriptHostCapability.DEFAULT,
+        clearSecrets: Set<String> = emptySet(),
     ): ScriptEntry {
         val dir = dirOf(id)
         val state = readState(dir).toMutableMap()
@@ -124,7 +125,7 @@ class ScriptStore(
             state["enabled"] = JsonPrimitive(true)
         }
         writeState(dir, JsonObject(state))
-        writeSettings(dir, settings, fields)
+        writeSettings(dir, settings, fields, clearSecrets)
         return requireNotNull(readEntry(id, hostCapabilities = hostCapabilities))
     }
 
@@ -132,8 +133,9 @@ class ScriptStore(
         id: String,
         settings: Map<String, String>,
         fields: List<ScriptSettingField>,
+        clearSecrets: Set<String> = emptySet(),
     ) {
-        writeSettings(dirOf(id), settings, fields)
+        writeSettings(dirOf(id), settings, fields, clearSecrets)
     }
 
     fun setEnabled(
@@ -158,6 +160,15 @@ class ScriptStore(
         dir.delete()
         writeCatalog(readCatalog() - id)
     }
+
+    /** The stored non-secret settings, keyed by declaration key. Secrets live in a separate
+     *  encrypted blob and never leave the proxy process, so a caller can prefill a form but
+     *  cannot read a stored secret back. */
+    fun plainSettings(id: String): Map<String, String> =
+        readState(dirOf(id))["settings"]
+            ?.jsonObject
+            ?.mapValues { it.value.jsonPrimitive.contentOrNull ?: "" }
+            ?: emptyMap()
 
     fun settingsOf(
         id: String,
@@ -274,23 +285,41 @@ class ScriptStore(
         dir: File,
         settings: Map<String, String>,
         fields: List<ScriptSettingField>,
+        clearSecrets: Set<String> = emptySet(),
     ) {
+        val state = readState(dir).toMutableMap()
+        val storedPlain = state["settings"]?.jsonObject ?: JsonObject(emptyMap())
         val plain =
             buildJsonObject {
                 fields.filterNot { it.secret }.forEach { field ->
-                    settings[field.key]?.let { put(field.key, it) }
+                    // A key the form sends updates the value; an empty string clears it. A key the
+                    // form omits keeps what is stored, so an older form cannot wipe fields it does
+                    // not know about.
+                    val value = settings[field.key]
+                    if (value != null) {
+                        put(field.key, value)
+                    } else {
+                        storedPlain[field.key]?.let { put(field.key, it) }
+                    }
                 }
             }
-        val secretValues =
-            buildJsonObject {
-                fields.filter { it.secret }.forEach { field ->
-                    settings[field.key]?.let { put(field.key, it) }
+        val secrets = readSecrets(dir).toMutableMap()
+        fields.filter { it.secret }.forEach { field ->
+            when {
+                // An explicit clear wins over a value still typed in the form: the user asked for
+                // the stored secret to go away.
+                field.key in clearSecrets -> secrets.remove(field.key)
+                else -> {
+                    // A blank secret field means "keep the stored secret": the form never reads
+                    // secrets back, so blank cannot be told apart from "not edited".
+                    val value = settings[field.key]
+                    if (!value.isNullOrEmpty()) secrets[field.key] = value
                 }
             }
-        val state = readState(dir).toMutableMap()
+        }
         state["settings"] = plain
         writeState(dir, JsonObject(state))
-        writeSecrets(dir, secretValues)
+        writeSecrets(dir, JsonObject(secrets.mapValues { JsonPrimitive(it.value) }))
     }
 
     private fun writeSecrets(

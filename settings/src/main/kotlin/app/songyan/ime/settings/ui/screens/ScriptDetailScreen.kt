@@ -1,25 +1,33 @@
 package app.songyan.ime.settings.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudDownload
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -38,21 +46,29 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.script.ScriptEntry
 import app.songyan.ime.script.ScriptRunOutcome
+import app.songyan.ime.script.ScriptSettingField
+import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsNotice
 import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.components.HideKeyboardOnEnter
+import app.songyan.ime.settings.ui.components.ImeDialog
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
+import app.songyan.ime.settings.ui.components.StateMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -83,6 +99,7 @@ fun ScriptDetailScreen(
     val upToDateText = stringResource(R.string.scripts_notice_up_to_date)
     val updatedText = stringResource(R.string.scripts_notice_updated)
     val deletedText = stringResource(R.string.scripts_notice_deleted)
+    val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
     // notice it belongs to is the current one.
     val actionFailureText =
@@ -97,6 +114,7 @@ fun ScriptDetailScreen(
                 ScriptsNotice.UpToDate -> upToDateText
                 is ScriptsNotice.Updated -> updatedText
                 ScriptsNotice.Deleted -> deletedText
+                ScriptsNotice.SettingsSaved -> settingsSavedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
                 null -> null
             }
@@ -109,6 +127,7 @@ fun ScriptDetailScreen(
         }
     }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
 
     if (state.loading) {
@@ -127,28 +146,85 @@ fun ScriptDetailScreen(
         onBack = onBack,
         snackbarHost = { SnackbarHost(snackbar) },
         actions = {
-            if (entry?.sourceOrigin is app.songyan.ime.script.ScriptSourceOrigin.Link) {
-                IconButton(onClick = { viewModel.checkUpdate(scriptId) }, enabled = !state.busy) {
+            // One overflow keeps the bar calm: the destructive entry sits behind the menu, not
+            // one stray tap away.
+            var menuOpen by remember { mutableStateOf(false) }
+            val ordered = state.entries.sortedBy { it.order }
+            val index = ordered.indexOfFirst { it.id == scriptId }
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
                     Icon(
-                        Icons.Outlined.CloudDownload,
-                        contentDescription = stringResource(R.string.scripts_check_update),
+                        Icons.Outlined.MoreVert,
+                        contentDescription = stringResource(R.string.scripts_more_actions),
                     )
                 }
-            }
-            IconButton(onClick = { editorOpen = true }) {
-                Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.scripts_edit))
-            }
-            IconButton(onClick = { viewModel.export(context, scriptId, (entry?.name ?: "script") + ".js") }) {
-                Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.scripts_export))
-            }
-            IconButton(onClick = { deleting = true }) {
-                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.scripts_delete))
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (entry?.sourceOrigin is app.songyan.ime.script.ScriptSourceOrigin.Link) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.scripts_check_update)) },
+                            enabled = !state.busy,
+                            onClick = {
+                                menuOpen = false
+                                viewModel.checkUpdate(scriptId)
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.scripts_edit)) },
+                        onClick = {
+                            menuOpen = false
+                            editorOpen = true
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.scripts_export)) },
+                        onClick = {
+                            menuOpen = false
+                            viewModel.export(context, scriptId, (entry?.name ?: "script") + ".js")
+                        },
+                    )
+                    if (index > 0) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.scripts_move_up)) },
+                            onClick = {
+                                menuOpen = false
+                                viewModel.move(scriptId, up = true)
+                            },
+                        )
+                    }
+                    if (index in 0 until ordered.lastIndex) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.scripts_move_down)) },
+                            onClick = {
+                                menuOpen = false
+                                viewModel.move(scriptId, up = false)
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.scripts_delete),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            menuOpen = false
+                            deleting = true
+                        },
+                    )
+                }
             }
         },
     ) { innerPadding ->
         if (entry == null) {
-            // Deleted from the list behind this page; the way back is the only thing left.
-            LaunchedEffect(Unit) { onBack() }
+            // Deleted from the list behind this page: say so instead of leaving a blank page.
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                StateMessage(title = stringResource(R.string.scripts_missing_title))
+            }
             return@SettingsScaffold
         }
         LazyColumn(
@@ -225,6 +301,11 @@ fun ScriptDetailScreen(
                                 },
                             )
                         },
+                        trailingContent = {
+                            TextButton(onClick = { settingsOpen = true }) {
+                                Text(stringResource(R.string.scripts_settings_edit))
+                            }
+                        },
                     )
                 }
             }
@@ -239,6 +320,14 @@ fun ScriptDetailScreen(
             onDismiss = { editorOpen = false },
         )
     }
+    if (settingsOpen && entry != null) {
+        ScriptSettingsDialog(
+            scriptId = scriptId,
+            entry = entry,
+            viewModel = viewModel,
+            onDismiss = { settingsOpen = false },
+        )
+    }
     if (deleting) {
         AlertDialog(
             onDismissRequest = { deleting = false },
@@ -250,6 +339,7 @@ fun ScriptDetailScreen(
                         viewModel.delete(scriptId)
                         deleting = false
                     },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) { Text(stringResource(R.string.scripts_delete_confirm)) }
             },
             dismissButton = {
@@ -285,7 +375,12 @@ private fun TestBox(
                 onRun()
             }, enabled = !running) {
                 if (running) {
-                    CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
                 } else {
                     Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
                 }
@@ -429,3 +524,170 @@ private suspend fun readExample(context: android.content.Context): String? =
             null
         }
     }
+
+/** The editable settings form of an already confirmed script: saved non-secret values are
+ *  prefilled, a blank secret keeps the stored one, and the clearance checkbox is the explicit
+ *  way to delete a stored secret. */
+@Composable
+private fun ScriptSettingsDialog(
+    scriptId: String,
+    entry: ScriptEntry,
+    viewModel: ScriptsViewModel,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var values by rememberSaveable(scriptId) { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var clearSecrets by rememberSaveable(scriptId) { mutableStateOf<List<String>>(emptyList()) }
+    var loaded by rememberSaveable(scriptId) { mutableStateOf(false) }
+    val saved by
+        produceState<Map<String, String>?>(initialValue = null, scriptId) {
+            value = viewModel.savedSettings(scriptId)
+        }
+    LaunchedEffect(saved) {
+        val savedValues = saved ?: return@LaunchedEffect
+        if (!loaded) {
+            values = savedValues
+            loaded = true
+        }
+    }
+    // The save round-trip is a busy window: close the dialog only after it has started and
+    // finished, so a fast state emission cannot dismiss the form before the write happened.
+    var saving by remember { mutableStateOf(false) }
+    var sawBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(state.busy) {
+        if (!saving) return@LaunchedEffect
+        if (state.busy) {
+            sawBusy = true
+        } else if (sawBusy) {
+            saving = false
+            sawBusy = false
+            onDismiss()
+        }
+    }
+    ImeDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.scripts_settings_title),
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    saving = true
+                    viewModel.updateSettings(scriptId, values, clearSecrets.toSet())
+                },
+                enabled = !state.busy,
+            ) {
+                if (state.busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(stringResource(R.string.scripts_editor_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.scripts_cancel)) }
+        },
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            entry.settings.forEach { field ->
+                SettingsEditField(
+                    field = field,
+                    value = values[field.key] ?: "",
+                    clearSaved = field.key in clearSecrets,
+                    onChange = { value -> values = values + (field.key to value) },
+                    onClearSaved = { clear ->
+                        clearSecrets =
+                            if (clear) {
+                                clearSecrets + field.key
+                            } else {
+                                clearSecrets - field.key
+                            }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** One field of the settings dialog; the same masking, validation and secret rules as the
+ *  confirmation page. */
+@Composable
+private fun SettingsEditField(
+    field: ScriptSettingField,
+    value: String,
+    clearSaved: Boolean,
+    onChange: (String) -> Unit,
+    onClearSaved: (Boolean) -> Unit,
+) {
+    var reveal by rememberSaveable(field.key) { mutableStateOf(false) }
+    val addressInvalid =
+        field.kind == ScriptSettingKind.URL &&
+            value.isNotBlank() &&
+            !value.trim().startsWith("http://") &&
+            !value.trim().startsWith("https://")
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onChange,
+            label = {
+                Text(
+                    field.label +
+                        if (field.secret) stringResource(R.string.scripts_secret_suffix) else "",
+                )
+            },
+            supportingText = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        when {
+                            addressInvalid -> stringResource(R.string.scripts_setting_url_invalid)
+                            field.kind == ScriptSettingKind.URL -> stringResource(R.string.scripts_setting_kind_url)
+                            field.kind == ScriptSettingKind.CHOICE ->
+                                stringResource(R.string.scripts_setting_choice_hint)
+                            else -> stringResource(R.string.scripts_setting_kind_text)
+                        },
+                    )
+                    if (field.secret) Text(stringResource(R.string.scripts_secret_keep_hint))
+                }
+            },
+            isError = addressInvalid,
+            singleLine = true,
+            visualTransformation =
+                if (field.secret && !reveal) {
+                    PasswordVisualTransformation()
+                } else {
+                    VisualTransformation.None
+                },
+            trailingIcon =
+                if (field.secret) {
+                    {
+                        IconButton(onClick = { reveal = !reveal }) {
+                            Icon(
+                                imageVector = if (reveal) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription =
+                                    stringResource(
+                                        if (reveal) R.string.scripts_secret_hide else R.string.scripts_secret_show,
+                                    ),
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (field.secret) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { onClearSaved(!clearSaved) },
+            ) {
+                Checkbox(checked = clearSaved, onCheckedChange = onClearSaved)
+                Text(stringResource(R.string.scripts_secret_clear))
+            }
+        }
+    }
+}

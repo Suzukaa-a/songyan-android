@@ -348,8 +348,23 @@
     <string name="voice_switch_title">マイクボタン</string>
     <string name="voice_switch_subtitle">キーボードのツールバーにマイクを表示します</string>
     <string name="voice_scripts_section">音声スクリプト</string>
-    <string name="voice_scripts_empty">音声スクリプトはまだありません。「スクリプト」で追加してください。</string>
-    <string name="voice_scripts_loading">スクリプトを読み込んでいます…</string>
+    <string name="voice_empty_scripts_title">音声入力に対応したスクリプトがありません</string>
+    <string name="voice_empty_scripts_body">「スクリプト」で音声入力に対応したスクリプトを追加すると、ここに表示されます。</string>
+    <string name="voice_open_scripts">スクリプトで追加</string>
+    <string name="voice_load_failed_title">スクリプトを読み込めませんでした</string>
+    <string name="voice_load_failed_body">もう一度お試しください。</string>
+    <string name="voice_retry">再試行</string>
+    <string name="voice_script_summary">%1$s · %2$s</string>
+    <string name="voice_script_enabled">有効</string>
+    <string name="voice_script_disabled">無効</string>
+    <string name="voice_script_selected">選択中</string>
+    <string name="voice_script_not_selected">未選択</string>
+    <string name="voice_permission_section">許可</string>
+    <string name="voice_permission_title">マイクの使用</string>
+    <string name="voice_permission_granted">許可されています</string>
+    <string name="voice_permission_denied">許可されていません</string>
+    <string name="voice_permission_open_settings">システム設定で許可する</string>
+    <string name="voice_addon_origin">拡張アプリ</string>
 
     <!-- 設定 → 拡張機能: 別 APK としてインストールされた外部アドオン。 -->
     <string name="row_extensions_title">拡張機能</string>
@@ -380,4 +395,11 @@
     <string name="extensions_switch">%1$s スイッチ</string>
     <string name="voice_addon_option">%1$s（拡張機能）</string>
     <string name="extensions_toggle_failed">スイッチを保存できませんでした。状態は変わっていません。</string>
+    <string name="extensions_open_settings">設定</string>
+    <string name="extensions_settings_unavailable">この拡張機能の設定画面を開けませんでした。</string>
+    <string name="extensions_details">バージョンと署名</string>
+    <string name="extensions_copy_signer">署名証明書をコピー</string>
+    <string name="extensions_copied">コピーしました</string>
+    <string name="extensions_permissions_section">権限</string>
+    <string name="extensions_last_call_section">最後の呼び出し</string>
 </resources>

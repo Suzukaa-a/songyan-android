@@ -103,6 +103,8 @@
     <string name="ime_tool_panel_failed">The tool did not run.</string>
     <string name="ime_tool_panel_error_with_tool">%1$s: %2$s</string>
     <string name="ime_tool_panel_retry">Retry</string>
+    <string name="ime_tool_panel_expand">Show more</string>
+    <string name="ime_tool_panel_collapse">Show less</string>
     <string name="ime_toolbar_switch_input_method">Switch input method</string>
     <string name="ime_toolbar_voice_input">Voice input</string>
     <string name="ime_menu_switch_package">Switch to %2$s in %1$s</string>
@@ -160,4 +162,5 @@
     <string name="ime_voice_no_script">Choose a voice script in Settings first.</string>
     <string name="ime_toolbar_voice_undo">Undo voice input</string>
     <string name="ime_menu_extensions">Extensions</string>
+    <string name="ime_menu_extensions_loading">Loading extensions…</string>
 </resources>

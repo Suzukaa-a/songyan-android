@@ -700,7 +700,10 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.VOICE_INPUT) {
-        VoiceInputScreen(onBack = topBack(navController))
+        VoiceInputScreen(
+            onBack = topBack(navController),
+            onOpenScripts = { navController.navigate(SettingsRoutes.SCRIPTS) },
+        )
     }
 
     composable(SettingsRoutes.EXTENSIONS) {

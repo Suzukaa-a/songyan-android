@@ -175,4 +175,6 @@
 
     <!-- 処理結果をもとの場所に書き戻せず、クリップボードに入れたとき -->
     <string name="addon_panel_failed">拡張機能のパネルを開けませんでした。</string>
+    <string name="addon_panel_opening">拡張機能を開いています…</string>
+    <string name="addon_panel_retry">再試行</string>
 </resources>

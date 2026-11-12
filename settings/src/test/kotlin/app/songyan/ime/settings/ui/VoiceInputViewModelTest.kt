@@ -6,6 +6,9 @@ import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.script.ScriptRegistryUnavailable
 import app.songyan.ime.script.ScriptRunOutcome
 import app.songyan.ime.script.ScriptSourceOrigin
+import app.songyan.ime.settings.state.AddonCompatibility
+import app.songyan.ime.settings.state.AddonInfo
+import app.songyan.ime.settings.state.AddonSettingsGateway
 import app.songyan.ime.settings.state.InMemorySettingsPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,6 +52,7 @@ class VoiceInputViewModelTest {
         pending: Boolean = false,
         available: Boolean = true,
         order: Int = 0,
+        origin: ScriptSourceOrigin = ScriptSourceOrigin.Pasted,
     ): ScriptEntry =
         ScriptEntry(
             id = id,
@@ -62,7 +66,7 @@ class VoiceInputViewModelTest {
             availableOnThisHost = available,
             confirmationPending = pending,
             settings = emptyList(),
-            sourceOrigin = ScriptSourceOrigin.Pasted,
+            sourceOrigin = origin,
         )
 
     @Test
@@ -86,6 +90,80 @@ class VoiceInputViewModelTest {
                 model.uiState.value.scripts
                     .map { it.id },
             )
+        }
+
+    @Test
+    fun theRowKeepsWhereTheScriptCameFromAndThatItIsEnabled() =
+        runTest(dispatcher) {
+            registry.store(
+                script(
+                    "link",
+                    origin =
+                        ScriptSourceOrigin.Link(
+                            url = "https://example.test/a.js",
+                            updateUrl = "https://example.test/a.js",
+                        ),
+                ),
+            )
+            val model = VoiceInputViewModel(registry, preferences)
+
+            advanceUntilIdle()
+
+            val option =
+                model.uiState.value.scripts
+                    .single()
+            assertEquals(VoiceSourceOrigin.Link, option.origin)
+            assertEquals(true, option.enabled)
+            assertEquals(false, option.isAddon)
+        }
+
+    @Test
+    fun aCatalogThatCannotBeReadShowsTheFailureAndRetryClearsIt() =
+        runTest(dispatcher) {
+            registry.store(script("keep"))
+            registry.failReload = true
+            val model = VoiceInputViewModel(registry, preferences)
+
+            advanceUntilIdle()
+            assertTrue("an unreadable catalog must say so", model.uiState.value.failed)
+            assertFalse(model.uiState.value.loading)
+
+            registry.failReload = false
+            model.refresh()
+            advanceUntilIdle()
+            assertFalse(model.uiState.value.failed)
+            assertEquals(
+                listOf("keep"),
+                model.uiState.value.scripts
+                    .map { it.id },
+            )
+        }
+
+    @Test
+    fun onlyEnabledCompatibleVoiceAddonsAreOfferedNextToTheScripts() =
+        runTest(dispatcher) {
+            registry.store(script("script"))
+            val addons =
+                FakeAddons(
+                    listOf(
+                        addon("com.example.voice", enabled = true),
+                        addon("com.example.off", enabled = false),
+                        addon(
+                            "com.example.old",
+                            compatibility = AddonCompatibility.INCOMPATIBLE,
+                        ),
+                        addon("com.example.text", supportsVoice = false),
+                    ),
+                )
+            val model = VoiceInputViewModel(registry, preferences, addons)
+
+            advanceUntilIdle()
+
+            val options = model.uiState.value.scripts
+            assertEquals(listOf("script", "addon:com.example.voice"), options.map { it.id })
+            val addon = options.last()
+            assertEquals(true, addon.isAddon)
+            assertEquals(VoiceSourceOrigin.Addon, addon.origin)
         }
 
     @Test
@@ -118,10 +196,43 @@ class VoiceInputViewModelTest {
             assertEquals("keep", model.uiState.value.selectedScriptId)
         }
 
+    private fun addon(
+        packageName: String,
+        enabled: Boolean = true,
+        compatibility: AddonCompatibility = AddonCompatibility.COMPATIBLE,
+        supportsVoice: Boolean = true,
+    ): AddonInfo =
+        AddonInfo(
+            packageName = packageName,
+            label = packageName,
+            versionName = "1.0",
+            signerSha256 = null,
+            enabled = enabled,
+            compatibility = compatibility,
+            supportsVoice = supportsVoice,
+        )
+
+    private class FakeAddons(
+        private val installed: List<AddonInfo>,
+    ) : AddonSettingsGateway {
+        override val available: Boolean = true
+
+        override suspend fun list(): List<AddonInfo> = installed
+
+        override suspend fun rescan(): List<AddonInfo> = installed
+
+        override suspend fun setEnabled(
+            packageName: String,
+            enabled: Boolean,
+        ): Boolean = true
+    }
+
     /** The catalog stands in for the proxy: the page only reads entries and reloads them. */
     private class FakeRegistry : ScriptRegistry {
         private var stored: List<ScriptEntry> = emptyList()
         private var reloadCount = 0
+
+        var failReload: Boolean = false
 
         val reloads: Int get() = reloadCount
 
@@ -135,6 +246,7 @@ class VoiceInputViewModelTest {
 
         override suspend fun reload() {
             reloadCount += 1
+            if (failReload) error("the catalog is unavailable")
         }
 
         override suspend fun inspect(source: ByteArray): ScriptHeader = throw ScriptRegistryUnavailable()
@@ -149,12 +261,16 @@ class VoiceInputViewModelTest {
         override suspend fun confirm(
             id: String,
             settings: Map<String, String>,
+            clearSecrets: Set<String>,
         ): ScriptEntry = throw ScriptRegistryUnavailable()
 
         override suspend fun updateSettings(
             id: String,
             settings: Map<String, String>,
+            clearSecrets: Set<String>,
         ): ScriptEntry = throw ScriptRegistryUnavailable()
+
+        override suspend fun settings(id: String): Map<String, String> = emptyMap()
 
         override suspend fun setEnabled(
             id: String,

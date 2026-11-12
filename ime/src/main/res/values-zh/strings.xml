@@ -71,6 +71,8 @@
     <string name="ime_tool_panel_failed">工具运行失败。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
     <string name="ime_tool_panel_retry">重试</string>
+    <string name="ime_tool_panel_expand">展开</string>
+    <string name="ime_tool_panel_collapse">收起</string>
     <string name="ime_toolbar_switch_input_method">切换输入法</string>
     <string name="ime_toolbar_voice_input">语音输入</string>
     <string name="ime_menu_switch_package">切换到%1$s的%2$s</string>
@@ -129,4 +131,5 @@
     <string name="ime_voice_no_script">先在设置里选一个语音脚本。</string>
     <string name="ime_toolbar_voice_undo">撤销语音输入</string>
     <string name="ime_menu_extensions">扩展</string>
+    <string name="ime_menu_extensions_loading">正在加载扩展…</string>
 </resources>

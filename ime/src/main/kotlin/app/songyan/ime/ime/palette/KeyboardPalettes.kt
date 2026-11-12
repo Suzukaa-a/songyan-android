@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import app.songyan.ime.appearance.AppearancePresets
+import app.songyan.ime.ime.ColorMode
 import app.songyan.ime.ime.KeyboardDesignTokens
 import app.songyan.ime.ime.KeyboardPalette
 import app.songyan.ime.appearance.KeyboardPalette as AppearancePalette
@@ -18,10 +19,47 @@ import app.songyan.ime.appearance.KeyboardPalette as AppearancePalette
  * per configuration and appearance revision.
  */
 object KeyboardPalettes {
-    /** The palette for [context]'s current night mode; what the keyboard views call. */
+    /**
+     * The stored light/dark choice, pushed here by [app.songyan.ime.ime.KeyboardController] when
+     * its `colorMode` changes. [ColorMode.SYSTEM] follows the platform; the other two override it,
+     * so a dark keyboard in a light system (and the reverse) paints the same surface throughout.
+     */
+    @Volatile
+    private var colorMode: ColorMode = ColorMode.SYSTEM
+
+    /**
+     * Applies the user's theme choice and drops the resolved palettes when it changes. Returns
+     * whether the choice changed, so callers repaint only when they have to.
+     */
+    fun setColorMode(mode: ColorMode): Boolean {
+        if (colorMode == mode) return false
+        colorMode = mode
+        trim()
+        return true
+    }
+
+    /** Whether the keyboard surface is dark under the stored choice and [context]'s system theme. */
+    fun isDark(context: Context): Boolean = darkFor(colorMode, systemDark(context))
+
+    /** The pure part of [isDark]: the choice wins, [ColorMode.SYSTEM] follows the platform. */
+    internal fun darkFor(
+        mode: ColorMode,
+        systemDark: Boolean,
+    ): Boolean =
+        when (mode) {
+            ColorMode.SYSTEM -> systemDark
+            ColorMode.LIGHT -> false
+            ColorMode.DARK -> true
+        }
+
+    private fun systemDark(context: Context): Boolean =
+        (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+
+    /** The palette for [context] under the stored light/dark choice; what the keyboard views call. */
     fun current(context: Context): KeyboardPalette {
         val uiMode = context.resources.configuration.uiMode
-        val dark = (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val dark = isDark(context)
         val revision = KeyboardAppearanceRegistry.revision
         val cached = if (dark) darkEntry else lightEntry
         if (cached != null && cached.revision == revision && cached.uiMode == uiMode) {

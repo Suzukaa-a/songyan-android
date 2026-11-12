@@ -37,12 +37,16 @@ private class UnavailableScriptRegistry : ScriptRegistry {
     override suspend fun confirm(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String>,
     ): ScriptEntry = throw ScriptRegistryUnavailable()
 
     override suspend fun updateSettings(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String>,
     ): ScriptEntry = throw ScriptRegistryUnavailable()
+
+    override suspend fun settings(id: String): Map<String, String> = emptyMap()
 
     override suspend fun setEnabled(
         id: String,

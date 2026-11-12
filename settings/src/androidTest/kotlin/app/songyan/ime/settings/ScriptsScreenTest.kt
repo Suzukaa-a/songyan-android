@@ -19,7 +19,6 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -87,6 +86,13 @@ class ScriptsScreenTest {
         compose.waitUntilExactlyOneExists(matcher, timeoutMillis = 5_000)
     }
 
+    /** The update check moved from the top bar into the overflow; open it and tap the entry. */
+    private fun checkForUpdateThroughTheOverflow() {
+        compose.onNodeWithContentDescription(str(R.string.scripts_more_actions)).performClick()
+        waitForOne(hasText(str(R.string.scripts_check_update)))
+        compose.onNodeWithText(str(R.string.scripts_check_update)).performClick()
+    }
+
     private fun waitUntilGone(matcher: SemanticsMatcher) {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()
@@ -144,8 +150,9 @@ class ScriptsScreenTest {
         compose.onNodeWithText(DECLARED_SETTINGS[1].label).assertExists()
         compose.onNodeWithText(DECLARED_SETTINGS[2].label).assertExists()
         compose.onNodeWithText(str(R.string.scripts_setting_kind_url)).assertExists()
-        compose.onNodeWithText(str(R.string.scripts_setting_kind_choice)).assertExists()
-        compose.onNodeWithContentDescription(str(R.string.scripts_secret_toggle)).assertExists()
+        // A choice is free text with a hint, not a dropdown: the contract has no option list yet.
+        compose.onNodeWithText(str(R.string.scripts_setting_choice_hint)).assertExists()
+        compose.onNodeWithContentDescription(str(R.string.scripts_secret_show)).assertExists()
     }
 
     @Test
@@ -211,14 +218,10 @@ class ScriptsScreenTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(isToggleable()).fetchSemanticsNodes().isNotEmpty()
         }
-        assertEquals(
-            mapOf(
-                DECLARED_SETTINGS[0].key to SECRET,
-                DECLARED_SETTINGS[1].key to "",
-                DECLARED_SETTINGS[2].key to "",
-            ),
-            registry.confirms.single().second,
-        )
+        // Only the typed field travels; the blank non-secret settings keep whatever was stored
+        // (nothing, on a first confirmation) and the secret is the one value the user typed.
+        assertEquals(mapOf(DECLARED_SETTINGS[0].key to SECRET), registry.confirms.single().second)
+        assertEquals(listOf(emptySet<String>()), registry.clearedSecrets.map { it.second })
         compose.onNodeWithText(str(R.string.scripts_empty_title)).assertDoesNotExist()
         compose.onNode(isToggleable()).assertIsOn()
         assertEquals(emptyList<Pair<String, Boolean>>(), registry.enabled)
@@ -259,9 +262,12 @@ class ScriptsScreenTest {
         // A masked field is what the platform (autofill, accessibility) is told it is; the
         // reveal button is the affordance the user has for looking at what they typed.
         compose.onNode(hasSetTextAction() and passwordField()).assertExists()
+        // The reveal control names what it will do next: show while masked, hide while shown.
         compose
-            .onNodeWithContentDescription(str(R.string.scripts_secret_toggle))
+            .onNodeWithContentDescription(str(R.string.scripts_secret_show))
             .assertHasClickAction()
+            .performClick()
+        compose.onNodeWithContentDescription(str(R.string.scripts_secret_hide)).assertExists()
     }
 
     // --- the update check ---
@@ -289,9 +295,9 @@ class ScriptsScreenTest {
         waitForOne(hasText("链接脚本"))
         compose.onNodeWithText("链接脚本").performClick()
 
-        // The script's own page carries the update check for a link origin.
-        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
-        compose.onNodeWithContentDescription(str(R.string.scripts_check_update)).performClick()
+        // The script's own page carries the update check for a link origin, behind the overflow.
+        waitForOne(hasText(str(R.string.scripts_test_section)))
+        checkForUpdateThroughTheOverflow()
 
         // New declarations are unconfirmed again: the page says so and leads back to confirmation.
         waitForOne(hasText(str(R.string.scripts_pending_title)))
@@ -303,7 +309,7 @@ class ScriptsScreenTest {
         gate.complete(Unit)
 
         // Confirming the new declarations closes the page and clears the pending banner.
-        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        waitForOne(hasText(str(R.string.scripts_test_section)))
         compose.onNodeWithText(str(R.string.scripts_pending_title)).assertDoesNotExist()
         assertEquals(listOf("script-1"), registry.updates)
         assertEquals("script-1", registry.confirms.single().first)
@@ -320,8 +326,8 @@ class ScriptsScreenTest {
         compose.onNode(isToggleable()).performClick()
         compose.onNode(isToggleable()).assertIsOff()
         compose.onNodeWithText("链接脚本").performClick()
-        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
-        compose.onNodeWithContentDescription(str(R.string.scripts_check_update)).performClick()
+        waitForOne(hasText(str(R.string.scripts_test_section)))
+        checkForUpdateThroughTheOverflow()
         waitForOne(hasText(str(R.string.scripts_pending_title)))
         compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
         waitForOne(hasText(str(R.string.scripts_confirm_title)))
@@ -330,7 +336,7 @@ class ScriptsScreenTest {
         compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
         compose.onNodeWithText(str(R.string.scripts_confirm_action)).assertIsNotEnabled()
         secondGate.complete(Unit)
-        waitForOne(hasContentDescription(str(R.string.scripts_check_update)))
+        waitForOne(hasText(str(R.string.scripts_test_section)))
         compose.onNodeWithContentDescription(str(R.string.action_back)).performClick()
         waitForOne(hasText("链接脚本"))
         compose.onNode(isToggleable()).assertIsOff()

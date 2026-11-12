@@ -300,6 +300,21 @@ val SongyanTypography =
     )
 
 /**
+ * The effective dark flag for the stored choice: LIGHT and DARK win over the system, SYSTEM
+ * follows [systemDark]. The keyboard resolves its palette from the same choice, so the settings
+ * app and the keys never disagree about the theme.
+ */
+internal fun resolveDarkTheme(
+    mode: ThemeMode,
+    systemDark: Boolean,
+): Boolean =
+    when (mode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> systemDark
+    }
+
+/**
  * Root theme. Light/dark follows the stored theme choice (system by default), and Android 12+
  * wallpaper colors are used when [dynamicColor] is on; otherwise the Songyan palette is used.
  */
@@ -311,12 +326,7 @@ fun SongyanTheme(
 ) {
     val context = LocalContext.current
     val storedMode by ThemePreferencesHolder.current.mode.collectAsStateWithLifecycle()
-    val dark =
-        darkTheme ?: when (storedMode) {
-            ThemeMode.LIGHT -> false
-            ThemeMode.DARK -> true
-            ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        }
+    val dark = darkTheme ?: resolveDarkTheme(storedMode, isSystemInDarkTheme())
     val colorScheme =
         when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->

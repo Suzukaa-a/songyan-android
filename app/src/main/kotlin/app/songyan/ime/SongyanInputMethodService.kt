@@ -18,7 +18,7 @@ import android.view.WindowInsetsController
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
-import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
@@ -292,7 +292,7 @@ class SongyanInputMethodService : InputMethodService() {
 
     /** The restarted editor still shows the composition; the engine keeps it too. */
     private var keepComposition = false
-    private var root: LinearLayout? = null
+    private var root: FrameLayout? = null
     private var policy = EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE)
 
     /** The repeat-buffer rules that follow from [policy]; kept in step by [applyPolicy]. */
@@ -835,19 +835,22 @@ class SongyanInputMethodService : InputMethodService() {
         pad.setOtherInputMethods(otherInputMethods)
         controllerInput = NO_INPUT
         val palette = KeyboardPalette.from(this)
+        // A FrameLayout, not a column: the extension panel's SurfaceView and its loading/error chip
+        // are drawn over the keyboard instead of beside it, so the IME window keeps its height while
+        // the panel binds and the keyboard stays visible underneath (no blank window).
         val container =
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
+            FrameLayout(this).apply {
                 background =
                     KeyboardBackgroundDrawable(palette).also { surface ->
                         surface.onBottomToneChanged = { applyWindowAppearance() }
                     }
             }
-        container.addView(pad.view, LinearLayout.LayoutParams(-1, -2))
+        container.addView(
+            pad.view,
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT),
+        )
         root = container
         viewOwners.install(container)
-        // The extension panel shares this window: the keyboard view is hidden while a panel is shown
-        // and a SurfaceView takes its place, so the IME window keeps the height it already had.
         addonPanel?.destroy()
         addonPanel =
             AddonRegistryHolder.current?.let { registry ->

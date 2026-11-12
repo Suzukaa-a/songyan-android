@@ -1,11 +1,21 @@
 package app.songyan.ime.ime
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.text.InputType
+import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -17,11 +27,13 @@ import app.songyan.ime.ime.tools.ToolPanelController
 import app.songyan.ime.ime.tools.ToolPanelView
 import app.songyan.ime.ime.tools.ToolUndoResult
 import app.songyan.ime.ime.tools.ToolWriteResult
+import app.songyan.ime.tools.TextScope
 import app.songyan.ime.tools.ToolCapability
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolFailure
 import app.songyan.ime.tools.ToolLimits
 import app.songyan.ime.tools.ToolPhase
+import app.songyan.ime.tools.ToolPreview
 import app.songyan.ime.tools.WriteBlockReason
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -34,10 +46,12 @@ import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
  * The tool panel over a real platform editor and the shipped librime engine: an instrumented
@@ -474,6 +488,351 @@ class ToolPanelDeviceTest {
         instrumentation.waitForIdleSync()
         assertTrue(view.childCount > 0)
         assertEquals(context.getString(R.string.ime_tool_panel_title), (view.getChildAt(0) as? TextView)?.text)
+    }
+
+    // --- the visual/UX guarantees of the panel ---
+
+    @Test
+    fun manyToolsScrollInsideThePanel() {
+        val many = (0 until 24).map { ToolDescriptor("tool$it", "Tool number $it", setOf(ToolCapability.TEXT)) }
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = many,
+                    tool = null,
+                    phase = ToolPhase.IDLE,
+                    preview = null,
+                    failure = null,
+                    canUndo = false,
+                ),
+            )
+        }
+        layout(view, width = 640, height = 420)
+
+        val scroll = findView(view, ScrollView::class.java)
+        assertTrue("the list must be scrollable, not clipped", scroll.canScrollVertically(1))
+        val shown = buttonTexts(view)
+        for (tool in many) assertTrue("every tool must be in the list: " + tool.title, tool.title in shown)
+    }
+
+    @Test
+    fun theLastToolRowStaysAboveTheActionRow() {
+        val many = (0 until 24).map { ToolDescriptor("tool$it", "Tool number $it", setOf(ToolCapability.TEXT)) }
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = many,
+                    tool = null,
+                    phase = ToolPhase.IDLE,
+                    preview = null,
+                    failure = null,
+                    canUndo = false,
+                ),
+            )
+        }
+        layout(view, width = 640, height = 420)
+
+        val scroll = findView(view, ScrollView::class.java)
+        val actionRow = findView(view, HorizontalScrollView::class.java)
+        assertTrue(
+            "the scrollable list must end above the action row: " + scroll.bottom + " vs " + actionRow.top,
+            scroll.bottom <= actionRow.top,
+        )
+        val list = scroll.getChildAt(0) as ViewGroup
+        val last = list.getChildAt(list.childCount - 1)
+        assertTrue("the list keeps a safe inset under its last row", list.paddingBottom > 0)
+        assertTrue(
+            "the last row stays above the inset, never behind the action row",
+            last.bottom <= list.height - list.paddingBottom,
+        )
+
+        instrumentation.runOnMainSync { scroll.scrollTo(0, Int.MAX_VALUE) }
+        assertFalse("the end of the list must be reachable", scroll.canScrollVertically(1))
+    }
+
+    @Test
+    fun aLongResultIsFoldedUntilTheUserUnfoldsIt() {
+        val long = "很长的结果".repeat(60)
+        val view = showPreview(listOf(long, "短结果"), selected = 0)
+        layout(view, width = 640, height = 720)
+
+        val folded = resultBodies(view).first { it.text.length > 100 }
+        assertEquals("a long result starts folded", 3, folded.maxLines)
+        val expand = findTextViews(view, context.getString(R.string.ime_tool_panel_expand))
+        assertTrue("the fold link must be offered", expand.isNotEmpty())
+
+        instrumentation.runOnMainSync { expand.first().performClick() }
+
+        val unfolded = resultBodies(view).first { it.text.length > 100 }
+        assertEquals("unfolded results show everything", Int.MAX_VALUE, unfolded.maxLines)
+        assertTrue(
+            "the link must now offer folding",
+            findTextViews(view, context.getString(R.string.ime_tool_panel_collapse)).isNotEmpty(),
+        )
+    }
+
+    @Test
+    fun theActionRowScrollsSidewaysInsteadOfClippingButtons() {
+        val view = showPreview(listOf("x"), selected = 0)
+        layout(view, width = 300, height = 720)
+
+        val actionScroll = findView(view, HorizontalScrollView::class.java)
+        val row = actionScroll.getChildAt(0) as ViewGroup
+        assertTrue("the action row must not be clipped", row.width > actionScroll.width)
+        assertTrue(
+            "the row must scroll",
+            actionScroll.canScrollHorizontally(1) || actionScroll.canScrollHorizontally(-1),
+        )
+        val last = row.getChildAt(row.childCount - 1)
+        assertTrue("the last action keeps a real touch target", last.width > 0 && last.right <= row.width)
+    }
+
+    @Test
+    fun theSelectedResultIsMarkedForTalkBack() {
+        val view = showPreview(listOf("第一", "第二"), selected = 1)
+        layout(view, width = 640, height = 720)
+
+        val bodies = resultBodies(view)
+        val selected = bodies.single { it.isSelected }
+        assertTrue("the selected row is the second result", selected.text.contains("第二"))
+        assertTrue(
+            "TalkBack must hear which result is selected",
+            selected.contentDescription.toString().contains("第二"),
+        )
+        assertTrue("the selected row is the platform's selected state", selected.isSelected)
+        assertTrue("the check mark makes the selection visible", selected.text.startsWith("\u2713"))
+        assertNull(
+            "only the selected row describes itself as selected",
+            bodies.first { !it.isSelected }.contentDescription,
+        )
+        assertNotEquals(
+            "the selected result is painted differently",
+            bodies.first { !it.isSelected }.currentTextColor,
+            selected.currentTextColor,
+        )
+    }
+
+    @Test
+    fun previewActionsAreStyledByTheirWeight() {
+        val view = showPreview(listOf("x"), selected = 0)
+        val palette = KeyboardPalette.from(context)
+
+        val replace = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_replace)))
+        val insert = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_insert)))
+        val copy = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_copy)))
+        assertEquals("replace is the primary action", palette.accent, buttonColor(replace))
+        assertEquals("insert is tonal", palette.control, buttonColor(insert))
+        assertEquals("copy is a text action", 0, buttonColor(copy))
+        val close = findViewWithDescription(view, context.getString(R.string.ime_tool_panel_close))
+        assertTrue("close is an icon action", close is ImageView)
+    }
+
+    @Test
+    fun aRunningToolShowsProgressAndOnlyCancel() {
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = tool,
+                    phase = ToolPhase.RUNNING,
+                    preview = null,
+                    failure = null,
+                    canUndo = false,
+                ),
+            )
+        }
+        assertEquals("a run shows it is working", View.VISIBLE, findView(view, ProgressBar::class.java).visibility)
+        val texts = buttonTexts(view)
+        assertTrue(context.getString(R.string.ime_tool_panel_cancel) in texts)
+        assertFalse(
+            "no write action while the run is in flight",
+            context.getString(R.string.ime_tool_panel_replace) in texts,
+        )
+    }
+
+    @Test
+    fun darkPaletteKeepsThePanelTextReadable() {
+        val palette = KeyboardPalette.resolve(context, dark = true)
+        val view = showPreview(listOf("暗色下的结果"), selected = 0, palette = palette)
+        layout(view, width = 720, height = 900)
+
+        assertEquals(palette.background, (view.background as ColorDrawable).color)
+        val title = view.getChildAt(0) as TextView
+        val status = view.getChildAt(1) as TextView
+        assertEquals(palette.text, title.currentTextColor)
+        assertEquals(palette.muted, status.currentTextColor)
+        assertTrue(
+            "the title must stay readable on the dark surface: " + contrast(palette.text, palette.background),
+            contrast(palette.text, palette.background) >= 4.5,
+        )
+        assertTrue(
+            "the status must stay readable on the dark surface: " + contrast(palette.muted, palette.background),
+            contrast(palette.muted, palette.background) >= 3.0,
+        )
+        val replace = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_replace)))
+        val replaceBackground = buttonColor(replace)
+        assertEquals(palette.accent, replaceBackground)
+        assertTrue(
+            "the primary action label must contrast with its fill: " +
+                contrast(replace.currentTextColor, replaceBackground),
+            contrast(replace.currentTextColor, replaceBackground) >= 3.0,
+        )
+        // A picture of the dark panel, so the palette claim can be looked at, not only computed.
+        val screenshot = saveScreenshot(view, 720, 900, "tool-panel-dark.png")
+        assertTrue("the dark panel must render: " + screenshot.length(), screenshot.length() > 0)
+
+        // The tool rows are Buttons too: the platform theme's light tint must not survive here.
+        instrumentation.runOnMainSync {
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = null,
+                    phase = ToolPhase.IDLE,
+                    preview = null,
+                    failure = null,
+                    canUndo = false,
+                ),
+            )
+        }
+        val toolRow = requireNotNull(buttonWithText(view, tool.title))
+        assertEquals("tool rows take the palette key surface", palette.key, buttonColor(toolRow))
+        assertEquals(palette.text, toolRow.currentTextColor)
+    }
+
+    private fun layout(
+        view: ToolPanelView,
+        width: Int,
+        height: Int,
+    ) {
+        instrumentation.runOnMainSync {
+            view.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+            )
+            view.layout(0, 0, width, height)
+        }
+    }
+
+    private fun previewState(
+        results: List<String>,
+        selected: Int,
+    ): ToolPanelController.State =
+        ToolPanelController.State(
+            available = true,
+            tools = listOf(tool),
+            tool = tool,
+            phase = ToolPhase.PREVIEWING,
+            preview = ToolPreview("run", tool.title, TextScope.SELECTION, false, results, selected),
+            failure = null,
+            canUndo = false,
+        )
+
+    private fun showPreview(
+        results: List<String>,
+        selected: Int,
+        palette: KeyboardPalette? = null,
+    ): ToolPanelView {
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = if (palette == null) ToolPanelView(context) else ToolPanelView(context, palette)
+            view.render(previewState(results, selected))
+        }
+        return view
+    }
+
+    private fun resultBodies(view: ToolPanelView): List<TextView> {
+        val scroll = findView(view, ScrollView::class.java)
+        val list = scroll.getChildAt(0) as LinearLayout
+        return (0 until list.childCount).map { index ->
+            val row = list.getChildAt(index) as ViewGroup
+            row.getChildAt(0) as TextView
+        }
+    }
+
+    private fun textViewsIn(root: ViewGroup): List<TextView> =
+        buildList {
+            for (index in 0 until root.childCount) {
+                when (val child = root.getChildAt(index)) {
+                    is TextView -> add(child)
+                    is ViewGroup -> addAll(textViewsIn(child))
+                }
+            }
+        }
+
+    private fun findTextViews(
+        root: ViewGroup,
+        text: String,
+    ): List<TextView> = textViewsIn(root).filter { it.text.toString() == text }
+
+    private fun findViewWithDescription(
+        root: ViewGroup,
+        description: String,
+    ): View? {
+        for (index in 0 until root.childCount) {
+            val child = root.getChildAt(index)
+            if (child.contentDescription?.toString() == description) return child
+            if (child is ViewGroup) findViewWithDescription(child, description)?.let { return it }
+        }
+        return null
+    }
+
+    private fun <T : View> findView(
+        root: ViewGroup,
+        type: Class<T>,
+    ): T {
+        val pending = ArrayDeque<ViewGroup>()
+        pending.addLast(root)
+        while (pending.isNotEmpty()) {
+            val group = pending.removeLast()
+            for (index in 0 until group.childCount) {
+                val child = group.getChildAt(index)
+                if (type.isInstance(child)) return requireNotNull(type.cast(child))
+                if (child is ViewGroup) pending.addLast(child)
+            }
+        }
+        error("no " + type.simpleName + " in the panel")
+    }
+
+    private fun buttonColor(button: Button): Int = (button.background as GradientDrawable).color?.defaultColor ?: 0
+
+    /** WCAG contrast ratio of two opaque ARGB colours. */
+    private fun contrast(
+        foreground: Int,
+        background: Int,
+    ): Double {
+        fun luminance(color: Int): Double {
+            fun channel(shift: Int): Double {
+                val value = ((color shr shift) and 0xFF) / 255.0
+                return if (value <= 0.04045) value / 12.92 else Math.pow((value + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+        }
+        val first = luminance(foreground)
+        val second = luminance(background)
+        return (maxOf(first, second) + 0.05) / (minOf(first, second) + 0.05)
+    }
+
+    private fun saveScreenshot(
+        view: ToolPanelView,
+        width: Int,
+        height: Int,
+        name: String,
+    ): File {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        instrumentation.runOnMainSync { view.draw(Canvas(bitmap)) }
+        val file = File(context.cacheDir, name)
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        return file
     }
 
     private fun reasonText(controller: ToolPanelController): String? {

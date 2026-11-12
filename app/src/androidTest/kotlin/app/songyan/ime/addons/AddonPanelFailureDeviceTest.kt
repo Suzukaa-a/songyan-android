@@ -4,11 +4,14 @@ package app.songyan.ime.addons
 import android.os.SystemClock
 import android.text.InputType
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.R
 import app.songyan.ime.addon.AddonCapability
 import app.songyan.ime.addon.AddonHandshake
 import app.songyan.ime.addon.AddonHostInfo
@@ -152,10 +155,12 @@ class AddonPanelFailureDeviceTest {
         // No surface was drawn yet: the keyboard stays visible until it would be.
         assertEquals(View.VISIBLE, keyboardView.visibility)
 
+        val failedText = targetContext.getString(R.string.addon_panel_failed)
         assertTrue(
-            "the token failure must release the surface",
-            waitFor { container.childCount == 1 && keyboardView.visibility == View.VISIBLE },
+            "the token failure must release the surface and show the error chip",
+            waitFor { hasText(container, failedText) && keyboardView.visibility == View.VISIBLE },
         )
+        assertEquals(2, container.childCount)
         assertFalse(panel.isShown)
         assertTrue("the failure must be reported to the service", recorder.failed)
         assertTrue(recorder.shownChanges.isEmpty())
@@ -197,13 +202,17 @@ class AddonPanelFailureDeviceTest {
                         recorder = recorder,
                     )
                 assertTrue(panel.open(samplePackage))
-                assertEquals(2, host.container.childCount)
+                // keyboard, transparent surface, loading chip
+                assertEquals(3, host.container.childCount)
                 assertEquals(View.VISIBLE, host.keyboardView.visibility)
+                assertTrue(hasText(host.container, host.getString(R.string.addon_panel_opening)))
             }
             assertTrue("the watchdog must close the stalled panel", waitFor(timeoutMillis = 10_000) { !panel.isShown })
             scenario.onActivity { host ->
-                assertEquals(1, host.container.childCount)
+                // keyboard plus the error chip with Retry instead of a blank window
+                assertEquals(2, host.container.childCount)
                 assertEquals(View.VISIBLE, host.keyboardView.visibility)
+                assertTrue(hasText(host.container, host.getString(R.string.addon_panel_failed)))
             }
             assertTrue("the timeout must be reported to the service", recorder.failed)
             assertTrue(
@@ -222,6 +231,19 @@ class AddonPanelFailureDeviceTest {
         } finally {
             scenario.close()
         }
+    }
+
+    private fun hasText(
+        view: View,
+        text: String,
+    ): Boolean {
+        if (view is TextView && view.text.toString() == text) return true
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                if (hasText(view.getChildAt(index), text)) return true
+            }
+        }
+        return false
     }
 
     private fun waitFor(

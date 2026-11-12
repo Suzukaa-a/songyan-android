@@ -476,8 +476,16 @@ class KeyboardController(
     /** The user's shuangpin hints per letter; empty while they are off. */
     internal var shuangpinHints: Map<Char, String> = emptyMap()
 
-    /** The stored light/dark choice, kept for the keyboard settings panel. */
+    /**
+     * The stored light/dark choice. Assigning it also hands it to [app.songyan.ime.ime.palette.KeyboardPalettes]
+     * and repaints when it changed, so a dark choice in a light system (and the reverse) reaches
+     * the keys, candidate bar, menus and panels without waiting for a configuration change.
+     */
     internal var colorMode = ColorMode.SYSTEM
+        set(value) {
+            field = value
+            if (KeyboardPalettes.setColorMode(value)) refreshAppearance()
+        }
 
     /** The user turned the input-method switch key on; layouts and footers then keep their globe keys. */
     internal var showsSwitchKey = false
@@ -525,6 +533,10 @@ class KeyboardController(
     /** The key area height every page is laid out against, the nine-key shell included. */
     internal val keyAreaHeightDp: Float get() = rowHeightDp * PAGE_ROWS
     internal var menuOpen = false
+
+    /** The extension rows the menu last drew, and whether a finished scan has ever supplied them. */
+    private var extensionPanelsSnapshot: List<Pair<String, String>> = emptyList()
+    private var extensionPanelsKnown = false
     internal var generation = 0
     internal var dispatchGeneration = 0
     internal var retired = false
@@ -944,6 +956,7 @@ class KeyboardController(
         inlineSuggestions.refreshAppearance()
         keyboard.refreshAppearance()
         menu.refreshAppearance()
+        toolPanelView?.refreshAppearance()
         panels?.refreshAppearance()
         render()
     }
@@ -1171,13 +1184,17 @@ class KeyboardController(
     }
 
     /**
-     * Replaces the extension rows of an already open menu. The service re-reads the registry off
-     * the main thread when the menu opens; the scan can finish after the menu was built, and the
-     * rows then have to appear without the user closing and reopening the menu.
+     * Takes the extension list a background scan just produced. A menu that is still waiting for
+     * its first list (the placeholder row) is filled now; a menu that already drew rows keeps them,
+     * because inserting late rows under the user's finger is the jump this avoids. The fresh list
+     * is used the next time the menu opens.
      */
     fun refreshExtensionMenu() {
-        if (retired || !menuOpen) return
-        menu.setExtensionPanels(extensionPanels())
+        if (retired) return
+        extensionPanelsSnapshot = extensionPanels()
+        extensionPanelsKnown = true
+        if (!menuOpen || !menu.extensionWaiting) return
+        menu.setExtensionPanels(extensionPanelsSnapshot)
     }
 
     /**
@@ -1281,7 +1298,15 @@ class KeyboardController(
         panels?.settle()
         syncMenu()
         refreshInputMethodOptions()
-        menu.setExtensionPanels(extensionPanels())
+        // The menu is drawn once, from the last known list: a scan that finishes after it opened
+        // must not push new rows into it. Only a first open with nothing cached yet shows a
+        // loading row, which the finished scan then replaces in place.
+        val cachedExtensions = extensionPanels()
+        if (cachedExtensions.isNotEmpty()) {
+            extensionPanelsSnapshot = cachedExtensions
+            extensionPanelsKnown = true
+        }
+        menu.setExtensionPanels(extensionPanelsSnapshot, loading = !extensionPanelsKnown)
         menuOpen = true
         // The menu replaces the whole key surface, so it takes that surface's exact height: a
         // shorter menu would resize the IME window and scroll the editor under the user's text.

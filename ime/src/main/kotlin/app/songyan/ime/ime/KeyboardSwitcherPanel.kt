@@ -92,6 +92,10 @@ internal class KeyboardSwitcherPanel(
     private var extensionTitle: TextView? = null
     private var extensionEntries: List<Pair<String, String>> = emptyList()
 
+    /** True while the section stands for a list that has not arrived yet (a placeholder row). */
+    private var extensionLoading = false
+    private var extensionPlaceholder: TextView? = null
+
     init {
         orientation = VERTICAL
         setBackgroundColor(palette.background)
@@ -122,6 +126,21 @@ internal class KeyboardSwitcherPanel(
         layoutRow = layoutScroll.getChildAt(0) as LinearLayout
         body.addView(layoutScroll)
         rebuildLayoutChips()
+        // Extensions with their own panel sit right under the chip groups: the menu's height is the
+        // fixed key surface, and the rows below (quick content, settings, input methods) are long
+        // enough that anything put under them needs a scroll to be seen at all.
+        val extensionsDivider = divider()
+        val extensionsTitle = title(context.getString(R.string.ime_menu_extensions))
+        val extensionsSection = LinearLayout(context).apply { orientation = VERTICAL }
+        extensionsDivider.visibility = View.GONE
+        extensionsTitle.visibility = View.GONE
+        extensionsSection.visibility = View.GONE
+        body.addView(extensionsDivider)
+        body.addView(extensionsTitle)
+        body.addView(extensionsSection)
+        extensionDivider = extensionsDivider
+        extensionTitle = extensionsTitle
+        extensionSection = extensionsSection
         // The action rows state their own role with a chevron; a third group title would push the
         // menu past the surface height, which is fixed so opening it never resizes the window.
         body.addView(actionRow(context.getString(R.string.ime_menu_quick_content)) { onQuickContent() })
@@ -152,19 +171,6 @@ internal class KeyboardSwitcherPanel(
         body.addView(voiceRow)
         switchRows = listOf(switchDivider, switchRow, pickRow)
         voiceRows = listOf(voiceDivider, voiceRow)
-        // Extensions with their own panel: one row each, added only when the host reports any.
-        val extensionsDivider = divider()
-        val extensionsTitle = title(context.getString(R.string.ime_menu_extensions))
-        val extensionsSection = LinearLayout(context).apply { orientation = VERTICAL }
-        extensionsDivider.visibility = View.GONE
-        extensionsTitle.visibility = View.GONE
-        extensionsSection.visibility = View.GONE
-        body.addView(extensionsDivider)
-        body.addView(extensionsTitle)
-        body.addView(extensionsSection)
-        extensionDivider = extensionsDivider
-        extensionTitle = extensionsTitle
-        extensionSection = extensionsSection
         setInputMethodOptions(InputMethodOptions())
         update(defaultSchemaId, defaultLayout)
     }
@@ -309,11 +315,19 @@ internal class KeyboardSwitcherPanel(
     /**
      * The extensions with their own panel, as (package name, label). Rebuilt when the list changes;
      * an empty list hides the whole section so the menu stays as short as before.
+     *
+     * With [loading] and no rows yet, the section shows a single placeholder line: the rows that
+     * arrive with the menu's background scan then replace it instead of making the whole section
+     * appear out of nowhere under the user.
      */
-    fun setExtensionPanels(entries: List<Pair<String, String>>) {
+    fun setExtensionPanels(
+        entries: List<Pair<String, String>>,
+        loading: Boolean = false,
+    ) {
         val section = extensionSection ?: return
-        if (entries == extensionEntries) return
+        if (entries == extensionEntries && loading == extensionLoading) return
         extensionEntries = entries
+        extensionLoading = loading
         val removed = mutableListOf<View>()
         for (index in section.childCount - 1 downTo 0) {
             removed += section.getChildAt(index)
@@ -326,14 +340,35 @@ internal class KeyboardSwitcherPanel(
             actionChevrons.removeAll(removedSet)
             actionDividers.removeAll(removedSet)
         }
-        val visible = entries.isNotEmpty()
+        extensionPlaceholder = null
+        val visible = entries.isNotEmpty() || loading
         extensionDivider?.visibility = if (visible) VISIBLE else GONE
         extensionTitle?.visibility = if (visible) VISIBLE else GONE
         section.visibility = if (visible) VISIBLE else GONE
+        if (loading && entries.isEmpty()) {
+            section.addView(
+                TextView(context).apply {
+                    text = context.getString(R.string.ime_menu_extensions_loading)
+                    textSize = 15f
+                    setTextColor(palette.muted)
+                    gravity = Gravity.CENTER_VERTICAL
+                    minimumHeight = padding(MIN_TOUCH_TARGET_DP)
+                    setPadding(padding(12), padding(8), padding(12), padding(8))
+                    extensionPlaceholder = this
+                },
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
+            )
+        }
         for ((packageName, label) in entries) {
             section.addView(actionRow(label) { onExtensionPanel(packageName) })
         }
     }
+
+    /** The rows currently drawn for the extension section; the controller keeps them stable. */
+    internal val extensionRows: List<Pair<String, String>> get() = extensionEntries
+
+    /** Whether the section is still waiting for its first list. */
+    internal val extensionWaiting: Boolean get() = extensionLoading
 
     /** Shows the input method rows the system can serve: switching, and voice when a voice input method exists. */
     fun setInputMethodOptions(options: InputMethodOptions) {
@@ -371,6 +406,7 @@ internal class KeyboardSwitcherPanel(
         palette = KeyboardPalette.from(context)
         setBackgroundColor(palette.background)
         for (title in titles) title.setTextColor(palette.muted)
+        extensionPlaceholder?.setTextColor(palette.muted)
         headerTitle?.setTextColor(palette.text)
         for (label in actionLabels) label.setTextColor(palette.text)
         for (chevron in actionChevrons) chevron.imageTintList = ColorStateList.valueOf(palette.muted)

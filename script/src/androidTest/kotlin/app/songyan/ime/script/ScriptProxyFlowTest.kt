@@ -70,6 +70,38 @@ class ScriptProxyFlowTest {
         }
 
     @Test
+    fun aBlankSecretKeepsTheStoredOneAndAnExplicitClearDeletesIt() =
+        runBlocking {
+            val quote = '\u0022'
+            val source =
+                listOf(
+                    "// @api 1",
+                    "// @name 带设置与密钥",
+                    "// @setting endpoint url 服务地址",
+                    "// @secret key 密钥",
+                    "export default async () => " + quote + "x" + quote + ";",
+                ).joinToString("\n").toByteArray(Charsets.UTF_8)
+            val entry = registry.add(source, ScriptSourceOrigin.Pasted)
+            registry.confirm(entry.id, mapOf("endpoint" to "https://a.example", "key" to "topsecret"))
+            val secretFile = java.io.File(context.filesDir, "script/scripts/" + entry.id + "/secret.bin")
+            assertTrue("the secret is stored outside state.json", secretFile.isFile)
+            // The read surface never carries secrets, only the filled non-secret settings.
+            assertEquals(mapOf("endpoint" to "https://a.example"), registry.settings(entry.id))
+            // A re-confirmation with a blank secret form keeps the stored secret.
+            registry.confirm(entry.id, emptyMap())
+            assertTrue("a blank secret keeps the stored one", secretFile.isFile)
+            assertEquals(
+                "the non-secret settings survive too",
+                mapOf("endpoint" to "https://a.example"),
+                registry.settings(entry.id),
+            )
+            // Only the explicit clear deletes it.
+            registry.confirm(entry.id, emptyMap(), clearSecrets = setOf("key"))
+            assertTrue("an explicit clear deletes the stored secret", !secretFile.isFile)
+            registry.delete(entry.id)
+        }
+
+    @Test
     fun secretsStayOutOfTheStateFile() =
         runBlocking {
             val quote = '\u0022'

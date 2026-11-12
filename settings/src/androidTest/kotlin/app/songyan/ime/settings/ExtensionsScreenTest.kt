@@ -20,14 +20,15 @@ import app.songyan.ime.settings.state.AddonToolInfo
 import app.songyan.ime.settings.ui.ExtensionsViewModel
 import app.songyan.ime.settings.ui.screens.ExtensionsScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * 设置 → 扩展 as the user sees it: where extensions come from, who an installed one is (package,
- * version, signing certificate, permissions), whether Songyan can talk to it, what it last did,
- * and the switch that turns it on.
+ * 设置 → 扩展 as the user sees it after the card redesign: one card per extension with identity,
+ * switch and a compatibility badge, capability/tool/permission chips, a collapsible identity block,
+ * the last call as secondary information, and the extension's own settings page as a button.
  */
 @OptIn(ExperimentalTestApi::class)
 class ExtensionsScreenTest {
@@ -55,21 +56,45 @@ class ExtensionsScreenTest {
         }
     }
 
-    private fun show(gateway: FakeGateway): ExtensionsViewModel {
+    private class HangingGateway : AddonSettingsGateway {
+        override val available: Boolean = true
+
+        override suspend fun list(): List<AddonInfo> = awaitCancellation()
+
+        override suspend fun rescan(): List<AddonInfo> = awaitCancellation()
+
+        override suspend fun setEnabled(
+            packageName: String,
+            enabled: Boolean,
+        ): Boolean = false
+    }
+
+    private fun show(
+        gateway: AddonSettingsGateway,
+        openSettings: ((String) -> Unit)? = null,
+    ): ExtensionsViewModel {
         val model = ExtensionsViewModel(gateway)
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
-                ExtensionsScreen(onBack = {}, model = model)
+                ExtensionsScreen(onBack = {}, model = model, openSettings = openSettings)
             }
         }
         return model
     }
+
+    private val settingsComponent = "app.songyan.ime.addon.sample/.SampleSettingsActivity"
 
     private fun sampleAddon(
         packageName: String = "app.songyan.ime.addon.sample",
         label: String = "Sample Addon",
         enabled: Boolean = false,
         compatibility: AddonCompatibility = AddonCompatibility.COMPATIBLE,
+        settingsComponent: String? = this.settingsComponent,
+        tools: List<AddonToolInfo> =
+            listOf(
+                AddonToolInfo("uppercase", "Uppercase"),
+                AddonToolInfo("crash", "Crash the addon (debug only)"),
+            ),
     ): AddonInfo =
         AddonInfo(
             packageName = packageName,
@@ -80,16 +105,11 @@ class ExtensionsScreenTest {
             enabled = enabled,
             compatibility = compatibility,
             incompatibleReason =
-                if (compatibility ==
-                    AddonCompatibility.INCOMPATIBLE
-                ) {
-                    "no common protocol version"
-                } else {
-                    null
-                },
-            tools = listOf(AddonToolInfo("uppercase", "Uppercase")),
+                if (compatibility == AddonCompatibility.INCOMPATIBLE) "no common protocol version" else null,
+            tools = tools,
             supportsPanel = true,
             supportsVoice = true,
+            settingsComponent = settingsComponent,
             lastCall =
                 AddonCallInfo(
                     kind = AddonCallKind.TEXT,
@@ -99,8 +119,16 @@ class ExtensionsScreenTest {
                 ),
         )
 
+    private fun waitForCard() {
+        compose.waitUntilExactlyOneExists(
+            androidx.compose.ui.test
+                .hasText("Sample Addon"),
+            timeoutMillis = 5_000,
+        )
+    }
+
     @Test
-    fun theEmptyPageExplainsWhereExtensionsComeFrom() {
+    fun theEmptyPageUsesTheSharedStateMessageAndOffersARescan() {
         show(FakeGateway(emptyList()))
         compose.waitUntilExactlyOneExists(
             androidx.compose.ui.test
@@ -109,28 +137,35 @@ class ExtensionsScreenTest {
         )
         compose.onNodeWithText(str(R.string.extensions_body)).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.extensions_empty_body)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(str(R.string.extensions_rescan)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.extensions_rescan)).assertIsDisplayed()
     }
 
     @Test
-    fun anInstalledExtensionShowsItsIdentityPermissionsAndLastCall() {
+    fun aCardShowsIdentityBadgeCapabilitiesPermissionsAndLastCall() {
         show(FakeGateway(listOf(sampleAddon())))
-        compose.waitUntilExactlyOneExists(
-            androidx.compose.ui.test
-                .hasText("Sample Addon"),
-            timeoutMillis = 5_000,
-        )
+        waitForCard()
         compose.onNodeWithText("app.songyan.ime.addon.sample").assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.extensions_version, "0.1.0")).assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.extensions_signer, "0123456789abcdef…")).assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.extensions_permissions, "Microphone")).assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.extensions_tools, "Uppercase")).assertIsDisplayed()
+        // Badge
+        compose.onNodeWithText(str(R.string.extensions_compatible)).assertIsDisplayed()
+        // Capability and tool chips
+        compose.onNodeWithText("Uppercase").assertIsDisplayed()
         compose.onNodeWithText(str(R.string.extensions_panel)).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.extensions_voice)).assertIsDisplayed()
+        // Permission chip and section
+        compose.onNodeWithText(str(R.string.extensions_permissions_section)).assertIsDisplayed()
+        compose.onNodeWithText("Microphone").assertIsDisplayed()
+        // Last call is secondary information, not a body line per identity field
         compose
             .onNodeWithText(
-                str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), 12L, "boom"),
+                str(R.string.extensions_last_call_section) +
+                    " · " +
+                    str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), 12L, "boom"),
             ).assertIsDisplayed()
+        // Version/signature stay folded until asked for
+        compose.onNodeWithText(str(R.string.extensions_details)).assertIsDisplayed()
+        compose
+            .onNodeWithText(str(R.string.extensions_version, "0.1.0"))
+            .assertDoesNotExist()
         compose
             .onNodeWithContentDescription(str(R.string.extensions_switch, "Sample Addon"))
             .assertIsOff()
@@ -138,7 +173,7 @@ class ExtensionsScreenTest {
     }
 
     @Test
-    fun anIncompatibleExtensionIsMarkedAndCannotBeTurnedOn() {
+    fun anIncompatibleExtensionIsBadgedAndCannotBeTurnedOn() {
         show(FakeGateway(listOf(sampleAddon(compatibility = AddonCompatibility.INCOMPATIBLE))))
         compose.waitUntilExactlyOneExists(
             androidx.compose.ui.test
@@ -152,14 +187,73 @@ class ExtensionsScreenTest {
     }
 
     @Test
+    fun anUnverifiedExtensionIsBadgedWithTheQuestionMark() {
+        show(FakeGateway(listOf(sampleAddon(compatibility = AddonCompatibility.UNKNOWN))))
+        compose.waitUntilExactlyOneExists(
+            androidx.compose.ui.test
+                .hasText(str(R.string.extensions_unknown)),
+            timeoutMillis = 5_000,
+        )
+        compose.onNodeWithText(str(R.string.extensions_unknown)).assertIsDisplayed()
+    }
+
+    @Test
+    fun theIdentityBlockExpandsAndTheSignatureCanBeCopied() {
+        show(FakeGateway(listOf(sampleAddon())))
+        waitForCard()
+        compose.onNodeWithText(str(R.string.extensions_details)).performClick()
+        compose.onNodeWithText(str(R.string.extensions_version, "0.1.0")).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.extensions_signer, "0123456789abcdef…")).assertIsDisplayed()
+        compose.onNodeWithContentDescription(str(R.string.extensions_copy_signer)).performClick()
+        compose.waitUntilExactlyOneExists(
+            androidx.compose.ui.test
+                .hasText(str(R.string.extensions_copied)),
+            timeoutMillis = 5_000,
+        )
+    }
+
+    @Test
+    fun theExtensionSettingsEntryLaunchesTheDeclaredComponent() {
+        val opened = mutableListOf<String>()
+        show(FakeGateway(listOf(sampleAddon())), openSettings = { opened += it })
+        waitForCard()
+        compose.onNodeWithText(str(R.string.extensions_open_settings)).performClick()
+        assertEquals(listOf(settingsComponent), opened)
+    }
+
+    @Test
+    fun anExtensionWithoutASettingsPageHasNoSettingsEntry() {
+        show(FakeGateway(listOf(sampleAddon(settingsComponent = null))))
+        waitForCard()
+        compose.onNodeWithText(str(R.string.extensions_open_settings)).assertDoesNotExist()
+    }
+
+    @Test
+    fun developerOnlyToolsAreVisibleOnADebugHost() {
+        // The compose tests run in a debuggable host, where the sample's debug tools are real; the
+        // release filtering rule itself is covered by ExtensionsUiModelTest.
+        show(FakeGateway(listOf(sampleAddon())))
+        waitForCard()
+        compose.onNodeWithText("Crash the addon (debug only)").assertIsDisplayed()
+    }
+
+    @Test
+    fun theLoadingPageShowsTheFrameInsteadOfAnEmptyList() {
+        show(HangingGateway())
+        // The page frame (title) is drawn immediately; the empty state must not flash while loading.
+        compose.waitUntilExactlyOneExists(
+            androidx.compose.ui.test
+                .hasText(str(R.string.extensions_title)),
+            timeoutMillis = 5_000,
+        )
+        compose.onNodeWithText(str(R.string.extensions_empty_title)).assertDoesNotExist()
+    }
+
+    @Test
     fun turningAnExtensionOnCallsTheGateway() {
         val gateway = FakeGateway(listOf(sampleAddon()))
         show(gateway)
-        compose.waitUntilExactlyOneExists(
-            androidx.compose.ui.test
-                .hasText("Sample Addon"),
-            timeoutMillis = 5_000,
-        )
+        waitForCard()
         compose.onNodeWithContentDescription(str(R.string.extensions_switch, "Sample Addon")).performClick()
         compose.waitUntil(timeoutMillis = 5_000) { gateway.toggles.isNotEmpty() }
         assertEquals(listOf("app.songyan.ime.addon.sample" to true), gateway.toggles.toList())

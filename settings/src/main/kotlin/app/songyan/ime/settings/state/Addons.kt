@@ -51,6 +51,8 @@ data class AddonInfo(
     val tools: List<AddonToolInfo> = emptyList(),
     val supportsPanel: Boolean = false,
     val supportsVoice: Boolean = false,
+    /** Flattened ComponentName of the extension's own settings page; null when it declares none. */
+    val settingsComponent: String? = null,
     val lastCall: AddonCallInfo? = null,
 )
 

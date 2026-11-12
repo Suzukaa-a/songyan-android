@@ -349,8 +349,23 @@
     <string name="voice_switch_title">Microphone button</string>
     <string name="voice_switch_subtitle">Show the microphone in the keyboard toolbar</string>
     <string name="voice_scripts_section">Voice script</string>
-    <string name="voice_scripts_empty">No voice script yet. Add one under Scripts.</string>
-    <string name="voice_scripts_loading">Reading scripts…</string>
+    <string name="voice_empty_scripts_title">No voice script yet</string>
+    <string name="voice_empty_scripts_body">Scripts that support voice input appear here after you add them under Scripts.</string>
+    <string name="voice_open_scripts">Add under Scripts</string>
+    <string name="voice_load_failed_title">Unable to read the scripts</string>
+    <string name="voice_load_failed_body">Please try again.</string>
+    <string name="voice_retry">Retry</string>
+    <string name="voice_script_summary">%1$s · %2$s</string>
+    <string name="voice_script_enabled">On</string>
+    <string name="voice_script_disabled">Off</string>
+    <string name="voice_script_selected">Selected</string>
+    <string name="voice_script_not_selected">Not selected</string>
+    <string name="voice_permission_section">Permission</string>
+    <string name="voice_permission_title">Microphone access</string>
+    <string name="voice_permission_granted">Granted</string>
+    <string name="voice_permission_denied">Not granted</string>
+    <string name="voice_permission_open_settings">Open system settings</string>
+    <string name="voice_addon_origin">Extension app</string>
 
     <!-- 设置 → 扩展: external addons installed as separate APKs. -->
     <string name="row_extensions_title">Extensions</string>
@@ -381,4 +396,11 @@
     <string name="extensions_switch">%1$s switch</string>
     <string name="voice_addon_option">%1$s (extension)</string>
     <string name="extensions_toggle_failed">Could not save the switch. Nothing was changed.</string>
+    <string name="extensions_open_settings">Settings</string>
+    <string name="extensions_settings_unavailable">The settings page of the extension could not be opened.</string>
+    <string name="extensions_details">Version and signature</string>
+    <string name="extensions_copy_signer">Copy signing certificate</string>
+    <string name="extensions_copied">Copied</string>
+    <string name="extensions_permissions_section">Permissions</string>
+    <string name="extensions_last_call_section">Last call</string>
 </resources>

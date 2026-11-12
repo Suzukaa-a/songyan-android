@@ -42,6 +42,21 @@
     <string name="scripts_guide_clipboard_label">给 AI 的说明</string>
     <string name="scripts_example_title">例子（不联网）</string>
 
+    <string name="scripts_pending_badge">待确认</string>
+    <string name="scripts_enable_script">启用 %1$s</string>
+    <string name="scripts_disable_script">停用 %1$s</string>
+    <string name="scripts_more_actions">更多操作</string>
+    <string name="scripts_missing_title">这个脚本已不存在</string>
+    <string name="scripts_settings_edit">修改设置</string>
+    <string name="scripts_settings_title">脚本设置</string>
+    <string name="scripts_setting_choice_hint">自由填写：输入脚本说明中允许的值。</string>
+    <string name="scripts_setting_url_invalid">地址以 http:// 或 https:// 开头</string>
+    <string name="scripts_secret_keep_hint">留空表示保留已保存的密钥。</string>
+    <string name="scripts_secret_clear">清除已保存的密钥</string>
+    <string name="scripts_secret_show">显示密钥</string>
+    <string name="scripts_secret_hide">隐藏密钥</string>
+    <string name="scripts_notice_settings_saved">设置已保存。</string>
+
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">确认脚本</string>
     <string name="scripts_confirm_section_what">它是什么</string>
@@ -88,11 +103,11 @@
     <string name="scripts_editor_save">保存</string>
     <string name="scripts_editor_body">脚本按编辑后的内容保存。新的声明需要再次确认才会运行。</string>
     <string name="scripts_delete_title">删除这个脚本？</string>
-    <string name="scripts_delete_body">%1$s 将从这台设备移除，无法撤销。</string>
+    <string name="scripts_delete_body">%1$s 将从这台设备移除，保存的设置和密钥也会一起删除，且无法撤销。</string>
     <string name="scripts_delete_confirm">删除</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">脚本已删除。</string>
+    <string name="scripts_notice_deleted">脚本已删除，此操作无法撤销。</string>
     <string name="scripts_notice_up_to_date">已是最新。</string>
     <string name="scripts_notice_updated">发现更新。使用前请读一读改了什么。</string>
     <string name="scripts_notice_exported">已分享。</string>

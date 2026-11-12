@@ -17,8 +17,9 @@ import kotlinx.serialization.json.put
  *  are ignored, so a newer payload can travel to an older client without breaking it. */
 internal object ScriptProxyProto {
     /** The proxy surface version: 2 added the audio run (`runAudio`), 3 carries the host
-     *  capability set in `hello`. */
-    const val VERSION = 3
+     *  capability set in `hello`, 4 adds the saved-settings read and the explicit
+     *  secret clear. */
+    const val VERSION = 4
     val json = Json { ignoreUnknownKeys = true }
 
     fun error(message: String): String =
@@ -57,6 +58,16 @@ internal object ScriptProxyProto {
     fun entry(entry: ScriptEntry): String = buildJsonObject { put("entry", entry.toJson()) }.toString()
 
     fun header(header: ScriptHeader): String = buildJsonObject { put("header", header.toJson()) }.toString()
+
+    fun settings(values: Map<String, String>): String =
+        buildJsonObject {
+            put(
+                "settings",
+                buildJsonObject {
+                    values.forEach { (key, value) -> put(key, value) }
+                },
+            )
+        }.toString()
 
     fun source(bytes: ByteArray?): String =
         buildJsonObject {
@@ -97,6 +108,14 @@ internal object ScriptProxyProto {
                 .jsonPrimitive.content
         return text.takeIf { it.isNotEmpty() }?.toByteArray(Charsets.ISO_8859_1)
     }
+
+    fun parseSettings(payload: String): Map<String, String> =
+        json
+            .parseToJsonElement(payload)
+            .jsonObject["settings"]
+            ?.jsonObject
+            ?.mapValues { it.value.jsonPrimitive.contentOrNull ?: "" }
+            ?: emptyMap()
 
     fun parseOutcome(payload: String): ScriptRunOutcome {
         val node = json.parseToJsonElement(payload).jsonObject

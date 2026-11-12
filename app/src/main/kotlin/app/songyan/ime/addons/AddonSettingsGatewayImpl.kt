@@ -44,6 +44,7 @@ internal class AddonSettingsGatewayImpl(
             tools = tools.map { AddonToolInfo(it.id, it.title) },
             supportsPanel = handshake?.supportsPanel == true,
             supportsVoice = handshake?.supportsVoice == true,
+            settingsComponent = handshake?.settingsComponent,
             lastCall =
                 lastCall?.let {
                     AddonCallInfo(

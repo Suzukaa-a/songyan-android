@@ -11,7 +11,6 @@ import app.songyan.ime.settings.ui.theme.SongyanTheme
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
@@ -81,8 +80,11 @@ class ScriptConfirmLoadingTest {
         assertFalse(done.get())
         compose.runOnIdle { gate.complete(Unit) }
 
-        // Loaded and absent (deleted elsewhere): now the page leaves.
-        compose.waitUntil(5_000) { done.get() }
-        assertTrue(done.get())
+        // Loaded and absent (deleted elsewhere): the page says so instead of vanishing unseen.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText(str(R.string.scripts_missing_title))).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(str(R.string.scripts_missing_title)).assertExists()
+        assertFalse("a missing entry must not close the page without telling the user", done.get())
     }
 }

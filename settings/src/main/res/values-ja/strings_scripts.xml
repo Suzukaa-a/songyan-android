@@ -42,6 +42,21 @@
     <string name="scripts_guide_clipboard_label">AI 用の説明</string>
     <string name="scripts_example_title">例（ネットワーク接続なし）</string>
 
+    <string name="scripts_pending_badge">確認待ち</string>
+    <string name="scripts_enable_script">「%1$s」を有効にする</string>
+    <string name="scripts_disable_script">「%1$s」を無効にする</string>
+    <string name="scripts_more_actions">その他の操作</string>
+    <string name="scripts_missing_title">このスクリプトはもうありません</string>
+    <string name="scripts_settings_edit">設定を変更</string>
+    <string name="scripts_settings_title">スクリプトの設定</string>
+    <string name="scripts_setting_choice_hint">自由入力：スクリプトの説明にある値を入力してください。</string>
+    <string name="scripts_setting_url_invalid">アドレスは http:// または https:// で始まります</string>
+    <string name="scripts_secret_keep_hint">空欄のままにすると保存済みのシークレットを保持します。</string>
+    <string name="scripts_secret_clear">保存済みのシークレットを削除</string>
+    <string name="scripts_secret_show">シークレットを表示</string>
+    <string name="scripts_secret_hide">シークレットを隠す</string>
+    <string name="scripts_notice_settings_saved">設定を保存しました。</string>
+
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">スクリプトを確認</string>
     <string name="scripts_confirm_section_what">これは何か</string>
@@ -88,11 +103,11 @@
     <string name="scripts_editor_save">保存する</string>
     <string name="scripts_editor_body">スクリプトは編集内容で保存されます。新しい宣言は、再確認しないと実行されません。</string>
     <string name="scripts_delete_title">このスクリプトを削除しますか？</string>
-    <string name="scripts_delete_body">%1$s はこの端末から削除されます。元に戻せません。</string>
+    <string name="scripts_delete_body">%1$s はこの端末から削除され、保存した設定とシークレットも一緒に削除されます。元に戻せません。</string>
     <string name="scripts_delete_confirm">削除</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">スクリプトを削除しました。</string>
+    <string name="scripts_notice_deleted">スクリプトを削除しました。元に戻せません。</string>
     <string name="scripts_notice_up_to_date">最新です。</string>
     <string name="scripts_notice_updated">更新があります。使う前に何が変わったかお読みください。</string>
     <string name="scripts_notice_exported">共有しました。</string>

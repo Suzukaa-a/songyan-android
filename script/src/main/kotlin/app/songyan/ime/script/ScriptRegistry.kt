@@ -118,13 +118,21 @@ interface ScriptRegistry {
     suspend fun confirm(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String> = emptySet(),
     ): ScriptEntry
 
-    /** Updates settings or secrets; the script stays confirmed unless declarations changed. */
+    /** Updates settings or secrets; the script stays confirmed unless declarations changed.
+     *  A blank secret value keeps the stored secret; [clearSecrets] names the ones to delete. */
     suspend fun updateSettings(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String> = emptySet(),
     ): ScriptEntry
+
+    /** The saved values of the non-secret settings, keyed by declaration key. Secrets never leave
+     *  the proxy process: a blank secret field in [confirm] or [updateSettings] keeps what is
+     *  stored, and only [clearSecrets] deletes it. */
+    suspend fun settings(id: String): Map<String, String>
 
     suspend fun setEnabled(
         id: String,

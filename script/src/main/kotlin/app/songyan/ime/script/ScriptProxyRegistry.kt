@@ -86,9 +86,13 @@ class ScriptProxyRegistry(
     override suspend fun confirm(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String>,
     ): ScriptEntry {
         val bundle = Bundle().apply { settings.forEach { (key, value) -> putString(key, value) } }
-        val payload = call { proxy, callback -> proxy.confirm(id, bundle, callback) }
+        val payload =
+            call { proxy, callback ->
+                proxy.confirmClear(id, bundle, clearSecrets.toList(), callback)
+            }
         val entry = ScriptProxyProto.parseEntry(payload)
         reloadAfterMutation()
         return entry
@@ -97,7 +101,13 @@ class ScriptProxyRegistry(
     override suspend fun updateSettings(
         id: String,
         settings: Map<String, String>,
-    ): ScriptEntry = confirm(id, settings)
+        clearSecrets: Set<String>,
+    ): ScriptEntry = confirm(id, settings, clearSecrets)
+
+    override suspend fun settings(id: String): Map<String, String> {
+        val payload = call { proxy, callback -> proxy.settings(id, callback) }
+        return ScriptProxyProto.parseSettings(payload)
+    }
 
     override suspend fun setEnabled(
         id: String,

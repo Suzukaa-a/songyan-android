@@ -148,17 +148,23 @@ class ScriptProxyService : Service() {
                 settings: Bundle,
                 reply: ScriptProxyCallback,
             ) {
-                reply(reply) {
-                    val entry = store.entry(id) ?: return@reply ScriptProxyProto.unavailable("no script " + id)
-                    val header =
-                        HeaderParser.parse(this@ScriptProxyService, store.source(id)!!) as? ScriptHeader.Parsed
-                            ?: return@reply ScriptProxyProto.error("the stored header is refused")
-                    val values =
-                        header.settings.associate { field ->
-                            field.key to (settings.getString(field.key) ?: "")
-                        }
-                    ScriptProxyProto.entry(store.confirm(id, header, values, header.settings, hostCapabilities))
-                }
+                reply(reply) { confirmStored(id, settings, emptySet()) }
+            }
+
+            override fun settings(
+                id: String,
+                reply: ScriptProxyCallback,
+            ) {
+                reply(reply) { ScriptProxyProto.settings(store.plainSettings(id)) }
+            }
+
+            override fun confirmClear(
+                id: String,
+                settings: Bundle,
+                clearSecrets: MutableList<String>,
+                reply: ScriptProxyCallback,
+            ) {
+                reply(reply) { confirmStored(id, settings, clearSecrets.toSet()) }
             }
 
             override fun setEnabled(
@@ -259,6 +265,28 @@ class ScriptProxyService : Service() {
                 ScriptRunner(this@ScriptProxyService, store).cancel(id)
             }
         }
+
+    /** Parses the stored header and writes the form's values; shared by confirm and confirmClear. */
+    private fun confirmStored(
+        id: String,
+        settings: Bundle,
+        clearSecrets: Set<String>,
+    ): String {
+        val entry = store.entry(id) ?: return ScriptProxyProto.unavailable("no script " + id)
+        val source = store.source(id) ?: return ScriptProxyProto.unavailable("no source for " + id)
+        val header =
+            HeaderParser.parse(this, source) as? ScriptHeader.Parsed
+                ?: return ScriptProxyProto.error("the stored header is refused")
+        // Only the keys the form actually sent travel: an omitted key keeps what is stored, and
+        // a blank secret is not mistaken for an explicit clear.
+        val values = mutableMapOf<String, String>()
+        header.settings.forEach { field ->
+            settings.getString(field.key)?.let { value -> values[field.key] = value }
+        }
+        return ScriptProxyProto.entry(
+            store.confirm(id, header, values, header.settings, hostCapabilities, clearSecrets),
+        )
+    }
 
     private inline fun reply(
         callback: ScriptProxyCallback,

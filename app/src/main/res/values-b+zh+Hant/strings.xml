@@ -174,4 +174,6 @@
     <string name="package_learning_nothing">方案包裡的用詞記錄與它的詞庫對不上，沒有併入。</string>
     <string name="package_learning_gone">這些用詞記錄已經不在了。</string>
     <string name="addon_panel_failed">擴充功能面板無法開啟。</string>
+    <string name="addon_panel_opening">正在開啟擴充功能…</string>
+    <string name="addon_panel_retry">重試</string>
 </resources>

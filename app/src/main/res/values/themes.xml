@@ -3,5 +3,8 @@
     <!-- Window-level theme only; the UI itself is Compose Material 3. -->
     <style name="Theme.Songyan" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/transparent</item>
+        <!-- The keyboard and its panels paint from KeyboardPalette; force-dark would recolour
+             native widgets on top of it. -->
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>

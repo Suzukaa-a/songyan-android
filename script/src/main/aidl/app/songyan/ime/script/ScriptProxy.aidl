@@ -21,6 +21,14 @@ oneway interface ScriptProxy {
 
     void confirm(String id, in android.os.Bundle settings, app.songyan.ime.script.ScriptProxyCallback reply);
 
+    // The saved values of the non-secret settings; secrets never leave the proxy process. The
+    // blank-secret rule lives in the store, so an old client's confirm keeps stored secrets too.
+    void settings(String id, app.songyan.ime.script.ScriptProxyCallback reply);
+
+    // confirm plus the keys whose stored secret the user asked to delete explicitly.
+    void confirmClear(String id, in android.os.Bundle settings, in java.util.List<String> clearSecrets,
+                      app.songyan.ime.script.ScriptProxyCallback reply);
+
     void setEnabled(String id, boolean enabled, app.songyan.ime.script.ScriptProxyCallback reply);
 
     void reorder(in java.util.List<String> orderedIds, app.songyan.ime.script.ScriptProxyCallback reply);

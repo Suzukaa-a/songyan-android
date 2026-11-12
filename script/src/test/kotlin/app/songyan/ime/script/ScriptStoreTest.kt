@@ -79,6 +79,51 @@ class ScriptStoreTest {
     }
 
     @Test
+    fun aBlankSecretOnReconfirmationKeepsTheStoredSecret() {
+        val entry = store.add("src".toByteArray(), header(), ScriptSourceOrigin.Pasted)
+        store.confirm(
+            entry.id,
+            header(),
+            mapOf("endpoint" to "https://a.example", "key" to "s3cret"),
+            header().settings,
+        )
+        // A re-confirmation sends only the edited fields; a blank secret keeps the stored one.
+        store.confirm(entry.id, header(), mapOf("key" to ""), header().settings)
+        assertEquals(
+            mapOf("endpoint" to "https://a.example", "key" to "s3cret"),
+            store.settingsOf(entry.id, header().settings),
+        )
+        assertEquals(mapOf("endpoint" to "https://a.example"), store.plainSettings(entry.id))
+    }
+
+    @Test
+    fun anExplicitClearRemovesTheStoredSecret() {
+        val entry = store.add("src".toByteArray(), header(), ScriptSourceOrigin.Pasted)
+        store.confirm(entry.id, header(), mapOf("key" to "s3cret"), header().settings)
+        store.confirm(
+            entry.id,
+            header(),
+            mapOf("key" to ""),
+            header().settings,
+            clearSecrets = setOf("key"),
+        )
+        assertEquals("", store.settingsOf(entry.id, header().settings)["key"])
+        assertFalse(File(folder.root, "scripts-root/scripts/" + entry.id + "/secret.bin").isFile)
+    }
+
+    @Test
+    fun anOmittedPlainSettingKeepsItsValueAndAnEmptyStringClearsIt() {
+        val entry = store.add("src".toByteArray(), header(), ScriptSourceOrigin.Pasted)
+        store.confirm(entry.id, header(), mapOf("endpoint" to "https://a.example"), header().settings)
+        // A key the form omits (an older form, a partial update) keeps the stored value.
+        store.updateSettings(entry.id, emptyMap(), header().settings)
+        assertEquals("https://a.example", store.settingsOf(entry.id, header().settings)["endpoint"])
+        // An empty string is a deliberate clear, and the form sends it.
+        store.updateSettings(entry.id, mapOf("endpoint" to ""), header().settings)
+        assertEquals("", store.settingsOf(entry.id, header().settings)["endpoint"])
+    }
+
+    @Test
     fun confirmClearsThePendingFlagAndADeclarationChangeReopensIt() {
         val entry = store.add("src".toByteArray(), header(), ScriptSourceOrigin.Pasted)
         store.confirm(entry.id, header(), emptyMap(), header().settings)

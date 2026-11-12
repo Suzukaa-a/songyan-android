@@ -683,6 +683,7 @@ class ScriptsViewModelTest {
         val adds = mutableListOf<Pair<ByteArray, ScriptSourceOrigin>>()
         val links = mutableListOf<String>()
         val confirms = mutableListOf<Pair<String, Map<String, String>>>()
+        val clearedSecrets = mutableListOf<Pair<String, Set<String>>>()
         val enabled = mutableListOf<Pair<String, Boolean>>()
         val reorders = mutableListOf<List<String>>()
         val deletes = mutableListOf<String>()
@@ -738,8 +739,10 @@ class ScriptsViewModelTest {
         override suspend fun confirm(
             id: String,
             settings: Map<String, String>,
+            clearSecrets: Set<String>,
         ): ScriptEntry {
             confirms += id to settings
+            clearedSecrets += id to clearSecrets
             failIfAsked()
             return replace(id) { it.copy(confirmationPending = false) }
         }
@@ -747,7 +750,10 @@ class ScriptsViewModelTest {
         override suspend fun updateSettings(
             id: String,
             settings: Map<String, String>,
-        ): ScriptEntry = confirm(id, settings)
+            clearSecrets: Set<String>,
+        ): ScriptEntry = confirm(id, settings, clearSecrets)
+
+        override suspend fun settings(id: String): Map<String, String> = emptyMap()
 
         override suspend fun setEnabled(
             id: String,

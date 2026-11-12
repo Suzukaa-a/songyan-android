@@ -3,19 +3,26 @@ package app.songyan.ime.addons
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.res.Configuration
+import android.content.res.ColorStateList
 import android.graphics.Insets
+import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
+import android.view.Gravity
 import android.view.SurfaceControlViewHost
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import app.songyan.ime.R
 import app.songyan.ime.addon.AddonBinding
 import app.songyan.ime.addon.AddonConnectResult
 import app.songyan.ime.addon.AddonFailure
@@ -78,6 +85,12 @@ internal class AddonPanelController(
      */
     private var pending: PendingPanel? = null
 
+    /** The loading chip or the failure chip with its retry, drawn over the keyboard. */
+    private var overlay: View? = null
+
+    /** The loading chip that is fading out; a close during the fade must remove it at once. */
+    private var fadingOverlay: View? = null
+
     /** Invalidates a host-token poll that outlived the open or close it belonged to. */
     private var generation = 0
 
@@ -126,13 +139,11 @@ internal class AddonPanelController(
         val surfaceView = SurfaceView(context)
         surfaceView.setZOrderOnTop(true)
         // Binding and the extension's first frame take a moment. Keep the keyboard visible under a
-        // transparent surface until it draws, so the window is never a blank rectangle; a failure
-        // or the watchdog then just removes the surface and leaves the keyboard as it is.
+        // transparent surface until it draws, so the window is never a blank rectangle; the loading
+        // chip says what is happening, and a failure or the watchdog shows the reason plus Retry.
         surfaceView.alpha = 0f
-        container.addView(
-            surfaceView,
-            LinearLayout.LayoutParams(width, height),
-        )
+        container.addView(surfaceView, panelLayoutParams(width, height))
+        showLoadingOverlay()
         val pendingPanel =
             PendingPanel(
                 packageName = packageName,
@@ -223,8 +234,167 @@ internal class AddonPanelController(
         keyboardView.visibility = View.VISIBLE
         keyboardView.requestLayout()
         recordPanelFailure(pendingPanel.packageName, pendingPanel.startedAt, reason)
+        runCatching { showErrorOverlay(pendingPanel.packageName) }
         onFailed()
     }
+
+    /** The layout parameters of the panel surface in the keyboard window's container. */
+    private fun panelLayoutParams(
+        width: Int,
+        height: Int,
+    ): ViewGroup.LayoutParams =
+        if (container is FrameLayout) {
+            FrameLayout.LayoutParams(width, height)
+        } else {
+            LinearLayout.LayoutParams(width, height)
+        }
+
+    /**
+     * A small chip over the keyboard while an extension binds: a spinner and "Opening extension…".
+     * It does not cover the keys and, in the keyboard's FrameLayout, does not change the window
+     * height while the panel loads.
+     */
+    private data class OverlayColors(
+        val background: Int,
+        val text: Int,
+        val accent: Int,
+    )
+
+    private fun overlayColors(): OverlayColors {
+        val palette = runCatching { KeyboardPalette.from(context) }.getOrNull()
+        return if (palette == null) {
+            OverlayColors(android.graphics.Color.DKGRAY, android.graphics.Color.WHITE, android.graphics.Color.WHITE)
+        } else {
+            OverlayColors(palette.candidateBackground, palette.text, palette.accent)
+        }
+    }
+
+    private fun showLoadingOverlay() {
+        removeOverlay()
+        val density = context.resources.displayMetrics.density
+        val palette = overlayColors()
+        val chip =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(padding(12), padding(8), padding(16), padding(8))
+                background = overlayBackground(palette.background)
+            }
+        val progress =
+            ProgressBar(context).apply {
+                isIndeterminate = true
+                indeterminateTintList = ColorStateList.valueOf(palette.accent)
+            }
+        chip.addView(progress, LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()))
+        chip.addView(
+            TextView(context).apply {
+                setText(R.string.addon_panel_opening)
+                setTextColor(palette.text)
+                textSize = 13f
+            },
+            LinearLayout
+                .LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { marginStart = (8 * density).toInt() },
+        )
+        addOverlay(chip)
+    }
+
+    /** A failure chip with the reason and a Retry button, instead of a silent blank panel. */
+    private fun showErrorOverlay(packageName: String) {
+        removeOverlay()
+        val palette = overlayColors()
+        val box =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(padding(16), padding(12), padding(16), padding(8))
+                background = overlayBackground(palette.background)
+            }
+        box.addView(
+            TextView(context).apply {
+                setText(R.string.addon_panel_failed)
+                setTextColor(palette.text)
+                textSize = 14f
+            },
+        )
+        box.addView(
+            TextView(context).apply {
+                setText(R.string.addon_panel_retry)
+                setTextColor(palette.accent)
+                textSize = 14f
+                isClickable = true
+                isFocusable = true
+                setPadding(0, padding(6), 0, padding(2))
+                setOnClickListener {
+                    if (!open(packageName)) runCatching { showErrorOverlay(packageName) }
+                }
+            },
+            LinearLayout
+                .LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = padding(4) },
+        )
+        addOverlay(box)
+    }
+
+    private fun addOverlay(view: View) {
+        overlay = view
+        container.addView(view, overlayLayoutParams())
+    }
+
+    private fun removeOverlay() {
+        removeFadingOverlay()
+        val current = overlay ?: return
+        overlay = null
+        current.animate().cancel()
+        (current.parent as? ViewGroup)?.removeView(current)
+    }
+
+    private fun removeFadingOverlay() {
+        val current = fadingOverlay ?: return
+        fadingOverlay = null
+        current.animate().cancel()
+        (current.parent as? ViewGroup)?.removeView(current)
+    }
+
+    /** The first frame is in: the chip goes away while the surface fades in. */
+    private fun fadeOutOverlay() {
+        val current = overlay ?: return
+        overlay = null
+        fadingOverlay = current
+        val animator = current.animate().alpha(0f).setDuration(PANEL_FADE_MS)
+        animator.withEndAction {
+            if (fadingOverlay === current) fadingOverlay = null
+            (current.parent as? ViewGroup)?.removeView(current)
+        }
+        animator.start()
+    }
+
+    private fun overlayLayoutParams(): ViewGroup.LayoutParams =
+        if (container is FrameLayout) {
+            FrameLayout
+                .LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+                ).apply { topMargin = padding(8) }
+        } else {
+            LinearLayout
+                .LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { gravity = Gravity.CENTER_HORIZONTAL }
+        }
+
+    private fun overlayBackground(color: Int): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = padding(18).toFloat()
+            setColor(color)
+        }
+
+    private fun padding(dp: Int): Int = (dp * context.resources.displayMetrics.density).toInt()
 
     private fun armSurfaceWatchdog(panel: ActivePanel) {
         if (active !== panel) return
@@ -249,6 +419,7 @@ internal class AddonPanelController(
             (pendingPanel.surfaceView.parent as? ViewGroup)?.removeView(pendingPanel.surfaceView)
             keyboardView.visibility = View.VISIBLE
             keyboardView.requestLayout()
+            removeOverlay()
             closed = true
         }
         val current = active
@@ -256,6 +427,7 @@ internal class AddonPanelController(
             closeActive(current)
             closed = true
         }
+        if (!closed) removeOverlay()
         return closed
     }
 
@@ -281,6 +453,9 @@ internal class AddonPanelController(
         generation++
         current.watchdog?.let(handler::removeCallbacks)
         current.watchdog = null
+        // A fade still running must not hide the keyboard after the panel is gone.
+        current.surfaceView.animate().cancel()
+        current.surfaceView.alpha = 1f
         onShownChanged(false)
         runCatching { current.client.closePanel() }
         scope.launch {
@@ -295,7 +470,14 @@ internal class AddonPanelController(
         (current.surfaceView.parent as? ViewGroup)?.removeView(current.surfaceView)
         keyboardView.visibility = View.VISIBLE
         keyboardView.requestLayout()
-        if (current.failure != null) onFailed()
+        if (current.failure != null) {
+            // The failure is explained in the keyboard window itself; a Toast alone disappears
+            // before the user can act, and Retry is the way back.
+            runCatching { showErrorOverlay(current.packageName) }
+            onFailed()
+        } else {
+            removeOverlay()
+        }
     }
 
     private fun listenerFor(panel: ActivePanel): AddonHostClient.Listener =
@@ -353,8 +535,9 @@ internal class AddonPanelController(
             insets = insets,
             inputType = info?.inputType ?: 0,
             imeOptions = info?.imeOptions ?: 0,
-            darkMode =
-                (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES,
+            // The panel follows the keyboard surface, not the system: a dark choice in a light
+            // system (and the reverse) must hand the extension the same tone it is painted in.
+            darkMode = !KeyboardPalette.from(context).isLight,
             keyboardColor = KeyboardPalette.from(context).key,
         )
     }
@@ -413,10 +596,25 @@ internal class AddonPanelController(
                 runCatching { panel.surfaceView.setChildSurfacePackage(surface) }
                     .onSuccess {
                         panel.surfaceAttached = true
-                        panel.surfaceView.alpha = 1f
-                        keyboardView.visibility = View.GONE
                         panel.watchdog?.let(handler::removeCallbacks)
                         panel.watchdog = null
+                        fadeOutOverlay()
+                        // The first frame can be black while the extension lays its hierarchy out.
+                        // The keyboard stays visible underneath and the surface fades in over it;
+                        // only then is the keyboard view hidden, so there is no instant swap or
+                        // blank window during the transition.
+                        panel.surfaceView.animate().cancel()
+                        panel.surfaceView
+                            .animate()
+                            .alpha(1f)
+                            .setDuration(PANEL_FADE_MS)
+                            .setInterpolator(DecelerateInterpolator())
+                            .withEndAction {
+                                if (active === panel) {
+                                    keyboardView.visibility = View.GONE
+                                    keyboardView.requestLayout()
+                                }
+                            }.start()
                     }.onFailure { panel.failure = it.message }
             }
         }
@@ -552,6 +750,9 @@ internal class AddonPanelController(
 
         /** A connected addon gets this long to hand back its surface before the panel is closed. */
         const val SURFACE_TIMEOUT_MS = 4_000L
+
+        /** The panel fades in over the visible keyboard; hiding it at the end avoids a blank swap. */
+        const val PANEL_FADE_MS = 180L
         const val EDITOR_TIMEOUT_MS = 750L
         const val MAX_READ_UNITS = 4_000
     }

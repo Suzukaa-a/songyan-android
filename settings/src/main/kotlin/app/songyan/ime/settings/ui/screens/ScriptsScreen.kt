@@ -5,14 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -20,11 +19,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.UploadFile
@@ -49,11 +44,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +63,7 @@ import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsNotice
 import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.components.ImeDialog
+import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +107,7 @@ fun ScriptsScreen(
     val upToDateText = stringResource(R.string.scripts_notice_up_to_date)
     val updatedText = stringResource(R.string.scripts_notice_updated)
     val exportFailedText = stringResource(R.string.scripts_notice_export_failed)
+    val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
     // notice it belongs to is the current one.
     val actionFailureText =
@@ -137,6 +135,7 @@ fun ScriptsScreen(
                 is ScriptsNotice.Updated -> updatedText
                 ScriptsNotice.ExportFailed -> exportFailedText
                 ScriptsNotice.Exported -> null
+                ScriptsNotice.SettingsSaved -> settingsSavedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
             }
         when (text) {
@@ -152,7 +151,6 @@ fun ScriptsScreen(
     var pastedText by rememberSaveable { mutableStateOf("") }
     var linkText by rememberSaveable { mutableStateOf("") }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
-    var deleting by rememberSaveable { mutableStateOf<String?>(null) }
     val filePicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) viewModel.addFromFile(context, uri)
@@ -167,7 +165,11 @@ fun ScriptsScreen(
                 Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.scripts_add))
             }
             if (state.refreshing) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 16.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(end = 16.dp).size(18.dp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    strokeWidth = 2.dp,
+                )
             } else {
                 IconButton(onClick = viewModel::refresh) {
                     Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.scripts_refresh))
@@ -176,15 +178,7 @@ fun ScriptsScreen(
         },
     ) { innerPadding ->
         if (state.loading) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
+            LoadingScreen(title = stringResource(R.string.scripts_title), onBack = onBack)
             return@SettingsScaffold
         }
         if (state.entries.isEmpty()) {
@@ -203,18 +197,14 @@ fun ScriptsScreen(
                         .padding(innerPadding),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
-                itemsIndexed(ordered, key = { _, entry -> entry.id }) { index, entry ->
+                itemsIndexed(ordered, key = { _, entry -> entry.id }) { _, entry ->
                     ScriptListRow(
                         entry = entry,
-                        first = index == 0,
-                        last = index == ordered.lastIndex,
                         // A script whose declarations the user has not confirmed yet has no page
                         // of its own to show: the row goes to the confirmation that completes the
                         // import instead. Confirmed scripts open their detail page as before.
                         onClick = { if (entry.confirmationPending) onOpenConfirmation(entry.id) else onOpen(entry.id) },
                         onEnabled = { enabled -> viewModel.setEnabled(entry.id, enabled) },
-                        onMove = { up -> viewModel.move(entry.id, up) },
-                        onDelete = { deleting = entry.id },
                     )
                 }
             }
@@ -329,25 +319,6 @@ fun ScriptsScreen(
             )
         }
     }
-    deleting?.let { id ->
-        val name = state.entries.firstOrNull { it.id == id }?.name ?: ""
-        AlertDialog(
-            onDismissRequest = { deleting = null },
-            title = { Text(stringResource(R.string.scripts_delete_title)) },
-            text = { Text(stringResource(R.string.scripts_delete_body, name)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.delete(id)
-                        deleting = null
-                    },
-                ) { Text(stringResource(R.string.scripts_delete_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.scripts_cancel)) }
-            },
-        )
-    }
     if (editorOpen) {
         NewScriptEditorDialog(
             viewModel = viewModel,
@@ -421,16 +392,13 @@ private fun AddWayRow(
     )
 }
 
-/** One installed script: the whole row opens it; the switch enables it, the arrows move it. */
+/** One installed script: the whole row opens it, and the switch is the only trailing control;
+ *  ordering and deletion live on the detail page so a narrow row keeps one tap target. */
 @Composable
 private fun ScriptListRow(
     entry: ScriptEntry,
-    first: Boolean,
-    last: Boolean,
     onClick: () -> Unit,
     onEnabled: (Boolean) -> Unit,
-    onMove: (up: Boolean) -> Unit,
-    onDelete: () -> Unit,
 ) {
     ListItem(
         headlineContent = {
@@ -443,36 +411,46 @@ private fun ScriptListRow(
                     text = originSummary(entry),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                // The badge sits on its own line so the name and the single-line origin keep the
+                // whole row width at the largest system font.
+                if (entry.confirmationPending) PendingBadge()
             }
         },
-        leadingContent = { Icon(Icons.Outlined.Extension, contentDescription = null) },
+        leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
         trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!first) {
-                    IconButton(onClick = { onMove(true) }) {
-                        Icon(
-                            Icons.Outlined.KeyboardArrowUp,
-                            contentDescription = stringResource(R.string.scripts_move_up),
-                        )
-                    }
+            val switchLabel =
+                if (entry.enabled) {
+                    stringResource(R.string.scripts_disable_script, entry.name)
+                } else {
+                    stringResource(R.string.scripts_enable_script, entry.name)
                 }
-                if (!last) {
-                    IconButton(onClick = { onMove(false) }) {
-                        Icon(
-                            Icons.Outlined.KeyboardArrowDown,
-                            contentDescription = stringResource(R.string.scripts_move_down),
-                        )
-                    }
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.scripts_delete))
-                }
-                Switch(checked = entry.enabled, onCheckedChange = onEnabled)
-            }
+            Switch(
+                checked = entry.enabled,
+                onCheckedChange = onEnabled,
+                modifier = Modifier.semantics { contentDescription = switchLabel },
+            )
         },
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     )
+}
+
+/** The \"needs confirmation\" marker beside the name: a badge, not a whole status row. */
+@Composable
+private fun PendingBadge() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = stringResource(R.string.scripts_pending_badge),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+    }
 }
 
 @Composable

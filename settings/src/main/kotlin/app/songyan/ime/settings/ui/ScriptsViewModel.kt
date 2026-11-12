@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -65,6 +66,9 @@ sealed interface ScriptsNotice {
     data object Exported : ScriptsNotice
 
     data object ExportFailed : ScriptsNotice
+
+    /** The detail page's settings form was saved. */
+    data object SettingsSaved : ScriptsNotice
 
     data class ActionFailed(
         val failure: ScriptFailure,
@@ -152,8 +156,14 @@ class ScriptsViewModel(
         context: Context,
         uri: Uri,
     ) {
+        // SAF exposes the picked file's name through OpenableColumns; lastPathSegment is the
+        // provider's document id ("msf:16" for the Files app), which is meaningless in the list.
         val name =
-            uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotEmpty() }
+            context.contentResolver
+                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+                ?.takeIf { it.isNotBlank() }
+                ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotEmpty() }
                 ?: uri.toString()
         importSource(ScriptSourceOrigin.File(name)) {
             context.contentResolver.openInputStream(uri)?.use { stream -> stream.readBytes() }
@@ -201,21 +211,51 @@ class ScriptsViewModel(
         }
     }
 
-    /** Records the user's confirmation and the filled settings; the script becomes usable. */
+    /** Records the user's confirmation and the filled settings; the script becomes usable. A
+     *  blank secret field keeps the saved secret; [clearSecrets] names the ones to delete. */
     fun confirm(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String> = emptySet(),
     ) {
         viewModelScope.launch {
             mutable.update { it.copy(busy = true) }
             try {
-                registry.confirm(id, settings)
+                registry.confirm(id, settings, clearSecrets)
                 mutable.update { it.copy(busy = false, pendingConfirmation = null, entries = registry.entries) }
             } catch (e: Exception) {
                 mutable.update { it.copy(busy = false, importFailure = failureOf(e)) }
             }
         }
     }
+
+    /** Saves the settings form of an already confirmed script; secrets keep their saved value
+     *  unless [clearSecrets] names them. */
+    fun updateSettings(
+        id: String,
+        settings: Map<String, String>,
+        clearSecrets: Set<String> = emptySet(),
+    ) {
+        viewModelScope.launch {
+            mutable.update { it.copy(busy = true) }
+            try {
+                registry.updateSettings(id, settings, clearSecrets)
+                mutable.update {
+                    it.copy(busy = false, entries = registry.entries, notice = ScriptsNotice.SettingsSaved)
+                }
+            } catch (e: Exception) {
+                mutable.update { it.copy(busy = false, notice = ScriptsNotice.ActionFailed(failureOf(e))) }
+            }
+        }
+    }
+
+    /** The saved non-secret settings, for prefilling the confirmation and settings forms. */
+    suspend fun savedSettings(id: String): Map<String, String> =
+        try {
+            registry.settings(id)
+        } catch (e: Exception) {
+            emptyMap()
+        }
 
     fun setEnabled(
         id: String,

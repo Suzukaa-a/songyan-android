@@ -5,10 +5,14 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.text.InputType
 import android.view.SurfaceView
+import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -99,15 +103,29 @@ class AddonPanelDeviceTest {
                         registry = registry,
                     )
                 assertTrue(controller.open(samplePackage))
-                assertEquals(2, host.container.childCount)
-                // The keyboard stays visible until the extension's first frame arrives, so the
-                // window is never a blank rectangle while the panel binds.
-                assertEquals(android.view.View.VISIBLE, host.keyboardView.visibility)
+                // keyboard, transparent surface, loading chip: the keyboard stays visible and a
+                // chip says what is happening, so the window is never a blank rectangle.
+                assertEquals(3, host.container.childCount)
+                assertEquals(View.VISIBLE, host.keyboardView.visibility)
+                assertTrue(hasText(host.container, host.getString(R.string.addon_panel_opening)))
             }
             assertTrue("the addon's surface never arrived", waitFor { controller.surfaceAttached() })
-            scenario.onActivity { host ->
-                assertEquals(android.view.View.GONE, host.keyboardView.visibility)
-            }
+            // The surface fades in over the keyboard (180 ms); only then is the keyboard hidden and
+            // the loading chip removed.
+            var fadeDone = false
+            assertTrue(
+                "the panel never finished fading in over the keyboard",
+                waitFor {
+                    scenario.onActivity { host ->
+                        val surface = host.container.getChildAt(1) as SurfaceView
+                        fadeDone =
+                            surface.alpha == 1f &&
+                            host.keyboardView.visibility == View.GONE &&
+                            host.container.childCount == 2
+                    }
+                    fadeDone
+                },
+            )
 
             // The panel of the sample addon: title, context line, then the first button (insert).
             val density = targetContext.resources.displayMetrics.density
@@ -131,8 +149,10 @@ class AddonPanelDeviceTest {
             forceStop(samplePackage)
             assertTrue("the host did not close the panel after the addon died", waitFor { !controller.isShown })
             scenario.onActivity { host ->
-                assertEquals(1, host.container.childCount)
-                assertEquals(android.view.View.VISIBLE, host.keyboardView.visibility)
+                // The failed call leaves the keyboard visible plus an error chip with Retry.
+                assertEquals(2, host.container.childCount)
+                assertEquals(View.VISIBLE, host.keyboardView.visibility)
+                assertTrue(hasText(host.container, host.getString(R.string.addon_panel_failed)))
             }
             assertTrue(
                 "the failed panel call must be recorded",
@@ -144,6 +164,61 @@ class AddonPanelDeviceTest {
                         ?.error != null
                 },
             )
+        } finally {
+            scenario.close()
+        }
+    }
+
+    @Test
+    fun thePanelFadesInOverTheKeyboardWithoutABlankWindow() {
+        val registry = registryWithSample()
+        val scenario = ActivityScenario.launch(AddonPanelHostProbeActivity::class.java)
+        try {
+            lateinit var controller: AddonPanelController
+            var loading = false
+            var keyboardHeight = 0
+            scenario.onActivity { host ->
+                controller =
+                    AddonPanelController(
+                        context = host,
+                        container = host.container,
+                        keyboardView = host.keyboardView,
+                        editorAccess = FakeEditorAccess(),
+                        editorInfo = { EditorInfo() },
+                        registry = registry,
+                    )
+                assertTrue(controller.open(samplePackage))
+                val surface = host.container.getChildAt(1) as SurfaceView
+                // While the addon binds, the keyboard is still drawn, the surface is transparent and
+                // a loading chip explains the wait.
+                loading =
+                    host.keyboardView.visibility == View.VISIBLE &&
+                    surface.alpha == 0f &&
+                    hasText(host.container, host.getString(R.string.addon_panel_opening))
+                keyboardHeight = host.keyboardView.height
+            }
+            assertTrue("the loading state must keep the keyboard visible", loading)
+
+            assertTrue("the addon's surface never arrived", waitFor { controller.surfaceAttached() })
+            var settled = false
+            assertTrue(
+                "the panel did not fade in and hide the keyboard",
+                waitFor {
+                    scenario.onActivity { host ->
+                        val surface = host.container.getChildAt(1) as SurfaceView
+                        settled =
+                            surface.alpha == 1f &&
+                            host.keyboardView.visibility == View.GONE &&
+                            host.container.childCount == 2
+                    }
+                    settled
+                },
+            )
+            scenario.onActivity { host ->
+                // The panel covers the same area as the keyboard: no blank band between them.
+                val surface = host.container.getChildAt(1) as SurfaceView
+                assertEquals(keyboardHeight, surface.height)
+            }
         } finally {
             scenario.close()
         }
@@ -186,6 +261,19 @@ class AddonPanelDeviceTest {
         } finally {
             scenario.close()
         }
+    }
+
+    private fun hasText(
+        view: View,
+        text: String,
+    ): Boolean {
+        if (view is TextView && view.text.toString() == text) return true
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                if (hasText(view.getChildAt(index), text)) return true
+            }
+        }
+        return false
     }
 
     private fun waitFor(

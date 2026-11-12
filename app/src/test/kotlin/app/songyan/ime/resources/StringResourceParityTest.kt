@@ -169,6 +169,7 @@ class StringResourceParityTest {
                 "app/rime_config_error_detail",
                 "settings/candidate_bar_value",
                 "settings/features_list_separator",
+                "settings/voice_script_summary",
                 "settings/keyboard_title",
                 "settings/layout_jump_target",
                 "settings/learning_backup_detail",

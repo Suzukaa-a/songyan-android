@@ -174,4 +174,6 @@
     <string name="package_learning_nothing">The learned words in this package do not match its dictionaries. Nothing was merged.</string>
     <string name="package_learning_gone">These learned words are no longer there.</string>
     <string name="addon_panel_failed">The extension panel could not open.</string>
+    <string name="addon_panel_opening">Opening extension…</string>
+    <string name="addon_panel_retry">Retry</string>
 </resources>

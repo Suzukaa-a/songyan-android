@@ -44,6 +44,7 @@ import app.songyan.ime.settings.state.StoredSourceStatus
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.DictionaryImportUiState
 import app.songyan.ime.settings.ui.SchemeImportUiState
+import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.SettingsUiState
 import app.songyan.ime.settings.ui.screens.FuzzyPinyinDialog
 import app.songyan.ime.settings.ui.screens.HomeScreen
@@ -51,9 +52,13 @@ import app.songyan.ime.settings.ui.screens.InputOptionsScreen
 import app.songyan.ime.settings.ui.screens.KeyboardFeelState
 import app.songyan.ime.settings.ui.screens.OnboardingScreen
 import app.songyan.ime.settings.ui.screens.SchemesScreen
+import app.songyan.ime.settings.ui.screens.ScriptConfirmScreen
+import app.songyan.ime.settings.ui.screens.ScriptDetailScreen
+import app.songyan.ime.settings.ui.screens.ScriptsScreen
 import app.songyan.ime.settings.ui.screens.SystemFeedbackState
 import app.songyan.ime.settings.ui.screens.TryOutScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -72,7 +77,12 @@ class LargeFontTest {
     /** The app languages this test renders; the first is the default the other screens assume. */
     private val language = mutableStateOf(APP_LANGUAGES.first().first)
 
-    private fun show(content: @Composable () -> Unit) {
+    private fun show(content: @Composable () -> Unit) = show(dark = false, content = content)
+
+    private fun show(
+        dark: Boolean,
+        content: @Composable () -> Unit,
+    ) {
         compose.setContent {
             // The base configuration comes from the composition, not from LocalContext: reading it
             // off the Context is what LocalContextConfigurationRead forbids.
@@ -108,7 +118,7 @@ class LargeFontTest {
                 // mirrors that rebuild for each language. It only resets the composition, it is not a
                 // fix for incorrect measurements.
                 key(tag) {
-                    SongyanTheme(dynamicColor = false) {
+                    SongyanTheme(darkTheme = dark, dynamicColor = false) {
                         // A 280 dp wide window: a compact phone, so the large text has to wrap.
                         Box(Modifier.width(280.dp)) { content() }
                     }
@@ -359,6 +369,66 @@ class LargeFontTest {
                 node.size.height >= minimum - 1f,
             )
         }
+    }
+
+    @Test
+    fun theScriptListStaysWholeAtTheLargestFontInTheDarkTheme() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(
+                    // One-character names: a 280 dp window at 200% is narrower than the real row,
+                    // and the single-line name is allowed to ellipsize outside the test's viewport.
+                    declaredEntry(name = "甲", pending = false, enabled = true),
+                    declaredEntry(name = "乙", pending = true, enabled = false)
+                        .copy(id = "script-2", order = 1, connects = listOf("https://one.example/very/long/path")),
+                )
+            }
+        val viewModel = ScriptsViewModel(registry, Dispatchers.Unconfined)
+        show(dark = true) {
+            ScriptsScreen(onBack = {}, onOpen = {}, onOpenConfirmation = {}, viewModel = viewModel)
+        }
+        assertEveryLanguageFits()
+    }
+
+    @Test
+    fun theScriptConfirmationStaysWholeAtTheLargestFontInTheDarkTheme() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(declaredEntry(pending = true))
+                savedValues =
+                    mapOf(
+                        "script-1" to
+                            mapOf(
+                                DECLARED_SETTINGS[1].key to "https://a-very-long-host.example/v1/endpoint",
+                                DECLARED_SETTINGS[2].key to "wide",
+                            ),
+                    )
+            }
+        val viewModel = ScriptsViewModel(registry, Dispatchers.Unconfined)
+        show(dark = true) {
+            ScriptConfirmScreen(scriptId = "script-1", onDone = {}, viewModel = viewModel)
+        }
+        assertEveryLanguageFits()
+    }
+
+    @Test
+    fun theScriptDetailStaysWholeAtTheLargestFontInTheDarkTheme() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(
+                    declaredEntry(
+                        name = "把选中的文字两边加上书名号",
+                        pending = false,
+                        enabled = true,
+                        connects = listOf("https://api.example.com/v1", "https://second.example.com"),
+                    ),
+                )
+            }
+        val viewModel = ScriptsViewModel(registry, Dispatchers.Unconfined)
+        show(dark = true) {
+            ScriptDetailScreen(scriptId = "script-1", onBack = {}, onOpenConfirmation = {}, viewModel = viewModel)
+        }
+        assertEveryLanguageFits()
     }
 
     private companion object {

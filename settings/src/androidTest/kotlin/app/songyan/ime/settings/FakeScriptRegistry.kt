@@ -39,6 +39,10 @@ internal class FakeScriptRegistry : ScriptRegistry {
     val adds = mutableListOf<Pair<ByteArray, ScriptSourceOrigin>>()
     val links = mutableListOf<String>()
     val confirms = mutableListOf<Pair<String, Map<String, String>>>()
+    val clearedSecrets = mutableListOf<Pair<String, Set<String>>>()
+
+    /** The non-secret settings the proxy would hand back; a test seeds it to check prefill. */
+    var savedValues: Map<String, Map<String, String>> = emptyMap()
     val enabled = mutableListOf<Pair<String, Boolean>>()
     val updates = mutableListOf<String>()
 
@@ -84,8 +88,14 @@ internal class FakeScriptRegistry : ScriptRegistry {
     override suspend fun confirm(
         id: String,
         settings: Map<String, String>,
+        clearSecrets: Set<String>,
     ): ScriptEntry {
         confirms += id to settings
+        clearedSecrets += id to clearSecrets
+        savedValues +=
+            id to
+            (savedValues[id].orEmpty() + settings.filterValues { it.isNotEmpty() })
+                .filterKeys { it !in clearSecrets }
         confirmGate?.await()
         val first = id !in confirmedBefore
         confirmedBefore += id
@@ -95,7 +105,10 @@ internal class FakeScriptRegistry : ScriptRegistry {
     override suspend fun updateSettings(
         id: String,
         settings: Map<String, String>,
-    ): ScriptEntry = confirm(id, settings)
+        clearSecrets: Set<String>,
+    ): ScriptEntry = confirm(id, settings, clearSecrets)
+
+    override suspend fun settings(id: String): Map<String, String> = savedValues[id].orEmpty()
 
     override suspend fun setEnabled(
         id: String,

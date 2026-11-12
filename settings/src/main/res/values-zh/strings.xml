@@ -349,8 +349,23 @@
     <string name="voice_switch_title">麦克风按钮</string>
     <string name="voice_switch_subtitle">在键盘工具栏显示麦克风</string>
     <string name="voice_scripts_section">语音脚本</string>
-    <string name="voice_scripts_empty">还没有语音脚本。先在「脚本」页添加一个。</string>
-    <string name="voice_scripts_loading">正在读取脚本…</string>
+    <string name="voice_empty_scripts_title">还没有支持语音的脚本</string>
+    <string name="voice_empty_scripts_body">在「脚本」页添加支持语音输入的脚本后，会出现在这里。</string>
+    <string name="voice_open_scripts">去脚本页添加</string>
+    <string name="voice_load_failed_title">读不到脚本</string>
+    <string name="voice_load_failed_body">请重试。</string>
+    <string name="voice_retry">重试</string>
+    <string name="voice_script_summary">%1$s · %2$s</string>
+    <string name="voice_script_enabled">已启用</string>
+    <string name="voice_script_disabled">已停用</string>
+    <string name="voice_script_selected">已选中</string>
+    <string name="voice_script_not_selected">未选中</string>
+    <string name="voice_permission_section">权限</string>
+    <string name="voice_permission_title">麦克风权限</string>
+    <string name="voice_permission_granted">已授予</string>
+    <string name="voice_permission_denied">未授予</string>
+    <string name="voice_permission_open_settings">去系统设置授权</string>
+    <string name="voice_addon_origin">扩展应用</string>
 
     <!-- 设置 → 扩展：以独立 APK 安装的外部 Addon。 -->
     <string name="row_extensions_title">扩展</string>
@@ -381,4 +396,11 @@
     <string name="extensions_switch">%1$s 开关</string>
     <string name="voice_addon_option">%1$s（扩展）</string>
     <string name="extensions_toggle_failed">开关未能保存，扩展状态未改变。</string>
+    <string name="extensions_open_settings">设置</string>
+    <string name="extensions_settings_unavailable">无法打开该扩展的设置页。</string>
+    <string name="extensions_details">版本与签名</string>
+    <string name="extensions_copy_signer">复制签名证书</string>
+    <string name="extensions_copied">已复制</string>
+    <string name="extensions_permissions_section">权限</string>
+    <string name="extensions_last_call_section">最近一次调用</string>
 </resources>

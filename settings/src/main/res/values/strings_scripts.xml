@@ -42,6 +42,21 @@
     <string name="scripts_guide_clipboard_label">Guide for AI</string>
     <string name="scripts_example_title">Example (no network)</string>
 
+    <string name="scripts_pending_badge">Needs confirmation</string>
+    <string name="scripts_enable_script">Enable %1$s</string>
+    <string name="scripts_disable_script">Disable %1$s</string>
+    <string name="scripts_more_actions">More actions</string>
+    <string name="scripts_missing_title">This script is no longer available</string>
+    <string name="scripts_settings_edit">Edit settings</string>
+    <string name="scripts_settings_title">Script settings</string>
+    <string name="scripts_setting_choice_hint">Free text: type a value the script describes.</string>
+    <string name="scripts_setting_url_invalid">Addresses start with http:// or https://</string>
+    <string name="scripts_secret_keep_hint">Leave blank to keep the saved secret.</string>
+    <string name="scripts_secret_clear">Clear the saved secret</string>
+    <string name="scripts_secret_show">Show secret</string>
+    <string name="scripts_secret_hide">Hide secret</string>
+    <string name="scripts_notice_settings_saved">Settings saved.</string>
+
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">Confirm script</string>
     <string name="scripts_confirm_section_what">What it is</string>
@@ -88,11 +103,11 @@
     <string name="scripts_editor_save">Save</string>
     <string name="scripts_editor_body">The script is stored as edited. New declarations need confirming before it runs again.</string>
     <string name="scripts_delete_title">Delete this script?</string>
-    <string name="scripts_delete_body">%1$s will be removed from this device. This cannot be undone.</string>
+    <string name="scripts_delete_body">%1$s will be removed from this device, along with its saved settings and secrets. This cannot be undone.</string>
     <string name="scripts_delete_confirm">Delete</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">Script deleted.</string>
+    <string name="scripts_notice_deleted">Script deleted. This cannot be undone.</string>
     <string name="scripts_notice_up_to_date">Already up to date.</string>
     <string name="scripts_notice_updated">Update found. Read what changed before using it.</string>
     <string name="scripts_notice_exported">Shared.</string>

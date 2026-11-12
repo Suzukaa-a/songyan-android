@@ -113,6 +113,9 @@ internal fun KeyboardController.wireViews() {
     keyboard.onRailScroll = { steps -> scrollRail(steps) }
     keyboard.popupLayer = popupLayer
     keyboard.composing = { session?.snapshot?.isComposing == true }
+    // Pending raw input counts as typing for the caret-drag choice only: holds and delete keep
+    // their own composing contract.
+    keyboard.typing = { session?.snapshot?.let { it.isComposing || it.rawInput.isNotEmpty() } == true }
     keyboard.onReleaseFeedback = { feedback.release(keyboard) }
     candidates.onPressFeedback = { feedback.press(candidates) }
     readingRow.onPressFeedback = { feedback.press(readingRow) }

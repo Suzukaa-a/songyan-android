@@ -322,6 +322,9 @@ class KeyboardView(
 
     /** True while the engine holds a composition; a held delete stops when it has erased one. */
     var composing: () -> Boolean = { false }
+
+    /** True while anything is being typed, including raw input with no composition yet. */
+    var typing: () -> Boolean = { false }
     var onDoubleShift: () -> Unit = {}
     var onLanguageMenu: () -> Unit = {}
 

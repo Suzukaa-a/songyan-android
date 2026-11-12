@@ -35,8 +35,11 @@ import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.KeyboardComposition
+import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
@@ -1521,6 +1524,71 @@ class RealEngineEditorTest {
             assertEquals("a slow 72 dp slide is three characters", 7, host.field.selectionStart)
             assertEquals("the slide types nothing", "abcdefghij", host.text())
         }
+
+    @Test
+    fun withTheChoiceOnAMergedKeySwipeStillTypesItsSecondLetterAtTheCaret() {
+        for ((layout, pair, letter) in listOf(Triple("merged14", "bn", 'n'), Triple("merged18", "fg", 'g'))) {
+            withHost(layout = layout, schema = "songyan_quanpin") { host ->
+                host.start(initial = "abcdefghij")
+                host.main {
+                    host.controller.keyboard.cursorSwipeAnywhere = true
+                    host.field.setSelection(5)
+                    host.report(oldStart = 10, newStart = 5, candidatesStart = -1, candidatesEnd = -1)
+                }
+                host.swipe(pair, 1)
+                host.awaitField("abcde" + letter + "fghij")
+                val fold = KeyboardLayoutKind.fromWire(layout)!!.compactFold!!
+                assertEquals(
+                    fold.exactTokens.getValue(letter).toString(),
+                    host.controller.session!!
+                        .snapshot.rawInput,
+                )
+                assertEquals("only the typed letter advances the caret", 6, host.field.selectionStart)
+            }
+        }
+    }
+
+    @Test
+    fun withTheChoiceOnAKana12SidewaysFlickStillTypesKanaAtTheCaret() {
+        val prepared = KanaFixture.prepare()
+        val previousCatalog = KeyboardLayoutCatalog.snapshot.value.registry
+        try {
+            val pairing = KeyboardCompositionKey(KanaFixture.SCHEMA, LayoutInput.Builtin.QWERTY26).rawValue
+            KeyboardLayoutCatalog.install(
+                LayoutRegistry.create(compositions = mapOf(pairing to KeyboardComposition(mainLayoutID = "kana12"))),
+            )
+            val backend = KanaFixture.open(prepared, "cursor-swipe-ownership")
+            val host = Host(backend, layout = "qwerty26", schema = KanaFixture.SCHEMA)
+            try {
+                host.start(initial = "abcdefghij")
+                assertEquals("kana12", host.main2 { host.controller.mainDefinition().id })
+                host.main {
+                    host.controller.keyboard.cursorSwipeAnywhere = true
+                    host.field.setSelection(5)
+                    host.report(oldStart = 10, newStart = 5, candidatesStart = -1, candidatesEnd = -1)
+                }
+                val label =
+                    host.main2 {
+                        val keyboard = host.controller.keyboard
+                        keyboard.spokenLabels[keyboard.kana12RowIds.indexOf("na")]
+                    }
+                host.swipe(label, -1)
+                host.awaitField("abcdeにfghij")
+                assertEquals(
+                    "に",
+                    host.controller.session!!
+                        .snapshot.rawInput,
+                )
+                assertEquals("only the typed kana advances the caret", 6, host.field.selectionStart)
+            } finally {
+                host.close()
+                runBlocking { backend.shutdown() }
+            }
+        } finally {
+            KeyboardLayoutCatalog.install(previousCatalog)
+            KanaFixture.cleanup(prepared)
+        }
+    }
 
     @Test
     fun aSlideOverALetterKeyLeavesTheCaretAloneWhileTypingOrWithTheChoiceOff() =

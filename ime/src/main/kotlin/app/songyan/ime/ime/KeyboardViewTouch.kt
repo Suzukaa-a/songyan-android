@@ -16,6 +16,7 @@ import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_GROW_DP
 import app.songyan.ime.ime.KeyboardView.Companion.PREVIEW_MAX_CHARS
 import app.songyan.ime.ime.KeyboardView.Companion.TOUCH_SLOP_DP
 import app.songyan.ime.ime.KeyboardView.Press
+import app.songyan.ime.layout.KeyboardCursorDragPolicy
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutOption
@@ -385,6 +386,15 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
         val press = pointers.get(event.getPointerId(i)) ?: continue
         val x = event.getX(i)
         val y = event.getY(i)
+        if (startsCursorSwipe(press, x, y)) {
+            // Taking over must suppress the key's release and preview for the rest of the drag.
+            press.task?.let { timers.removeCallbacks(it) }
+            popupLayer?.hidePreview(0)
+            endFlick(press.key)
+            invalidateKey(press.key)
+            dragCursor(press, x, y, event.eventTime)
+            continue
+        }
         // A kana press follows its own cross preview; no other gesture route sees it.
         if (trackKana12Flick(press, x, y)) continue
         val tracker = press.tracker
@@ -408,14 +418,6 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                 }
             }
             press.snapshot.isSpace || press.cursorEntered -> dragCursor(press, x, y, event.eventTime)
-            startsCursorSwipe(press, x, y) -> {
-                // The key gives up its tap, its hold and its preview: the slide is a caret drag.
-                press.task?.let { timers.removeCallbacks(it) }
-                popupLayer?.hidePreview(0)
-                endFlick(press.key)
-                invalidateKey(press.key)
-                dragCursor(press, x, y, event.eventTime)
-            }
             else -> {
                 val slop = TOUCH_SLOP_DP * density
                 val past = abs(x - press.startX) > slop || abs(y - press.startY) > slop
@@ -434,20 +436,21 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
     }
 }
 
-/**
- * With the user's choice on and nothing being typed, a mostly sideways slide that starts on a key
- * becomes a caret drag, as on the space bar. Delete keeps its own press (it deleted on the DOWN),
- * and a key already holding, flicking or showing its alternates keeps its gesture.
- */
 internal fun KeyboardView.startsCursorSwipe(
     press: Press,
     x: Float,
     y: Float,
 ): Boolean {
-    if (!cursorSwipeAnywhere || press.held || press.snapshot.isBackspace || composing()) return false
-    if (press.flickArmed || press.flickVoid || popupKey >= 0) return false
-    val dx = abs(x - press.startX)
-    return dx > CURSOR_START_DP * density && dx > abs(y - press.startY)
+    if (press.cursorEntered || press.held || press.flickArmed || press.flickVoid || popupKey >= 0) return false
+    return KeyboardCursorDragPolicy.starts(
+        settingOn = cursorSwipeAnywhere,
+        isComposing = typing(),
+        ownsSidewaysGesture = press.tracker != null || isKana12FlickPress(press) || press.snapshot.railPosition >= 0,
+        isSpace = press.snapshot.isSpace,
+        isDelete = press.snapshot.isBackspace,
+        dxDp = (x - press.startX) / density,
+        dyDp = (y - press.startY) / density,
+    )
 }
 
 /**
@@ -632,7 +635,9 @@ internal fun KeyboardView.dragCursor(
     // A hold that only jitters is still a space: the drag starts after a deliberate sideways move.
     // Only leaving the bar cancels the tap: a quick thumb tap rolls past the touch slop up or down
     // while still on the bar, and dropping that space left the composition waiting for a second one.
-    val sideways = abs(x - press.startX) > CURSOR_START_DP * density
+    val travelPx = abs(x - press.startX)
+    val startPx = CURSOR_START_DP * density
+    val sideways = if (press.snapshot.isSpace) travelPx > startPx else travelPx >= startPx
     if (!sideways) {
         val slop = TOUCH_SLOP_DP * density
         val hitBox = hitBounds.getOrNull(press.key)

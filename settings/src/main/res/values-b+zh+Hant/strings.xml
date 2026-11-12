@@ -160,7 +160,7 @@
     <string name="options_double_space_title">雙擊空格輸入句號</string>
     <string name="options_double_space_body">輸入英文單詞後，連按兩次空格會變成句號加空格。</string>
     <string name="options_cursor_swipe_title">橫滑移動游標</string>
-    <string name="options_cursor_swipe_body">沒在打字時，在按鍵上左右滑動來移動游標。</string>
+    <string name="options_cursor_swipe_body">沒在打字時，在鍵盤上左右拖動來移動游標；雙字母鍵仍用左右滑選字母，假名鍵仍用輕拂輸入。</string>
     <string name="options_key_preview_title">按鍵預覽</string>
     <string name="options_key_preview_body">輕觸時，在按鍵上方顯示放大的字元。</string>
     <string name="options_release_haptic_title">鬆開時振動</string>

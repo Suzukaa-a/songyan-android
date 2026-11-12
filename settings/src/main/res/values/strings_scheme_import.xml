@@ -54,7 +54,7 @@
     <string name="schemes_recommended_size">About %1$s to download</string>
     <string name="schemes_recommended_homepage">Open the project page</string>
     <string name="schemes_recommended_confirm_title">Download “%1$s”?</string>
-    <string name="schemes_recommended_confirm_body">This downloads the input scheme from GitHub. It is large, so use Wi-Fi if you can.</string>
+    <string name="schemes_recommended_confirm_body">This downloads the input method from GitHub. It is large, so use Wi-Fi if you can.</string>
     <string name="schemes_recommended_confirm">Download</string>
     <string name="schemes_incoming_title">Import the input scheme you received?</string>
     <string name="schemes_incoming_body">Another app wants to import a ZIP file into Songyan as an input scheme.</string>

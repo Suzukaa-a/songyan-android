@@ -160,7 +160,7 @@
     <string name="options_double_space_title">Double-space period</string>
     <string name="options_double_space_body">After an English word, tap space twice to type a period and a space.</string>
     <string name="options_cursor_swipe_title">Slide to move the cursor</string>
-    <string name="options_cursor_swipe_body">When you aren\'t typing, drag left or right on the keyboard to move the cursor. Sideways swipes still select letters on dual-letter keys and kana on flick keys.</string>
+    <string name="options_cursor_swipe_body">When you aren\'t typing, drag left or right on the keyboard to move the cursor.</string>
     <string name="options_key_preview_title">Key preview</string>
     <string name="options_key_preview_body">Show a magnified character above the key you press.</string>
     <string name="options_release_haptic_title">Vibrate on release</string>
@@ -235,7 +235,7 @@
     <string name="features_lua_section">Extensions</string>
     <string name="features_lua_processors">Key handling</string>
     <string name="features_lua_segmentors">Segmentation</string>
-    <string name="features_lua_translators">Candidate generation</string>
+    <string name="features_lua_translators">Candidates</string>
     <string name="features_lua_filters">Candidate sorting</string>
     <string name="features_lua_affects_input">%1$s · may affect basic typing</string>
     <string name="features_lua_scheme_managed">The extensions of this input method are set by the input scheme.</string>

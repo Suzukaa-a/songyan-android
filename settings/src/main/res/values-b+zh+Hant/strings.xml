@@ -133,7 +133,7 @@
     <string name="licenses_loading">正在讀取…</string>
     <string name="licenses_failed">許可文字讀取失敗，請重試。</string>
     <string name="licenses_empty">未找到許可文字。</string>
-    <string name="licenses_intro">松煙按 GPL-3.0 釋出。下面列出隨應用分發的第三方元件，輕觸可以看它的許可全文。</string>
+    <string name="licenses_intro">松煙使用 GPL-3.0 許可。下面列出隨應用分發的第三方元件，輕觸可以看它的許可全文。</string>
     <string name="licenses_section_components">第三方元件</string>
     <string name="licenses_section_texts">其他許可全文</string>
     <string name="licenses_field_licence">許可</string>
@@ -160,7 +160,7 @@
     <string name="options_double_space_title">雙擊空格輸入句號</string>
     <string name="options_double_space_body">輸入英文單詞後，連按兩次空格會變成句號加空格。</string>
     <string name="options_cursor_swipe_title">橫滑移動游標</string>
-    <string name="options_cursor_swipe_body">沒在打字時，在鍵盤上左右拖動來移動游標；雙字母鍵仍用左右滑選字母，假名鍵仍用輕拂輸入。</string>
+    <string name="options_cursor_swipe_body">沒在打字時，在鍵盤上左右拖動來移動游標。</string>
     <string name="options_key_preview_title">按鍵預覽</string>
     <string name="options_key_preview_body">輕觸時，在按鍵上方顯示放大的字元。</string>
     <string name="options_release_haptic_title">鬆開時振動</string>

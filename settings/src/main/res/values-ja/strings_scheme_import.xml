@@ -53,7 +53,7 @@
     <string name="schemes_recommended_size">ダウンロード約 %1$s</string>
     <string name="schemes_recommended_homepage">プロジェクトページを開く</string>
     <string name="schemes_recommended_confirm_title">「%1$s」をダウンロードしますか？</string>
-    <string name="schemes_recommended_confirm_body">GitHub からこの入力パックをダウンロードします。ファイルが大きいので、Wi-Fi での接続をおすすめします。</string>
+    <string name="schemes_recommended_confirm_body">GitHub からこの入力方式をダウンロードします。ファイルが大きいので、Wi-Fi での接続をおすすめします。</string>
     <string name="schemes_recommended_confirm">ダウンロード</string>
     <string name="schemes_incoming_title">受け取った入力パックをインポートしますか？</string>
     <string name="schemes_incoming_body">ほかのアプリが、ZIP ファイルを入力パックとして松煙にインポートしようとしています。</string>

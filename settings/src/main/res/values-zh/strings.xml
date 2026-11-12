@@ -133,7 +133,7 @@
     <string name="licenses_loading">正在读取…</string>
     <string name="licenses_failed">许可文本读取失败，请重试。</string>
     <string name="licenses_empty">未找到许可文本。</string>
-    <string name="licenses_intro">松烟按 GPL-3.0 发布。下面列出随应用分发的第三方组件，点按可以看它的许可全文。</string>
+    <string name="licenses_intro">松烟使用 GPL-3.0 许可。下面列出随应用分发的第三方组件，点按可以看它的许可全文。</string>
     <string name="licenses_section_components">第三方组件</string>
     <string name="licenses_section_texts">其他许可全文</string>
     <string name="licenses_field_licence">许可</string>
@@ -160,7 +160,7 @@
     <string name="options_double_space_title">双击空格输入句号</string>
     <string name="options_double_space_body">输入英文单词后，连按两次空格会变成句号加空格。</string>
     <string name="options_cursor_swipe_title">横滑移动光标</string>
-    <string name="options_cursor_swipe_body">没在打字时，在键盘上左右拖动来移动光标；双字母键仍用左右滑选字母，假名键仍用轻拂输入。</string>
+    <string name="options_cursor_swipe_body">没在打字时，在键盘上左右拖动来移动光标。</string>
     <string name="options_key_preview_title">按键预览</string>
     <string name="options_key_preview_body">点按时，在按键上方显示放大的字符。</string>
     <string name="options_release_haptic_title">松开时振动</string>

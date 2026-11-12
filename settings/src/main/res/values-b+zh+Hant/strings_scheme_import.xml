@@ -55,7 +55,7 @@
     <string name="schemes_recommended_size">下載約 %1$s</string>
     <string name="schemes_recommended_homepage">查看專案首頁</string>
     <string name="schemes_recommended_confirm_title">下載「%1$s」？</string>
-    <string name="schemes_recommended_confirm_body">會從 GitHub 下載這個輸入方案，檔案較大時建議連線 Wi-Fi。</string>
+    <string name="schemes_recommended_confirm_body">會從 GitHub 下載這個輸入方式，檔案較大時建議連線 Wi-Fi。</string>
     <string name="schemes_recommended_confirm">下載</string>
     <string name="schemes_incoming_title">匯入收到的輸入方案？</string>
     <string name="schemes_incoming_body">其他 App 想把一個 ZIP 檔案作為輸入方案匯入松煙。</string>

@@ -158,6 +158,8 @@
     <string name="options_key_flick_down">下フリック</string>
     <string name="options_double_space_title">スペース 2 回でピリオド</string>
     <string name="options_double_space_body">英単語のあとでスペースを 2 回タップすると、ピリオドとスペースを入力します。</string>
+    <string name="options_cursor_swipe_title">スライドでカーソルを移動</string>
+    <string name="options_cursor_swipe_body">入力中でないときは、キーの上を左右にスライドしてカーソルを移動します。</string>
     <string name="options_key_preview_title">キーのプレビュー</string>
     <string name="options_key_preview_body">キーを押すと、その上に拡大した文字を表示します。</string>
     <string name="options_release_haptic_title">指を離したときに振動</string>

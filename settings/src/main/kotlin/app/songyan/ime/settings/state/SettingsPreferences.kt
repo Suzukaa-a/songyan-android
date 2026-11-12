@@ -71,6 +71,11 @@ interface SettingsPreferences {
 
     suspend fun setOneHandWidthPercent(value: Int)
 
+    /** Sliding sideways over the keys moves the cursor while nothing is being typed (off by default). */
+    val cursorSwipeAnywhere: Flow<Boolean>
+
+    suspend fun setCursorSwipeAnywhere(value: Boolean)
+
     /** Where the key area sits on a wide surface: left, center, right or custom (the number in [widePositionCustom]). */
     val widePosition: Flow<String>
 
@@ -239,6 +244,7 @@ class InMemorySettingsPreferences(
     private val switchKey = MutableStateFlow(false)
     private val hand = MutableStateFlow("off")
     private val handWidth = MutableStateFlow(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT)
+    private val cursorSwipe = MutableStateFlow(false)
 
     private val wide = MutableStateFlow("center")
     private val wideCustom = MutableStateFlow(SettingsPreferences.WIDE_POSITION_CENTER)
@@ -342,9 +348,14 @@ class InMemorySettingsPreferences(
     override val releaseHaptic: Flow<Boolean> = release.asStateFlow()
     override val oneHand: Flow<String> = hand.asStateFlow()
     override val oneHandWidthPercent: Flow<Int> = handWidth.asStateFlow()
+    override val cursorSwipeAnywhere: Flow<Boolean> = cursorSwipe.asStateFlow()
 
     override suspend fun setOneHandWidthPercent(value: Int) {
         handWidth.value = KeyboardOneHandLayoutPolicy.clampedWidthPercent(value)
+    }
+
+    override suspend fun setCursorSwipeAnywhere(value: Boolean) {
+        cursorSwipe.value = value
     }
 
     override suspend fun setKeyHeight(value: String) {

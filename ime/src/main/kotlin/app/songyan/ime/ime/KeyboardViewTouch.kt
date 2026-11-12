@@ -396,7 +396,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
             dragRail(press, y)
             continue
         }
-        if (popupKey < 0 && !press.held) flickMove(press, y)
+        if (popupKey < 0 && !press.held && !press.cursorEntered) flickMove(press, y)
         when {
             popupKey >= 0 && popupOwner == press.pointerId -> {
                 val next = popupSelection(press, x, y)
@@ -407,7 +407,15 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                     popupLayer?.select(next)
                 }
             }
-            press.snapshot.isSpace -> dragCursor(press, x, y, event.eventTime)
+            press.snapshot.isSpace || press.cursorEntered -> dragCursor(press, x, y, event.eventTime)
+            startsCursorSwipe(press, x, y) -> {
+                // The key gives up its tap, its hold and its preview: the slide is a caret drag.
+                press.task?.let { timers.removeCallbacks(it) }
+                popupLayer?.hidePreview(0)
+                endFlick(press.key)
+                invalidateKey(press.key)
+                dragCursor(press, x, y, event.eventTime)
+            }
             else -> {
                 val slop = TOUCH_SLOP_DP * density
                 val past = abs(x - press.startX) > slop || abs(y - press.startY) > slop
@@ -424,6 +432,22 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
             }
         }
     }
+}
+
+/**
+ * With the user's choice on and nothing being typed, a mostly sideways slide that starts on a key
+ * becomes a caret drag, as on the space bar. Delete keeps its own press (it deleted on the DOWN),
+ * and a key already holding, flicking or showing its alternates keeps its gesture.
+ */
+internal fun KeyboardView.startsCursorSwipe(
+    press: Press,
+    x: Float,
+    y: Float,
+): Boolean {
+    if (!cursorSwipeAnywhere || press.held || press.snapshot.isBackspace || composing()) return false
+    if (press.flickArmed || press.flickVoid || popupKey >= 0) return false
+    val dx = abs(x - press.startX)
+    return dx > CURSOR_START_DP * density && dx > abs(y - press.startY)
 }
 
 /**
@@ -674,6 +698,8 @@ internal fun KeyboardView.handleUp(
                     press.flickArmed -> press.flickTarget?.let { onAction(it.action) }
                     press.railDragged -> Unit
                     press.flickVoid -> Unit
+                    // A slide that moved the caret types nothing, wherever it ends.
+                    press.cursorEntered && !press.snapshot.isSpace -> Unit
                     // Delete already acted at its DOWN (and on every repeat); the release adds nothing.
                     press.snapshot.isBackspace -> Unit
                     !press.held && !press.moved -> activate(press.snapshot)
@@ -696,7 +722,7 @@ internal fun KeyboardView.handleUp(
         }
         fadeOut(press, now)
         endFlick(press.key)
-        if (press.snapshot.isSpace) setCursorDragging(false)
+        if (press.snapshot.isSpace || press.cursorEntered) setCursorDragging(false)
         if (press.held || !press.moved || press.tracker?.choice != null || isKana12FlickPress(press)) {
             onReleaseFeedback()
         }

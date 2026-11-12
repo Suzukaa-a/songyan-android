@@ -126,6 +126,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val releaseHaptic = store.releaseHaptic
             override val oneHand = store.oneHand
             override val oneHandWidthPercent = store.oneHandWidthPercent
+            override val cursorSwipeAnywhere = store.cursorSwipeAnywhere
             override val widePosition = store.widePositionPercent
             override val splitMode = store.splitMode
             override val splitWidthDp = store.splitWidthDp

@@ -171,6 +171,9 @@ class KeyboardView(
     /** The user's key hold delay in ms, or null to follow the system; backspace repeat ignores it. */
     var longPressOverrideMs: Int? = null
 
+    /** Sliding sideways over any key moves the cursor while nothing is being typed (a user choice). */
+    var cursorSwipeAnywhere = false
+
     /** Which vertical flick types the hint drawn on a character key; off leaves only taps and long presses. */
     var flickDirection = FlickDirection.UP
 

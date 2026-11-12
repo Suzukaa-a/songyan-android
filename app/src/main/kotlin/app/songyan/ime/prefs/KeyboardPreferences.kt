@@ -111,6 +111,13 @@ class KeyboardPreferences(
                 )
             }.distinctUntilChanged()
 
+    /** Sliding sideways over the keys moves the cursor while nothing is being typed; off by default. */
+    val cursorSwipeAnywhere: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_CURSOR_SWIPE_ANYWHERE] ?: false }
+            .distinctUntilChanged()
+
     /** "left" / "center" / "right" / "custom": where the key area sits on a surface wider than 600 dp. */
     val widePosition: Flow<String> =
         appContext.keyboardDataStore.data
@@ -419,6 +426,8 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_PREVIEW] = value }
     }
 
+    suspend fun setCursorSwipeAnywhere(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_CURSOR_SWIPE_ANYWHERE] = value }
     }
 
     suspend fun setOneHandWidthPercent(value: Int) {
@@ -631,6 +640,7 @@ class KeyboardPreferences(
         private val KEY_HAPTIC_STRENGTH = floatPreferencesKey("key_haptic_strength")
         private val KEY_ONE_HAND = stringPreferencesKey("one_hand")
         private val KEY_ONE_HAND_WIDTH = intPreferencesKey("one_hand_width_percent")
+        private val KEY_CURSOR_SWIPE_ANYWHERE = booleanPreferencesKey("cursor_swipe_anywhere")
         private val KEY_ACTIVE_SCHEMA = stringPreferencesKey("active_schema_id")
         private val KEY_RECONCILED_GENERATION = stringPreferencesKey("reconciled_generation")
         private val KEY_RECONCILED_NAMESPACE = stringPreferencesKey("reconciled_namespace")

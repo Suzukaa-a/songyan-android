@@ -611,6 +611,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onLongPressDelayChanged = viewModel::setLongPressDelayMs,
                 onOneHandChanged = viewModel::setOneHand,
                 onOneHandWidthChanged = viewModel::setOneHandWidthPercent,
+                onCursorSwipeAnywhereChanged = viewModel::setCursorSwipeAnywhere,
                 onKeyPreviewChanged = viewModel::setKeyPreview,
                 onKeyFlickDirection = viewModel::setKeyFlickDirection,
                 onDoubleSpacePeriodChanged = viewModel::setDoubleSpacePeriod,

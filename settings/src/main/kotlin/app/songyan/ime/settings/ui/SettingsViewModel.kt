@@ -206,6 +206,9 @@ class SettingsViewModel(
         collectPreference(preferences.oneHandWidthPercent) {
             copy(keyboardFeel = keyboardFeel.copy(oneHandWidthPercent = it))
         }
+        collectPreference(preferences.cursorSwipeAnywhere) {
+            copy(keyboardFeel = keyboardFeel.copy(cursorSwipeAnywhere = it))
+        }
         collectPreference(preferences.widePosition) { copy(keyboardFeel = keyboardFeel.copy(widePosition = it)) }
         collectPreference(preferences.widePositionCustom) {
             copy(keyboardFeel = keyboardFeel.copy(widePositionCustom = it))
@@ -387,6 +390,8 @@ class SettingsViewModel(
         viewModelScope.launch { preferences.setOneHandWidthPercent(value) }
     }
 
+    fun setCursorSwipeAnywhere(value: Boolean) {
+        viewModelScope.launch { preferences.setCursorSwipeAnywhere(value) }
     }
 
     fun setKeyFlickDirection(value: String) {

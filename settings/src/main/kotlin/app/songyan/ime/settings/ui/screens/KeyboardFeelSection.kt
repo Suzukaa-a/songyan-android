@@ -43,6 +43,7 @@ data class KeyboardFeelState(
     val releaseHaptic: Boolean = false,
     val oneHand: String = "off",
     val oneHandWidthPercent: Int = KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT,
+    val cursorSwipeAnywhere: Boolean = false,
     val widePosition: String = "center",
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
@@ -60,6 +61,7 @@ fun KeyboardFeelSection(
     onLongPressDelay: (Int?) -> Unit = {},
     onOneHand: (String) -> Unit,
     onOneHandWidth: (Int) -> Unit = {},
+    onCursorSwipeAnywhere: (Boolean) -> Unit = {},
     onKeyPreview: (Boolean) -> Unit,
     onKeyFlickDirection: (String) -> Unit = {},
     onDoubleSpacePeriod: (Boolean) -> Unit = {},
@@ -304,6 +306,12 @@ fun KeyboardFeelSection(
             subtitle = stringResource(R.string.options_double_space_body),
             checked = state.doubleSpacePeriod,
             onCheckedChange = onDoubleSpacePeriod,
+        )
+        SwitchRow(
+            title = stringResource(R.string.options_cursor_swipe_title),
+            subtitle = stringResource(R.string.options_cursor_swipe_body),
+            checked = state.cursorSwipeAnywhere,
+            onCheckedChange = onCursorSwipeAnywhere,
         )
         SwitchRow(
             title = stringResource(R.string.options_key_preview_title),

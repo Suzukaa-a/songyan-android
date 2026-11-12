@@ -54,6 +54,9 @@ interface KeyboardPreferencesSource {
     /** The one-handed keyboard's width in percent of the panel. */
     val oneHandWidthPercent: Flow<Int> get() = flowOf(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT)
 
+    /** Sliding sideways over the keys moves the cursor while nothing is being typed. */
+    val cursorSwipeAnywhere: Flow<Boolean> get() = flowOf(false)
+
     /** [CandidateTextSize.id]; the standard size when the owner stores no choice. */
     val candidateTextSize: Flow<String> get() = flowOf(CandidateTextSize.DEFAULT.id)
 

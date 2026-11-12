@@ -1489,6 +1489,55 @@ class RealEngineEditorTest {
             assertEquals("a drag never types a space", "abcdefghij", host.text())
         }
 
+    /** A slow sideways slide of 72 dp to the left from the centre of the key labelled [label]. */
+    private fun slideLeftOnKey(
+        host: Host,
+        label: String,
+    ) {
+        val key = host.keyCenter(label)
+        val density = host.context.resources.displayMetrics.density
+        val start = SystemClock.uptimeMillis()
+        host.main {
+            host.touch(start, MotionEvent.ACTION_DOWN, key)
+            for (step in 1..6) {
+                host.touch(
+                    start + 16L * step,
+                    MotionEvent.ACTION_MOVE,
+                    key.first - 12f * density * step to key.second,
+                    downTime = start,
+                )
+            }
+            host.touch(start + 120L, MotionEvent.ACTION_UP, key.first - 72f * density to key.second, downTime = start)
+        }
+        host.awaitIdle()
+    }
+
+    @Test
+    fun withTheChoiceOnASlideOverALetterKeyMovesTheCaretLikeTheSpaceBar() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            host.main { host.controller.keyboard.cursorSwipeAnywhere = true }
+            slideLeftOnKey(host, "l")
+            assertEquals("a slow 72 dp slide is three characters", 7, host.field.selectionStart)
+            assertEquals("the slide types nothing", "abcdefghij", host.text())
+        }
+
+    @Test
+    fun aSlideOverALetterKeyLeavesTheCaretAloneWhileTypingOrWithTheChoiceOff() =
+        withHost { host ->
+            host.start(initial = "abcdefghij")
+            // Off by default: the slide is not a caret drag.
+            slideLeftOnKey(host, "l")
+            assertNotEquals("the choice is off by default", 7, host.field.selectionStart)
+            host.discard()
+            host.main { host.controller.keyboard.cursorSwipeAnywhere = true }
+            host.tap("n")
+            host.awaitComposing()
+            val before = host.field.selectionStart
+            slideLeftOnKey(host, "l")
+            assertTrue("a slide while typing does not move the caret", host.field.selectionStart >= before)
+        }
+
     @Test
     fun aFastSpaceDragNeedsLessTravelPerCharacterAndNeverSkipsOne() =
         withHost { host ->

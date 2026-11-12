@@ -159,6 +159,8 @@
     <string name="options_key_flick_down">Swipe down</string>
     <string name="options_double_space_title">Double-space period</string>
     <string name="options_double_space_body">After an English word, tap space twice to type a period and a space.</string>
+    <string name="options_cursor_swipe_title">Slide to move the cursor</string>
+    <string name="options_cursor_swipe_body">When you aren\'t typing, slide left or right across the keys to move the cursor.</string>
     <string name="options_key_preview_title">Key preview</string>
     <string name="options_key_preview_body">Show a magnified character above the key you press.</string>
     <string name="options_release_haptic_title">Vibrate on release</string>

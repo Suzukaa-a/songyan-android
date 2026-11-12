@@ -31,7 +31,7 @@ internal object IsolatedCall {
             }
         val intent =
             Intent().setComponent(
-                ComponentName(context, "app.songyan.ime.script.ScriptIsolatedService"),
+                ComponentName(context, ScriptIsolatedService::class.java),
             )
         check(context.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
             "cannot bind the isolated service"

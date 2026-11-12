@@ -196,7 +196,7 @@ class ScriptProxyRegistry(
 
                     override fun onServiceDisconnected(name: ComponentName) = Unit
                 }
-            val intent = Intent().setComponent(ComponentName(appContext, "app.songyan.ime.script.ScriptProxyService"))
+            val intent = Intent().setComponent(ComponentName(appContext, ScriptProxyService::class.java))
             if (!appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
                 continuation.resumeWith(Result.failure(IllegalStateException("cannot bind the script proxy")))
                 return@suspendCancellableCoroutine

@@ -12,6 +12,17 @@ import org.junit.runner.manipulation.Filter
  * device. An assumption is no way out either, because the Gradle report counts it as a failure.
  */
 class ExternalFixtureFilter : Filter() {
+    // Tests that need a real archive but live in a class that also runs without one.
+    private val excludedMethods: Set<String> =
+        buildSet {
+            if (InstrumentationRegistry.getArguments().getString("kagiroiFixture") == null) {
+                add(
+                    RealEngineEditorTest::class.java.name +
+                        "#withTheChoiceOnAKana12SidewaysFlickStillTypesKanaAtTheCaret",
+                )
+            }
+        }
+
     private val excluded: Set<String> =
         buildSet {
             val arguments = InstrumentationRegistry.getArguments()
@@ -31,7 +42,9 @@ class ExternalFixtureFilter : Filter() {
             }
         }
 
-    override fun shouldRun(description: Description): Boolean = description.className !in excluded
+    override fun shouldRun(description: Description): Boolean =
+        description.className !in excluded &&
+            (description.className + "#" + description.methodName) !in excludedMethods
 
     override fun describe(): String = "device tests whose fixtures were handed to this run"
 }

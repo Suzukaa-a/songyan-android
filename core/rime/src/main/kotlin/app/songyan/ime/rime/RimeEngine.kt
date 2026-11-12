@@ -177,6 +177,14 @@ class RimeEngine private constructor(
             RimeActionResult(consumed, actionSnapshot())
         }
 
+    /** Moves the composition caret by [offset] input characters, stopping at either end. */
+    suspend fun moveCaret(offset: Int): RimeActionResult =
+        dispatcher.onEngine(onLost = { keepUndelivered(it.snapshot.commitText) }) {
+            requireReadableSession()
+            val moved = RimeNative.nativeMoveCaret(engine, session, offset)
+            RimeActionResult(moved, actionSnapshot())
+        }
+
     /** Commits the current composition (the Return-key path). */
     suspend fun commitComposition(): RimeActionResult =
         dispatcher.onEngine(onLost = { keepUndelivered(it.snapshot.commitText) }) {

@@ -150,22 +150,35 @@ class RimeEngineBackend(
      * default and the caller leaves the composition untouched.
      */
     override suspend fun moveCompositionCaret(offset: Int): EngineSnapshot? {
-        val steps = if (offset < 0) -offset else offset
-        if (steps == 0) return currentSnapshot()
-        if (!currentSnapshot().isComposing) return null
+        if (offset == 0) return currentSnapshot()
+        val current = currentSnapshot()
+        if (!current.isComposing) return null
+        val family = InputLayoutPolicy.familyOf(current.schemaID, alphabetCache[current.schemaID].orEmpty())
+        if (family == InputSchemeFamily.JAPANESE) return publish(moveCaretWithKeys(offset) ?: return null)
+        // Elsewhere the caret is set directly: librime's Left / Right keys jump by syllable and
+        // wrap from one end to the other, so a drag would bounce between the ends of the spelling.
+        val result =
+            try {
+                engine.moveCaret(offset)
+            } catch (e: RimeException) {
+                throw e.asBackendError()
+            }
+        return publish(result.snapshot)
+    }
+
+    /** A kana composition keeps librime's own caret keys: its input is romaji, the caret a kana. */
+    private suspend fun moveCaretWithKeys(offset: Int): RimeSnapshot? {
         val key = RimeKey(if (offset < 0) RimeKeyCode.LEFT else RimeKeyCode.RIGHT)
         var latest: RimeSnapshot? = null
-        var remaining = steps
-        while (remaining > 0) {
+        repeat(if (offset < 0) -offset else offset) {
             latest =
                 try {
                     engine.processKey(key).snapshot
                 } catch (e: RimeException) {
                     throw e.asBackendError()
                 }
-            remaining--
         }
-        return publish(latest ?: return null)
+        return latest
     }
 
     /** What an unconsumed key types; control keys other than Return type nothing. */

@@ -1,5 +1,6 @@
 #include <jni.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -505,6 +506,36 @@ ENTRY jboolean JNI_FN(nativeChangePage)(JNIEnv*, jclass, jlong engine, jlong ses
 ENTRY jboolean JNI_FN(nativeClearComposition)(JNIEnv*, jclass, jlong engine, jlong session) {
   SONGYAN_JNI_TRY
   return rb_clear_composition(ENGINE_PTR(engine), SESSION_ID(session)) != 0 ? JNI_TRUE : JNI_FALSE;
+  SONGYAN_JNI_CATCH(JNI_FALSE)
+}
+
+// Moves the composition caret by `offset` input characters and stops at either end. librime's
+// own Left / Right keys jump by syllable and wrap from one end to the other, which a caret drag
+// must never do. False when there is no composition or the caret is already at that end.
+ENTRY jboolean JNI_FN(nativeMoveCaret)(JNIEnv*, jclass, jlong engine, jlong session, jint offset) {
+  SONGYAN_JNI_TRY
+  if (ENGINE_PTR(engine) == nullptr || SESSION_ID(session) == 0 || offset == 0) return JNI_FALSE;
+  RimeApi* api = rime_get_api();
+  if (api == nullptr || api->get_input == nullptr || api->get_caret_pos == nullptr ||
+      api->set_caret_pos == nullptr) {
+    return JNI_FALSE;
+  }
+  const char* input = api->get_input(SESSION_ID(session));
+  if (input == nullptr) return JNI_FALSE;
+  // The caret is a byte offset; it moves by whole characters so a kana input never splits.
+  std::vector<size_t> stops{0};
+  for (size_t i = 1; input[i - 1] != '\0'; ++i) {
+    if ((static_cast<unsigned char>(input[i]) & 0xC0) != 0x80) stops.push_back(i);
+  }
+  if (stops.size() < 2) return JNI_FALSE;
+  const size_t caret = api->get_caret_pos(SESSION_ID(session));
+  const auto at = std::lower_bound(stops.begin(), stops.end(), caret);
+  const long index = static_cast<long>(at - stops.begin());
+  const long last = static_cast<long>(stops.size()) - 1;
+  const long target = std::max(0L, std::min(last, index + static_cast<long>(offset)));
+  if (stops[static_cast<size_t>(target)] == caret) return JNI_FALSE;
+  api->set_caret_pos(SESSION_ID(session), stops[static_cast<size_t>(target)]);
+  return JNI_TRUE;
   SONGYAN_JNI_CATCH(JNI_FALSE)
 }
 

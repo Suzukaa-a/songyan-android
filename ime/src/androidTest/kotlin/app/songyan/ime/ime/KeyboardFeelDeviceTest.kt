@@ -66,6 +66,43 @@ class KeyboardFeelDeviceTest {
         }
 
     @Test
+    fun aSpaceDragOverCandidatesWalksTheCaretOneWayAndStopsAtTheEnds() =
+        withHost { host ->
+            host.start()
+            host.type("nihao")
+            host.awaitIdle()
+            val density = host.main2 { host.field.resources.displayMetrics.density }
+            // Far left, then far right: the caret must walk steadily and rest at each end. librime's
+            // own Left key jumped by syllable and wrapped round, so the caret bounced between ends.
+            val left = (1..16).map { -it * 7f * density to 0f }
+            val right = (15 downTo -16).map { -it * 7f * density to 0f }
+            val carets =
+                host.holdAndSlide(host.string(R.string.ime_space), left + right) {
+                    host.controller.session
+                        ?.snapshot
+                        ?.preeditCaretByte ?: -1
+                }
+            val leftward = carets.take(left.size)
+            val rightward = carets.drop(left.size)
+            assertTrue("leftward $leftward", leftward.zipWithNext().all { (a, b) -> b <= a })
+            assertTrue("rightward $rightward", rightward.zipWithNext().all { (a, b) -> b >= a })
+            assertEquals("rests at the start: $leftward", 0, leftward.last())
+            assertEquals("rests at the end: $rightward", carets.first(), rightward.last())
+            assertTrue("the spelling is still being composed", host.editor.composing)
+            assertEquals(
+                "nothing was picked",
+                "你好",
+                host.main2 {
+                    host.controller.session
+                        ?.snapshot
+                        ?.candidates
+                        ?.first()
+                        ?.text
+                },
+            )
+        }
+
+    @Test
     fun theKeyFlickPreferenceReachesAShownKeyboard() =
         withHost { host ->
             host.start()

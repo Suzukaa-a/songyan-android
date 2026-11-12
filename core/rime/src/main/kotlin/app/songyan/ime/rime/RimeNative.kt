@@ -129,6 +129,12 @@ internal object RimeNative {
         session: Long,
     ): Boolean
 
+    external fun nativeMoveCaret(
+        engine: Long,
+        session: Long,
+        offset: Int,
+    ): Boolean
+
     external fun nativeSimulateKeySequence(
         engine: Long,
         session: Long,

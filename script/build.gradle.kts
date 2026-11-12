@@ -22,6 +22,8 @@ android {
         minSdk = 30
         ndk { abiFilters += abis }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The JNI bridge finds its host class by name; see proguard-rules.pro.
+        consumerProguardFiles("proguard-rules.pro")
         externalNativeBuild {
             cmake {
                 arguments += "-DANDROID_STL=none"

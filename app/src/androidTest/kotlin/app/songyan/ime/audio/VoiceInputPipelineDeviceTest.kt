@@ -48,6 +48,14 @@ import org.junit.runner.RunWith
 class VoiceInputPipelineDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
+
+    /**
+     * The keyboard preloads the script snapshot on IO when it shows; these tests drive the host
+     * directly, so do the same before asking it for a script.
+     */
+    private fun preloadedCatalogCache(): ScriptCatalogCache =
+        ScriptCatalogCache(context).also { cache -> runBlocking(Dispatchers.IO) { cache.entries() } }
+
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val messages = mutableListOf<String>()
 
@@ -152,7 +160,7 @@ class VoiceInputPipelineDeviceTest {
         scriptId = installAudioScript()
         val target = field("你好")
         val original = target.edit.text.toString()
-        val host = VoiceInputHostImpl(context, VoiceRecorder(context), ScriptCatalogCache(context))
+        val host = VoiceInputHostImpl(context, VoiceRecorder(context), preloadedCatalogCache())
         val script = awaitScript(host, scriptId!!)
         assertEquals(scriptId, script.id)
 
@@ -212,7 +220,7 @@ class VoiceInputPipelineDeviceTest {
     fun aPasswordFieldOffersNoMicrophone() {
         scriptId = installAudioScript()
         val target = field("secret", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        val host = VoiceInputHostImpl(context, VoiceRecorder(context), ScriptCatalogCache(context))
+        val host = VoiceInputHostImpl(context, VoiceRecorder(context), preloadedCatalogCache())
         awaitScript(host, scriptId!!)
         val voice = controller(host, target)
         voice.configure(enabled = true, scriptId = scriptId)

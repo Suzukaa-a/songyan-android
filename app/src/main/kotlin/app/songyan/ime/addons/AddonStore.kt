@@ -208,7 +208,8 @@ internal interface AddonStateStore {
 internal class LazyAddonStore(
     private val directory: () -> File,
 ) : AddonStateStore {
-    private val delegate: AddonStore by lazy { AddonStore(directory()) }
+    // Synchronized: warm/recordCall may resolve it from an IO coroutine while a scan reads it.
+    private val delegate: AddonStore by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { AddonStore(directory()) }
 
     override fun read(): StoredAddonState = delegate.read()
 

@@ -7,6 +7,9 @@ import app.songyan.ime.ime.tools.ToolCatalog
 import app.songyan.ime.scripttools.PreloadedToolCatalog
 import app.songyan.ime.tools.ToolCapability
 import app.songyan.ime.tools.ToolDescriptor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -71,6 +74,60 @@ class PreloadedToolCatalogDeviceTest {
         } finally {
             file.delete()
         }
+    }
+
+    private class CountingCatalog : ToolCatalog {
+        @Volatile
+        var items: List<ToolDescriptor> = emptyList()
+
+        override fun tools(): List<ToolDescriptor> = items
+    }
+
+    private class SlowCatalog : ToolCatalog {
+        private val lock = Any()
+        private var active = 0
+
+        @Volatile
+        var peak = 0
+
+        override fun tools(): List<ToolDescriptor> {
+            synchronized(lock) {
+                active += 1
+                peak = maxOf(peak, active)
+            }
+            Thread.sleep(50)
+            synchronized(lock) { active -= 1 }
+            return emptyList()
+        }
+    }
+
+    @Test
+    fun refreshReportsWhetherTheVisibleListChanged() {
+        val tool =
+            ToolDescriptor(id = "memory:tool", title = "Memory tool", requiredCapabilities = setOf(ToolCapability.TEXT))
+        val source = CountingCatalog().apply { items = listOf(tool) }
+        val catalog = PreloadedToolCatalog(listOf(source))
+        assertTrue(runBlocking { catalog.refresh() })
+        assertEquals(1, catalog.tools().size)
+        // The list the toolbar draws is the same: the service must not redraw.
+        assertTrue(!runBlocking { catalog.refresh() })
+        source.items = emptyList()
+        assertTrue(runBlocking { catalog.refresh() })
+        assertTrue(catalog.tools().isEmpty())
+    }
+
+    @Test
+    fun concurrentRefreshesDoNotReadTheSourcesAtTheSameTime() {
+        val source = SlowCatalog()
+        val catalog = PreloadedToolCatalog(listOf(source))
+        runBlocking {
+            coroutineScope {
+                launch(Dispatchers.IO) { catalog.refresh() }
+                launch(Dispatchers.IO) { catalog.refresh() }
+            }
+        }
+        // Without the mutex both reads overlap and the peak is 2.
+        assertEquals("refreshes must be serialized", 1, source.peak)
     }
 
     @Test

@@ -108,6 +108,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** How long a first deployment may take before the engine notice offers the settings path. */
 private const val SETTINGS_ACTION_DELAY_MS = 2_000L
@@ -120,6 +121,10 @@ private const val SNAPSHOT_QUIET_MS = 5_000L
 
 // Long enough for a stored generation to be swapped in, deploy process start included.
 private const val TAG = "SongyanIme"
+
+// One keyboard refresh pass: package discovery plus two small file reads. A pass that takes
+// longer than this is stuck; the next keyboard show starts a fresh one instead of queueing forever.
+private const val KEYBOARD_REFRESH_TIMEOUT_MS = 15_000L
 
 class SongyanInputMethodService : InputMethodService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + LogAndContinue)
@@ -682,21 +687,30 @@ class SongyanInputMethodService : InputMethodService() {
             scope.launch {
                 do {
                     toolRefreshQueued = false
-                    AddonRegistryHolder.current?.let { registry ->
-                        runCatching { registry.refreshOnKeyboardShow() }
-                            .onFailure { Log.w(TAG, "extension registry refresh failed", it) }
-                    }
-                    val toolsChanged =
-                        toolCatalogCache?.let { catalog ->
-                            runCatching { catalog.refresh() }
-                                .onFailure { Log.w(TAG, "tool catalog refresh failed", it) }
-                                .getOrDefault(false)
-                        } == true
-                    // A menu opened while the scan was still running gets its extension rows now,
-                    // and the toolbar must show the tool entry without waiting for a keystroke.
-                    controller?.refreshExtensionMenu()
-                    if (toolsChanged) controller?.onToolCatalogRefreshed()
-                } while (toolRefreshQueued && scope.isActive)
+                    val finished =
+                        withTimeoutOrNull(KEYBOARD_REFRESH_TIMEOUT_MS) {
+                            AddonRegistryHolder.current?.let { registry ->
+                                runCatching { registry.refreshOnKeyboardShow() }
+                                    .onFailure { error ->
+                                        if (error is CancellationException) throw error
+                                        Log.w(TAG, "extension registry refresh failed", error)
+                                    }
+                            }
+                            val toolsChanged =
+                                toolCatalogCache?.let { catalog ->
+                                    runCatching { catalog.refresh() }
+                                        .onFailure { error ->
+                                            if (error is CancellationException) throw error
+                                            Log.w(TAG, "tool catalog refresh failed", error)
+                                        }.getOrDefault(false)
+                                } == true
+                            // A menu opened while the scan was still running gets its rows now,
+                            // and the toolbar shows the tool entry without waiting for a keystroke.
+                            controller?.refreshExtensionMenu()
+                            if (toolsChanged) controller?.onToolCatalogRefreshed()
+                        }
+                    if (finished == null) Log.w(TAG, "keyboard tool refresh timed out")
+                } while (toolRefreshQueued && isActive)
             }
     }
 

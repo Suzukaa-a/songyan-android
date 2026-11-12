@@ -200,6 +200,7 @@ class ToolbarView(
         }
 
     /** The entries currently drawn; the keyboard's render tests read this instead of private state. */
+    @androidx.annotation.VisibleForTesting
     internal fun actionsForTest(): List<Action> = entries()
 
     override val itemCount: Int

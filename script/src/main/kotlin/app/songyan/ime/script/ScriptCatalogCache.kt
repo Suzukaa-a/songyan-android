@@ -19,7 +19,11 @@ import java.io.File
 class ScriptCatalogCache(
     context: Context,
 ) {
-    private val snapshotFile = File(context.applicationContext.filesDir, "script/catalog-snapshot.json")
+    private val appContext = context.applicationContext
+
+    // Resolved on first use: constructing the cache happens on the main thread when the keyboard
+    // view is built, and getFilesDir creates the private directory on first call.
+    private val snapshotFile by lazy { File(appContext.filesDir, "script/catalog-snapshot.json") }
     private var cachedAt: Long = -1
     private var cached: List<ScriptEntry> = emptyList()
 
@@ -40,6 +44,12 @@ class ScriptCatalogCache(
 
     /** Enabled scripts in panel order - what the keyboard toolbar needs. */
     fun enabledEntries(): List<ScriptEntry> = entries().filter { it.enabled && !it.confirmationPending }
+
+    /**
+     * The last parsed list without touching the disk. The keyboard preloads [entries] on IO when
+     * it shows, so callers on the main thread (the voice-input list) read from here.
+     */
+    fun cachedEntries(): List<ScriptEntry> = cached
 
     private fun readSnapshot(): String = snapshotFile.readText()
 }

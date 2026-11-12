@@ -40,8 +40,9 @@ class VoiceInputHostImpl(
     }
 
     override fun script(id: String): VoiceScript? =
+        // Called from the keyboard thread: never stat or read the snapshot here.
         catalog
-            .enabledEntries()
+            .cachedEntries()
             .firstOrNull { it.id == id && it.needsAudio && it.availableOnThisHost }
             ?.let { VoiceScript(it.id, it.name.ifBlank { it.id }) }
 

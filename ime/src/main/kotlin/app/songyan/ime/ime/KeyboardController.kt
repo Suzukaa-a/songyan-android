@@ -1176,7 +1176,7 @@ class KeyboardController(
      * rows then have to appear without the user closing and reopening the menu.
      */
     fun refreshExtensionMenu() {
-        if (!menuOpen) return
+        if (retired || !menuOpen) return
         menu.setExtensionPanels(extensionPanels())
     }
 

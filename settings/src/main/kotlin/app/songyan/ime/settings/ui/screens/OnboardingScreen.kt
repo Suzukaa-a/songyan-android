@@ -188,11 +188,19 @@ fun OnboardingScreen(
                                     progress = inlineStatus.takeIf { inlineProgress && downloadingId == entry.id },
                                 )
                             }
+                            // Importing a file or a link is the last way in, not a second headline.
+                            TextButton(
+                                onClick = onOtherSchemes,
+                                enabled = !downloading,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    stringResource(R.string.onboarding_other_schemes),
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
-                }
-                TextButton(onClick = onOtherSchemes, enabled = !downloading) {
-                    Text(stringResource(R.string.onboarding_other_schemes))
                 }
             }
 

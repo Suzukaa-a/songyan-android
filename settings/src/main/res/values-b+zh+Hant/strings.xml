@@ -46,10 +46,10 @@
 
     <!-- 引導 -->
     <string name="onboarding_title">啟用松煙</string>
-    <string name="onboarding_intro">下載一個輸入方案，再啟用松煙開始打字。</string>
-    <string name="onboarding_step_download_title">下載輸入方案</string>
-    <string name="onboarding_step_download_body">選擇一個輸入方案開始使用。</string>
-    <string name="onboarding_other_schemes">其他輸入方案與檔案</string>
+    <string name="onboarding_intro">下載一個輸入方式，再啟用松煙開始打字。</string>
+    <string name="onboarding_step_download_title">下載輸入方式</string>
+    <string name="onboarding_step_download_body">選擇一個開始使用。</string>
+    <string name="onboarding_other_schemes">從檔案或連結匯入</string>
     <string name="onboarding_step_enable_title">啟用松煙鍵盤</string>
     <string name="onboarding_step_enable_body">在系統設定裡啟用松煙鍵盤。</string>
     <string name="onboarding_step_enable_action">開啟系統設定</string>

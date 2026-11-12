@@ -46,10 +46,10 @@
 
     <!-- 引导 -->
     <string name="onboarding_title">启用松烟</string>
-    <string name="onboarding_intro">下载一个输入方案，再启用松烟开始打字。</string>
-    <string name="onboarding_step_download_title">下载输入方案</string>
-    <string name="onboarding_step_download_body">选择一个输入方案开始使用。</string>
-    <string name="onboarding_other_schemes">其他输入方案与文件</string>
+    <string name="onboarding_intro">下载一个输入方式，再启用松烟开始打字。</string>
+    <string name="onboarding_step_download_title">下载输入方式</string>
+    <string name="onboarding_step_download_body">选择一个开始使用。</string>
+    <string name="onboarding_other_schemes">从文件或链接导入</string>
     <string name="onboarding_step_enable_title">启用松烟键盘</string>
     <string name="onboarding_step_enable_body">在系统设置里启用松烟键盘。</string>
     <string name="onboarding_step_enable_action">打开系统设置</string>

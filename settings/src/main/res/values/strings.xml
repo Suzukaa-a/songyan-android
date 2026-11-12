@@ -46,10 +46,10 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title">Enable Songyan</string>
-    <string name="onboarding_intro">Download an input scheme, then enable Songyan to start typing.</string>
-    <string name="onboarding_step_download_title">Download an input scheme</string>
-    <string name="onboarding_step_download_body">Choose an input scheme to start with.</string>
-    <string name="onboarding_other_schemes">Other input schemes and files</string>
+    <string name="onboarding_intro">Download an input method, then enable Songyan to start typing.</string>
+    <string name="onboarding_step_download_title">Download an input method</string>
+    <string name="onboarding_step_download_body">Choose one to start with.</string>
+    <string name="onboarding_other_schemes">Import from files or links</string>
     <string name="onboarding_step_enable_title">Enable Songyan Keyboard</string>
     <string name="onboarding_step_enable_body">Enable the Songyan keyboard in System Settings.</string>
     <string name="onboarding_step_enable_action">Open system settings</string>

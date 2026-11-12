@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
@@ -99,6 +100,16 @@ class KeyboardPreferences(
             .orDefaultsOnIoError()
             .map { it[KEY_ONE_HAND] ?: ONE_HAND_OFF }
             .distinctUntilChanged()
+
+    /** The one-handed keyboard's width in percent of the panel. */
+    val oneHandWidthPercent: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { prefs ->
+                KeyboardOneHandLayoutPolicy.clampedWidthPercent(
+                    prefs[KEY_ONE_HAND_WIDTH] ?: KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT,
+                )
+            }.distinctUntilChanged()
 
     /** "left" / "center" / "right" / "custom": where the key area sits on a surface wider than 600 dp. */
     val widePosition: Flow<String> =
@@ -408,6 +419,14 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_PREVIEW] = value }
     }
 
+    }
+
+    suspend fun setOneHandWidthPercent(value: Int) {
+        appContext.keyboardDataStore.edit {
+            it[KEY_ONE_HAND_WIDTH] = KeyboardOneHandLayoutPolicy.clampedWidthPercent(value)
+        }
+    }
+
     suspend fun setKeyFlickDirection(value: String) {
         require(value in FLICK_DIRECTIONS) { "unknown flick direction: $value" }
         appContext.keyboardDataStore.edit {
@@ -611,6 +630,7 @@ class KeyboardPreferences(
         private val KEY_HAPTICS_ENABLED = booleanPreferencesKey("key_haptics_enabled")
         private val KEY_HAPTIC_STRENGTH = floatPreferencesKey("key_haptic_strength")
         private val KEY_ONE_HAND = stringPreferencesKey("one_hand")
+        private val KEY_ONE_HAND_WIDTH = intPreferencesKey("one_hand_width_percent")
         private val KEY_ACTIVE_SCHEMA = stringPreferencesKey("active_schema_id")
         private val KEY_RECONCILED_GENERATION = stringPreferencesKey("reconciled_generation")
         private val KEY_RECONCILED_NAMESPACE = stringPreferencesKey("reconciled_namespace")

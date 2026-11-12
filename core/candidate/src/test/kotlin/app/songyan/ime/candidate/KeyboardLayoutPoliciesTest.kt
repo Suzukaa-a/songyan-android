@@ -90,6 +90,52 @@ class KeyboardLayoutPoliciesTest {
     }
 
     @Test
+    fun aChosenWidthNarrowsTheKeyboardAndKeepsTheGutterUsable() {
+        val narrow =
+            KeyboardOneHandLayoutPolicy.plan(
+                KeyboardOneHandMode.LEFT,
+                400.0,
+                isPhonePortrait = true,
+                widthPercent = 75,
+            )
+        assertEquals(300.0, narrow.contentWidth)
+        assertEquals(100.0, narrow.gutterWidth)
+        // The content floor still applies below it, and a wide choice leaves the gutter its 44 dp.
+        val floored =
+            KeyboardOneHandLayoutPolicy.plan(
+                KeyboardOneHandMode.LEFT,
+                360.0,
+                isPhonePortrait = true,
+                widthPercent = 60,
+            )
+        assertEquals(KeyboardOneHandLayoutPolicy.MINIMUM_CONTENT_WIDTH, floored.contentWidth)
+        val wide =
+            KeyboardOneHandLayoutPolicy.plan(
+                KeyboardOneHandMode.RIGHT,
+                400.0,
+                isPhonePortrait = true,
+                widthPercent = 90,
+            )
+        assertTrue(wide.active)
+        assertEquals(KeyboardOneHandLayoutPolicy.MINIMUM_GUTTER_WIDTH, wide.gutterWidth)
+        // Stored values out of range snap into the offered choices.
+        assertEquals(
+            KeyboardOneHandLayoutPolicy.plan(
+                KeyboardOneHandMode.LEFT,
+                400.0,
+                isPhonePortrait = true,
+                widthPercent = 90,
+            ),
+            KeyboardOneHandLayoutPolicy.plan(
+                KeyboardOneHandMode.LEFT,
+                400.0,
+                isPhonePortrait = true,
+                widthPercent = 120,
+            ),
+        )
+    }
+
+    @Test
     fun standardPortraitWidthsProduceExactContentAndGutter() {
         val cases =
             listOf(

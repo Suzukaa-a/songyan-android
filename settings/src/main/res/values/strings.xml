@@ -147,6 +147,8 @@
     <string name="options_key_height_tall">Tall</string>
     <string name="options_one_hand_section">One-handed mode</string>
     <string name="options_one_hand_off">Off</string>
+    <string name="options_one_hand_width_title">Keyboard width</string>
+    <string name="options_one_hand_width_value">%1$d%% of the screen width</string>
     <string name="options_one_hand_left">Left</string>
     <string name="options_one_hand_right">Right</string>
     <string name="options_key_feel_section">Key feel</string>

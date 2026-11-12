@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.ui.components.RadioRow
@@ -41,6 +42,7 @@ data class KeyboardFeelState(
     val hideIdleToolbar: Boolean = false,
     val releaseHaptic: Boolean = false,
     val oneHand: String = "off",
+    val oneHandWidthPercent: Int = KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT,
     val widePosition: String = "center",
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
@@ -57,6 +59,7 @@ fun KeyboardFeelSection(
     onBottomGap: (Int) -> Unit = {},
     onLongPressDelay: (Int?) -> Unit = {},
     onOneHand: (String) -> Unit,
+    onOneHandWidth: (Int) -> Unit = {},
     onKeyPreview: (Boolean) -> Unit,
     onKeyFlickDirection: (String) -> Unit = {},
     onDoubleSpacePeriod: (Boolean) -> Unit = {},
@@ -99,6 +102,24 @@ fun KeyboardFeelSection(
                         SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE
                 },
             onReset = { onSideMargin(SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE) },
+        )
+    }
+    var oneHandWidthOpen by rememberSaveable { mutableStateOf(false) }
+    if (oneHandWidthOpen) {
+        ValueSliderDialog(
+            title = stringResource(R.string.options_one_hand_width_title),
+            range =
+                KeyboardOneHandLayoutPolicy.MINIMUM_WIDTH_PERCENT..KeyboardOneHandLayoutPolicy.MAXIMUM_WIDTH_PERCENT,
+            step = 1,
+            initial = state.oneHandWidthPercent,
+            label = { stringResource(R.string.options_one_hand_width_value, it) },
+            onConfirm = onOneHandWidth,
+            onDismiss = { oneHandWidthOpen = false },
+            resetLabel =
+                stringResource(R.string.options_reset_default).takeIf {
+                    state.oneHandWidthPercent != KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT
+                },
+            onReset = { onOneHandWidth(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT) },
         )
     }
     var bottomGapOpen by rememberSaveable { mutableStateOf(false) }
@@ -172,6 +193,11 @@ fun KeyboardFeelSection(
                 onClick = { onOneHand(mode) },
             )
         }
+        SettingsRow(
+            title = stringResource(R.string.options_one_hand_width_title),
+            subtitle = stringResource(R.string.options_one_hand_width_value, state.oneHandWidthPercent),
+            onClick = { oneHandWidthOpen = true },
+        )
 
         SectionHeader(stringResource(R.string.options_wide_position_section))
         Text(

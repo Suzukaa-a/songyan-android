@@ -146,6 +146,8 @@
     <string name="options_key_height_tall">高め</string>
     <string name="options_one_hand_section">片手モード</string>
     <string name="options_one_hand_off">オフ</string>
+    <string name="options_one_hand_width_title">キーボードの幅</string>
+    <string name="options_one_hand_width_value">画面幅の %1$d%%</string>
     <string name="options_one_hand_left">左</string>
     <string name="options_one_hand_right">右</string>
     <string name="options_key_feel_section">キーの操作感</string>

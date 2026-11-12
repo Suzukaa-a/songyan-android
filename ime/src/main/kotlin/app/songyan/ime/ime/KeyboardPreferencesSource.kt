@@ -1,6 +1,7 @@
 package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
+import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
@@ -49,6 +50,9 @@ interface KeyboardPreferencesSource {
 
     /** [KeyboardOneHandMode.wire]: off, left or right. */
     val oneHand: Flow<String> get() = flowOf(KeyboardOneHandMode.OFF.wire)
+
+    /** The one-handed keyboard's width in percent of the panel. */
+    val oneHandWidthPercent: Flow<Int> get() = flowOf(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT)
 
     /** [CandidateTextSize.id]; the standard size when the owner stores no choice. */
     val candidateTextSize: Flow<String> get() = flowOf(CandidateTextSize.DEFAULT.id)

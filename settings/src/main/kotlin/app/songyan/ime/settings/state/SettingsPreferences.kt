@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import kotlinx.coroutines.flow.Flow
@@ -64,6 +65,11 @@ interface SettingsPreferences {
 
     /** One-handed mode: off, left or right. */
     val oneHand: Flow<String>
+
+    /** The one-handed keyboard's width in percent of the panel. */
+    val oneHandWidthPercent: Flow<Int>
+
+    suspend fun setOneHandWidthPercent(value: Int)
 
     /** Where the key area sits on a wide surface: left, center, right or custom (the number in [widePositionCustom]). */
     val widePosition: Flow<String>
@@ -232,6 +238,7 @@ class InMemorySettingsPreferences(
     private val longPress = MutableStateFlow<Int?>(null)
     private val switchKey = MutableStateFlow(false)
     private val hand = MutableStateFlow("off")
+    private val handWidth = MutableStateFlow(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT)
 
     private val wide = MutableStateFlow("center")
     private val wideCustom = MutableStateFlow(SettingsPreferences.WIDE_POSITION_CENTER)
@@ -334,6 +341,11 @@ class InMemorySettingsPreferences(
 
     override val releaseHaptic: Flow<Boolean> = release.asStateFlow()
     override val oneHand: Flow<String> = hand.asStateFlow()
+    override val oneHandWidthPercent: Flow<Int> = handWidth.asStateFlow()
+
+    override suspend fun setOneHandWidthPercent(value: Int) {
+        handWidth.value = KeyboardOneHandLayoutPolicy.clampedWidthPercent(value)
+    }
 
     override suspend fun setKeyHeight(value: String) {
         require(value in SettingsPreferences.KEY_HEIGHTS) { "unknown key height: $value" }

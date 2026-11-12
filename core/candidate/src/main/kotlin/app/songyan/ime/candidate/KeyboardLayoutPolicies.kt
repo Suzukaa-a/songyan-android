@@ -42,8 +42,13 @@ data class KeyboardOneHandPlan(
  * phone from its expanded or multitasking surface, so the caller supplies the window facts.
  */
 object KeyboardOneHandLayoutPolicy {
-    /** Narrowed content keeps this share of the panel width. */
-    const val CONTENT_RATIO: Double = 0.85
+    /** The narrowed keyboard's width the user can pick, in percent of the panel width. */
+    const val MINIMUM_WIDTH_PERCENT: Int = 60
+    const val MAXIMUM_WIDTH_PERCENT: Int = 90
+    const val DEFAULT_WIDTH_PERCENT: Int = 85
+
+    /** Out-of-range values snap into the offered choices. */
+    fun clampedWidthPercent(value: Int): Int = value.coerceIn(MINIMUM_WIDTH_PERCENT, MAXIMUM_WIDTH_PERCENT)
 
     /**
      * Lower bound of the narrowed content so alphabetic keys stay usable: ten columns of about
@@ -80,6 +85,7 @@ object KeyboardOneHandLayoutPolicy {
         mode: KeyboardOneHandMode,
         panelWidth: Double,
         isPhonePortrait: Boolean,
+        widthPercent: Int = DEFAULT_WIDTH_PERCENT,
     ): KeyboardOneHandPlan {
         // Normalize once, like the wide-content policy: a NaN width would pass both range checks
         // (comparisons with NaN are false) and produce an active plan with NaN geometry.
@@ -91,7 +97,10 @@ object KeyboardOneHandLayoutPolicy {
         ) {
             return KeyboardOneHandPlan.inactive(width)
         }
-        val content = maxOf(MINIMUM_CONTENT_WIDTH, kotlin.math.floor(width * CONTENT_RATIO))
+        val ratio = clampedWidthPercent(widthPercent) / 100.0
+        // A wide choice still leaves the gutter its controls' room instead of switching the mode off.
+        val content =
+            minOf(maxOf(MINIMUM_CONTENT_WIDTH, kotlin.math.floor(width * ratio)), width - MINIMUM_GUTTER_WIDTH)
         val gutter = width - content
         if (gutter < MINIMUM_GUTTER_WIDTH) return KeyboardOneHandPlan.inactive(width)
         return KeyboardOneHandPlan(

@@ -98,6 +98,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.keyFlickDirection.collect { keyboard.flickDirection = FlickDirection.resolve(it) } }
     scope.launch { source.doubleSpacePeriod.collect { doubleSpacePeriodEnabled = it } }
     scope.launch { source.keyPreview.collect { keyboard.keyPreviewEnabled = it } }
+    scope.launch { source.oneHandWidthPercent.collect { shell.widthPercent = it } }
     scope.launch { source.hideIdleToolbar.collect { applyHideIdleToolbar(it) } }
     scope.launch { source.toolbarLayout.collect { applyToolbarLayout(it) } }
     scope.launch {
@@ -206,6 +207,7 @@ internal suspend fun KeyboardController.readPreferences() {
     }
     runCatching { source.doubleSpacePeriod.first() }.getOrNull()?.let { doubleSpacePeriodEnabled = it }
     runCatching { source.keyPreview.first() }.getOrNull()?.let { keyboard.keyPreviewEnabled = it }
+    runCatching { source.oneHandWidthPercent.first() }.getOrNull()?.let { shell.widthPercent = it }
     runCatching { source.hideIdleToolbar.first() }.getOrNull()?.let { applyHideIdleToolbar(it) }
     runCatching { source.toolbarLayout.first() }.getOrNull()?.let { applyToolbarLayout(it) }
     runCatching { source.releaseHaptic.first() }.getOrNull()?.let { feedback.releaseEnabled = it }

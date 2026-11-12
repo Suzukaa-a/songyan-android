@@ -147,6 +147,8 @@
     <string name="options_key_height_tall">較高</string>
     <string name="options_one_hand_section">單手模式</string>
     <string name="options_one_hand_off">關閉</string>
+    <string name="options_one_hand_width_title">鍵盤寬度</string>
+    <string name="options_one_hand_width_value">螢幕寬度的 %1$d%%</string>
     <string name="options_one_hand_left">靠左</string>
     <string name="options_one_hand_right">靠右</string>
     <string name="options_key_feel_section">按鍵手感</string>

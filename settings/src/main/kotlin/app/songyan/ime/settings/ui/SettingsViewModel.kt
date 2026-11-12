@@ -203,6 +203,9 @@ class SettingsViewModel(
         }
         collectPreference(preferences.releaseHaptic) { copy(keyboardFeel = keyboardFeel.copy(releaseHaptic = it)) }
         collectPreference(preferences.oneHand) { copy(keyboardFeel = keyboardFeel.copy(oneHand = it)) }
+        collectPreference(preferences.oneHandWidthPercent) {
+            copy(keyboardFeel = keyboardFeel.copy(oneHandWidthPercent = it))
+        }
         collectPreference(preferences.widePosition) { copy(keyboardFeel = keyboardFeel.copy(widePosition = it)) }
         collectPreference(preferences.widePositionCustom) {
             copy(keyboardFeel = keyboardFeel.copy(widePositionCustom = it))
@@ -378,6 +381,12 @@ class SettingsViewModel(
     fun setOneHand(value: String) {
         if (value !in SettingsPreferences.ONE_HAND_MODES) return
         viewModelScope.launch { preferences.setOneHand(value) }
+    }
+
+    fun setOneHandWidthPercent(value: Int) {
+        viewModelScope.launch { preferences.setOneHandWidthPercent(value) }
+    }
+
     }
 
     fun setKeyFlickDirection(value: String) {

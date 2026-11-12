@@ -33,6 +33,14 @@ internal class OneHandShell(
             requestLayout()
         }
 
+    /** The narrowed keyboard's width in percent of the panel, as the user chose it. */
+    var widthPercent: Int = KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+        }
+
     /** Called after a width change, once laid out; whether narrowing is possible may have changed. */
     var onWidthChanged: () -> Unit = {}
 
@@ -103,6 +111,7 @@ internal class OneHandShell(
         isPhonePortrait =
             resources.configuration.smallestScreenWidthDp < TABLET_DP &&
                 resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT,
+        widthPercent = widthPercent,
     )
 
     /** The restore column: a side-swap and an expand button, each a real 48 dp view. */

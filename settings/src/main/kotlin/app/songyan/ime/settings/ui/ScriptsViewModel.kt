@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
-/** Everything the 脚本 screen renders for its list and empty states. */
+/** Everything the Settings → Scripts screen renders for its list and empty states. */
 data class ScriptsUiState(
     val loading: Boolean = true,
     val entries: List<ScriptEntry> = emptyList(),
@@ -84,7 +84,7 @@ data class ScriptTestState(
 )
 
 /**
- * State of the 设置 → 脚本 screen. The catalog comes from [ScriptRegistryHolder.current], whose
+ * State of the Settings → Scripts screen. The catalog comes from [ScriptRegistryHolder.current], whose
  * cached entries never start the proxy process; the AI guide ships as an asset of the script
  * module and is read once on demand.
  *

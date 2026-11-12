@@ -9,7 +9,7 @@ import app.songyan.ime.settings.state.AddonSettingsGateway
 import app.songyan.ime.settings.state.AddonToolInfo
 
 /**
- * Brings the extension registry to the 扩展 settings page. Listing negotiates with every installed
+ * Brings the extension registry to the Extensions settings page. Listing negotiates with every installed
  * extension (the page must say whether it is compatible); enabling only flips the stored switch.
  */
 internal class AddonSettingsGatewayImpl(

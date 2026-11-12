@@ -345,9 +345,11 @@
     <string name="row_voice_title">Voice input</string>
     <string name="row_voice_subtitle">Speak instead of typing</string>
     <string name="voice_title">Voice input</string>
-    <string name="voice_body">The keyboard records what you say and hands the recording to the script you choose; the text the script returns is typed at the cursor. A script that supports voice input appears here once you add it under Scripts.</string>
+    <string name="voice_body">Press the microphone button to record and press it again to stop; the recording goes to the script you choose, and the text it returns is typed at the cursor.</string>
     <string name="voice_switch_title">Microphone button</string>
     <string name="voice_switch_subtitle">Show the microphone in the keyboard toolbar</string>
+    <string name="voice_switch_needs_permission">Grant microphone access first</string>
+    <string name="voice_switch_needs_script">Add a voice script first</string>
     <string name="voice_scripts_section">Voice script</string>
     <string name="voice_empty_scripts_title">No voice script yet</string>
     <string name="voice_empty_scripts_body">Scripts that support voice input appear here after you add them under Scripts.</string>
@@ -356,8 +358,8 @@
     <string name="voice_load_failed_body">Please try again.</string>
     <string name="voice_retry">Retry</string>
     <string name="voice_script_summary">%1$s · %2$s</string>
-    <string name="voice_script_enabled">On</string>
-    <string name="voice_script_disabled">Off</string>
+    <string name="voice_script_enabled">Enabled</string>
+    <string name="voice_script_disabled">Disabled</string>
     <string name="voice_script_selected">Selected</string>
     <string name="voice_script_not_selected">Not selected</string>
     <string name="voice_permission_section">Permission</string>
@@ -367,11 +369,11 @@
     <string name="voice_permission_open_settings">Open system settings</string>
     <string name="voice_addon_origin">Extension app</string>
 
-    <!-- 设置 → 扩展: external addons installed as separate APKs. -->
+    <!-- Settings → Extensions: external addons installed as separate APKs. -->
     <string name="row_extensions_title">Extensions</string>
     <string name="row_extensions_subtitle">Extensions installed on this device</string>
     <string name="extensions_title">Extensions</string>
-    <string name="extensions_body">Extensions are separate apps you install from the system. Songyan only binds to their services: it never downloads, installs or loads their code. Every extension is off until you turn it on here.</string>
+    <string name="extensions_body">Extensions are separate apps you install from the system. Songyan never downloads, installs or loads their code; every extension is off until you turn it on here.</string>
     <string name="extensions_loading">Looking for installed extensions…</string>
     <string name="extensions_empty_title">No extensions installed</string>
     <string name="extensions_empty_body">Install an extension app, then come back here to turn it on.</string>
@@ -396,11 +398,11 @@
     <string name="extensions_switch">%1$s switch</string>
     <string name="voice_addon_option">%1$s (extension)</string>
     <string name="extensions_toggle_failed">Could not save the switch. Nothing was changed.</string>
-    <string name="extensions_open_settings">Settings</string>
+    <string name="extensions_open_settings">Extension settings</string>
     <string name="extensions_settings_unavailable">The settings page of the extension could not be opened.</string>
     <string name="extensions_details">Version and signature</string>
-    <string name="extensions_copy_signer">Copy signing certificate</string>
+    <string name="extensions_copy_signer">Copy fingerprint</string>
     <string name="extensions_copied">Copied</string>
     <string name="extensions_permissions_section">Permissions</string>
-    <string name="extensions_last_call_section">Last call</string>
+    <string name="extensions_last_call_section">Last use</string>
 </resources>

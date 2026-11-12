@@ -277,6 +277,9 @@ class QuickContentPanels(
     /** Whether a panel currently covers the key area. */
     val isShowing: Boolean get() = host.isShowing
 
+    /** The tool panel is the one covering the key area; the keyboard repaints it after a catalog refresh. */
+    val isToolPanelShowing: Boolean get() = host.isShowing && toolPanelView != null
+
     fun openSymbols() {
         val panel = symbols.value
         show(panel)

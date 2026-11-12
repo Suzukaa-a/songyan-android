@@ -17,10 +17,10 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.kotlin.dsl.register
 
 /**
- * "边界由构建看守" for the script platform (PORTING_PLAN.md, P10 / S1).
+ * The script platform's dependency boundaries are enforced by the build itself.
  *
  * The gate reads the dependency graph Gradle resolves for the real variants, not build scripts or
- * source text. It enforces exactly the two directions the plan asks for:
+ * source text. It enforces exactly the two required directions:
  *
  *  - :ime must not reach :script, directly or through another module;
  *  - :core:tools must stay a pure JVM module and must not depend on an Android module.
@@ -46,7 +46,9 @@ class DependencyBoundaryPlugin : Plugin<Project> {
                     val missing = listOf(IME, TOOLS).filter { target.findProject(it) == null }
                     if (missing.isNotEmpty()) {
                         throw GradleException(
-                            "门禁无法执行：" + missing.joinToString() + " 不在本次构建中，不能报告依赖边界通过。",
+                            "Cannot run the dependency boundary gate: " +
+                                missing.joinToString() +
+                                " is not part of this build, so the boundaries were not proven.",
                         )
                     }
                     logger.lifecycle("Dependency boundaries: ok")
@@ -87,7 +89,9 @@ class DependencyBoundaryPlugin : Plugin<Project> {
         if (offenders.isEmpty()) return
         throw GradleException(
             buildString {
-                appendLine("$IME 不得依赖脚本实现模块 $SCRIPT（直接或传递；计划 P10 地基规则 4）。")
+                appendLine(
+                    "$IME must not depend on the script implementation module $SCRIPT, directly or transitively.",
+                )
                 offenders.forEach { appendLine("  " + it) }
             },
         )
@@ -97,12 +101,12 @@ class DependencyBoundaryPlugin : Plugin<Project> {
         val androidPlugin = ANDROID_PLUGIN_IDS.firstOrNull { tools.pluginManager.hasPlugin(it) }
         if (androidPlugin != null) {
             throw GradleException(
-                "$TOOLS 必须是纯 JVM 模块（计划 P10 地基规则 4），但它应用了 Android 插件 $androidPlugin。",
+                "$TOOLS must stay a pure JVM module, but it applies the Android plugin $androidPlugin.",
             )
         }
         if (tools.extensions.findByType(JavaPluginExtension::class.java) == null) {
             throw GradleException(
-                "$TOOLS 必须是纯 JVM 模块（计划 P10 地基规则 4），但它没有应用 JVM 插件。",
+                "$TOOLS must stay a pure JVM module, but it does not apply a JVM plugin.",
             )
         }
         val offenders = LinkedHashSet<String>()
@@ -114,7 +118,7 @@ class DependencyBoundaryPlugin : Plugin<Project> {
                     val dependencyProject = root.findProject(id.projectPath) ?: return@mapNotNull null
                     ANDROID_PLUGIN_IDS.firstOrNull { dependencyProject.pluginManager.hasPlugin(it) }
                         ?.let { plugin ->
-                            configuration.name + ": " + dependencyPath(result, id) + "（Android 模块 " + plugin + "）"
+                            configuration.name + ": " + dependencyPath(result, id) + " (Android module " + plugin + ")"
                         }
                 }
                 .forEach { offenders.add(it) }
@@ -122,7 +126,7 @@ class DependencyBoundaryPlugin : Plugin<Project> {
         if (offenders.isEmpty()) return
         throw GradleException(
             buildString {
-                appendLine("$TOOLS 不得依赖 Android 模块（计划 P10 地基规则 4）。")
+                appendLine("$TOOLS must not depend on an Android module.")
                 offenders.forEach { appendLine("  " + it) }
             },
         )
@@ -140,10 +144,14 @@ class DependencyBoundaryPlugin : Plugin<Project> {
             throw GradleException(
                 buildString {
                     appendLine(
-                        project.path + " 的 " + configuration.name + " 无法完整解析，门禁无法证明依赖边界：",
+                        project.path + " configuration " + configuration.name +
+                            " does not resolve completely, so the dependency boundary cannot be proven:",
                     )
                     unresolved.forEach { dependency ->
-                        appendLine("  " + describe(dependency.attempted) + "：" + (dependency.failure.message ?: "未解析"))
+                        appendLine(
+                            "  " + describe(dependency.attempted) + ": " +
+                                (dependency.failure.message ?: "unresolved"),
+                        )
                     }
                 },
             )

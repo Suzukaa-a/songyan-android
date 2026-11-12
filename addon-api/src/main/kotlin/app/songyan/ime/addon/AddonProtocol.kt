@@ -5,8 +5,8 @@ package app.songyan.ime.addon
  * Version and discovery constants for the external-addon protocol, plus the version negotiation
  * both sides run before anything else.
  *
- * The protocol is append-only (decision D53, plan rule 5 in docs/ARCHITECTURE.md and
- * .local/docs/PORTING_PLAN.md): a new protocol version may only add methods to the Binder
+ * The protocol is append-only (the rules are in docs/ARCHITECTURE.md and addon-api/README.md):
+ * a new protocol version may only add methods to the Binder
  * interfaces and optional keys to the payload bundles. Methods are never removed, renamed or
  * reordered, and an existing key never changes meaning. Both sides state the version range they
  * support, and the highest common version is used; with no common version the addon is shown as

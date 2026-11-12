@@ -1,7 +1,7 @@
 # Songyan addon API
 
 The cross-process contract between the Songyan keyboard (松烟) and an external addon APK. Licensed
-Apache-2.0 (decision D54) so that addons can use any license; every source file carries an SPDX
+Apache-2.0 so that addons can use any license; every source file carries an SPDX
 header. The keyboard itself stays GPL-3.0-only.
 
 An addon is an ordinary app that the user installs from the system. Songyan binds to its service and
@@ -20,7 +20,7 @@ one of its tools or its panel asks for it.
 
 ```kotlin
 dependencies {
-    implementation(project(":addon-api")) // published artifact when addons are opened up
+    implementation(project(":addon-api"))
 }
 ```
 

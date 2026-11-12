@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * One installed extension APK as the package manager describes it: identity, signing certificate
- * and the dangerous permissions it declares. This is what the 扩展 page shows without binding.
+ * and the dangerous permissions it declares. This is what the Extensions page shows without binding.
  */
 internal data class AddonPackageFacts(
     val packageName: String,

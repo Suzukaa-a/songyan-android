@@ -136,10 +136,13 @@ internal class FakeScriptRegistry : ScriptRegistry {
         entries = stored.toList()
     }
 
+    /** What a trial run answers; a test seeds it to drive the output and copy paths. */
+    var trialOutcome: ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
+
     override suspend fun runTrial(
         id: String,
         text: String,
-    ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
+    ): ScriptRunOutcome = trialOutcome
 
     override suspend fun run(
         id: String,

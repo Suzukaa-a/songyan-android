@@ -73,8 +73,8 @@
     <string name="ime_tool_panel_failed">ツールを実行できませんでした。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
     <string name="ime_tool_panel_retry">再試行</string>
-    <string name="ime_tool_panel_expand">もっと見る</string>
-    <string name="ime_tool_panel_collapse">折りたたむ</string>
+    <string name="ime_tool_panel_expand">結果を展開</string>
+    <string name="ime_tool_panel_collapse">結果を折りたたむ</string>
     <string name="ime_toolbar_switch_input_method">入力メソッドを切り替え</string>
     <string name="ime_toolbar_voice_input">音声入力</string>
     <string name="ime_menu_switch_package">%1$sの%2$sに切り替え</string>
@@ -131,5 +131,5 @@
     <string name="ime_voice_no_script">先に設定で音声スクリプトを選んでください。</string>
     <string name="ime_toolbar_voice_undo">音声入力を元に戻す</string>
     <string name="ime_menu_extensions">拡張機能</string>
-    <string name="ime_menu_extensions_loading">拡張を読み込み中…</string>
+    <string name="ime_menu_extensions_loading">拡張機能を読み込み中…</string>
 </resources>

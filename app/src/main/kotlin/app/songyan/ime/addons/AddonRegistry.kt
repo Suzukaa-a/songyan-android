@@ -20,7 +20,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** The extension kinds the keyboard records for the 扩展 page's "last call" line. */
+/** The extension kinds the keyboard records for the Extensions page's "last call" line. */
 internal object AddonCallKinds {
     const val TEXT: String = "text"
     const val VOICE: String = "voice"
@@ -46,7 +46,7 @@ internal data class AddonEntry(
 
 /**
  * The app's view of the installed extensions. Discovery and the enabled switch are cheap reads;
- * a handshake binds to the extension's service, so it only happens on the 扩展 page's scans (and
+ * a handshake binds to the extension's service, so it only happens on the Extensions page's scans (and
  * whenever the user enables one). The keyboard's catalog reads this in-memory snapshot instead of
  * binding anything; a fresh process starts from the cached handshakes in [AddonStore].
  */
@@ -79,7 +79,7 @@ internal class AddonRegistry(
     /**
      * Re-reads the state file and the installed packages when the keyboard becomes visible again.
      *
-     * The 扩展 page runs in the same app but its enable may have been written after this process
+     * The Extensions page runs in the same app but its enable may have been written after this process
      * last scanned (and a future build may put settings in its own process), so a snapshot taken at
      * process start is not enough for the input-method menu's extension section. discovery and the
      * file read happen off the main thread; binding nothing keeps this cheap.
@@ -181,7 +181,7 @@ internal class AddonRegistry(
 
     fun enabledCompatible(): List<AddonEntry> = entries().filter { it.enabled && it.isCompatible }
 
-    /** Records one finished call for the 扩展 page; persisted on the IO scope. */
+    /** Records one finished call for the Extensions page; persisted on the IO scope. */
     fun recordCall(
         packageName: String,
         kind: String,

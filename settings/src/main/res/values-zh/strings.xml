@@ -4,7 +4,7 @@
     <string name="app_label">松烟</string>
     <string name="action_back">返回</string>
 
-    <!-- 首页状态 -->
+    <!-- Home status -->
     <string name="home_engine_ready">松烟已就绪</string>
     <string name="home_engine_preparing">正在准备输入方案 %1$d%%</string>
     <string name="home_engine_failed">输入方案准备失败，请重试。</string>
@@ -43,7 +43,7 @@
     <string name="row_about_title">关于</string>
     <string name="row_about_subtitle">版本与第三方许可</string>
 
-    <!-- 引导 -->
+    <!-- Setup -->
     <string name="onboarding_title">启用松烟</string>
     <string name="onboarding_intro">下载一个输入方式，再启用松烟开始打字。</string>
     <string name="onboarding_step_download_title">下载输入方式</string>
@@ -64,7 +64,7 @@
     <string name="onboarding_done">松烟已设置完毕，可以开始打字了。</string>
     <string name="settings_open_failed">无法打开系统设置，请手动前往设置。</string>
 
-    <!-- 试打 -->
+    <!-- Trial typing -->
     <string name="tryout_title">试打</string>
     <string name="tryout_kind_label">输入类型</string>
     <string name="tryout_kind_text">文本</string>
@@ -80,13 +80,13 @@
     <string name="tryout_needs_select">松烟还不是默认键盘，请先切换为松烟。</string>
     <string name="tryout_action">打开系统设置</string>
 
-    <!-- 输入方案 -->
+    <!-- Input schemes -->
     <string name="schemes_status_in_use">正在使用</string>
     <string name="schemes_status_not_in_use">未使用</string>
     <string name="schemes_empty_title">还没有可用的输入方案</string>
     <string name="schemes_empty_body">内置方案会在第一次准备完成后出现。</string>
 
-    <!-- 我的键盘 -->
+    <!-- My keyboards -->
     <string name="keyboards_current_compact">当前输入方式：%1$s</string>
     <string name="keyboards_current_none">还没有可用的键盘。</string>
     <string name="keyboards_layout_section">键盘布局</string>
@@ -105,7 +105,7 @@
     <string name="page_name_english_qwerty">英文 QWERTY</string>
     <string name="layout_unavailable_note">键盘暂时还不能用这个布局。</string>
 
-    <!-- 输入选项 -->
+    <!-- Input options -->
     <string name="options_reading_section">14 键 / 18 键读音</string>
     <string name="options_engine_section">输入方式选项</string>
     <string name="options_engine_footer">下次打开键盘时生效。</string>
@@ -122,7 +122,7 @@
     <string name="options_sound_title">按键音</string>
     <string name="options_haptics_title">振动</string>
 
-    <!-- 关于 -->
+    <!-- About -->
     <string name="about_version">版本 %1$s</string>
     <string name="about_version_unknown">版本未知</string>
     <string name="about_license">松烟基于 GPL-3.0 协议开源。</string>
@@ -345,14 +345,16 @@
     <string name="row_voice_title">语音输入</string>
     <string name="row_voice_subtitle">说话代替打字</string>
     <string name="voice_title">语音输入</string>
-    <string name="voice_body">键盘会录下你说的话，交给你选的脚本；脚本返回的文字会输入到光标处。支持语音输入的脚本在「脚本」页添加后，会出现在这里。</string>
+    <string name="voice_body">按麦克风按钮开始录音，再按一次结束；录音会交给你选的脚本，脚本返回的文字输入到光标处。</string>
     <string name="voice_switch_title">麦克风按钮</string>
     <string name="voice_switch_subtitle">在键盘工具栏显示麦克风</string>
+    <string name="voice_switch_needs_permission">先授予麦克风权限才可用</string>
+    <string name="voice_switch_needs_script">先添加语音脚本才可用</string>
     <string name="voice_scripts_section">语音脚本</string>
-    <string name="voice_empty_scripts_title">还没有支持语音的脚本</string>
+    <string name="voice_empty_scripts_title">还没有语音脚本</string>
     <string name="voice_empty_scripts_body">在「脚本」页添加支持语音输入的脚本后，会出现在这里。</string>
     <string name="voice_open_scripts">去脚本页添加</string>
-    <string name="voice_load_failed_title">读不到脚本</string>
+    <string name="voice_load_failed_title">无法读取脚本</string>
     <string name="voice_load_failed_body">请重试。</string>
     <string name="voice_retry">重试</string>
     <string name="voice_script_summary">%1$s · %2$s</string>
@@ -367,11 +369,11 @@
     <string name="voice_permission_open_settings">去系统设置授权</string>
     <string name="voice_addon_origin">扩展应用</string>
 
-    <!-- 设置 → 扩展：以独立 APK 安装的外部 Addon。 -->
+    <!-- Settings -> Extensions: external extensions installed as separate APKs. -->
     <string name="row_extensions_title">扩展</string>
     <string name="row_extensions_subtitle">这台设备上安装的扩展</string>
     <string name="extensions_title">扩展</string>
-    <string name="extensions_body">扩展是用户自己从系统安装的独立应用。松烟只绑定它的服务，不下载、不安装、不加载它的代码。每一项默认关闭，在这里打开后才生效。</string>
+    <string name="extensions_body">扩展是你自己从系统安装的独立应用。松烟不会下载、安装或加载它的代码；每项默认关闭，在这里开启后才可用。</string>
     <string name="extensions_loading">正在查找已安装的扩展…</string>
     <string name="extensions_empty_title">还没有安装扩展</string>
     <string name="extensions_empty_body">先安装扩展应用，再回到这里打开。</string>
@@ -396,11 +398,11 @@
     <string name="extensions_switch">%1$s 开关</string>
     <string name="voice_addon_option">%1$s（扩展）</string>
     <string name="extensions_toggle_failed">开关未能保存，扩展状态未改变。</string>
-    <string name="extensions_open_settings">设置</string>
+    <string name="extensions_open_settings">扩展设置</string>
     <string name="extensions_settings_unavailable">无法打开该扩展的设置页。</string>
     <string name="extensions_details">版本与签名</string>
-    <string name="extensions_copy_signer">复制签名证书</string>
+    <string name="extensions_copy_signer">复制签名指纹</string>
     <string name="extensions_copied">已复制</string>
     <string name="extensions_permissions_section">权限</string>
-    <string name="extensions_last_call_section">最近一次调用</string>
+    <string name="extensions_last_call_section">最近使用</string>
 </resources>

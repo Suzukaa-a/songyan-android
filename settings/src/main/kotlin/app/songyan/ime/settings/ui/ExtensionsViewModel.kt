@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Everything the 设置 → 扩展 page renders. */
+/** Everything the Settings → Extensions page renders. */
 data class ExtensionsUiState(
     val loading: Boolean = true,
     val refreshing: Boolean = false,
@@ -28,7 +28,7 @@ data class ExtensionsUiState(
 )
 
 /**
- * State of 设置 → 扩展: the extensions installed on this device, each one's identity and
+ * State of Settings → Extensions: the extensions installed on this device, each one's identity and
  * permissions, its compatibility, and the switch that lets the keyboard use it. The gateway is the
  * app module's: this page never binds to an extension by itself.
  */

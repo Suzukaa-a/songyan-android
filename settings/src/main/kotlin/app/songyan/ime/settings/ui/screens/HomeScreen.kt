@@ -43,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -89,6 +90,10 @@ fun HomeScreen(
     queryState: MutableState<String> = rememberSaveable { mutableStateOf("") },
 ) {
     val importCard = importCardOf(state.dictionaryImport, state.schemeImport)
+    // Taller lines need room under the last row: at a larger system font the row's second line
+    // would otherwise end flush against the navigation bar, which cuts it when the list is at its end.
+    val fontScale = LocalDensity.current.fontScale
+    val bottomPadding = 16.dp + 16.dp * (fontScale - 1f).coerceIn(0f, 1f)
     val context = LocalContext.current
     val searchIndex = remember(context) { SettingsSearch.resolve(context) }
     var query by queryState
@@ -102,7 +107,7 @@ fun HomeScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            contentPadding = PaddingValues(bottom = bottomPadding),
         ) {
             item(key = "search") {
                 SettingsSearchField(

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Developer-only tools of the sample: these strings exist only in the debug source set. -->
+<resources>
+    <string name="tool_delay">Delayed result (debug only)</string>
+    <string name="tool_crash">Crash the extension (debug only)</string>
+</resources>

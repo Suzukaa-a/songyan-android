@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,6 +71,7 @@ import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -100,6 +102,8 @@ fun ScriptDetailScreen(
     val updatedText = stringResource(R.string.scripts_notice_updated)
     val deletedText = stringResource(R.string.scripts_notice_deleted)
     val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
+    val copiedText = stringResource(R.string.scripts_test_copied)
+    val scope = rememberCoroutineScope()
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
     // notice it belongs to is the current one.
     val actionFailureText =
@@ -147,72 +151,74 @@ fun ScriptDetailScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         actions = {
             // One overflow keeps the bar calm: the destructive entry sits behind the menu, not
-            // one stray tap away.
-            var menuOpen by remember { mutableStateOf(false) }
-            val ordered = state.entries.sortedBy { it.order }
-            val index = ordered.indexOfFirst { it.id == scriptId }
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(
-                        Icons.Outlined.MoreVert,
-                        contentDescription = stringResource(R.string.scripts_more_actions),
-                    )
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    if (entry?.sourceOrigin is app.songyan.ime.script.ScriptSourceOrigin.Link) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.scripts_check_update)) },
-                            enabled = !state.busy,
-                            onClick = {
-                                menuOpen = false
-                                viewModel.checkUpdate(scriptId)
-                            },
+            // one stray tap away. Actions apply to a script; without one the bar shows nothing.
+            if (entry != null) {
+                var menuOpen by remember { mutableStateOf(false) }
+                val ordered = state.entries.sortedBy { it.order }
+                val index = ordered.indexOfFirst { it.id == scriptId }
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(
+                            Icons.Outlined.MoreVert,
+                            contentDescription = stringResource(R.string.scripts_more_actions),
                         )
                     }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.scripts_edit)) },
-                        onClick = {
-                            menuOpen = false
-                            editorOpen = true
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.scripts_export)) },
-                        onClick = {
-                            menuOpen = false
-                            viewModel.export(context, scriptId, (entry?.name ?: "script") + ".js")
-                        },
-                    )
-                    if (index > 0) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.scripts_move_up)) },
-                            onClick = {
-                                menuOpen = false
-                                viewModel.move(scriptId, up = true)
-                            },
-                        )
-                    }
-                    if (index in 0 until ordered.lastIndex) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.scripts_move_down)) },
-                            onClick = {
-                                menuOpen = false
-                                viewModel.move(scriptId, up = false)
-                            },
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(R.string.scripts_delete),
-                                color = MaterialTheme.colorScheme.error,
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        if (entry.sourceOrigin is app.songyan.ime.script.ScriptSourceOrigin.Link) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.scripts_check_update)) },
+                                enabled = !state.busy,
+                                onClick = {
+                                    menuOpen = false
+                                    viewModel.checkUpdate(scriptId)
+                                },
                             )
-                        },
-                        onClick = {
-                            menuOpen = false
-                            deleting = true
-                        },
-                    )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.scripts_edit)) },
+                            onClick = {
+                                menuOpen = false
+                                editorOpen = true
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.scripts_export)) },
+                            onClick = {
+                                menuOpen = false
+                                viewModel.export(context, scriptId, entry.name + ".js")
+                            },
+                        )
+                        if (index > 0) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.scripts_move_up)) },
+                                onClick = {
+                                    menuOpen = false
+                                    viewModel.move(scriptId, up = true)
+                                },
+                            )
+                        }
+                        if (index in 0 until ordered.lastIndex) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.scripts_move_down)) },
+                                onClick = {
+                                    menuOpen = false
+                                    viewModel.move(scriptId, up = false)
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.scripts_delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                deleting = true
+                            },
+                        )
+                    }
                 }
             }
         },
@@ -264,6 +270,7 @@ fun ScriptDetailScreen(
                     onInput = viewModel::editTestInput,
                     onRun = viewModel::runTest,
                     onBegin = { viewModel.beginTest(scriptId) },
+                    onCopied = { scope.launch { snackbar.showSnackbar(copiedText) } },
                 )
             }
             item { SectionHeader(stringResource(R.string.scripts_about_section)) }
@@ -271,6 +278,24 @@ fun ScriptDetailScreen(
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.scripts_origin)) },
                     supportingContent = { Text(originSummary(entry)) },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.scripts_status)) },
+                    supportingContent = {
+                        val status =
+                            if (entry.enabled) R.string.scripts_status_enabled else R.string.scripts_status_disabled
+                        Text(stringResource(status))
+                    },
+                )
+            }
+            item {
+                // The same disclosure the confirmation page makes, so the page answers "what does
+                // this read?" without going back to the confirmation list.
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.scripts_confirm_reads)) },
+                    supportingContent = { Text(stringResource(readsBodyRes(entry.needsAudio))) },
                 )
             }
             entry.description?.let { description ->
@@ -358,7 +383,10 @@ private fun TestBox(
     onInput: (String) -> Unit,
     onRun: () -> Unit,
     onBegin: () -> Unit,
+    onCopied: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val copyLabel = stringResource(R.string.scripts_test_outputs)
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -405,10 +433,24 @@ private fun TestBox(
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             } else {
-                                Text(
-                                    stringResource(R.string.scripts_test_outputs),
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        stringResource(R.string.scripts_test_outputs),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    // The result is what the user came for; copying it saves a trip
+                                    // through the select-all/copy keyboard dance.
+                                    TextButton(
+                                        onClick = {
+                                            copyToClipboard(context, copyLabel, answer.outputs.joinToString("\n"))
+                                            onCopied()
+                                        },
+                                    ) { Text(stringResource(R.string.scripts_test_copy)) }
+                                }
                                 answer.outputs.forEach { output ->
                                     Text(
                                         output,
@@ -420,15 +462,16 @@ private fun TestBox(
                                 }
                             }
                             if (answer.consoleLines.isNotEmpty()) {
+                                // Each heading is one complete resource: concatenating two
+                                // translated fragments cannot keep their order in every language.
                                 Text(
-                                    stringResource(R.string.scripts_test_console) +
+                                    stringResource(
                                         if (answer.consoleTruncated) {
-                                            stringResource(
-                                                R.string.scripts_test_console_truncated,
-                                            )
+                                            R.string.scripts_test_console_shortened
                                         } else {
-                                            ""
+                                            R.string.scripts_test_console
                                         },
+                                    ),
                                     style = MaterialTheme.typography.labelMedium,
                                 )
                                 answer.consoleLines.forEach { line ->
@@ -690,4 +733,15 @@ private fun SettingsEditField(
             }
         }
     }
+}
+
+/** Copies a plain-text result; the trial box offers it so the user does not need to select text
+ *  in a keyboard-owned preview. */
+private fun copyToClipboard(
+    context: android.content.Context,
+    label: String,
+    text: String,
+) {
+    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java) ?: return
+    clipboard.setPrimaryClip(android.content.ClipData.newPlainText(label, text))
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -39,7 +41,9 @@ class ToolPanelView(
 ) : LinearLayout(context) {
     var onRun: (ToolDescriptor) -> Unit = {}
     var onSelect: (Int) -> Unit = {}
-    var onCopy: () -> Unit = {}
+
+    /** Copies the selected result; true when something went to the clipboard (drives the tip). */
+    var onCopy: () -> Boolean = { false }
     var onReplace: () -> Unit = {}
     var onInsert: () -> Unit = {}
     var onUndo: () -> Unit = {}
@@ -57,6 +61,12 @@ class ToolPanelView(
     private val actionScroll = HorizontalScrollView(context)
     private val actions = LinearLayout(context)
     private var lastState: ToolPanelController.State? = null
+
+    /** The 2-second "Done." line a copy leaves in the status slot, then the state comes back. */
+    private var copyTip: Runnable? = null
+
+    /** Own handler, not the view's: the tip must run even before the panel is attached. */
+    private val tipHandler = Handler(Looper.getMainLooper())
 
     /** Results the user unfolded; kept while the same preview stays on screen. */
     private val expandedResults = mutableSetOf<Int>()
@@ -142,7 +152,9 @@ class ToolPanelView(
                     }
                     // The write actions read in the order of their weight: the one that replaces
                     // the selection is primary, inserting after it is tonal, copying is text.
-                    addAction(R.string.ime_tool_panel_copy, ActionStyle.TEXT) { onCopy() }
+                    addAction(R.string.ime_tool_panel_copy, ActionStyle.TEXT) {
+                        if (onCopy()) showCopyTip()
+                    }
                     addAction(R.string.ime_tool_panel_insert, ActionStyle.TONAL) { onInsert() }
                     addAction(R.string.ime_tool_panel_replace, ActionStyle.PRIMARY) { onReplace() }
                 }
@@ -329,6 +341,28 @@ class ToolPanelView(
         )
     }
 
+    /**
+     * Copying has no state of its own in the model, so the panel says it happened itself: the
+     * status line shows the existing "Done." copy for two seconds and then repaints the state.
+     */
+    private fun showCopyTip() {
+        status.setText(R.string.ime_tool_panel_written)
+        copyTip?.let(tipHandler::removeCallbacks)
+        val tip =
+            Runnable {
+                copyTip = null
+                lastState?.let(::render)
+            }
+        copyTip = tip
+        tipHandler.postDelayed(tip, COPY_TIP_MS)
+    }
+
+    override fun onDetachedFromWindow() {
+        copyTip?.let(tipHandler::removeCallbacks)
+        copyTip = null
+        super.onDetachedFromWindow()
+    }
+
     private fun rowBackground(selected: Boolean): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = padding(10).toFloat()
@@ -341,8 +375,32 @@ class ToolPanelView(
         actionDivider.setBackgroundColor(palette.divider)
         actionScroll.setBackgroundColor(palette.background)
         title.setTextColor(palette.text)
-        status.setTextColor(palette.muted)
+        // The muted role is designed for the surface in the default palettes, but a custom
+        // appearance can pair it with a background only just readable: fall back to the body
+        // colour rather than leave the status line dimmer than WCAG AA.
+        status.setTextColor(readableText(palette.muted))
         progress.indeterminateTintList = ColorStateList.valueOf(palette.accent)
+    }
+
+    /** [preferred] when it stays readable on the panel surface, the body colour otherwise. */
+    private fun readableText(preferred: Int): Int =
+        if (contrast(preferred, palette.background) >= MIN_SECONDARY_CONTRAST) preferred else palette.text
+
+    /** WCAG contrast ratio of two opaque ARGB colours. */
+    private fun contrast(
+        foreground: Int,
+        background: Int,
+    ): Double {
+        fun luminance(color: Int): Double {
+            fun channel(shift: Int): Double {
+                val value = ((color shr shift) and 0xFF) / 255.0
+                return if (value <= 0.04045) value / 12.92 else Math.pow((value + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+        }
+        val first = luminance(foreground)
+        val second = luminance(background)
+        return (maxOf(first, second) + 0.05) / (minOf(first, second) + 0.05)
     }
 
     /** A refused write or undo names the model's own reason instead of leaving the last phase text. */
@@ -409,5 +467,11 @@ class ToolPanelView(
 
         /** Characters past which a result gets the fold link; shorter ones fit in the lines above. */
         const val RESULT_PREVIEW_CHARS = 120
+
+        /** WCAG AA for normal text; the status line is body text, not a large heading. */
+        const val MIN_SECONDARY_CONTRAST = 4.5
+
+        /** How long the "Done." tip a copy shows stays in the status slot. */
+        const val COPY_TIP_MS = 2_000L
     }
 }

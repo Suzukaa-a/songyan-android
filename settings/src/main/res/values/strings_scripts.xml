@@ -18,6 +18,7 @@
     <string name="scripts_move_down">Move down</string>
     <string name="scripts_origin_pasted">Pasted</string>
     <string name="scripts_origin_file">From file: %1$s</string>
+    <string name="scripts_origin_file_unknown">From file</string>
     <string name="scripts_origin_link">From link</string>
     <string name="scripts_origin_edited">Edited here</string>
 
@@ -49,8 +50,8 @@
     <string name="scripts_missing_title">This script is no longer available</string>
     <string name="scripts_settings_edit">Edit settings</string>
     <string name="scripts_settings_title">Script settings</string>
-    <string name="scripts_setting_choice_hint">Free text: type a value the script describes.</string>
-    <string name="scripts_setting_url_invalid">Addresses start with http:// or https://</string>
+    <string name="scripts_setting_choice_hint">Free text: type a value the script accepts.</string>
+    <string name="scripts_setting_url_invalid">The address must start with http:// or https://</string>
     <string name="scripts_secret_keep_hint">Leave blank to keep the saved secret.</string>
     <string name="scripts_secret_clear">Clear the saved secret</string>
     <string name="scripts_secret_show">Show secret</string>
@@ -78,23 +79,26 @@
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">Text</string>
     <string name="scripts_setting_kind_url">Address</string>
-    <string name="scripts_setting_kind_choice">Choice</string>
     <string name="scripts_secret_suffix"> (secret)</string>
-    <string name="scripts_secret_toggle">Show or hide</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">Trial run</string>
     <string name="scripts_test_input_label">Text to send</string>
     <string name="scripts_test_run">Run</string>
+    <string name="scripts_test_copy">Copy</string>
+    <string name="scripts_test_copied">Copied</string>
     <string name="scripts_test_outputs">Outputs</string>
     <string name="scripts_test_no_output">The script returned nothing.</string>
     <string name="scripts_test_console">Console</string>
-    <string name="scripts_test_console_truncated"> (shortened)</string>
+    <string name="scripts_test_console_shortened">Console (shortened)</string>
     <string name="scripts_test_cancelled">The run was cancelled.</string>
 
     <!-- Detail page -->
     <string name="scripts_about_section">About</string>
     <string name="scripts_origin">Source</string>
+    <string name="scripts_status">Status</string>
+    <string name="scripts_status_enabled">Enabled</string>
+    <string name="scripts_status_disabled">Disabled</string>
     <string name="scripts_description">Description</string>
     <string name="scripts_connects">Sites</string>
     <string name="scripts_settings_fields">Settings</string>
@@ -121,7 +125,7 @@
     <string name="scripts_error_bad_header">The file\'s header declarations are not valid.</string>
     <string name="scripts_error_unsupported_api">This script needs a newer version of Songyan.</string>
     <string name="scripts_error_capability">This script needs an input this keyboard cannot offer.</string>
-    <string name="scripts_error_unavailable">The script service is unavailable. Update or reinstall Songyan.</string>
+    <string name="scripts_error_unavailable">Scripts are unavailable right now. Update or reinstall Songyan.</string>
     <string name="scripts_error_generic">The script failed: %1$s</string>
     <string name="scripts_error_at_line">%1$s (line %2$d)</string>
 </resources>

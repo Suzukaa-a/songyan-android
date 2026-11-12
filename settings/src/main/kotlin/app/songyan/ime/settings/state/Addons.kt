@@ -35,7 +35,7 @@ data class AddonToolInfo(
 )
 
 /**
- * One installed extension as the 设置 → 扩展 page shows it. [permissions] are the dangerous
+ * One installed extension as the Settings → Extensions page shows it. [permissions] are the dangerous
  * permissions it declares, already localized by the system; [signerSha256] is the first signing
  * certificate so the user can compare it with the extension's published fingerprint.
  */

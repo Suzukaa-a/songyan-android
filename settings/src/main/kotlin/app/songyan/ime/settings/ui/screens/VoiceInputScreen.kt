@@ -49,13 +49,13 @@ import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.SwitchRow
 
 /**
- * 语音输入: the keyboard's own voice input. The switch shows the microphone in the toolbar; the list
+ * Voice input: the keyboard's own voice input. The switch shows the microphone in the toolbar; the list
  * picks the installed script (or extension) that turns the recording into text. Only sources that
  * declare audio input and can run on this device are listed, so a script that asks for text only
  * never appears.
  *
  * The page states plainly what is wrong and what to do about it: a missing microphone permission
- * links to the system page that grants it, an empty catalog points at the 脚本 page, and a catalog
+ * links to the system page that grants it, an empty catalog points at the Scripts page, and a catalog
  * that cannot be read offers a retry instead of an empty list.
  */
 @Composable
@@ -98,6 +98,9 @@ internal fun VoiceInputPage(
         LoadingScreen(stringResource(R.string.voice_title), onBack)
         return
     }
+    // The switch is only live when voice input could actually run: a granted microphone and at
+    // least one runnable source. A switch already on stays tappable, so it can still be turned off.
+    val canStartVoice = microphoneGranted && state.scripts.isNotEmpty() && !state.failed
     SettingsScaffold(title = stringResource(R.string.voice_title), onBack = onBack) { padding ->
         Column(
             modifier =
@@ -115,9 +118,17 @@ internal fun VoiceInputPage(
             )
             SwitchRow(
                 title = stringResource(R.string.voice_switch_title),
-                subtitle = stringResource(R.string.voice_switch_subtitle),
+                subtitle =
+                    stringResource(
+                        when {
+                            !microphoneGranted -> R.string.voice_switch_needs_permission
+                            state.scripts.isEmpty() && !state.failed -> R.string.voice_switch_needs_script
+                            else -> R.string.voice_switch_subtitle
+                        },
+                    ),
                 checked = state.enabled,
                 onCheckedChange = onEnabledChange,
+                enabled = state.enabled || canStartVoice,
             )
             SectionHeader(stringResource(R.string.voice_permission_section))
             DetailRow(

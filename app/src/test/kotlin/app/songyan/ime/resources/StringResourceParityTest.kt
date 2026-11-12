@@ -16,7 +16,7 @@ class StringResourceParityTest {
     private val repoRoot: File =
         generateSequence(File("").absoluteFile) { it.parentFile }.first { File(it, "settings.gradle.kts").isFile }
 
-    private val modules = listOf("app", "settings", "ime")
+    private val modules = listOf("app", "settings", "ime", "addon-sample")
 
     private val languages = listOf("values", "values-zh", "values-b+zh+Hant", "values-ja")
 

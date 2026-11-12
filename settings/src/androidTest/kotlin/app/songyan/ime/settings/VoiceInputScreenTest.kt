@@ -7,6 +7,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -153,6 +155,35 @@ class VoiceInputScreenTest {
         compose.onNodeWithText(string(R.string.voice_retry)).assertIsDisplayed().performClick()
         assertTrue(calls.contains("retry"))
         compose.onNodeWithText(string(R.string.voice_open_scripts)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theSwitchSaysItNeedsTheMicrophonePermission() {
+        val calls = show(VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))), granted = false)
+
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsNotEnabled()
+        compose.onNodeWithText(string(R.string.voice_switch_needs_permission)).assertIsDisplayed()
+        assertEquals(emptyList<String>(), calls)
+    }
+
+    @Test
+    fun theSwitchSaysItNeedsAVoiceScript() {
+        show(VoiceInputUiState(loading = false, scripts = emptyList()), granted = true)
+
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsNotEnabled()
+        compose.onNodeWithText(string(R.string.voice_switch_needs_script)).assertIsDisplayed()
+    }
+
+    @Test
+    fun theSwitchIsLiveWhenTheMicrophoneAndAScriptAreThere() {
+        val calls = show(VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))), granted = true)
+
+        compose
+            .onNodeWithText(string(R.string.voice_switch_title))
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(listOf("enabled"), calls)
     }
 
     @Test

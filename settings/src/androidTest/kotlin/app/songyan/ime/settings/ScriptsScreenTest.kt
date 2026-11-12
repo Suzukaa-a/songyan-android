@@ -19,6 +19,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.songyan.ime.script.ScriptSourceOrigin
@@ -146,13 +148,20 @@ class ScriptsScreenTest {
         compose.onNodeWithText(str(R.string.scripts_confirm_section_connects)).assertExists()
         DECLARED_SITES.forEach { compose.onNodeWithText(it).assertExists() }
         compose.onNodeWithText(str(R.string.scripts_confirm_section_settings)).assertExists()
-        compose.onNodeWithText(DECLARED_SETTINGS[0].label + str(R.string.scripts_secret_suffix)).assertExists()
+        // The pinned confirm bar leaves less list height, and a LazyColumn only composes what is
+        // near the viewport: scroll to each field before asserting it.
+        val form = hasScrollToIndexAction()
+        compose
+            .onNode(form)
+            .performScrollToNode(hasText(DECLARED_SETTINGS[0].label + str(R.string.scripts_secret_suffix)))
+        compose.onNodeWithContentDescription(str(R.string.scripts_secret_show)).assertExists()
+        compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[1].label))
+        compose.onNodeWithText(str(R.string.scripts_setting_kind_url)).assertExists()
+        compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[2].label))
         compose.onNodeWithText(DECLARED_SETTINGS[1].label).assertExists()
         compose.onNodeWithText(DECLARED_SETTINGS[2].label).assertExists()
-        compose.onNodeWithText(str(R.string.scripts_setting_kind_url)).assertExists()
         // A choice is free text with a hint, not a dropdown: the contract has no option list yet.
         compose.onNodeWithText(str(R.string.scripts_setting_choice_hint)).assertExists()
-        compose.onNodeWithContentDescription(str(R.string.scripts_secret_show)).assertExists()
     }
 
     @Test

@@ -4,7 +4,7 @@ package app.songyan.ime.settings.ui
 import app.songyan.ime.settings.state.AddonToolInfo
 
 /**
- * Display rules of the 扩展 page that must not depend on a device or the build type:
+ * Display rules of the Extensions page that must not depend on a device or the build type:
  *
  * A debug build of an extension declares tools it would never ship (the repository's sample adds
  * "Delayed result (debug only)" and "Crash the addon (debug only)"). The settings page keeps those

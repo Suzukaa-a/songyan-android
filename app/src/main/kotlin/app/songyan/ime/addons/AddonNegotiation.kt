@@ -32,7 +32,7 @@ internal fun interface AddonNegotiator {
 
 /**
  * Binds to the extension's explicit service component, asks for the handshake and closes the
- * connection again. The 扩展 page and every enable go through here; the keyboard only binds when a
+ * connection again. The Extensions page and every enable go through here; the keyboard only binds when a
  * tool actually runs, so opening the page is the only time an idle extension is woken.
  */
 internal class AddonHostNegotiator(

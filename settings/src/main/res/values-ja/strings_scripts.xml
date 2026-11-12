@@ -18,6 +18,7 @@
     <string name="scripts_move_down">下へ移動</string>
     <string name="scripts_origin_pasted">貼り付けから</string>
     <string name="scripts_origin_file">ファイルから：%1$s</string>
+    <string name="scripts_origin_file_unknown">ファイルから</string>
     <string name="scripts_origin_link">リンクから</string>
     <string name="scripts_origin_edited">この画面で編集</string>
 
@@ -49,8 +50,8 @@
     <string name="scripts_missing_title">このスクリプトはもうありません</string>
     <string name="scripts_settings_edit">設定を変更</string>
     <string name="scripts_settings_title">スクリプトの設定</string>
-    <string name="scripts_setting_choice_hint">自由入力：スクリプトの説明にある値を入力してください。</string>
-    <string name="scripts_setting_url_invalid">アドレスは http:// または https:// で始まります</string>
+    <string name="scripts_setting_choice_hint">自由入力：スクリプトが受け付ける値を入力してください（説明を参照）。</string>
+    <string name="scripts_setting_url_invalid">アドレスは http:// または https:// で始まる必要があります。</string>
     <string name="scripts_secret_keep_hint">空欄のままにすると保存済みのシークレットを保持します。</string>
     <string name="scripts_secret_clear">保存済みのシークレットを削除</string>
     <string name="scripts_secret_show">シークレットを表示</string>
@@ -78,23 +79,26 @@
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">テキスト</string>
     <string name="scripts_setting_kind_url">アドレス</string>
-    <string name="scripts_setting_kind_choice">選択</string>
     <string name="scripts_secret_suffix">（シークレット）</string>
-    <string name="scripts_secret_toggle">表示 / 非表示</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">試してみる</string>
     <string name="scripts_test_input_label">送る文字</string>
     <string name="scripts_test_run">実行</string>
+    <string name="scripts_test_copy">コピー</string>
+    <string name="scripts_test_copied">コピーしました</string>
     <string name="scripts_test_outputs">出力</string>
     <string name="scripts_test_no_output">スクリプトは何も返しませんでした。</string>
     <string name="scripts_test_console">コンソール</string>
-    <string name="scripts_test_console_truncated">（省略あり）</string>
+    <string name="scripts_test_console_shortened">コンソール（省略あり）</string>
     <string name="scripts_test_cancelled">実行はキャンセルされました。</string>
 
     <!-- Detail page -->
     <string name="scripts_about_section">情報</string>
     <string name="scripts_origin">ソース</string>
+    <string name="scripts_status">状態</string>
+    <string name="scripts_status_enabled">有効</string>
+    <string name="scripts_status_disabled">無効</string>
     <string name="scripts_description">説明</string>
     <string name="scripts_connects">サイト</string>
     <string name="scripts_settings_fields">設定</string>
@@ -121,7 +125,7 @@
     <string name="scripts_error_bad_header">ファイル先頭の宣言が正しくありません。</string>
     <string name="scripts_error_unsupported_api">このスクリプトには新しいバージョンの松煙が必要です。</string>
     <string name="scripts_error_capability">このスクリプトが必要とする入力をこのキーボードは提供できません。</string>
-    <string name="scripts_error_unavailable">スクリプトサービスを利用できません。松煙を更新するか、インストールし直してください。</string>
+    <string name="scripts_error_unavailable">スクリプト機能を一時的に利用できません。松煙を更新するか、インストールし直してください。</string>
     <string name="scripts_error_generic">スクリプトが失敗しました：%1$s</string>
     <string name="scripts_error_at_line">%1$s（%2$d 行目）</string>
 </resources>

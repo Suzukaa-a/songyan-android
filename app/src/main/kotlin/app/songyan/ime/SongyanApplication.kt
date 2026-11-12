@@ -158,7 +158,7 @@ class SongyanApplication : Application() {
             LinkDownloadHolder.install(LinkDownloadGatewayImpl(this, storage))
             RimeConfigHolder.install(RimeConfigGatewayImpl(this, storage))
             DiagnosticsHolder.install(DiagnosticsGatewayImpl(this, storage))
-            // External addons: the 扩展 page and the keyboard share this process, so one registry
+            // External addons: the Extensions page and the keyboard share this process, so one registry
             // serves both. Warming only reads the cached handshakes; binding happens on the page's
             // scan and when the user runs a tool.
             val addons = createAddonRegistry(this)

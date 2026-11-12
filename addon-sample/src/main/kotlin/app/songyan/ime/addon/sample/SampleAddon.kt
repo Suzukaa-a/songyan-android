@@ -29,10 +29,12 @@ internal class SampleAddon(
         buildList {
             add(AddonToolDescriptor(TOOL_UPPERCASE, context.getString(R.string.tool_uppercase)))
             add(AddonToolDescriptor(TOOL_BOOK_TITLE, context.getString(R.string.tool_book_title)))
-            // The delay tool exists for the timeout case of the integration tests only.
+            // The delay/crash tools exist for the timeout and crash cases of the integration tests.
+            // Their titles live in src/debug/res, so a release build has neither the tools nor the
+            // developer-only copy.
             if (BuildConfig.DEBUG) {
-                add(AddonToolDescriptor(TOOL_DELAY, context.getString(R.string.tool_delay)))
-                add(AddonToolDescriptor(TOOL_CRASH, context.getString(R.string.tool_crash)))
+                add(AddonToolDescriptor(TOOL_DELAY, debugToolTitle("tool_delay")))
+                add(AddonToolDescriptor(TOOL_CRASH, debugToolTitle("tool_crash")))
             }
         }
 
@@ -49,6 +51,12 @@ internal class SampleAddon(
             supportsVoice = true,
             settingsComponent = ComponentName(context, SampleSettingsActivity::class.java).flattenToString(),
         )
+
+    /** A developer-only tool title; the key exists only in the debug resource set. */
+    private fun debugToolTitle(name: String): String {
+        val id = context.resources.getIdentifier(name, "string", context.packageName)
+        return if (id == 0) name else context.getString(id)
+    }
 
     override fun openSession(host: AddonHost): SongyanAddonSession = SampleAddonSession(context, host, tools)
 

@@ -519,6 +519,75 @@ class ToolPanelDeviceTest {
     }
 
     @Test
+    fun toolsDisappearingWhileThePanelIsOpenShowTheEmptyState() {
+        val target = field("hello")
+        var tools = listOf(tool)
+        val mutableCatalog = ToolCatalog { tools }
+        val bridge =
+            EditorToolGatewayBridge(editor, mutableCatalog, limits, info = { target.info }, clock = { 1_000L })
+        val controller =
+            ToolPanelController(
+                bridge,
+                ToolExecutor { _, input -> listOf(input.uppercase()) },
+                scope,
+                clock = { 1_000L },
+            )
+        activate(target)
+        controller.open()
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            controller.onChanged = view::render
+            view.render(controller.state())
+        }
+        assertEquals(context.getString(R.string.ime_tool_panel_select_hint), statusText(view))
+
+        // Every tool went away while the panel stayed open (scripts disabled, extension removed).
+        tools = emptyList()
+        instrumentation.runOnMainSync { view.render(controller.state()) }
+
+        assertEquals(
+            "the open panel must say the tools are gone",
+            context.getString(R.string.ime_tool_panel_unavailable),
+            statusText(view),
+        )
+        assertTrue("no row for a tool that no longer exists", buttonTexts(view).isEmpty())
+    }
+
+    @Test
+    fun copyingSaysSoForAMomentAndThenReturnsToTheHint() {
+        val view = showPreview(listOf("x"), selected = 0)
+        var copied = true
+        instrumentation.runOnMainSync {
+            view.onCopy = { copied }
+            requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_copy))).performClick()
+        }
+        assertEquals(
+            "a copy says it happened",
+            context.getString(R.string.ime_tool_panel_written),
+            statusText(view),
+        )
+
+        Thread.sleep(2_200)
+        instrumentation.runOnMainSync { }
+        assertEquals(
+            "the tip goes away and the phase's own status comes back",
+            context.getString(R.string.ime_tool_panel_select_hint),
+            statusText(view),
+        )
+
+        instrumentation.runOnMainSync {
+            copied = false
+            requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_copy))).performClick()
+        }
+        assertEquals(
+            "a copy that copied nothing says nothing",
+            context.getString(R.string.ime_tool_panel_select_hint),
+            statusText(view),
+        )
+    }
+
+    @Test
     fun theLastToolRowStaysAboveTheActionRow() {
         val many = (0 until 24).map { ToolDescriptor("tool$it", "Tool number $it", setOf(ToolCapability.TEXT)) }
         lateinit var view: ToolPanelView
@@ -669,14 +738,15 @@ class ToolPanelDeviceTest {
         val title = view.getChildAt(0) as TextView
         val status = view.getChildAt(1) as TextView
         assertEquals(palette.text, title.currentTextColor)
-        assertEquals(palette.muted, status.currentTextColor)
         assertTrue(
             "the title must stay readable on the dark surface: " + contrast(palette.text, palette.background),
             contrast(palette.text, palette.background) >= 4.5,
         )
+        // Secondary text may be the muted role or, when that pair falls short, the body colour.
+        val statusContrast = contrast(status.currentTextColor, palette.background)
         assertTrue(
-            "the status must stay readable on the dark surface: " + contrast(palette.muted, palette.background),
-            contrast(palette.muted, palette.background) >= 3.0,
+            "the status must stay readable on the dark surface: " + statusContrast,
+            statusContrast >= 4.5,
         )
         val replace = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_replace)))
         val replaceBackground = buttonColor(replace)
@@ -684,7 +754,25 @@ class ToolPanelDeviceTest {
         assertTrue(
             "the primary action label must contrast with its fill: " +
                 contrast(replace.currentTextColor, replaceBackground),
-            contrast(replace.currentTextColor, replaceBackground) >= 3.0,
+            contrast(replace.currentTextColor, replaceBackground) >= 4.5,
+        )
+        val insert = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_insert)))
+        assertTrue(
+            "the tonal action label must contrast with its fill: " +
+                contrast(insert.currentTextColor, palette.control),
+            contrast(insert.currentTextColor, palette.control) >= 4.5,
+        )
+        val copy = requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_copy)))
+        assertTrue(
+            "the text action must contrast with the panel surface: " +
+                contrast(copy.currentTextColor, palette.background),
+            contrast(copy.currentTextColor, palette.background) >= 4.5,
+        )
+        val selectedResult = resultBodies(view).single { it.isSelected }
+        assertTrue(
+            "the selected result label must contrast with its fill: " +
+                contrast(selectedResult.currentTextColor, palette.accent),
+            contrast(selectedResult.currentTextColor, palette.accent) >= 4.5,
         )
         // A picture of the dark panel, so the palette claim can be looked at, not only computed.
         val screenshot = saveScreenshot(view, 720, 900, "tool-panel-dark.png")
@@ -707,6 +795,11 @@ class ToolPanelDeviceTest {
         val toolRow = requireNotNull(buttonWithText(view, tool.title))
         assertEquals("tool rows take the palette key surface", palette.key, buttonColor(toolRow))
         assertEquals(palette.text, toolRow.currentTextColor)
+        assertTrue(
+            "a tool row label must contrast with its key surface: " +
+                contrast(toolRow.currentTextColor, palette.key),
+            contrast(toolRow.currentTextColor, palette.key) >= 4.5,
+        )
     }
 
     private fun layout(

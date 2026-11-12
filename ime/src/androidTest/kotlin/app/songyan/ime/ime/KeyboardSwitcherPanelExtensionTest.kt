@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,6 +81,50 @@ class KeyboardSwitcherPanelExtensionTest {
             "the extension row must be in the visible part of the menu: " + rect + " inside " + scroll.height,
             rect.top >= 0 && rect.bottom <= scroll.height,
         )
+    }
+
+    @Test
+    fun theWaitingRowHasTheSameMetricsAsAnActionRow() {
+        val panel = KeyboardSwitcherPanel(context, "builtin", KeyboardLayoutKind.QWERTY26)
+        panel.setExtensionPanels(emptyList(), loading = true)
+        layout(panel, dp(400), dp(500))
+
+        val placeholder = requireNotNull(findText(panel, context.getString(R.string.ime_menu_extensions_loading)))
+        val placeholderRow = placeholder.parent as ViewGroup
+        val action = requireNotNull(findText(panel, context.getString(R.string.ime_menu_quick_content)))
+        val actionRow = action.parent as ViewGroup
+        assertEquals("the waiting row keeps the action row height", actionRow.height, placeholderRow.height)
+        assertEquals(actionRow.paddingTop, placeholderRow.paddingTop)
+        assertEquals(actionRow.paddingBottom, placeholderRow.paddingBottom)
+
+        // The rows that replace it keep the same shape: label plus the action rows' chevron.
+        panel.setExtensionPanels(listOf("app.songyan.ime.addon.sample" to "Sample Addon"))
+        layout(panel, dp(400), dp(500))
+        val addon = requireNotNull(findText(panel, "Sample Addon")).parent as ViewGroup
+        assertEquals("an extension row has the action row's shape", actionRow.childCount, addon.childCount)
+        assertTrue("an extension row ends in the usual chevron", addon.getChildAt(1) is ImageView)
+    }
+
+    @Test
+    fun swappingTheWaitingRowForRowsKeepsTheSectionInPlace() {
+        val panel = KeyboardSwitcherPanel(context, "builtin", KeyboardLayoutKind.QWERTY26)
+        panel.setExtensionPanels(emptyList(), loading = true)
+        layout(panel, dp(400), dp(500))
+        val titleBefore = requireNotNull(findText(panel, context.getString(R.string.ime_menu_extensions)))
+        val titleTop = titleBefore.top
+        val placeholder = requireNotNull(findText(panel, context.getString(R.string.ime_menu_extensions_loading)))
+        val section = placeholder.parent.parent as ViewGroup
+        val sectionTop = section.top
+
+        panel.setExtensionPanels(listOf("a" to "Addon A", "b" to "Addon B"))
+        layout(panel, dp(400), dp(500))
+
+        assertFalse("the waiting row is gone", hasText(panel, context.getString(R.string.ime_menu_extensions_loading)))
+        assertTrue(hasText(panel, "Addon A"))
+        assertEquals("the title does not move when the rows arrive", titleTop, titleBefore.top)
+        assertEquals("the section keeps its place", sectionTop, section.top)
+        assertEquals("both rows are in the section", 2, section.childCount)
+        assertEquals("the section never hides during the swap", View.VISIBLE, section.visibility)
     }
 
     @Test

@@ -18,6 +18,7 @@
     <string name="scripts_move_down">下移</string>
     <string name="scripts_origin_pasted">粘贴导入</string>
     <string name="scripts_origin_file">来自文件：%1$s</string>
+    <string name="scripts_origin_file_unknown">来自文件</string>
     <string name="scripts_origin_link">来自链接</string>
     <string name="scripts_origin_edited">在此编辑</string>
 
@@ -49,8 +50,8 @@
     <string name="scripts_missing_title">这个脚本已不存在</string>
     <string name="scripts_settings_edit">修改设置</string>
     <string name="scripts_settings_title">脚本设置</string>
-    <string name="scripts_setting_choice_hint">自由填写：输入脚本说明中允许的值。</string>
-    <string name="scripts_setting_url_invalid">地址以 http:// 或 https:// 开头</string>
+    <string name="scripts_setting_choice_hint">自由填写：输入脚本接受的值（见脚本说明）。</string>
+    <string name="scripts_setting_url_invalid">地址需以 http:// 或 https:// 开头。</string>
     <string name="scripts_secret_keep_hint">留空表示保留已保存的密钥。</string>
     <string name="scripts_secret_clear">清除已保存的密钥</string>
     <string name="scripts_secret_show">显示密钥</string>
@@ -78,23 +79,26 @@
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">文字</string>
     <string name="scripts_setting_kind_url">地址</string>
-    <string name="scripts_setting_kind_choice">选项</string>
     <string name="scripts_secret_suffix">（密钥）</string>
-    <string name="scripts_secret_toggle">显示或隐藏</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">试一试</string>
     <string name="scripts_test_input_label">要发送的文字</string>
     <string name="scripts_test_run">运行</string>
+    <string name="scripts_test_copy">复制</string>
+    <string name="scripts_test_copied">已复制</string>
     <string name="scripts_test_outputs">输出</string>
     <string name="scripts_test_no_output">脚本没有返回内容。</string>
     <string name="scripts_test_console">控制台</string>
-    <string name="scripts_test_console_truncated">（有省略）</string>
+    <string name="scripts_test_console_shortened">控制台（内容已截短）</string>
     <string name="scripts_test_cancelled">运行已取消。</string>
 
     <!-- Detail page -->
     <string name="scripts_about_section">关于</string>
     <string name="scripts_origin">来源</string>
+    <string name="scripts_status">状态</string>
+    <string name="scripts_status_enabled">已启用</string>
+    <string name="scripts_status_disabled">已停用</string>
     <string name="scripts_description">描述</string>
     <string name="scripts_connects">网站</string>
     <string name="scripts_settings_fields">设置</string>
@@ -121,7 +125,7 @@
     <string name="scripts_error_bad_header">文件开头的声明不合法。</string>
     <string name="scripts_error_unsupported_api">这个脚本需要更新版本的松烟输入法。</string>
     <string name="scripts_error_capability">这个脚本需要的输入是此键盘无法提供的。</string>
-    <string name="scripts_error_unavailable">脚本服务不可用，请更新或重新安装松烟。</string>
+    <string name="scripts_error_unavailable">脚本功能暂时不可用，请更新或重新安装松烟。</string>
     <string name="scripts_error_generic">脚本失败：%1$s</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

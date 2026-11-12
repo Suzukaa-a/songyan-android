@@ -1164,10 +1164,14 @@ class KeyboardController(
                     panel.onRun = controller::start
                     panel.onSelect = controller::selectResult
                     panel.onCopy = {
-                        controller.copy()?.let { text ->
+                        val text = controller.copy()
+                        if (text == null) {
+                            false
+                        } else {
                             context
                                 .getSystemService(ClipboardManager::class.java)
                                 ?.setPrimaryClip(ClipData.newPlainText(null, text))
+                            true
                         }
                     }
                     panel.onReplace = controller::replace
@@ -1205,6 +1209,14 @@ class KeyboardController(
         if (retired) return
         syncToolbar()
         render()
+        // An open tool panel lists the same catalog this refresh replaced. If the tools it was
+        // offering are gone (every script disabled, an extension removed), the panel repaints
+        // now: it shows the empty-state copy instead of leaving rows for tools that no longer exist.
+        if (panels?.isToolPanelShowing == true) {
+            val panel = toolPanelView
+            val controller = toolPanel
+            if (panel != null && controller != null) panel.render(controller.state())
+        }
     }
 
     /** Opens the in-keyboard settings panel (from the input-method menu). */
@@ -1291,7 +1303,7 @@ class KeyboardController(
 
     internal fun openKeyboardMenu() {
         if (retired || menuOpen) return
-        // The extension list is written by the 扩展 page; re-read it off the main thread so the
+        // The extension list is written by the Extensions page; re-read it off the main thread so the
         // rows below reflect the latest enable even when the scan at keyboard show raced it.
         onMenuOpening()
         // Finish the settings panel's visual exit before the menu replaces the same surface.

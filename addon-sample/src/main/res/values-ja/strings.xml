@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">松煙拡張機能サンプル</string>
+    <string name="addon_name">サンプル拡張機能</string>
+    <string name="tool_uppercase">大文字</string>
+    <string name="tool_book_title">書名号を付ける</string>
+    <string name="panel_title">サンプルパネル</string>
+    <string name="panel_commit">「パネルからのこんにちは」を挿入</string>
+    <string name="panel_plain_text">パネルからのこんにちは</string>
+    <string name="panel_refused">エディターが編集を拒否しました</string>
+    <string name="panel_delete">1 文字削除</string>
+    <string name="panel_read">選択範囲を読み取る</string>
+    <string name="panel_resize">より高い高さを要求</string>
+    <string name="panel_close">パネルを閉じる</string>
+    <string name="panel_context">エディターの種類 %1$d · %2$d × %3$d px</string>
+    <string name="panel_no_text">選択範囲なし</string>
+    <string name="panel_committed">挿入しました：%1$s</string>
+    <string name="panel_deleted">1 文字削除しました</string>
+    <string name="panel_read_result">読み取り：%1$s</string>
+    <string name="sample_explain">この APK は松煙の外部拡張機能のサンプルです。普通のアプリで、インストール後に松煙の「設定 → 拡張機能」でオンにします。松煙は拡張機能のコードをダウンロード、インストール、読み込みしません。</string>
+    <string name="sample_tools">テキストツール：大文字、書名号を付ける</string>
+    <string name="sample_panel">独自パネル：キーボードウィンドウ内に描画</string>
+    <string name="sample_voice">音声入力：模擬的なディクテーションフロー</string>
+    <string name="voice_partial">サンプル音声</string>
+    <string name="voice_final">サンプル音声の文字起こし結果</string>
+    <string name="settings_title">サンプル拡張機能の設定</string>
+    <string name="settings_explain">拡張機能は独自の設定画面を宣言できます。このサンプルには設定項目がありません。実際の設定は松煙ではなく拡張機能に属します。</string>
+</resources>

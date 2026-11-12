@@ -71,8 +71,8 @@
     <string name="ime_tool_panel_failed">工具執行失敗。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
     <string name="ime_tool_panel_retry">重試</string>
-    <string name="ime_tool_panel_expand">展開</string>
-    <string name="ime_tool_panel_collapse">收起</string>
+    <string name="ime_tool_panel_expand">展開結果</string>
+    <string name="ime_tool_panel_collapse">收起結果</string>
     <string name="ime_toolbar_switch_input_method">切換輸入法</string>
     <string name="ime_toolbar_voice_input">語音輸入</string>
     <string name="ime_menu_switch_package">切換到%1$s的%2$s</string>

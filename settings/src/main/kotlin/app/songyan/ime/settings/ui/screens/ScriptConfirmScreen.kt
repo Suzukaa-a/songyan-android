@@ -145,8 +145,10 @@ fun ScriptConfirmScreen(
                         leadingContent = { Icon(Icons.Outlined.Save, contentDescription = null) },
                     )
                 }
+                // The section header is always present, like "What it is": an empty list is a
+                // statement under the heading, not a site row that happens to say "none".
+                item { SectionHeader(stringResource(R.string.scripts_confirm_section_connects)) }
                 if (entry.connects.isNotEmpty()) {
-                    item { SectionHeader(stringResource(R.string.scripts_confirm_section_connects)) }
                     items(entry.connects.size) { index ->
                         ListItem(
                             headlineContent = { Text(entry.connects[index]) },
@@ -155,10 +157,20 @@ fun ScriptConfirmScreen(
                     }
                 } else {
                     item {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.scripts_confirm_connects_none)) },
-                            supportingContent = { Text(stringResource(R.string.scripts_confirm_connects_none_body)) },
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.scripts_confirm_connects_none),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.scripts_confirm_connects_none_body),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
                 if (entry.settings.isNotEmpty()) {

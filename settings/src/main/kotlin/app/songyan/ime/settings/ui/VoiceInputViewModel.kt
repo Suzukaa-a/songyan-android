@@ -46,7 +46,7 @@ data class VoiceScriptOption(
     val enabled: Boolean = true,
 )
 
-/** Everything the 语音输入 page renders. */
+/** Everything the Voice input page renders. */
 data class VoiceInputUiState(
     val loading: Boolean = true,
     /** The catalog could not be read; the page offers a retry instead of an empty list. */
@@ -60,8 +60,8 @@ data class VoiceInputUiState(
 )
 
 /**
- * State of the 设置 → 语音输入 page: the keyboard's own voice input switch and the audio script it
- * runs. The script list is the same catalog the 脚本 page manages ([ScriptRegistryHolder]); only
+ * State of the Settings → Voice input page: the keyboard's own voice input switch and the audio script it
+ * runs. The script list is the same catalog the Scripts page manages ([ScriptRegistryHolder]); only
  * entries that declare audio input and that this host can run are offered
  * ([app.songyan.ime.script.ScriptEntry.availableOnThisHost]), followed by installed extensions that
  * support voice.
@@ -88,7 +88,7 @@ class VoiceInputViewModel(
         refresh()
     }
 
-    /** Re-reads the catalog: the 脚本 page may have changed it while this page was away. */
+    /** Re-reads the catalog: the Scripts page may have changed it while this page was away. */
     fun refresh() {
         viewModelScope.launch {
             mutable.update { it.copy(loading = it.scripts.isEmpty(), failed = false) }

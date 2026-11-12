@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <resources>
-    <string name="app_name">Songyan Addon Sample</string>
-    <string name="addon_name">Sample Addon</string>
+    <string name="app_name">Songyan Extension Sample</string>
+    <string name="addon_name">Sample Extension</string>
     <string name="tool_uppercase">Uppercase</string>
     <string name="tool_book_title">Add book-title marks</string>
-    <string name="tool_delay">Delayed result (debug only)</string>
-    <string name="tool_crash">Crash the addon (debug only)</string>
     <string name="panel_title">Sample panel</string>
     <string name="panel_commit">Insert “Hello from the panel”</string>
     <string name="panel_plain_text">Hello from the panel</string>
@@ -20,12 +18,12 @@
     <string name="panel_committed">Inserted: %1$s</string>
     <string name="panel_deleted">Deleted one character</string>
     <string name="panel_read_result">Read: %1$s</string>
-    <string name="sample_explain">This APK is the sample external addon for Songyan. It is an ordinary app: install it, then turn it on in Songyan settings → Extensions. Songyan binds to its service and never loads its code.</string>
+    <string name="sample_explain">This APK is the sample external extension for Songyan. It is an ordinary app: install it, then turn it on in Songyan settings → Extensions. Songyan never downloads, installs or loads extension code.</string>
     <string name="sample_tools">Text tools: uppercase, add book-title marks</string>
     <string name="sample_panel">Own panel: draws itself inside the keyboard window</string>
     <string name="sample_voice">Voice input: a simulated dictation flow</string>
     <string name="voice_partial">Sample speech</string>
     <string name="voice_final">Sample speech transcription result</string>
-    <string name="settings_title">Sample addon settings</string>
-    <string name="settings_explain">An addon may declare its own settings page. This sample has nothing to configure; the real settings belong to the addon, not to Songyan.</string>
+    <string name="settings_title">Sample extension settings</string>
+    <string name="settings_explain">An extension may declare its own settings page. This sample has nothing to configure; the real settings belong to the extension, not to Songyan.</string>
 </resources>

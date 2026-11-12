@@ -157,9 +157,7 @@ class ExtensionsScreenTest {
         // Last call is secondary information, not a body line per identity field
         compose
             .onNodeWithText(
-                str(R.string.extensions_last_call_section) +
-                    " · " +
-                    str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), 12L, "boom"),
+                str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), 12L, "boom"),
             ).assertIsDisplayed()
         // Version/signature stay folded until asked for
         compose.onNodeWithText(str(R.string.extensions_details)).assertIsDisplayed()

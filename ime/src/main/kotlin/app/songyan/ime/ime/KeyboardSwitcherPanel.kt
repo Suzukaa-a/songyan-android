@@ -346,18 +346,11 @@ internal class KeyboardSwitcherPanel(
         extensionTitle?.visibility = if (visible) VISIBLE else GONE
         section.visibility = if (visible) VISIBLE else GONE
         if (loading && entries.isEmpty()) {
-            section.addView(
-                TextView(context).apply {
-                    text = context.getString(R.string.ime_menu_extensions_loading)
-                    textSize = 15f
-                    setTextColor(palette.muted)
-                    gravity = Gravity.CENTER_VERTICAL
-                    minimumHeight = padding(MIN_TOUCH_TARGET_DP)
-                    setPadding(padding(12), padding(8), padding(12), padding(8))
-                    extensionPlaceholder = this
-                },
-                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
-            )
+            // The waiting row uses the same metrics as an action row, so the rows that replace it
+            // land in the same place instead of shrinking or growing the section.
+            val placeholder = staticRow(context.getString(R.string.ime_menu_extensions_loading))
+            extensionPlaceholder = placeholder.getChildAt(0) as TextView
+            section.addView(placeholder, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         }
         for ((packageName, label) in entries) {
             section.addView(actionRow(label) { onExtensionPanel(packageName) })
@@ -558,6 +551,33 @@ internal class KeyboardSwitcherPanel(
                 }
             actionDividers += this
         }
+
+    /**
+     * A row with the exact metrics of [actionRow] but no press state and no chevron: the waiting
+     * placeholder, so replacing it with real rows never moves the menu's other items.
+     */
+    private fun staticRow(text: String): LinearLayout {
+        val row =
+            LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = padding(MIN_TOUCH_TARGET_DP)
+                setPadding(padding(12), padding(8), padding(12), padding(8))
+                layoutParams =
+                    LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                        topMargin = padding(2)
+                    }
+            }
+        row.addView(
+            TextView(context).apply {
+                this.text = text
+                textSize = 15f
+                setTextColor(palette.muted)
+                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+            },
+        )
+        return row
+    }
 
     /** Pressed state only: the row itself has no idle container of its own. */
     private fun pressedBackground(): StateListDrawable {

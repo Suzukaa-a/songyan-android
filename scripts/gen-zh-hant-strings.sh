@@ -63,7 +63,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 root, out_root, opencc_bin, opencc_config = sys.argv[1:5]
-modules = ("app", "ime", "settings")
+modules = ("app", "ime", "settings", "addon-sample")
 source_dir = "values-zh"
 target_dir = "values-b+zh+Hant"
 # Shared Taiwan wording is owned by the iOS manifest source, not copied into this script.

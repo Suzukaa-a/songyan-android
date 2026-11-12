@@ -77,7 +77,7 @@ private enum class AddWay { PASTE, LINK }
 private val SCRIPT_FILE_TYPES = arrayOf("text/*", "application/javascript", "application/octet-stream")
 
 /**
- * 设置 → 脚本: the list of installed scripts, the ways to add one, and, with none installed, the
+ * Settings → Scripts: the list of installed scripts, the ways to add one, and, with none installed,
  * two ways to start — copying the guide that tells an AI how to write one, and the smallest
  * working example.
  *
@@ -457,10 +457,21 @@ private fun PendingBadge() {
 internal fun originSummary(entry: ScriptEntry): String =
     when (val origin = entry.sourceOrigin) {
         ScriptSourceOrigin.Pasted -> stringResource(R.string.scripts_origin_pasted)
-        is ScriptSourceOrigin.File -> stringResource(R.string.scripts_origin_file, origin.displayName)
+        is ScriptSourceOrigin.File ->
+            if (isReadableFileOrigin(origin.displayName)) {
+                stringResource(R.string.scripts_origin_file, origin.displayName)
+            } else {
+                // Old records kept the document picker's opaque id (`msf:42`) as the file name; the
+                // raw id is noise, so they read as the generic origin instead.
+                stringResource(R.string.scripts_origin_file_unknown)
+            }
         is ScriptSourceOrigin.Link -> stringResource(R.string.scripts_origin_link)
         ScriptSourceOrigin.Edited -> stringResource(R.string.scripts_origin_edited)
     }
+
+/** A picked file's display name is user-facing only when the picker gave a real name. */
+internal fun isReadableFileOrigin(name: String): Boolean =
+    name.isNotBlank() && !name.startsWith("msf:") && '\uFFFD' !in name
 
 /**
  * Nothing installed: what a script is, the guide an AI needs to write one, and the example that

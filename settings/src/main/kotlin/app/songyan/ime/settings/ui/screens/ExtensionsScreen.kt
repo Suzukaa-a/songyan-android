@@ -82,7 +82,7 @@ import app.songyan.ime.settings.ui.components.StateMessage
 import kotlinx.coroutines.launch
 
 /**
- * 设置 → 扩展: the addon APKs installed on this device. Songyan has no store; the user installs
+ * Settings → Extensions: the addon APKs installed on this device. Songyan has no store; the user installs
  * an addon themselves and turns it on here. Each addon is one card: identity and switch in the main
  * row, a compatibility badge under it, capability/tool/permission chips, an expandable
  * version/signature block and the last call as secondary information. The extension's own settings
@@ -353,13 +353,18 @@ private fun ExtensionCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.History,
-                        contentDescription = null,
+                        // The inline extensions_last_call* text already starts with "Last use:";
+                        // the section key labels the history icon for screen readers so it stays
+                        // in use instead of becoming a dead string.
+                        contentDescription = stringResource(R.string.extensions_last_call_section),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.extensions_last_call_section) + " · " + lastCallText(call),
+                        // extensions_last_call* already start with "Last use:"; a second label
+                        // before them read like a phone call ("Last call · Last use: ...").
+                        text = lastCallText(call),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

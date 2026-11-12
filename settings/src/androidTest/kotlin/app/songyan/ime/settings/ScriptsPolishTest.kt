@@ -2,6 +2,7 @@
 
 package app.songyan.ime.settings
 
+import android.content.ClipboardManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
@@ -18,7 +20,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
+import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.script.ScriptRunOutcome
 import app.songyan.ime.script.ScriptSettingField
 import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.script.ScriptSourceOrigin
@@ -156,6 +162,8 @@ class ScriptsPolishTest {
                 compose.onAllNodes(hasText("https://saved.example/v1")).fetchSemanticsNodes().isNotEmpty()
             }.getOrDefault(false)
         }
+        // The pinned bar leaves less height; the last field lives below the first viewport.
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(DECLARED_SETTINGS[2].label))
         compose.onNodeWithText("wide").assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
 
@@ -260,5 +268,100 @@ class ScriptsPolishTest {
         val saved = registry.confirms.single().second
         assertEquals("", saved[DECLARED_SETTINGS[1].key])
         assertEquals(listOf(emptySet<String>()), registry.clearedSecrets.map { it.second })
+    }
+
+    @Test
+    fun aConfirmationWithoutSitesStatesItUnderItsOwnHeading() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(declaredEntry(pending = true, connects = emptyList()))
+            }
+        show(registry)
+        waitFor(SCRIPT_NAME)
+        compose.onNodeWithText(SCRIPT_NAME).performClick()
+
+        // The heading is always there, and the empty case is a plain statement below it rather
+        // than a site row that happens to be called "No sites declared".
+        waitFor(str(R.string.scripts_confirm_section_connects))
+        compose.onNodeWithText(str(R.string.scripts_confirm_connects_none)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_confirm_connects_none_body)).assertExists()
+    }
+
+    @Test
+    fun aFileOriginShowsTheFileNameOrTheGenericLabel() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(
+                    declaredEntry(
+                        name = "有文件名",
+                        pending = false,
+                        origin = ScriptSourceOrigin.File("my-script.js"),
+                    ),
+                    declaredEntry(
+                        name = "旧记录",
+                        pending = false,
+                        origin = ScriptSourceOrigin.File("msf:42"),
+                    ).copy(id = "script-2", order = 1),
+                )
+            }
+        show(registry)
+        waitFor("有文件名")
+
+        compose.onNodeWithText(str(R.string.scripts_origin_file, "my-script.js")).assertExists()
+        // The old opaque picker id is dropped, not shown as a file name.
+        compose.onNodeWithText(str(R.string.scripts_origin_file_unknown)).assertExists()
+        compose.onNodeWithText("msf:42").assertDoesNotExist()
+    }
+
+    @Test
+    fun theDetailPageSummarizesTheStatusAndWhatItReads() {
+        val registry = FakeScriptRegistry().apply { store(declaredEntry(pending = false, enabled = true)) }
+        show(registry)
+        waitFor(SCRIPT_NAME)
+        compose.onNodeWithText(SCRIPT_NAME).performClick()
+
+        // The About section sits below the trial box, so scroll to it before asserting.
+        waitFor(str(R.string.scripts_test_section))
+        val page = hasScrollToIndexAction()
+        compose.onNode(page).performScrollToNode(hasText(str(R.string.scripts_status)))
+        compose.onNodeWithText(str(R.string.scripts_status_enabled)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_confirm_reads_body)).assertExists()
+    }
+
+    @Test
+    fun theTrialResultCanBeCopied() {
+        val registry =
+            FakeScriptRegistry().apply {
+                store(declaredEntry(pending = false, enabled = true))
+                trialOutcome =
+                    ScriptRunOutcome.Success(
+                        outputs = listOf("结果一", "结果二"),
+                        consoleLines = emptyList(),
+                        consoleTruncated = false,
+                    )
+            }
+        show(registry)
+        waitFor(SCRIPT_NAME)
+        compose.onNodeWithText(SCRIPT_NAME).performClick()
+
+        waitFor(str(R.string.scripts_test_section))
+        compose.onNode(hasSetTextAction()).performTextInput("输入")
+        compose.onNodeWithText(str(R.string.scripts_test_run)).performClick()
+        waitFor(str(R.string.scripts_test_outputs))
+        compose.onNodeWithText(str(R.string.scripts_test_copy)).performClick()
+        waitFor(str(R.string.scripts_test_copied))
+
+        val clipboard =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .context
+                .getSystemService(ClipboardManager::class.java)
+        assertEquals(
+            "结果一\n结果二",
+            clipboard.primaryClip
+                ?.getItemAt(0)
+                ?.text
+                ?.toString(),
+        )
     }
 }

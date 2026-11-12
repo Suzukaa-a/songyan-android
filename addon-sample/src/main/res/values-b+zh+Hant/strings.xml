@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <string name="app_name">松煙擴充功能示例</string>
+    <string name="addon_name">示例擴充功能</string>
+    <string name="tool_uppercase">大寫</string>
+    <string name="tool_book_title">加書名號</string>
+    <string name="panel_title">示例面板</string>
+    <string name="panel_commit">上屏「來自面板的文字」</string>
+    <string name="panel_plain_text">來自面板的文字</string>
+    <string name="panel_refused">輸入框沒有接受這次編輯</string>
+    <string name="panel_delete">向前刪除一個字</string>
+    <string name="panel_read">讀取選區</string>
+    <string name="panel_resize">請求更高的空間</string>
+    <string name="panel_close">關閉面板</string>
+    <string name="panel_context">輸入框型別 %1$d · %2$d × %3$d 畫素</string>
+    <string name="panel_no_text">沒有選區</string>
+    <string name="panel_committed">已上屏：%1$s</string>
+    <string name="panel_deleted">已向前刪除一個字</string>
+    <string name="panel_read_result">讀到：%1$s</string>
+    <string name="sample_explain">這個 APK 是松煙的外部擴充功能示例。它就是一個普通應用：安裝後到松煙「設定 → 擴充功能」裡開啟。松煙不會下載、安裝或載入擴充功能的程式碼。</string>
+    <string name="sample_tools">文字工具：大寫、加書名號</string>
+    <string name="sample_panel">自帶面板：畫在鍵盤窗口裡</string>
+    <string name="sample_voice">語音輸入：一段模擬的聽寫流程</string>
+    <string name="voice_partial">示例語音</string>
+    <string name="voice_final">示例語音轉寫結果</string>
+    <string name="settings_title">示例擴充功能設定</string>
+    <string name="settings_explain">擴充功能可以宣告自己的設定頁。這個示例沒有可設定的內容；真正的設定屬於擴充功能，不屬於松煙。</string>
+</resources>

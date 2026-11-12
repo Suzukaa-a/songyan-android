@@ -999,7 +999,7 @@ class SongyanInputMethodService : InputMethodService() {
         super.onStartInputView(info, restarting)
         // A panel belonged to the editor that was focused before; the new show starts on the keys.
         addonPanel?.close()
-        // The 扩展 page may have enabled an extension since the last scan; the next menu open must
+        // The Extensions page may have enabled an extension since the last scan; the next menu open must
         // show it without restarting the input-method process.
         refreshKeyboardTools()
         snapshotJob?.cancel()

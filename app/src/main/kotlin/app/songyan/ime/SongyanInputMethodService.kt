@@ -25,11 +25,11 @@ import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import app.songyan.ime.addons.AddonEditorAccess
+import app.songyan.ime.addons.AddonMenu
 import app.songyan.ime.addons.AddonPanelController
 import app.songyan.ime.addons.AddonRegistryHolder
 import app.songyan.ime.addons.AddonToolCatalog
 import app.songyan.ime.addons.AddonToolExecutor
-import app.songyan.ime.addons.CombinedToolCatalog
 import app.songyan.ime.addons.CombinedToolExecutor
 import app.songyan.ime.appearance.AppearanceRepository
 import app.songyan.ime.audio.VoiceInputHostImpl
@@ -84,6 +84,7 @@ import app.songyan.ime.prefs.reconcileWith
 import app.songyan.ime.rime.RimeBindings
 import app.songyan.ime.script.ScriptCatalogCache
 import app.songyan.ime.script.ScriptRegistryHolder
+import app.songyan.ime.scripttools.PreloadedToolCatalog
 import app.songyan.ime.scripttools.ScriptToolCatalog
 import app.songyan.ime.scripttools.ScriptToolExecutor
 import app.songyan.ime.scripttools.ToolPipelineLimits
@@ -104,6 +105,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -260,6 +262,13 @@ class SongyanInputMethodService : InputMethodService() {
 
     /** The extension panel currently hosting a SurfaceView in this keyboard window. */
     private var addonPanel: AddonPanelController? = null
+
+    /** The tool list read ahead of the view build; its sources are files, so never read on main. */
+    private var toolCatalogCache: PreloadedToolCatalog? = null
+
+    /** One refresh at a time; a request that arrives meanwhile is folded into a second pass. */
+    private var toolRefreshJob: Job? = null
+    private var toolRefreshQueued = false
 
     private val inputMethods by lazy { SystemInputMethods(this) }
 
@@ -657,16 +666,39 @@ class SongyanInputMethodService : InputMethodService() {
         }
 
     /** Enabled extensions that offer their own panel, for the input-method menu's extension section. */
-    private fun addonPanelEntries(): List<Pair<String, String>> =
-        AddonRegistryHolder.current
-            ?.enabledCompatible()
-            ?.mapNotNull { entry ->
-                if (entry.handshake?.supportsPanel == true) {
-                    entry.packageName to entry.facts.label.ifBlank { entry.packageName }
-                } else {
-                    null
-                }
-            }.orEmpty()
+    private fun addonPanelEntries(): List<Pair<String, String>> = AddonMenu.entries(AddonRegistryHolder.current)
+
+    /**
+     * Re-reads the extension registry and the tool list off the main thread. Called when an input
+     * view is built, when the keyboard shows and when the input-method menu opens: settings may
+     * have enabled an extension since the last scan, and the script snapshot is a file.
+     */
+    private fun refreshKeyboardTools() {
+        if (toolRefreshJob?.isActive == true) {
+            toolRefreshQueued = true
+            return
+        }
+        toolRefreshJob =
+            scope.launch {
+                do {
+                    toolRefreshQueued = false
+                    AddonRegistryHolder.current?.let { registry ->
+                        runCatching { registry.refreshOnKeyboardShow() }
+                            .onFailure { Log.w(TAG, "extension registry refresh failed", it) }
+                    }
+                    val toolsChanged =
+                        toolCatalogCache?.let { catalog ->
+                            runCatching { catalog.refresh() }
+                                .onFailure { Log.w(TAG, "tool catalog refresh failed", it) }
+                                .getOrDefault(false)
+                        } == true
+                    // A menu opened while the scan was still running gets its extension rows now,
+                    // and the toolbar must show the tool entry without waiting for a keystroke.
+                    controller?.refreshExtensionMenu()
+                    if (toolsChanged) controller?.onToolCatalogRefreshed()
+                } while (toolRefreshQueued && scope.isActive)
+            }
+    }
 
     /**
      * Opens settings on [target]. CLEAR_TOP reuses a running settings screen instead of stacking a
@@ -704,12 +736,17 @@ class SongyanInputMethodService : InputMethodService() {
         // executor binds on the press, enforces its own deadline and disconnects again.
         val scriptCatalog = ScriptToolCatalog { scriptCatalogCache.enabledEntries() }
         val addons = AddonRegistryHolder.current
+        // The toolbar is built on the main thread: the catalog it asks for tools must answer from a
+        // snapshot. The script source reads a file, so the snapshot is refreshed on an IO dispatcher
+        // here and again on every show, never inside tools().
         val toolCatalog =
-            if (addons == null) {
-                scriptCatalog
-            } else {
-                CombinedToolCatalog(listOf(scriptCatalog, AddonToolCatalog(addons)))
-            }
+            PreloadedToolCatalog(
+                buildList {
+                    add(scriptCatalog)
+                    if (addons != null) add(AddonToolCatalog(addons))
+                },
+            )
+        toolCatalogCache = toolCatalog
         val toolBridge =
             EditorToolGatewayBridge(
                 editor = editor,
@@ -767,6 +804,7 @@ class SongyanInputMethodService : InputMethodService() {
                 voiceInputHost = voiceInputHost,
                 extensionPanels = ::addonPanelEntries,
                 onOpenExtensionPanel = { packageName -> addonPanel?.open(packageName) },
+                onMenuOpening = { refreshKeyboardTools() },
             )
         controller?.retire()
         controller = pad
@@ -831,6 +869,7 @@ class SongyanInputMethodService : InputMethodService() {
             insets
         }
         renderRuntimeState()
+        refreshKeyboardTools()
         return container
     }
 
@@ -934,6 +973,9 @@ class SongyanInputMethodService : InputMethodService() {
         super.onStartInputView(info, restarting)
         // A panel belonged to the editor that was focused before; the new show starts on the keys.
         addonPanel?.close()
+        // The 扩展 page may have enabled an extension since the last scan; the next menu open must
+        // show it without restarting the input-method process.
+        refreshKeyboardTools()
         snapshotJob?.cancel()
         ImePerf.refresh()
         ImePerf.showStart()

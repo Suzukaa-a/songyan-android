@@ -91,6 +91,8 @@ class KeyboardController(
     internal val extensionPanels: () -> List<Pair<String, String>> = { emptyList() },
     /** The user picked one of those panels from the input-method menu. */
     internal val onOpenExtensionPanel: (String) -> Unit = {},
+    /** The input-method menu is about to open: re-read what its extension rows come from. */
+    internal val onMenuOpening: () -> Unit = {},
 ) {
     internal val keyNames = KeyNames(context)
 
@@ -1168,6 +1170,26 @@ class KeyboardController(
         callbacks.panelsChanged(true)
     }
 
+    /**
+     * Replaces the extension rows of an already open menu. The service re-reads the registry off
+     * the main thread when the menu opens; the scan can finish after the menu was built, and the
+     * rows then have to appear without the user closing and reopening the menu.
+     */
+    fun refreshExtensionMenu() {
+        if (!menuOpen) return
+        menu.setExtensionPanels(extensionPanels())
+    }
+
+    /**
+     * The tool catalog snapshot was refreshed off the main thread: rebuild the toolbar so a tool
+     * entry that appeared (or disappeared) does not wait for the next keystroke.
+     */
+    fun onToolCatalogRefreshed() {
+        if (retired) return
+        syncToolbar()
+        render()
+    }
+
     /** Opens the in-keyboard settings panel (from the input-method menu). */
     fun openKeyboardSettingsPanel() {
         val quick = panels ?: return
@@ -1252,6 +1274,9 @@ class KeyboardController(
 
     internal fun openKeyboardMenu() {
         if (retired || menuOpen) return
+        // The extension list is written by the 扩展 page; re-read it off the main thread so the
+        // rows below reflect the latest enable even when the scan at keyboard show raced it.
+        onMenuOpening()
         // Finish the settings panel's visual exit before the menu replaces the same surface.
         panels?.settle()
         syncMenu()

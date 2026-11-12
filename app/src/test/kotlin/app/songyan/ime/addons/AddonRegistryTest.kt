@@ -197,6 +197,39 @@ class AddonRegistryTest {
         }
 
     @Test
+    fun refreshOnKeyboardShowPicksUpAnEnableWrittenByAnotherRegistry() =
+        runTest {
+            val directory = temporary.newFolder("addons").also { it.mkdirs() }
+            val keyboard =
+                registry(
+                    AddonStore(directory),
+                    FakeDiscovery(listOf(facts("app.one"))),
+                    FakeNegotiator(mapOf("app.one" to AddonNegotiation.Answered(handshake("uppercase")))),
+                    CoroutineScope(StandardTestDispatcher(testScheduler)),
+                )
+            // The keyboard process starts disabled: settings has not enabled anything yet.
+            keyboard.scan(negotiate = false)
+            assertTrue(AddonMenu.entries(keyboard).isEmpty())
+
+            // The 扩展 page is its own registry (a future build may run it in its own process); it
+            // writes the enable and the handshake cache to the shared state file.
+            val settings =
+                registry(
+                    AddonStore(directory),
+                    FakeDiscovery(listOf(facts("app.one"))),
+                    FakeNegotiator(mapOf("app.one" to AddonNegotiation.Answered(handshake("uppercase")))),
+                    CoroutineScope(StandardTestDispatcher(testScheduler)),
+                )
+            settings.scan(negotiate = true)
+            assertTrue(settings.setEnabled("app.one", true))
+
+            // The next keyboard show re-reads the file: the menu rows appear without a restart.
+            assertTrue(AddonMenu.entries(keyboard).isEmpty())
+            keyboard.refreshOnKeyboardShow()
+            assertEquals(listOf("app.one" to "one"), AddonMenu.entries(keyboard))
+        }
+
+    @Test
     fun aCacheThatCannotBeWrittenDoesNotBreakTheScan() =
         runTest {
             val directory = temporary.newFolder("addons")

@@ -199,6 +199,9 @@ class ToolbarView(
                 KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
         }
 
+    /** The entries currently drawn; the keyboard's render tests read this instead of private state. */
+    internal fun actionsForTest(): List<Action> = entries()
+
     override val itemCount: Int
         get() = notice?.items?.size ?: if (chip != null) CHIP_ITEMS else entries().size
 

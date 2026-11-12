@@ -51,7 +51,7 @@ internal data class AddonEntry(
  * binding anything; a fresh process starts from the cached handshakes in [AddonStore].
  */
 internal class AddonRegistry(
-    private val store: AddonStore,
+    private val store: AddonStateStore,
     private val discovery: AddonDiscovery,
     private val negotiator: AddonNegotiator,
     private val hostInfo: () -> AddonHostInfo,
@@ -75,6 +75,17 @@ internal class AddonRegistry(
         if (warmJob?.isActive == true) return
         warmJob = scope.launch { runCatching { scan(negotiate = false) } }
     }
+
+    /**
+     * Re-reads the state file and the installed packages when the keyboard becomes visible again.
+     *
+     * The 扩展 page runs in the same app but its enable may have been written after this process
+     * last scanned (and a future build may put settings in its own process), so a snapshot taken at
+     * process start is not enough for the input-method menu's extension section. discovery and the
+     * file read happen off the main thread; binding nothing keeps this cheap.
+     */
+    suspend fun refreshOnKeyboardShow(): List<AddonEntry> =
+        runCatching { scan(negotiate = false) }.getOrElse { entries() }
 
     /**
      * Reads the installed extensions. With [negotiate] every extension is bound and asked for its
@@ -224,7 +235,10 @@ internal object AddonRegistryHolder {
 internal fun createAddonRegistry(context: Context): AddonRegistry {
     val appContext = context.applicationContext
     return AddonRegistry(
-        store = AddonStore(File(appContext.filesDir, "addons")),
+        // Lazy: resolving the app's files directory is a disk access, and this factory is called
+        // from Application.onCreate on the main thread. The first real read/write runs on the
+        // registry's IO dispatcher, where touching the directory is allowed.
+        store = LazyAddonStore { File(appContext.filesDir, "addons") },
         discovery = AndroidAddonDiscovery(appContext),
         negotiator = AddonHostNegotiator(appContext),
         hostInfo = { AddonHostInfo.forHost(appContext) },

@@ -54,10 +54,10 @@ internal data class StoredAddonState(
  */
 internal class AddonStore(
     directory: File,
-) {
+) : AddonStateStore {
     private val file = File(directory, "addons.json")
 
-    fun read(): StoredAddonState {
+    override fun read(): StoredAddonState {
         if (!file.isFile) return StoredAddonState()
         val root =
             runCatching { Json.parseToJsonElement(file.readText()).jsonObject }.getOrNull()
@@ -112,7 +112,7 @@ internal class AddonStore(
     }
 
     /** Writes atomically; false when the file could not be replaced (the previous file stays). */
-    fun write(state: StoredAddonState): Boolean {
+    override fun write(state: StoredAddonState): Boolean {
         val directory = file.parentFile ?: return false
         if (!directory.isDirectory && !directory.mkdirs()) return false
         val text =
@@ -191,4 +191,26 @@ internal class AddonStore(
 
     private fun JsonObject.boolean(key: String): Boolean? =
         runCatching { this[key]?.jsonPrimitive?.booleanOrNull }.getOrNull()
+}
+
+/** The state file as the registry sees it; replaceable so a test can count reads. */
+internal interface AddonStateStore {
+    fun read(): StoredAddonState
+
+    fun write(state: StoredAddonState): Boolean
+}
+
+/**
+ * The production store, resolved on first use. The directory is handed in as a lambda so creating
+ * the registry does not call [android.content.Context.getFilesDir] (a disk access) on whatever
+ * thread builds the registry: the service creates it in Application.onCreate, on the main thread.
+ */
+internal class LazyAddonStore(
+    private val directory: () -> File,
+) : AddonStateStore {
+    private val delegate: AddonStore by lazy { AddonStore(directory()) }
+
+    override fun read(): StoredAddonState = delegate.read()
+
+    override fun write(state: StoredAddonState): Boolean = delegate.write(state)
 }

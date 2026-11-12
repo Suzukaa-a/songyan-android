@@ -32,7 +32,7 @@ oneway interface ScriptProxy {
     // Re-fetches a link origin; the reply entry carries confirmationPending when declarations moved.
     void checkUpdate(String id, app.songyan.ime.script.ScriptProxyCallback reply);
 
-    void runForTest(String id, String text, app.songyan.ime.script.ScriptProxyCallback reply);
+    void runTrial(String id, String text, app.songyan.ime.script.ScriptProxyCallback reply);
 
     void run(String id, String text, app.songyan.ime.script.ScriptProxyCallback reply);
 

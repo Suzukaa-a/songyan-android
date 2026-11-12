@@ -1,5 +1,7 @@
-# Debug builds additionally export the CLI test entry (runCli) and the fopen interposer the
-# case harness needs; see the version note below. Production exports only the guard.
+# Production exports only the guard and the JNI entry points. Debug builds additionally compile
+# the CLI test entry (Java_app_songyan_ime_script_ScriptNative_runCli), which the wildcard below
+# exports; it has no symbol in a release engine. The fopen interposer is called inside this DSO
+# and is deliberately local.
 {
   global:
     JNI_OnLoad;

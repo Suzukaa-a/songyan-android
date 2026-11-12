@@ -171,7 +171,7 @@ class VoiceInputViewModelTest {
 
         override suspend fun delete(id: String) = throw ScriptRegistryUnavailable()
 
-        override suspend fun runForTest(
+        override suspend fun runTrial(
             id: String,
             text: String,
         ): ScriptRunOutcome = ScriptRunOutcome.Failed("unavailable", "", 0)

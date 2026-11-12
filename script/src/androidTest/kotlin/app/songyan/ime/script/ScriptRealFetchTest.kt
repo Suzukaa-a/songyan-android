@@ -86,7 +86,7 @@ class ScriptRealFetchTest {
                         ScriptSourceOrigin.Pasted,
                     )
                 registry.confirm(entry.id, emptyMap())
-                val outcome = registry.runForTest(entry.id, "")
+                val outcome = registry.runTrial(entry.id, "")
                 android.util.Log.d("RealFetch", "outcome=" + outcome)
                 assertTrue("the run succeeds: " + outcome, outcome is ScriptRunOutcome.Success)
                 assertEquals(listOf("你好，来自回环"), (outcome as ScriptRunOutcome.Success).outputs)
@@ -115,7 +115,7 @@ class ScriptRealFetchTest {
                         ScriptSourceOrigin.Pasted,
                     )
                 registry.confirm(entry.id, emptyMap())
-                val outcome = registry.runForTest(entry.id, "")
+                val outcome = registry.runTrial(entry.id, "")
                 assertTrue(outcome is ScriptRunOutcome.Failed)
                 assertEquals("addressNotAllowed", (outcome as ScriptRunOutcome.Failed).code)
                 registry.delete(entry.id)

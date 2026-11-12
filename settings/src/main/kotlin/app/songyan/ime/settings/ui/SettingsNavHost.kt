@@ -266,6 +266,7 @@ private fun NavGraphBuilder.settingsGraph(
     versionName: String?,
     navController: NavHostController,
     homeQuery: MutableState<String>,
+    scriptsViewModel: ScriptsViewModel,
 ) {
     composable(SettingsRoutes.HOME) {
         if (LocalTwoPane.current) {
@@ -671,6 +672,7 @@ private fun NavGraphBuilder.settingsGraph(
             onBack = topBack(navController),
             onOpen = { id -> navController.navigate(SettingsRoutes.scriptDetail(id)) },
             onOpenConfirmation = { id -> navController.navigate(SettingsRoutes.scriptConfirm(id)) },
+            viewModel = scriptsViewModel,
         )
     }
 
@@ -682,6 +684,7 @@ private fun NavGraphBuilder.settingsGraph(
             scriptId = entry.arguments?.getString("id").orEmpty(),
             onBack = { navController.popBackStack() },
             onOpenConfirmation = { id -> navController.navigate(SettingsRoutes.scriptConfirm(id)) },
+            viewModel = scriptsViewModel,
         )
     }
 
@@ -692,6 +695,7 @@ private fun NavGraphBuilder.settingsGraph(
         ScriptConfirmScreen(
             scriptId = entry.arguments?.getString("id").orEmpty(),
             onDone = { navController.popBackStack() },
+            viewModel = scriptsViewModel,
         )
     }
 
@@ -927,6 +931,7 @@ fun SettingsNavHost(
     target: SettingsTarget? = null,
     onTargetHandled: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
+    scriptsViewModel: ScriptsViewModel? = null,
 ) = SettingsHost(
     viewModel = viewModel,
     versionName = versionName,
@@ -938,6 +943,7 @@ fun SettingsNavHost(
             Posture(),
         ),
     navController = navController,
+    scriptsViewModel = scriptsViewModel,
 )
 
 /** A phone-sized window for [SettingsNavHost]: only the width class matters to the layout. */
@@ -959,7 +965,12 @@ private fun SettingsPanes(
     versionName: String?,
     adaptiveInfo: WindowAdaptiveInfo,
     navController: NavHostController,
+    injectedScriptsViewModel: ScriptsViewModel? = null,
 ) {
+    // One scripts view model for the list, the detail page and the confirmation page: the list
+    // loads the catalog once, and the pages opened from it read the same state. A view model of
+    // their own would start empty and could not tell "still loading" from "the script is gone".
+    val scriptsViewModel = injectedScriptsViewModel ?: viewModel(factory = ScriptsViewModel.Factory())
     // A medium window shows one pane of a list-detail scaffold at a time, so the pane count, not
     // the width class, decides whether the list stands beside the page. The scaffold would also
     // focus the first focusable in its current pane whenever it is composed, and on home that is
@@ -983,6 +994,21 @@ private fun SettingsPanes(
     val homeQuery = rememberSaveable { mutableStateOf("") }
     val entry by navController.currentBackStackEntryAsState()
     val selected = SettingsRoutes.topLevelOf(entry?.destination?.route)
+    // The scripts pages share one view model, and an import asks for the confirmation page by
+    // storing the entry as pending. The request is answered here, above the NavHost: the list can
+    // leave composition while the import settles (a dialog closing, the IME hiding), and a
+    // navigate issued from a screen that is leaving can be lost on a real device. The request
+    // ends when the confirmation destination is on top, so a navigation that is still starting is
+    // never consumed before it arrived.
+    val scriptsState by scriptsViewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(scriptsState.pendingConfirmation, entry?.destination?.route) {
+        val pending = scriptsState.pendingConfirmation ?: return@LaunchedEffect
+        if (entry?.destination?.route == SettingsRoutes.SCRIPT_CONFIRM) {
+            scriptsViewModel.consumePendingConfirmation()
+        } else {
+            navController.navigate(SettingsRoutes.scriptConfirm(pending.id)) { launchSingleTop = true }
+        }
+    }
     val slidePx = with(LocalDensity.current) { SettingsMotion.SLIDE_DP.dp.roundToPx() }
     // The detail pane is always the destination: on one pane it is the only one shown.
     val navigator =
@@ -1074,7 +1100,7 @@ private fun SettingsPanes(
                             }
                         },
                     ) {
-                        settingsGraph(viewModel, state, versionName, navController, homeQuery)
+                        settingsGraph(viewModel, state, versionName, navController, homeQuery, scriptsViewModel)
                     }
                 }
             },
@@ -1096,12 +1122,13 @@ fun SettingsHost(
     onTargetHandled: () -> Unit = {},
     adaptiveInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo(),
     navController: NavHostController = rememberNavController(),
+    scriptsViewModel: ScriptsViewModel? = null,
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val editorNavigation = remember { EditorNavigationController() }
     CompositionLocalProvider(LocalEditorNavigationGuard provides editorNavigation) {
         SettingsEffects(viewModel, state.value, navController, target, onTargetHandled)
-        SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController)
+        SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController, scriptsViewModel)
         EditorNavigationConfirmation(editorNavigation)
     }
 }

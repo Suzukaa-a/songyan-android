@@ -789,7 +789,7 @@ class ScriptsViewModelTest {
             entries = stored.toList()
         }
 
-        override suspend fun runForTest(
+        override suspend fun runTrial(
             id: String,
             text: String,
         ): ScriptRunOutcome {
@@ -801,12 +801,12 @@ class ScriptsViewModelTest {
         override suspend fun run(
             id: String,
             text: String,
-        ): ScriptRunOutcome = runForTest(id, text)
+        ): ScriptRunOutcome = runTrial(id, text)
 
         override suspend fun runAudio(
             id: String,
             wav: ByteArray,
-        ): ScriptRunOutcome = runForTest(id, wav.size.toString())
+        ): ScriptRunOutcome = runTrial(id, wav.size.toString())
 
         override suspend fun cancel(id: String) {
             cancels += id

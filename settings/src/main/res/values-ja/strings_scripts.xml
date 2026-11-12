@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">スクリプト</string>
-    <string name="row_scripts_subtitle">1 ファイルの便利ツール：文字を入れて文字を取り出す</string>
+    <string name="row_scripts_subtitle">1 ファイルで完結するツール：文字を受け取り、文字を返します</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">スクリプト</string>
@@ -25,12 +25,12 @@
     <string name="scripts_add_paste">スクリプトの文字を貼り付け</string>
     <string name="scripts_add_file">ファイルを選択</string>
     <string name="scripts_add_link">HTTPS リンクから</string>
-    <string name="scripts_add_editor">ここで書く</string>
+    <string name="scripts_add_editor">ここでスクリプトを書く</string>
     <string name="scripts_add_paste_title">スクリプトを貼り付け</string>
     <string name="scripts_add_paste_label">スクリプトの文字</string>
     <string name="scripts_add_link_title">リンクから追加</string>
     <string name="scripts_add_link_label">HTTPS リンク</string>
-    <string name="scripts_add_link_body">リンクは今 1 回だけダウンロードされます。更新は自分で頼んだときだけ確認します。</string>
+    <string name="scripts_add_link_body">リンクは追加時に一度だけダウンロードされます。更新は自分で確認したときだけ行います。</string>
     <string name="scripts_import_failed_title">読み込まれませんでした</string>
 
     <!-- Empty state -->
@@ -47,13 +47,14 @@
     <string name="scripts_confirm_section_what">これは何か</string>
     <string name="scripts_confirm_name">名前</string>
     <string name="scripts_confirm_reads">読み取れるもの</string>
-    <string name="scripts_confirm_reads_body">実行時に選択した文字だけです。</string>
+    <string name="scripts_confirm_reads_body">実行時に選択した文字を読み取ります。選択していないときは、カーソル前の文を読み取ります。</string>
+    <string name="scripts_confirm_reads_audio">実行中に録音し（マイクが必要です）、その録音をスクリプトに渡します。スクリプトはほかの入力を見られません。</string>
     <string name="scripts_confirm_section_connects">接続できるサイト</string>
     <string name="scripts_confirm_connects_none">宣言されたサイトはありません</string>
     <string name="scripts_confirm_connects_none_body">このスクリプトはネットワークに接続しません。</string>
     <string name="scripts_confirm_section_settings">入力を求める設定</string>
     <string name="scripts_confirm_action">確認</string>
-    <string name="scripts_confirm_note">上の内容を読んでから確認してください。シークレットはこの端末にのみ保存され、共有ファイルには含まれません。</string>
+    <string name="scripts_confirm_note">上の内容を読んでから確認してください。シークレットはこの端末にのみ保存され、共有する内容には含まれません。</string>
     <string name="scripts_pending_title">確認が必要です</string>
     <string name="scripts_pending_body">このスクリプトの宣言が変わりました。使う前にもう一度お読みください。</string>
     <string name="scripts_unavailable_title">この端末では利用できません</string>
@@ -105,7 +106,7 @@
     <string name="scripts_error_bad_header">ファイル先頭の宣言が正しくありません。</string>
     <string name="scripts_error_unsupported_api">このスクリプトには新しいバージョンの松煙が必要です。</string>
     <string name="scripts_error_capability">このスクリプトが必要とする入力をこのキーボードは提供できません。</string>
-    <string name="scripts_error_unavailable">スクリプトのホストがインストールされていません。</string>
+    <string name="scripts_error_unavailable">スクリプトサービスを利用できません。松煙を更新するか、インストールし直してください。</string>
     <string name="scripts_error_generic">スクリプトが失敗しました：%1$s</string>
     <string name="scripts_error_at_line">%1$s（%2$d 行目）</string>
 </resources>

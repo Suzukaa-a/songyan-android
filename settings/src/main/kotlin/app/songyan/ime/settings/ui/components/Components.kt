@@ -1,5 +1,8 @@
 package app.songyan.ime.settings.ui.components
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -45,12 +48,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -58,6 +63,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import app.songyan.ime.settings.R
 
 /**
@@ -390,6 +397,27 @@ fun LoadingScreen(
         }
     }
 }
+
+/**
+ * Takes the soft keyboard down as a page appears. A page opened right after a dialog or a text
+ * field can still have the IME up; its window then sits over the page and can swallow the first
+ * tap on a button near the bottom. On a page with no keyboard showing this does nothing.
+ */
+@Composable
+fun HideKeyboardOnEnter() {
+    val view = LocalView.current
+    LaunchedEffect(view) {
+        val activity = view.context.findActivity() ?: return@LaunchedEffect
+        WindowCompat.getInsetsController(activity.window, view).hide(WindowInsetsCompat.Type.ime())
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
 
 /**
  * A dialog that holds a text field. It sits above the on-screen keyboard instead of behind it:

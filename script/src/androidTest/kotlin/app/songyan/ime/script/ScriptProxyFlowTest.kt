@@ -36,14 +36,24 @@ class ScriptProxyFlowTest {
             val entry = registry.add(source, ScriptSourceOrigin.Pasted)
             assertEquals("加书名号", entry.name)
             assertTrue("fresh imports wait for confirmation", entry.confirmationPending)
+            // The cache every screen renders from must show the import right away; the confirmation
+            // page is opened by id from it, and a stale cache used to pop that page.
+            assertTrue(
+                "the cache lists the fresh import",
+                registry.entries.any { it.id == entry.id },
+            )
 
             val confirmed = registry.confirm(entry.id, emptyMap())
             assertTrue("confirmation clears the pending flag", !confirmed.confirmationPending)
+            assertTrue(
+                "the cache shows the confirmation",
+                registry.entries.first { it.id == entry.id }.confirmationPending == false,
+            )
 
             val enabled = registry.setEnabled(entry.id, true)
             assertTrue(enabled.enabled)
 
-            val outcome = registry.runForTest(entry.id, "测试")
+            val outcome = registry.runTrial(entry.id, "测试")
             assertTrue("the run succeeds: " + outcome, outcome is ScriptRunOutcome.Success)
             assertEquals(listOf("「测试」"), (outcome as ScriptRunOutcome.Success).outputs)
 

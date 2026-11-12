@@ -24,7 +24,12 @@ class ScriptCatalogCache(
     // Resolved on first use: constructing the cache happens on the main thread when the keyboard
     // view is built, and getFilesDir creates the private directory on first call.
     private val snapshotFile by lazy { File(appContext.filesDir, "script/catalog-snapshot.json") }
+
+    // Written by the keyboard's IO preload, read by the main-thread voice list.
+    @Volatile
     private var cachedAt: Long = -1
+
+    @Volatile
     private var cached: List<ScriptEntry> = emptyList()
 
     /** The catalog as of the last proxy write; empty when nothing is installed yet. */

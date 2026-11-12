@@ -13,19 +13,19 @@ REPO = Path(__file__).resolve().parents[2]
 CHECK = REPO / "scripts" / "check-instrumented-results.py"
 
 
-def suite_xml(tests: int, failures: int = 0) -> str:
+def suite_xml(tests: int, failures: int = 0, skipped: int = 0) -> str:
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        f'<testsuites><testsuite name="suite" tests="{tests}" failures="{failures}" errors="0"/></testsuites>'
+        f'<testsuites><testsuite name="suite" tests="{tests}" failures="{failures}" errors="0" skipped="{skipped}"/></testsuites>'
     )
 
 
 class InstrumentedResultsCheckTest(unittest.TestCase):
-    def run_check(self, minimum, content):
+    def run_check(self, minimum, content, *flags):
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / "result.xml").write_text(content, encoding="utf-8")
             return subprocess.run(
-                [sys.executable, str(CHECK), str(minimum), directory],
+                [sys.executable, str(CHECK), *flags, str(minimum), directory],
                 capture_output=True,
                 text=True,
             )
@@ -54,6 +54,16 @@ class InstrumentedResultsCheckTest(unittest.TestCase):
         result = self.run_check(1, suite_xml(3, failures=1))
         self.assertEqual(result.returncode, 1)
         self.assertIn("1 failure", result.stderr)
+
+    def test_skipped_tests_pass_unless_asked(self):
+        result = self.run_check(1, suite_xml(3, skipped=2))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2 skipped", result.stdout)
+
+    def test_skipped_tests_fail_with_no_skips(self):
+        result = self.run_check(1, suite_xml(3, skipped=1), "--no-skips")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("must run them all", result.stderr)
 
 
 if __name__ == "__main__":

@@ -114,8 +114,10 @@ class ToolPanelView(
                 if (state.canUndo) addAction(R.string.ime_tool_panel_undo) { onUndo() }
             }
             ToolPhase.FAILED -> {
-                status.setText(failureText(state.failure))
-                // Retry: the tools are offered again after a failure.
+                status.setText(failureText(state))
+                // An explicit retry re-runs the failed tool; the list below still offers the
+                // others, so a failure never leaves the user with Close only.
+                state.tool?.let { failed -> addAction(R.string.ime_tool_panel_retry) { onRun(failed) } }
                 state.tools.forEach { tool ->
                     val row = Button(context)
                     row.text = tool.title
@@ -164,20 +166,37 @@ class ToolPanelView(
             WriteBlockReason.UNSUPPORTED_INSERTION -> R.string.ime_tool_panel_selection
         }
 
-    private fun failureText(failure: ToolFailure?): Int =
-        when (failure) {
-            is ToolFailure.Unavailable ->
-                when (failure.reason) {
-                    UnavailableReason.SECURE_ENTRY -> R.string.ime_tool_panel_unavailable
-                    UnavailableReason.NO_TEXT -> R.string.ime_tool_panel_no_text
-                    UnavailableReason.MISSING_CAPABILITIES -> R.string.ime_tool_panel_failed
-                }
-            ToolFailure.Cancelled -> R.string.ime_tool_panel_cancelled
-            ToolFailure.TimedOut -> R.string.ime_tool_panel_timeout
-            ToolFailure.NoResult -> R.string.ime_tool_panel_no_result
-            is ToolFailure.ToolError -> R.string.ime_tool_panel_failed
-            null -> R.string.ime_tool_panel_failed
+    /**
+     * The line under the panel title for a failed run. A tool's own words are shown as written and
+     * prefixed with the tool's title (a script's name): the user has to know which tool said it.
+     * The generic copy is only the fallback when the model carries neither.
+     */
+    private fun failureText(state: ToolPanelController.State): CharSequence {
+        val failed = state.failedToolCopy()
+        if (failed != null) {
+            return when {
+                failed.title != null && failed.message != null ->
+                    context.getString(R.string.ime_tool_panel_error_with_tool, failed.title, failed.message)
+                failed.message != null -> failed.message
+                else -> context.getString(R.string.ime_tool_panel_failed)
+            }
         }
+        return context.getString(
+            when (val failure = state.failure) {
+                is ToolFailure.Unavailable ->
+                    when (failure.reason) {
+                        UnavailableReason.SECURE_ENTRY -> R.string.ime_tool_panel_unavailable
+                        UnavailableReason.NO_TEXT -> R.string.ime_tool_panel_no_text
+                        UnavailableReason.MISSING_CAPABILITIES -> R.string.ime_tool_panel_failed
+                    }
+                ToolFailure.Cancelled -> R.string.ime_tool_panel_cancelled
+                ToolFailure.TimedOut -> R.string.ime_tool_panel_timeout
+                ToolFailure.NoResult -> R.string.ime_tool_panel_no_result
+                is ToolFailure.ToolError -> R.string.ime_tool_panel_failed
+                null -> R.string.ime_tool_panel_failed
+            },
+        )
+    }
 
     private fun addAction(
         label: Int,

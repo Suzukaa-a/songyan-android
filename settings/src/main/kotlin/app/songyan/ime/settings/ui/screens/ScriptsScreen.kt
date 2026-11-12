@@ -147,14 +147,6 @@ fun ScriptsScreen(
             }
         }
     }
-    // A stored script asks for its confirmation right away; the confirm page replaces this list
-    // until the user has seen what it declares.
-    LaunchedEffect(state.pendingConfirmation) {
-        val pending = state.pendingConfirmation ?: return@LaunchedEffect
-        onOpenConfirmation(pending.id)
-        viewModel.consumePendingConfirmation()
-    }
-
     var addOpen by rememberSaveable { mutableStateOf(false) }
     var addWay by rememberSaveable { mutableStateOf<AddWay?>(null) }
     var pastedText by rememberSaveable { mutableStateOf("") }
@@ -216,7 +208,10 @@ fun ScriptsScreen(
                         entry = entry,
                         first = index == 0,
                         last = index == ordered.lastIndex,
-                        onClick = { onOpen(entry.id) },
+                        // A script whose declarations the user has not confirmed yet has no page
+                        // of its own to show: the row goes to the confirmation that completes the
+                        // import instead. Confirmed scripts open their detail page as before.
+                        onClick = { if (entry.confirmationPending) onOpenConfirmation(entry.id) else onOpen(entry.id) },
                         onEnabled = { enabled -> viewModel.setEnabled(entry.id, enabled) },
                         onMove = { up -> viewModel.move(entry.id, up) },
                         onDelete = { deleting = entry.id },
@@ -233,15 +228,20 @@ fun ScriptsScreen(
             title = { Text(stringResource(R.string.scripts_add)) },
             text = {
                 Column {
+                    // Choosing a way closes this sheet and opens the way's own dialog; leaving it
+                    // open would put the sheet back over the page this flow navigates to.
                     AddWayRow(Icons.Outlined.ContentPaste, stringResource(R.string.scripts_add_paste)) {
-                        addWay =
-                            AddWay.PASTE
+                        addOpen = false
+                        addWay = AddWay.PASTE
                     }
                     AddWayRow(Icons.Outlined.UploadFile, stringResource(R.string.scripts_add_file)) {
                         addOpen = false
                         filePicker.launch(SCRIPT_FILE_TYPES)
                     }
-                    AddWayRow(Icons.Outlined.Link, stringResource(R.string.scripts_add_link)) { addWay = AddWay.LINK }
+                    AddWayRow(Icons.Outlined.Link, stringResource(R.string.scripts_add_link)) {
+                        addOpen = false
+                        addWay = AddWay.LINK
+                    }
                     AddWayRow(Icons.Outlined.Edit, stringResource(R.string.scripts_add_editor)) {
                         addOpen = false
                         editorOpen = true

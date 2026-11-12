@@ -386,7 +386,7 @@ class ScriptsViewModel(
             mutableTest.update { it?.copy(running = true) }
             val outcome =
                 try {
-                    registry.runForTest(state.entryId, state.input)
+                    registry.runTrial(state.entryId, state.input)
                 } catch (e: Exception) {
                     ScriptRunOutcome.Failed(failureOf(e).code, e.message ?: "", 0)
                 }

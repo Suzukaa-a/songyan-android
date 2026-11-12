@@ -25,19 +25,19 @@
     <string name="scripts_add_paste">貼上指令碼文字</string>
     <string name="scripts_add_file">選擇檔案</string>
     <string name="scripts_add_link">從 HTTPS 連結</string>
-    <string name="scripts_add_editor">在這裡寫一個</string>
+    <string name="scripts_add_editor">在這裡寫指令碼</string>
     <string name="scripts_add_paste_title">貼上指令碼</string>
     <string name="scripts_add_paste_label">指令碼文字</string>
     <string name="scripts_add_link_title">從連結新增</string>
     <string name="scripts_add_link_label">HTTPS 連結</string>
-    <string name="scripts_add_link_body">連結只會在現在下載一次。更新只在你要求時檢查。</string>
+    <string name="scripts_add_link_body">連結會在新增時下載一次。更新只在你主動檢查時才進行。</string>
     <string name="scripts_import_failed_title">未匯入</string>
 
     <!-- Empty state -->
     <string name="scripts_empty_title">還沒有指令碼</string>
-    <string name="scripts_empty_body">指令碼是一個單檔案：收到你選中的文字，返回處理後的文字。把說明覆制給 AI 讓它寫一個，或從下面的例子開始。</string>
+    <string name="scripts_empty_body">指令碼是一個單檔案：收到你選中的文字，返回處理後的文字。把說明複製給 AI 讓它寫一個，或從下面的例子開始。</string>
     <string name="scripts_copy_guide">複製給 AI 的說明</string>
-    <string name="scripts_guide_copied">說明已複製。貼上到和 AI 的對話裡即可。</string>
+    <string name="scripts_guide_copied">說明已複製。貼上到與 AI 的對話中即可。</string>
     <string name="scripts_guide_failed">讀取說明失敗，請重試。</string>
     <string name="scripts_guide_clipboard_label">給 AI 的說明</string>
     <string name="scripts_example_title">例子（不聯網）</string>
@@ -47,17 +47,18 @@
     <string name="scripts_confirm_section_what">它是什麼</string>
     <string name="scripts_confirm_name">名字</string>
     <string name="scripts_confirm_reads">能讀什麼</string>
-    <string name="scripts_confirm_reads_body">執行時你選中的文字，僅此而已。</string>
+    <string name="scripts_confirm_reads_body">執行時你選中的文字；沒有選中時，讀游標前的一段。</string>
+    <string name="scripts_confirm_reads_audio">執行時會錄音（需要麥克風），錄音交給這個指令碼；指令碼看不到其他輸入。</string>
     <string name="scripts_confirm_section_connects">會連的網站</string>
-    <string name="scripts_confirm_connects_none">沒有宣告網站</string>
+    <string name="scripts_confirm_connects_none">沒有宣告任何網站</string>
     <string name="scripts_confirm_connects_none_body">這個指令碼不會連線網路。</string>
     <string name="scripts_confirm_section_settings">要填的設定</string>
     <string name="scripts_confirm_action">確認</string>
-    <string name="scripts_confirm_note">讀完上面的清單再確認。金鑰只存在這臺裝置上，不會寫進分享出去的檔案。</string>
+    <string name="scripts_confirm_note">讀完上面的清單再確認。金鑰只存在這臺裝置上，不會包含在分享內容裡。</string>
     <string name="scripts_pending_title">需要確認</string>
     <string name="scripts_pending_body">這個指令碼的宣告變了。使用前請再讀一遍。</string>
     <string name="scripts_unavailable_title">在這臺裝置上不可用</string>
-    <string name="scripts_unavailable_body">這個指令碼需要的輸入是此鍵盤無法提供的，所以在這裡無法執行。</string>
+    <string name="scripts_unavailable_body">此鍵盤無法提供這個指令碼需要的輸入，因此它無法在這裡執行。</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">文字</string>
@@ -87,7 +88,7 @@
     <string name="scripts_editor_save">儲存</string>
     <string name="scripts_editor_body">指令碼按編輯後的內容儲存。新的宣告需要再次確認才會執行。</string>
     <string name="scripts_delete_title">刪除這個指令碼？</string>
-    <string name="scripts_delete_body">%1$s 會從這臺裝置移除，無法撤銷。</string>
+    <string name="scripts_delete_body">%1$s 將從這臺裝置移除，無法撤銷。</string>
     <string name="scripts_delete_confirm">刪除</string>
 
     <!-- Notices -->
@@ -105,7 +106,7 @@
     <string name="scripts_error_bad_header">檔案開頭的宣告不合法。</string>
     <string name="scripts_error_unsupported_api">這個指令碼需要更新版本的松煙輸入法。</string>
     <string name="scripts_error_capability">這個指令碼需要的輸入是此鍵盤無法提供的。</string>
-    <string name="scripts_error_unavailable">指令碼宿主未安裝。</string>
+    <string name="scripts_error_unavailable">指令碼服務不可用，請更新或重新安裝松煙。</string>
     <string name="scripts_error_generic">指令碼失敗：%1$s</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

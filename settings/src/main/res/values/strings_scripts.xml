@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">Scripts</string>
-    <string name="row_scripts_subtitle">One-file helpers: text in, text out</string>
+    <string name="row_scripts_subtitle">Single-file helpers: text in, text out</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">Scripts</string>
@@ -25,12 +25,12 @@
     <string name="scripts_add_paste">Paste script text</string>
     <string name="scripts_add_file">Choose a file</string>
     <string name="scripts_add_link">From an HTTPS link</string>
-    <string name="scripts_add_editor">Write one here</string>
+    <string name="scripts_add_editor">Write a script here</string>
     <string name="scripts_add_paste_title">Paste the script</string>
     <string name="scripts_add_paste_label">Script text</string>
     <string name="scripts_add_link_title">Add from a link</string>
     <string name="scripts_add_link_label">HTTPS link</string>
-    <string name="scripts_add_link_body">The link is downloaded once, now. Updates are checked only when you ask.</string>
+    <string name="scripts_add_link_body">The link is downloaded once when you add it. Updates are checked only when you ask.</string>
     <string name="scripts_import_failed_title">Not imported</string>
 
     <!-- Empty state -->
@@ -47,17 +47,18 @@
     <string name="scripts_confirm_section_what">What it is</string>
     <string name="scripts_confirm_name">Name</string>
     <string name="scripts_confirm_reads">What it can read</string>
-    <string name="scripts_confirm_reads_body">The text you select when you run it. Nothing else.</string>
+    <string name="scripts_confirm_reads_body">The text you select when you run it; with nothing selected, the text before the cursor.</string>
+    <string name="scripts_confirm_reads_audio">It records while it runs (the microphone is needed) and hands the recording to the script; the script sees no other input.</string>
     <string name="scripts_confirm_section_connects">Sites it may connect to</string>
     <string name="scripts_confirm_connects_none">No sites declared</string>
     <string name="scripts_confirm_connects_none_body">This script never connects to the network.</string>
-    <string name="scripts_confirm_section_settings">Settings it asks for</string>
+    <string name="scripts_confirm_section_settings">Settings it needs</string>
     <string name="scripts_confirm_action">Confirm</string>
-    <string name="scripts_confirm_note">Confirm only after reading the list above. Secrets stay on this device and are never included in a share.</string>
+    <string name="scripts_confirm_note">Confirm only after reading the list above. Secrets stay on this device and are never included in what you share.</string>
     <string name="scripts_pending_title">Needs confirmation</string>
     <string name="scripts_pending_body">What this script declares has changed. Read it again before using it.</string>
     <string name="scripts_unavailable_title">Not available on this device</string>
-    <string name="scripts_unavailable_body">This script needs an input this keyboard cannot offer, so it cannot run here.</string>
+    <string name="scripts_unavailable_body">This keyboard cannot provide the input this script needs, so it cannot run here.</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">Text</string>
@@ -105,7 +106,7 @@
     <string name="scripts_error_bad_header">The file\'s header declarations are not valid.</string>
     <string name="scripts_error_unsupported_api">This script needs a newer version of Songyan.</string>
     <string name="scripts_error_capability">This script needs an input this keyboard cannot offer.</string>
-    <string name="scripts_error_unavailable">The script host is not installed.</string>
+    <string name="scripts_error_unavailable">The script service is unavailable. Update or reinstall Songyan.</string>
     <string name="scripts_error_generic">The script failed: %1$s</string>
     <string name="scripts_error_at_line">%1$s (line %2$d)</string>
 </resources>

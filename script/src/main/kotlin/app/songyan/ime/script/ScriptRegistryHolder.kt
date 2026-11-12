@@ -59,7 +59,7 @@ private class UnavailableScriptRegistry : ScriptRegistry {
 
     override suspend fun delete(id: String) = throw ScriptRegistryUnavailable()
 
-    override suspend fun runForTest(
+    override suspend fun runTrial(
         id: String,
         text: String,
     ): ScriptRunOutcome = ScriptRunOutcome.Failed("unavailable", "the script host is not installed", 0)

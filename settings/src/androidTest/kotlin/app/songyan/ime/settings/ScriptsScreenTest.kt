@@ -3,6 +3,7 @@
 package app.songyan.ime.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,12 +29,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import app.songyan.ime.script.ScriptEntry
-import app.songyan.ime.script.ScriptHeader
-import app.songyan.ime.script.ScriptRegistry
-import app.songyan.ime.script.ScriptRunOutcome
-import app.songyan.ime.script.ScriptSettingField
-import app.songyan.ime.script.ScriptSettingKind
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.songyan.ime.script.ScriptSourceOrigin
 import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.screens.ScriptConfirmScreen
@@ -52,7 +48,7 @@ import org.junit.Test
  * the user back to confirmation when the declarations changed.
  *
  * The screens take their ViewModel from the caller and the ViewModel takes the registry, so the
- * [FakeScriptRegistry] below replaces the proxy process: no engine, no network, no storage.
+ * package-level [FakeScriptRegistry] replaces the proxy process: no engine, no network, no storage.
  */
 class ScriptsScreenTest {
     @get:Rule
@@ -234,6 +230,24 @@ class ScriptsScreenTest {
     }
 
     @Test
+    fun aTextScriptConfirmationSaysWhatItReads() {
+        val registry = FakeScriptRegistry().apply { store(declaredEntry(pending = true)) }
+        showConfirmation(registry)
+
+        waitForOne(hasText(str(R.string.scripts_confirm_reads_body)))
+        compose.onNodeWithText(str(R.string.scripts_confirm_reads_audio)).assertDoesNotExist()
+    }
+
+    @Test
+    fun aVoiceScriptConfirmationSaysItRecords() {
+        val registry = FakeScriptRegistry().apply { store(declaredEntry(pending = true, needsAudio = true)) }
+        showConfirmation(registry)
+
+        waitForOne(hasText(str(R.string.scripts_confirm_reads_audio)))
+        compose.onNodeWithText(str(R.string.scripts_confirm_reads_body)).assertDoesNotExist()
+    }
+
+    @Test
     fun aSecretFieldIsAMaskedInputWithARevealToggle() {
         val registry =
             FakeScriptRegistry().apply {
@@ -332,6 +346,18 @@ class ScriptsScreenTest {
     private fun ScriptsFlow(viewModel: ScriptsViewModel) {
         var stack by remember { mutableStateOf(listOf(ScriptsPage.LIST)) }
         var scriptId by remember { mutableStateOf("") }
+        // What SettingsNavHost does in production: an import asks for the confirmation page
+        // through the shared state, and the host navigates once the request stands.
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        LaunchedEffect(state.pendingConfirmation, stack.last()) {
+            val pending = state.pendingConfirmation ?: return@LaunchedEffect
+            if (stack.last() == ScriptsPage.CONFIRM) {
+                viewModel.consumePendingConfirmation()
+            } else {
+                scriptId = pending.id
+                stack = stack + ScriptsPage.CONFIRM
+            }
+        }
         SongyanTheme(dynamicColor = false) {
             when (stack.last()) {
                 ScriptsPage.LIST ->
@@ -372,176 +398,4 @@ class ScriptsScreenTest {
     private enum class ScriptsPage { LIST, DETAIL, CONFIRM }
 
     private fun passwordField(): SemanticsMatcher = SemanticsMatcher.keyIsDefined(SemanticsProperties.Password)
-
-    // --- the fake registry and its fixtures ---
-
-    /**
-     * The registry the screens talk to. Every call is recorded so the test can assert what the UI
-     * handed over; [imported] is what the next import produces, [checkedUpdate] what an update
-     * check brings back. Like the store, the first confirmation turns a script on, while a
-     * re-confirmation after an update keeps the switch as the user left it.
-     */
-    private class FakeScriptRegistry : ScriptRegistry {
-        private val stored = mutableListOf<ScriptEntry>()
-        private val confirmedBefore = mutableSetOf<String>()
-
-        override var entries: List<ScriptEntry> = emptyList()
-            private set
-
-        override val refreshing: Boolean = false
-
-        var imported: ScriptEntry = declaredEntry()
-        var checkedUpdate: ScriptEntry? = null
-        var confirmGate: CompletableDeferred<Unit>? = null
-
-        val adds = mutableListOf<Pair<ByteArray, ScriptSourceOrigin>>()
-        val links = mutableListOf<String>()
-        val confirms = mutableListOf<Pair<String, Map<String, String>>>()
-        val enabled = mutableListOf<Pair<String, Boolean>>()
-        val updates = mutableListOf<String>()
-
-        fun store(vararg scripts: ScriptEntry) {
-            stored.clear()
-            stored += scripts
-            // A seed that is no longer pending has been confirmed before, so confirming it again
-            // is a re-confirmation and must leave its switch alone.
-            scripts.filterNot { it.confirmationPending }.forEach { confirmedBefore += it.id }
-            entries = stored.toList()
-        }
-
-        override suspend fun reload() {
-            entries = stored.toList()
-        }
-
-        override suspend fun inspect(source: ByteArray): ScriptHeader = error("inspect is not used by this screen")
-
-        override suspend fun add(
-            source: ByteArray,
-            origin: ScriptSourceOrigin,
-        ): ScriptEntry {
-            adds += source to origin
-            val entry =
-                imported.copy(
-                    id = "script-" + (stored.size + 1),
-                    order = stored.size,
-                    sourceOrigin = origin,
-                    enabled = false,
-                )
-            stored += entry
-            entries = stored.toList()
-            return entry
-        }
-
-        override suspend fun addFromLink(url: String): ScriptEntry {
-            links += url
-            return add(ByteArray(0), ScriptSourceOrigin.Link(url, url))
-        }
-
-        override suspend fun confirm(
-            id: String,
-            settings: Map<String, String>,
-        ): ScriptEntry {
-            confirms += id to settings
-            confirmGate?.await()
-            val first = id !in confirmedBefore
-            confirmedBefore += id
-            return replace(id) { it.copy(confirmationPending = false, enabled = if (first) true else it.enabled) }
-        }
-
-        override suspend fun updateSettings(
-            id: String,
-            settings: Map<String, String>,
-        ): ScriptEntry = confirm(id, settings)
-
-        override suspend fun setEnabled(
-            id: String,
-            enabled: Boolean,
-        ): ScriptEntry {
-            this.enabled += id to enabled
-            return replace(id) { it.copy(enabled = enabled) }
-        }
-
-        override suspend fun reorder(orderedIds: List<String>) = Unit
-
-        override suspend fun source(id: String): ByteArray? = null
-
-        override suspend fun export(id: String): ByteArray? = null
-
-        override suspend fun checkUpdate(id: String): ScriptEntry {
-            updates += id
-            // The update replaces the declarations, never the switch the user chose.
-            val fresh = checkedUpdate ?: return replace(id) { it.copy(confirmationPending = false) }
-            return replace(id) { fresh.copy(id = id, order = it.order, enabled = it.enabled) }
-        }
-
-        override suspend fun delete(id: String) {
-            stored.removeAll { it.id == id }
-            entries = stored.toList()
-        }
-
-        override suspend fun runForTest(
-            id: String,
-            text: String,
-        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
-
-        override suspend fun run(
-            id: String,
-            text: String,
-        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
-
-        override suspend fun runAudio(
-            id: String,
-            wav: ByteArray,
-        ): ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
-
-        override suspend fun cancel(id: String) = Unit
-
-        private fun replace(
-            id: String,
-            change: (ScriptEntry) -> ScriptEntry,
-        ): ScriptEntry {
-            val index = stored.indexOfFirst { it.id == id }
-            check(index >= 0) { "no script " + id }
-            stored[index] = change(stored[index])
-            entries = stored.toList()
-            return stored[index]
-        }
-    }
-
-    private companion object {
-        const val SCRIPT_SOURCE = "// @api 1 @name 加书名号 export default async ({ text }) => text;"
-        const val SCRIPT_NAME = "加书名号"
-        const val SECRET = "hunter2"
-        const val LINK = "https://example.com/rent.js"
-
-        val DECLARED_SITES = listOf("https://api.example.com/v1", "https://second.example.com")
-        val DECLARED_SETTINGS =
-            listOf(
-                ScriptSettingField("token", ScriptSettingKind.TEXT, "API token", secret = true),
-                ScriptSettingField("endpoint", ScriptSettingKind.URL, "Endpoint", secret = false),
-                ScriptSettingField("mode", ScriptSettingKind.CHOICE, "Mode", secret = false),
-            )
-
-        fun declaredEntry(
-            name: String = SCRIPT_NAME,
-            enabled: Boolean = false,
-            pending: Boolean = true,
-            connects: List<String> = DECLARED_SITES,
-            origin: ScriptSourceOrigin = ScriptSourceOrigin.Pasted,
-            settings: List<ScriptSettingField> = DECLARED_SETTINGS,
-        ) = ScriptEntry(
-            id = "script-1",
-            name = name,
-            description = "把选中的文字两边加上书名号",
-            enabled = enabled,
-            order = 0,
-            apiVersion = 1,
-            connects = connects,
-            needsAudio = false,
-            availableOnThisHost = true,
-            confirmationPending = pending,
-            settings = settings,
-            sourceOrigin = origin,
-        )
-    }
 }

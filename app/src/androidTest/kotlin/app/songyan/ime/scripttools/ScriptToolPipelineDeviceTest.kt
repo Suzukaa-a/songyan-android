@@ -100,7 +100,8 @@ class ScriptToolPipelineDeviceTest {
     @Test
     fun cachedMetadataProducesTheToolCatalogWithoutTheHost() {
         // The lambda stands in for the host's cached entries: calling tools() must not ask the
-        // registry (which would start the proxy), it only maps the cached metadata.
+        // registry (which would start the proxy), it only maps the cached metadata. A voice
+        // script is not a text tool: it runs from the microphone, so the text panel leaves it out.
         val entries =
             listOf(
                 entry("one"),
@@ -110,9 +111,8 @@ class ScriptToolPipelineDeviceTest {
                 entry("audio", needsAudio = true),
             )
         val tools = ScriptToolCatalog { entries }.tools()
-        assertEquals(listOf("script:one", "script:audio"), tools.map { it.id })
-        assertEquals(listOf(ToolCapability.TEXT), tools[0].requiredCapabilities.toList())
-        assertEquals(setOf(ToolCapability.TEXT, ToolCapability.AUDIO), tools[1].requiredCapabilities)
+        assertEquals(listOf("script:one"), tools.map { it.id })
+        assertEquals(setOf(ToolCapability.TEXT), tools.single().requiredCapabilities)
     }
 
     @Test

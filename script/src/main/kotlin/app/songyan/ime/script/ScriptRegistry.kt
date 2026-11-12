@@ -146,12 +146,12 @@ interface ScriptRegistry {
     suspend fun delete(id: String)
 
     /** Trial run in the sandbox page: the input text, the panel's outputs and console lines. */
-    suspend fun runForTest(
+    suspend fun runTrial(
         id: String,
         text: String,
     ): ScriptRunOutcome
 
-    /** Runs an enabled script for the keyboard panel; same shape as [runForTest]. */
+    /** Runs an enabled script for the keyboard panel; same shape as [runTrial]. */
     suspend fun run(
         id: String,
         text: String,

@@ -125,7 +125,10 @@ internal class AddonPanelController(
                 ?: (context.resources.displayMetrics.heightPixels / 3)
         val surfaceView = SurfaceView(context)
         surfaceView.setZOrderOnTop(true)
-        keyboardView.visibility = View.GONE
+        // Binding and the extension's first frame take a moment. Keep the keyboard visible under a
+        // transparent surface until it draws, so the window is never a blank rectangle; a failure
+        // or the watchdog then just removes the surface and leaves the keyboard as it is.
+        surfaceView.alpha = 0f
         container.addView(
             surfaceView,
             LinearLayout.LayoutParams(width, height),
@@ -410,6 +413,8 @@ internal class AddonPanelController(
                 runCatching { panel.surfaceView.setChildSurfacePackage(surface) }
                     .onSuccess {
                         panel.surfaceAttached = true
+                        panel.surfaceView.alpha = 1f
+                        keyboardView.visibility = View.GONE
                         panel.watchdog?.let(handler::removeCallbacks)
                         panel.watchdog = null
                     }.onFailure { panel.failure = it.message }

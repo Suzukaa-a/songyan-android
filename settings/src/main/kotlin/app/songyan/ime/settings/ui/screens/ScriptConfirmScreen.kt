@@ -40,6 +40,8 @@ import app.songyan.ime.script.ScriptSettingField
 import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsViewModel
+import app.songyan.ime.settings.ui.components.HideKeyboardOnEnter
+import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 
@@ -59,15 +61,25 @@ fun ScriptConfirmScreen(
     viewModel: ScriptsViewModel = viewModel(factory = ScriptsViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // The page is reached right after the paste dialog: the IME it raised can still be on screen
+    // and would cover the confirm button. Take it down as soon as the page appears.
+    HideKeyboardOnEnter()
     val entry = state.entries.firstOrNull { it.id == scriptId }
     // The fields, in declaration order; a fresh map each time the entry changes.
     var values by rememberSaveable(entry?.id) {
         mutableStateOf(entry?.settings?.associate { it.key to "" } ?: emptyMap())
     }
 
+    if (state.loading) {
+        // The catalog is still being read. Waiting here is what keeps "not loaded yet" from
+        // looking like "the script is gone" and closing the page the user just opened.
+        LoadingScreen(title = stringResource(R.string.scripts_confirm_title), onBack = onDone)
+        return
+    }
+
     LaunchedEffect(state.busy, state.pendingConfirmation) {
         // Confirming cleared the pending flag: the script is usable, the flow is over.
-        if (!state.busy && state.pendingConfirmation == null && entry?.confirmationPending == false && entry != null) {
+        if (!state.busy && state.pendingConfirmation == null && entry?.confirmationPending == false) {
             onDone()
         }
     }
@@ -100,7 +112,7 @@ fun ScriptConfirmScreen(
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.scripts_confirm_reads)) },
-                    supportingContent = { Text(stringResource(R.string.scripts_confirm_reads_body)) },
+                    supportingContent = { Text(stringResource(readsBodyRes(entry.needsAudio))) },
                     leadingContent = { Icon(Icons.Outlined.Save, contentDescription = null) },
                 )
             }
@@ -154,6 +166,14 @@ fun ScriptConfirmScreen(
         }
     }
 }
+
+/**
+ * The "what it can read" line: a voice script records the take and gets only that, while a text
+ * script reads the selection, or the text before the cursor when nothing is selected. Both are
+ * stated on the confirmation page because it is the user's only disclosure before the script runs.
+ */
+internal fun readsBodyRes(needsAudio: Boolean): Int =
+    if (needsAudio) R.string.scripts_confirm_reads_audio else R.string.scripts_confirm_reads_body
 
 /** One @setting or @secret of the header: a field labelled as declared, masked when secret. */
 @Composable

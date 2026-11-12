@@ -49,6 +49,8 @@ import app.songyan.ime.script.ScriptRunOutcome
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsNotice
 import app.songyan.ime.settings.ui.ScriptsViewModel
+import app.songyan.ime.settings.ui.components.HideKeyboardOnEnter
+import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +70,9 @@ fun ScriptDetailScreen(
     viewModel: ScriptsViewModel = viewModel(factory = ScriptsViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A page opened from the list can still have the search keyboard up; it would cover the
+    // actions at the bottom of this page.
+    HideKeyboardOnEnter()
     val test by viewModel.test.collectAsStateWithLifecycle()
     val entry = state.entries.firstOrNull { it.id == scriptId }
     val context = LocalContext.current
@@ -103,16 +108,19 @@ fun ScriptDetailScreen(
             }
         }
     }
-    // An update check that brought new declarations opens the confirm page right away.
-    LaunchedEffect(state.pendingConfirmation) {
-        val pending = state.pendingConfirmation ?: return@LaunchedEffect
-        if (pending.id != scriptId) return@LaunchedEffect
-        onOpenConfirmation(pending.id)
-        viewModel.consumePendingConfirmation()
-    }
-
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
+
+    if (state.loading) {
+        // The catalog is still being read; the entry is not "gone", it is just not here yet. This
+        // page and the confirmation page are opened from a list that has already loaded, but a
+        // process restoration can compose them first.
+        LoadingScreen(
+            title = entry?.name ?: stringResource(R.string.scripts_title),
+            onBack = onBack,
+        )
+        return
+    }
 
     SettingsScaffold(
         title = entry?.name ?: stringResource(R.string.scripts_title),

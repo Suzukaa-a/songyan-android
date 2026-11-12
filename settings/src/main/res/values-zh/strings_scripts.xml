@@ -25,19 +25,19 @@
     <string name="scripts_add_paste">粘贴脚本文字</string>
     <string name="scripts_add_file">选择文件</string>
     <string name="scripts_add_link">从 HTTPS 链接</string>
-    <string name="scripts_add_editor">在这里写一个</string>
+    <string name="scripts_add_editor">在这里写脚本</string>
     <string name="scripts_add_paste_title">粘贴脚本</string>
     <string name="scripts_add_paste_label">脚本文字</string>
     <string name="scripts_add_link_title">从链接添加</string>
     <string name="scripts_add_link_label">HTTPS 链接</string>
-    <string name="scripts_add_link_body">链接只会在现在下载一次。更新只在你要求时检查。</string>
+    <string name="scripts_add_link_body">链接会在添加时下载一次。更新只在你主动检查时才进行。</string>
     <string name="scripts_import_failed_title">未导入</string>
 
     <!-- Empty state -->
     <string name="scripts_empty_title">还没有脚本</string>
     <string name="scripts_empty_body">脚本是一个单文件：收到你选中的文字，返回处理后的文字。把说明复制给 AI 让它写一个，或从下面的例子开始。</string>
     <string name="scripts_copy_guide">复制给 AI 的说明</string>
-    <string name="scripts_guide_copied">说明已复制。粘贴到和 AI 的对话里即可。</string>
+    <string name="scripts_guide_copied">说明已复制。粘贴到与 AI 的对话中即可。</string>
     <string name="scripts_guide_failed">读取说明失败，请重试。</string>
     <string name="scripts_guide_clipboard_label">给 AI 的说明</string>
     <string name="scripts_example_title">例子（不联网）</string>
@@ -47,17 +47,18 @@
     <string name="scripts_confirm_section_what">它是什么</string>
     <string name="scripts_confirm_name">名字</string>
     <string name="scripts_confirm_reads">能读什么</string>
-    <string name="scripts_confirm_reads_body">运行时你选中的文字，仅此而已。</string>
+    <string name="scripts_confirm_reads_body">运行时你选中的文字；没有选中时，读光标前的一段。</string>
+    <string name="scripts_confirm_reads_audio">运行时会录音（需要麦克风），录音交给这个脚本；脚本看不到其他输入。</string>
     <string name="scripts_confirm_section_connects">会连的网站</string>
-    <string name="scripts_confirm_connects_none">没有声明网站</string>
+    <string name="scripts_confirm_connects_none">没有声明任何网站</string>
     <string name="scripts_confirm_connects_none_body">这个脚本不会连接网络。</string>
     <string name="scripts_confirm_section_settings">要填的设置</string>
     <string name="scripts_confirm_action">确认</string>
-    <string name="scripts_confirm_note">读完上面的清单再确认。密钥只存在这台设备上，不会写进分享出去的文件。</string>
+    <string name="scripts_confirm_note">读完上面的清单再确认。密钥只存在这台设备上，不会包含在分享内容里。</string>
     <string name="scripts_pending_title">需要确认</string>
     <string name="scripts_pending_body">这个脚本的声明变了。使用前请再读一遍。</string>
     <string name="scripts_unavailable_title">在这台设备上不可用</string>
-    <string name="scripts_unavailable_body">这个脚本需要的输入是此键盘无法提供的，所以在这里无法运行。</string>
+    <string name="scripts_unavailable_body">此键盘无法提供这个脚本需要的输入，因此它无法在这里运行。</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">文字</string>
@@ -87,7 +88,7 @@
     <string name="scripts_editor_save">保存</string>
     <string name="scripts_editor_body">脚本按编辑后的内容保存。新的声明需要再次确认才会运行。</string>
     <string name="scripts_delete_title">删除这个脚本？</string>
-    <string name="scripts_delete_body">%1$s 会从这台设备移除，无法撤销。</string>
+    <string name="scripts_delete_body">%1$s 将从这台设备移除，无法撤销。</string>
     <string name="scripts_delete_confirm">删除</string>
 
     <!-- Notices -->
@@ -105,7 +106,7 @@
     <string name="scripts_error_bad_header">文件开头的声明不合法。</string>
     <string name="scripts_error_unsupported_api">这个脚本需要更新版本的松烟输入法。</string>
     <string name="scripts_error_capability">这个脚本需要的输入是此键盘无法提供的。</string>
-    <string name="scripts_error_unavailable">脚本宿主未安装。</string>
+    <string name="scripts_error_unavailable">脚本服务不可用，请更新或重新安装松烟。</string>
     <string name="scripts_error_generic">脚本失败：%1$s</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

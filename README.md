@@ -36,10 +36,10 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 
 ## Privacy policy
 
-Songyan collects no personal data and sends nothing to its developers or to anyone else.
+Songyan itself collects no personal data and sends nothing to its developers. A script you run may send the text it handles to the sites that script declares (see below); that transfer goes through Songyan's script process, not Songyan's servers.
 
 Songyan itself does not go online. The scripts you install can only reach the sites they declare.
-Addons are separate apps you install yourself, and the system shows you the permissions they use.
+Extensions are separate apps you install yourself, and the system shows you the permissions they use.
 
 - What you type stays on your device. The words it learns, your phrases, the clipboard history
   (off until you turn it on), settings, layouts and appearances are stored in the app's private

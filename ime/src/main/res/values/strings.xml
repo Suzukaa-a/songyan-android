@@ -81,7 +81,7 @@
     <string name="ime_toolbar_tools">Tools</string>
     <string name="ime_tool_panel_title">Tools</string>
     <string name="ime_tool_panel_unavailable">Tools are unavailable in this field.</string>
-    <string name="ime_tool_panel_select_hint">Choose a tool or a result.</string>
+    <string name="ime_tool_panel_select_hint">Choose one below.</string>
     <string name="ime_tool_panel_running">Running…</string>
     <string name="ime_tool_panel_cancel">Cancel</string>
     <string name="ime_tool_panel_copy">Copy</string>
@@ -89,7 +89,7 @@
     <string name="ime_tool_panel_insert">Insert</string>
     <string name="ime_tool_panel_undo">Undo</string>
     <string name="ime_tool_panel_close">Close</string>
-    <string name="ime_tool_panel_written">Inserted.</string>
+    <string name="ime_tool_panel_written">Done.</string>
     <string name="ime_tool_panel_truncated">The text is long; only its end was used.</string>
     <string name="ime_tool_panel_no_text">This field has no usable text.</string>
     <string name="ime_tool_panel_cancelled">The tool was cancelled.</string>
@@ -101,6 +101,8 @@
     <string name="ime_tool_panel_timeout">The tool timed out; try again.</string>
     <string name="ime_tool_panel_no_result">The tool returned no result.</string>
     <string name="ime_tool_panel_failed">The tool did not run.</string>
+    <string name="ime_tool_panel_error_with_tool">%1$s: %2$s</string>
+    <string name="ime_tool_panel_retry">Retry</string>
     <string name="ime_toolbar_switch_input_method">Switch input method</string>
     <string name="ime_toolbar_voice_input">Voice input</string>
     <string name="ime_menu_switch_package">Switch to %2$s in %1$s</string>
@@ -146,13 +148,13 @@
     <!-- Voice input -->
     <string name="ime_voice_recording">Recording. Tap the microphone again to stop.</string>
     <string name="ime_voice_transcribing">Turning the recording into text…</string>
-    <string name="ime_voice_permission_needed">Microphone access is off. Allow it in the dialog to use voice input.</string>
+    <string name="ime_voice_permission_needed">Allow microphone access in system settings.</string>
     <string name="ime_voice_no_microphone">This device has no microphone.</string>
     <string name="ime_voice_device_busy">The microphone is in use by another app.</string>
     <string name="ime_voice_failed">Voice input failed. Please try again.</string>
     <string name="ime_voice_script_failed">The voice script failed. Please try again.</string>
     <string name="ime_voice_nothing_heard">Nothing was recognized. Please try again.</string>
-    <string name="ime_voice_finish_input">Finish the current input first.</string>
+    <string name="ime_voice_finish_input">Confirm the text you are typing first.</string>
     <string name="ime_voice_undo_unavailable">The text has changed, so it cannot be undone.</string>
     <string name="ime_voice_undone">Undone.</string>
     <string name="ime_voice_no_script">Choose a voice script in Settings first.</string>

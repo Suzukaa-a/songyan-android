@@ -8,8 +8,8 @@
     <string name="tool_delay">延迟返回（仅调试）</string>
     <string name="tool_crash">让 Addon 崩溃（仅调试）</string>
     <string name="panel_title">示例面板</string>
-    <string name="panel_commit">上屏「面板里的文字」</string>
-    <string name="panel_plain_text">面板里的文字</string>
+    <string name="panel_commit">上屏「来自面板的文字」</string>
+    <string name="panel_plain_text">来自面板的文字</string>
     <string name="panel_refused">输入框没有接受这次编辑</string>
     <string name="panel_delete">向前删除一个字</string>
     <string name="panel_read">读取选区</string>

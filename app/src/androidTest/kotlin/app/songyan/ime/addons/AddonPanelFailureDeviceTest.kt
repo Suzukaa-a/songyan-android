@@ -149,7 +149,8 @@ class AddonPanelFailureDeviceTest {
         val recorder = Recorder()
         val panel = controller(container, keyboardView, registry, recorder)
         assertTrue(panel.open(samplePackage))
-        assertEquals(View.GONE, keyboardView.visibility)
+        // No surface was drawn yet: the keyboard stays visible until it would be.
+        assertEquals(View.VISIBLE, keyboardView.visibility)
 
         assertTrue(
             "the token failure must release the surface",
@@ -197,6 +198,7 @@ class AddonPanelFailureDeviceTest {
                     )
                 assertTrue(panel.open(samplePackage))
                 assertEquals(2, host.container.childCount)
+                assertEquals(View.VISIBLE, host.keyboardView.visibility)
             }
             assertTrue("the watchdog must close the stalled panel", waitFor(timeoutMillis = 10_000) { !panel.isShown })
             scenario.onActivity { host ->

@@ -52,7 +52,16 @@ class ScriptProxyRegistry(
         origin: ScriptSourceOrigin,
     ): ScriptEntry {
         val payload = call { proxy, callback -> proxy.add(source, originJson(origin), callback) }
-        return ScriptProxyProto.parseEntry(payload)
+        val entry = ScriptProxyProto.parseEntry(payload)
+        // [entries] is the cache every screen renders from; a mutation that leaves it stale makes
+        // the new script look absent until the next reload (and the confirmation page is popped).
+        reloadAfterMutation()
+        return entry
+    }
+
+    /** Refreshes [entries] after a write; a failed refresh keeps the old cache, not a failed write. */
+    private suspend fun reloadAfterMutation() {
+        runCatching { reload() }
     }
 
     override suspend fun addFromLink(url: String): ScriptEntry {
@@ -69,7 +78,9 @@ class ScriptProxyRegistry(
                     callback,
                 )
             }
-        return ScriptProxyProto.parseEntry(payload)
+        val entry = ScriptProxyProto.parseEntry(payload)
+        reloadAfterMutation()
+        return entry
     }
 
     override suspend fun confirm(
@@ -78,7 +89,9 @@ class ScriptProxyRegistry(
     ): ScriptEntry {
         val bundle = Bundle().apply { settings.forEach { (key, value) -> putString(key, value) } }
         val payload = call { proxy, callback -> proxy.confirm(id, bundle, callback) }
-        return ScriptProxyProto.parseEntry(payload)
+        val entry = ScriptProxyProto.parseEntry(payload)
+        reloadAfterMutation()
+        return entry
     }
 
     override suspend fun updateSettings(
@@ -91,11 +104,14 @@ class ScriptProxyRegistry(
         enabled: Boolean,
     ): ScriptEntry {
         val payload = call { proxy, callback -> proxy.setEnabled(id, enabled, callback) }
-        return ScriptProxyProto.parseEntry(payload)
+        val entry = ScriptProxyProto.parseEntry(payload)
+        reloadAfterMutation()
+        return entry
     }
 
     override suspend fun reorder(orderedIds: List<String>) {
         call { proxy, callback -> proxy.reorder(orderedIds, callback) }
+        reloadAfterMutation()
     }
 
     override suspend fun source(id: String): ByteArray? {
@@ -107,18 +123,21 @@ class ScriptProxyRegistry(
 
     override suspend fun checkUpdate(id: String): ScriptEntry {
         val payload = call { proxy, callback -> proxy.checkUpdate(id, callback) }
-        return ScriptProxyProto.parseEntry(payload)
+        val entry = ScriptProxyProto.parseEntry(payload)
+        reloadAfterMutation()
+        return entry
     }
 
     override suspend fun delete(id: String) {
         call { proxy, callback -> proxy.delete(id, callback) }
+        reloadAfterMutation()
     }
 
-    override suspend fun runForTest(
+    override suspend fun runTrial(
         id: String,
         text: String,
     ): ScriptRunOutcome {
-        val payload = call { proxy, callback -> proxy.runForTest(id, text, callback) }
+        val payload = call { proxy, callback -> proxy.runTrial(id, text, callback) }
         return ScriptProxyProto.parseOutcome(payload)
     }
 

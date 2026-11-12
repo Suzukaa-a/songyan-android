@@ -499,6 +499,9 @@ class SongyanInputMethodService : InputMethodService() {
                 )
         }
         clipboardRecorder.start()
+        // Read the tool list and the extension snapshot before the first view asks for them.
+        ensureToolCatalog()
+        refreshKeyboardTools()
     }
 
     /**
@@ -674,6 +677,20 @@ class SongyanInputMethodService : InputMethodService() {
     private fun addonPanelEntries(): List<Pair<String, String>> = AddonMenu.entries(AddonRegistryHolder.current)
 
     /**
+     * The one tool catalog of this service: scripts plus installed extensions, read ahead on IO.
+     * Built once, before the first keyboard view exists, so the toolbar's first frame already sees
+     * the preloaded list instead of waiting for the read that the view build starts.
+     */
+    private fun ensureToolCatalog(): PreloadedToolCatalog =
+        toolCatalogCache
+            ?: PreloadedToolCatalog(
+                buildList {
+                    add(ScriptToolCatalog { scriptCatalogCache.enabledEntries() })
+                    AddonRegistryHolder.current?.let { add(AddonToolCatalog(it)) }
+                },
+            ).also { toolCatalogCache = it }
+
+    /**
      * Re-reads the extension registry and the tool list off the main thread. Called when an input
      * view is built, when the keyboard shows and when the input-method menu opens: settings may
      * have enabled an extension since the last scan, and the script snapshot is a file.
@@ -748,19 +765,11 @@ class SongyanInputMethodService : InputMethodService() {
         // One tool list, three kinds of implementations: scripts, built-in modules and installed
         // extensions. The extension catalog only reads the cached handshake (no binding); its
         // executor binds on the press, enforces its own deadline and disconnects again.
-        val scriptCatalog = ScriptToolCatalog { scriptCatalogCache.enabledEntries() }
-        val addons = AddonRegistryHolder.current
         // The toolbar is built on the main thread: the catalog it asks for tools must answer from a
-        // snapshot. The script source reads a file, so the snapshot is refreshed on an IO dispatcher
-        // here and again on every show, never inside tools().
-        val toolCatalog =
-            PreloadedToolCatalog(
-                buildList {
-                    add(scriptCatalog)
-                    if (addons != null) add(AddonToolCatalog(addons))
-                },
-            )
-        toolCatalogCache = toolCatalog
+        // snapshot. It was built (and its IO read started) when the service was created; the show
+        // refresh keeps it current and tools() itself never reads.
+        val addons = AddonRegistryHolder.current
+        val toolCatalog = ensureToolCatalog()
         val toolBridge =
             EditorToolGatewayBridge(
                 editor = editor,

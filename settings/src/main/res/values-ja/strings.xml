@@ -194,7 +194,7 @@
     <string name="quick_content_deleted">削除しました。</string>
     <string name="quick_content_undo">元に戻す</string>
     <string name="features_title">補正と予測変換</string>
-    <string name="features_entry_body">入力ミス補正、あいまい音、次語予測、文法モデル、拡張機能</string>
+    <string name="features_entry_body">入力ミス補正、あいまい音、次語予測、文法モデル、Lua 機能</string>
     <string name="features_current">現在の入力方式：%1$s</string>
     <string name="features_loading">読み込み中…</string>
     <string name="features_unavailable">現在の入力方式の設定を今は読み取れません。</string>
@@ -229,13 +229,13 @@
     <string name="features_grammar_import">文法モデルをインポート（.gram）</string>
     <string name="features_grammar_unsupported">この入力方式は文法モデルに対応していません。</string>
     <string name="features_grammar_dialog_title">文法モデルを選択</string>
-    <string name="features_lua_section">拡張機能</string>
+    <string name="features_lua_section">Lua 機能</string>
     <string name="features_lua_processors">キー処理</string>
     <string name="features_lua_segmentors">分割</string>
     <string name="features_lua_translators">候補の生成</string>
     <string name="features_lua_filters">候補の並べ替え</string>
     <string name="features_lua_affects_input">%1$s · 基本の入力に影響する場合があります</string>
-    <string name="features_lua_scheme_managed">この入力方式の拡張機能は入力パックで決まります。</string>
+    <string name="features_lua_scheme_managed">この入力方式の Lua 機能は入力パックで決まります。</string>
     <string name="detail_empty_title">左側から設定を選んでください</string>
     <string name="home_engine_preparing_unknown">入力パックを準備しています…</string>
     <string name="features_link_import">リンクからインポート</string>
@@ -344,7 +344,7 @@
     <string name="row_voice_title">音声入力</string>
     <string name="row_voice_subtitle">入力の代わりに話す</string>
     <string name="voice_title">音声入力</string>
-    <string name="voice_body">キーボードが話した内容を録音し、選んだスクリプトに渡します。スクリプトが返した文字がカーソル位置に入力されます。音声スクリプトは「スクリプト」で追加し、音声入力を受け取ると宣言するとここに表示されます。</string>
+    <string name="voice_body">キーボードが話した内容を録音し、選んだスクリプトに渡します。スクリプトが返した文字がカーソル位置に入力されます。音声入力に対応したスクリプトは、「スクリプト」で追加するとここに表示されます。</string>
     <string name="voice_switch_title">マイクボタン</string>
     <string name="voice_switch_subtitle">キーボードのツールバーにマイクを表示します</string>
     <string name="voice_scripts_section">音声スクリプト</string>
@@ -353,31 +353,31 @@
 
     <!-- 設定 → 拡張機能: 別 APK としてインストールされた外部アドオン。 -->
     <string name="row_extensions_title">拡張機能</string>
-    <string name="row_extensions_subtitle">この端末にインストールされたアドオン</string>
+    <string name="row_extensions_subtitle">この端末にインストールされた拡張機能</string>
     <string name="extensions_title">拡張機能</string>
     <string name="extensions_body">拡張機能はユーザーがシステムからインストールする独立したアプリです。松烟はそのサービスにバインドするだけで、コードをダウンロード・インストール・読み込みしません。ここでオンにするまで、どの拡張機能も無効です。</string>
     <string name="extensions_loading">インストール済みの拡張機能を探しています…</string>
     <string name="extensions_empty_title">拡張機能がインストールされていません</string>
     <string name="extensions_empty_body">拡張機能アプリをインストールしてから、ここに戻ってオンにしてください。</string>
-    <string name="extensions_not_available">このビルドでは拡張機能の一覧を利用できません。</string>
+    <string name="extensions_not_available">このバージョンでは拡張機能を利用できません。</string>
     <string name="extensions_rescan">再スキャン</string>
     <string name="extensions_scan_failed">インストール済みの拡張機能を読み取れませんでした。</string>
     <string name="extensions_compatible">互換</string>
     <string name="extensions_incompatible">非互換</string>
-    <string name="extensions_unknown">未確認</string>
+    <string name="extensions_unknown">署名未検証</string>
     <string name="extensions_version">バージョン %1$s</string>
-    <string name="extensions_signer">署名 %1$s</string>
+    <string name="extensions_signer">署名フィンガープリント %1$s</string>
     <string name="extensions_permissions">権限：%1$s</string>
-    <string name="extensions_no_permissions">権限：追加なし</string>
+    <string name="extensions_no_permissions">権限：追加の権限なし</string>
     <string name="extensions_tools">テキストツール：%1$s</string>
     <string name="extensions_panel">独自パネルを提供</string>
     <string name="extensions_voice">音声入力を提供</string>
-    <string name="extensions_last_call">最後の呼び出し：%1$s · %2$d ミリ秒</string>
-    <string name="extensions_last_call_error">最後の呼び出し：%1$s · %2$d ミリ秒 · %3$s</string>
+    <string name="extensions_last_call">最終使用：%1$s · %2$d ミリ秒</string>
+    <string name="extensions_last_call_error">最終使用：%1$s · %2$d ミリ秒 · %3$s</string>
     <string name="extensions_call_kind_text">テキストツール</string>
     <string name="extensions_call_kind_voice">音声入力</string>
     <string name="extensions_call_kind_panel">独自パネル</string>
-    <string name="extensions_switch">%1$s をオンにする</string>
+    <string name="extensions_switch">%1$s スイッチ</string>
     <string name="voice_addon_option">%1$s（拡張機能）</string>
     <string name="extensions_toggle_failed">スイッチを保存できませんでした。状態は変わっていません。</string>
 </resources>

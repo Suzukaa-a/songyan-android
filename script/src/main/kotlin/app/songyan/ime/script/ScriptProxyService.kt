@@ -216,7 +216,7 @@ class ScriptProxyService : Service() {
                 }
             }
 
-            override fun runForTest(
+            override fun runTrial(
                 id: String,
                 text: String,
                 reply: ScriptProxyCallback,

@@ -181,6 +181,7 @@ class StringResourceParityTest {
                 "settings/options_wide_position_value",
                 "settings/quick_content_phrases_counter",
                 "ime/ime_numbers",
+                "ime/ime_tool_panel_error_with_tool",
                 "settings/layout_page_numeric",
                 // Technical literals and physical key faces.
                 "ime/ime_back",

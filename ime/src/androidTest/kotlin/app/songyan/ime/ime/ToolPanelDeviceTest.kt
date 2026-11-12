@@ -4,6 +4,7 @@ import android.text.InputType
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -355,6 +356,80 @@ class ToolPanelDeviceTest {
     }
 
     @Test
+    fun aToolErrorShowsTheToolNameAndItsOwnWords() {
+        lateinit var view: ToolPanelView
+        val message = "保安找不到这本书"
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = tool,
+                    phase = ToolPhase.FAILED,
+                    preview = null,
+                    failure = ToolFailure.ToolError(message),
+                    canUndo = false,
+                ),
+            )
+        }
+        assertEquals(
+            context.getString(R.string.ime_tool_panel_error_with_tool, tool.title, message),
+            statusText(view),
+        )
+        val shown = requireNotNull(statusText(view))
+        assertTrue("the tool name must survive: " + shown, shown.contains(tool.title))
+        assertTrue("the tool's own words must survive: " + shown, shown.contains(message))
+    }
+
+    @Test
+    fun aToolErrorWithoutWordsFallsBackToTheGenericCopy() {
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = tool,
+                    phase = ToolPhase.FAILED,
+                    preview = null,
+                    failure = ToolFailure.ToolError(null),
+                    canUndo = false,
+                ),
+            )
+        }
+        assertEquals(context.getString(R.string.ime_tool_panel_failed), statusText(view))
+    }
+
+    @Test
+    fun aFailedRunOffersAnExplicitRetryForTheSameTool() {
+        lateinit var view: ToolPanelView
+        var retried: ToolDescriptor? = null
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.onRun = { retried = it }
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = tool,
+                    phase = ToolPhase.FAILED,
+                    preview = null,
+                    failure = ToolFailure.ToolError("boom"),
+                    canUndo = false,
+                ),
+            )
+        }
+        val retry =
+            requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_retry))) {
+                "a failed run must offer an explicit retry"
+            }
+        instrumentation.runOnMainSync { retry.performClick() }
+        assertEquals("retry re-runs the tool that failed", tool, retried)
+    }
+
+    @Test
     fun cancelWhileRunningKeepsTheDocumentUntouched() {
         val target = field("hello")
         val never = CompletableDeferred<List<String>>()
@@ -405,6 +480,19 @@ class ToolPanelDeviceTest {
         val view = ToolPanelView(context)
         view.render(controller.state())
         return statusText(view)
+    }
+
+    private fun buttonWithText(
+        view: ViewGroup,
+        text: String,
+    ): Button? {
+        for (index in 0 until view.childCount) {
+            when (val child = view.getChildAt(index)) {
+                is Button -> if (child.text?.toString() == text) return child
+                is ViewGroup -> buttonWithText(child, text)?.let { return it }
+            }
+        }
+        return null
     }
 
     private fun buttonTexts(view: ViewGroup): List<String> =

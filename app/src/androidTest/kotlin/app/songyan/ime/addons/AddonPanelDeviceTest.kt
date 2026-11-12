@@ -100,9 +100,14 @@ class AddonPanelDeviceTest {
                     )
                 assertTrue(controller.open(samplePackage))
                 assertEquals(2, host.container.childCount)
-                assertEquals(android.view.View.GONE, host.keyboardView.visibility)
+                // The keyboard stays visible until the extension's first frame arrives, so the
+                // window is never a blank rectangle while the panel binds.
+                assertEquals(android.view.View.VISIBLE, host.keyboardView.visibility)
             }
             assertTrue("the addon's surface never arrived", waitFor { controller.surfaceAttached() })
+            scenario.onActivity { host ->
+                assertEquals(android.view.View.GONE, host.keyboardView.visibility)
+            }
 
             // The panel of the sample addon: title, context line, then the first button (insert).
             val density = targetContext.resources.displayMetrics.density

@@ -25,25 +25,25 @@ object ToolPipelineLimits {
 }
 
 /**
- * Script entries as the keyboard's tool catalog. It only reads the metadata the host has cached:
- * no script bytes, no proxy process, no engine. A tool id is namespaced so entries from another
- * addon kind cannot collide with a script.
+ * Script entries as the keyboard's text tool catalog. It only reads the metadata the host has
+ * cached: no script bytes, no proxy process, no engine. A tool id is namespaced so entries from
+ * another addon kind cannot collide with a script.
+ *
+ * Voice scripts are left out on purpose: they run only from the microphone, whose recording the
+ * text tool panel cannot supply (a run started here would always fail with a missing input
+ * capability). They stay visible in Settings -> Voice input as voice sources.
  */
 class ScriptToolCatalog(
     private val entries: () -> List<ScriptEntry>,
 ) : ToolCatalog {
     override fun tools(): List<ToolDescriptor> =
         entries()
-            .filter { it.enabled && it.availableOnThisHost && !it.confirmationPending }
+            .filter { it.enabled && it.availableOnThisHost && !it.confirmationPending && !it.needsAudio }
             .map { entry ->
                 ToolDescriptor(
                     id = "script:" + entry.id,
                     title = entry.name,
-                    requiredCapabilities =
-                        buildSet {
-                            add(ToolCapability.TEXT)
-                            if (entry.needsAudio) add(ToolCapability.AUDIO)
-                        },
+                    requiredCapabilities = setOf(ToolCapability.TEXT),
                 )
             }
 }

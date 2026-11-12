@@ -38,20 +38,29 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 
 Songyan collects no personal data and sends nothing to its developers or to anyone else.
 
+Songyan itself does not go online. The scripts you install can only reach the sites they declare.
+Addons are separate apps you install yourself, and the system shows you the permissions they use.
+
 - What you type stays on your device. The words it learns, your phrases, the clipboard history
   (off until you turn it on), settings, layouts and appearances are stored in the app's private
   storage.
-- The keyboard never goes online. The settings app connects to the internet only when you ask it
-  to: downloading an input scheme, dictionary or model, or importing from a link you enter. Those
-  requests go to the site that hosts the file (for example GitHub), which sees your IP address as
-  with any download; nothing about you or your typing is sent.
+- The keyboard itself does not go online. The settings app connects to the internet only when you
+  ask it to: downloading an input scheme, dictionary or model, or importing from a link you enter.
+  Those requests go to the site that hosts the file (for example GitHub), which sees your IP
+  address as with any download; nothing about you or your typing is sent.
+- While a script runs, its requests are made by Songyan's script process and only to the sites that
+  script declares. Nothing else about you or your typing is sent.
+- Voice input records only while a take is running (you start and stop it with the microphone
+  button), and only if you have chosen a voice script. The temporary recording is handed to that
+  script and deleted after the run.
 - Password fields and fields that ask for no personalized learning are never learned from, and
   the clipboard is not recorded in them.
 - Android backup, when you have it on, includes the learned words, phrases, settings, layouts,
   appearances and your Rime configuration files, never the clipboard history. Backup is run by
   the system and your Google account, not by Songyan.
-- Permissions: internet and network state for the downloads above; a foreground service and
-  notification while an input scheme is being prepared; vibration for key feedback.
+- Permissions: internet and network state for the downloads above and for the sites your scripts
+  declare; the microphone for voice input; a foreground service and notification while an input
+  scheme is being prepared; vibration for key feedback.
 - Uninstalling the app deletes all of its data. Questions: open an issue in this repository.
 
 ## Build from source

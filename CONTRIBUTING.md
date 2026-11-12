@@ -17,9 +17,12 @@ Thanks for helping. Songyan (松烟) for Android is an input method built on the
 | Path | Content |
 | --- | --- |
 | `app/` | input method service, deployment service, engine runtime |
-| `core/*` | engine and pure Kotlin/JVM modules (keyboard session, layouts, candidates, appearance, content, packages) |
+| `core/*` | engine and pure Kotlin/JVM modules (keyboard session, layouts, candidates, appearance, content, packages, tools) |
 | `ime/` | self-drawn keyboard and editor bridge |
 | `settings/` | Compose Material 3 settings app |
+| `script/` | user scripts: QuickJS engine and shared C bridge, isolated process, proxy storage, public registry |
+| `addon-api/` | protocol for external Addon apps |
+| `addon-sample/` | example Addon app and its integration tests |
 | `native/` | engine sources and patches synced from the iOS repository |
 | `scripts/` | sync, install and verification scripts |
 
@@ -30,11 +33,13 @@ Thanks for helping. Songyan (松烟) for Android is an input method built on the
 Run the checks that match your change. CI runs the full gate on every pull request, and all of it must pass:
 
 ```bash
+./gradlew checkDependencyBoundaries --no-configuration-cache
 ./gradlew ktlintCheck lint test assembleDebug assembleRelease :benchmark:assemble
 ```
 
 | Command | Use it when |
 | --- | --- |
+| `./gradlew checkDependencyBoundaries --no-configuration-cache` | before every pull request |
 | `./gradlew ktlintCheck` | before every pull request; `./gradlew ktlintFormat` fixes most findings |
 | `./gradlew lint test assembleDebug` | before every pull request |
 | `./gradlew :core:keyboard:test` | iterating on one module (any module path works) |
@@ -50,9 +55,10 @@ If you cannot run a check, say so in the pull request and list what remains unve
 
 - Do not edit the files under `native/` that come from the iOS repository, or the other files listed in [scripts/ios-sync-manifest](scripts/ios-sync-manifest). Change them in the iOS repository and pull them in with `scripts/sync-from-ios.sh /path/to/songyan-ios`; `scripts/check-ios-sync.sh /path/to/songyan-ios` compares them. Engine and dependency versions are pinned in the iOS repository (`Tools/BuildRime/VERSIONS.env` and `Tools/BuildRimeIOS/*-VERSIONS.env`); to upgrade them, change the pin there and re-sync, so both apps run the same engine.
 - librime is a process-wide singleton. There is one engine instance, all engine calls run on the single engine dispatcher, and notification callbacks never call back into the engine.
-- No synchronous disk access on the main thread (StrictMode is on in debug builds and must stay clean). The input method process makes no network requests; networking happens only when the user asks for it in settings.
+- No synchronous disk access on the main thread (StrictMode is on in debug builds and must stay clean). The input method process makes no network requests: the settings screen goes online only when the user asks for it, and while a script runs the script proxy process performs only the requests to the hosts that script declared. The isolated process that runs the script has no permissions and cannot open a socket.
 - Password fields and fields with `IME_FLAG_NO_PERSONALIZED_LEARNING` are never learned from, never record the clipboard and never show suggestions.
 - Ranking and segmentation are the engine's job. The front end must not re-rank or re-segment candidates. The nine-key preedit is display only; committed text always comes from the engine.
+- A new script capability must be offered on both platforms, covered by shared cases and written into the interface version; a capability only one platform can offer belongs in an Addon instead. Scripts cannot reference each other, persist data, draw UI, stream output, take runtime arguments or update themselves.
 - When a capability cannot be proven, fail closed and fall back to native Rime behavior.
 - Follow Android conventions (official documentation, Material 3, platform behavior) over copying iOS UI.
 - Every bug fix comes with a regression test that reproduces the problem. Behavior in editors is tested with `:ime` instrumented tests against the real engine, not a stub.
@@ -61,9 +67,9 @@ If you cannot run a check, say so in the pull request and list what remains unve
 
 ## Modules and directories
 
-- Top-level directories are `app`, `core/*`, `ime`, `settings`, `native`, `benchmark`, `baselineprofile`, `build-logic`, `gradle`, `docs`, `scripts` and `.github`. Before adding a Gradle module or a top-level directory, list it in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and discuss it in the pull request.
+- Top-level directories are `app`, `core/*`, `ime`, `settings`, `script`, `addon-api`, `addon-sample`, `native`, `benchmark`, `baselineprofile`, `build-logic`, `gradle`, `docs`, `scripts` and `.github`. Before adding a Gradle module or a top-level directory, list it in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and discuss it in the pull request.
 - Modules use the standard Gradle source sets (`src/main/kotlin`, `src/test/kotlin`, `src/androidTest/kotlin`, `src/main/res`, `src/main/assets`). Packages start with `app.songyan.ime.<module>` and match the directory.
-- The `core/*` modules other than `core/rime` are pure Kotlin/JVM and must not depend on the Android SDK, so their tests run on the JVM. Only `core/rime` touches the native engine.
+- The `core/*` modules other than `core/rime` are pure Kotlin/JVM and must not depend on the Android SDK, so their tests run on the JVM. `core/rime` is no longer the only module with native code: `:script` builds the pinned QuickJS-ng engine and the shared C bridge into `libsongyan-script.so`, and that library refuses to load outside its isolated process.
 - Scripts live in `scripts/`, and each starts with a comment giving its purpose and usage. Do not leave one-off scripts in the root or in modules.
 - Do not commit build output, logs, backups or parallel copies (`*.bak`, `*_old`, commented-out blocks of old code); delete unused code instead. A committed generated file must be reproducible by a script in `scripts/`, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says how. The checked-in Baseline Profile is the exception that is regenerated with `scripts/generate-baseline-profile.sh`.
 - Performance is user-visible. Think about the cost of a change on the key-to-preedit and keyboard-show paths, measure with the `:benchmark` module, and state the build type; only measure on builds with the engine optimized (`benchmarkRelease`).

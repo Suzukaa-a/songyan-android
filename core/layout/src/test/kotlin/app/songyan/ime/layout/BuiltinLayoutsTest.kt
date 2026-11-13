@@ -372,7 +372,7 @@ class BuiltinLayoutsTest {
         assertEquals(listOf(5, 5, 5), qwerty.rowBreaks)
         val merged = BuiltinLayouts.handSplit(BuiltinLayouts.merged18)!!
         assertEquals(BuiltinLayouts.merged18.split!!.activation, merged.activation)
-        assertEquals(listOf(3, 3, 4), merged.rowBreaks)
+        assertEquals(listOf(3, 3, 3), merged.rowBreaks)
         assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.merged14))
         assertNull(BuiltinLayouts.handSplit(BuiltinLayouts.phone9))
     }
@@ -383,7 +383,7 @@ class BuiltinLayoutsTest {
         assertEquals(listOf(5, 5, 5), BuiltinLayouts.handSplit(copy)?.rowBreaks)
         assertEquals(listOf(5, 5, 5), BuiltinLayouts.handSplit(copy.copy(note = "另一句说明"))?.rowBreaks)
         assertEquals(
-            listOf(3, 3, 4),
+            listOf(3, 3, 3),
             BuiltinLayouts.handSplit(BuiltinLayouts.merged18.copyWithId("m", "我的"))?.rowBreaks,
         )
     }
@@ -412,7 +412,7 @@ class BuiltinLayoutsTest {
     fun persistingHandCutsWritesThemIntoACopyAndLeavesOthersAlone() {
         for ((layout, cuts) in listOf(
             BuiltinLayouts.qwerty26 to listOf(5, 5, 5),
-            BuiltinLayouts.merged18 to listOf(3, 3, 4),
+            BuiltinLayouts.merged18 to listOf(3, 3, 3),
         )) {
             val copy = BuiltinLayouts.persistingHandCuts(layout).copyWithId("mine", "我的")
             assertEquals(cuts, copy.split?.rowBreaks)

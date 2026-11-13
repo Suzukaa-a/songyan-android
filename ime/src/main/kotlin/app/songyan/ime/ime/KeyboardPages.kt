@@ -572,8 +572,8 @@ internal object KeyboardPages {
 
     /**
      * Where the bundled 26- and 18-key layouts split when nothing saved says otherwise: each hand
-     * keeps its letters from a physical keyboard, QWERT ASDFG ZXCVB on the left (on 18 keys three,
-     * three and four keys, the BN pair following its B). 26 keys still splits only when the user
+     * keeps its letters from a physical keyboard, QWERT ASDFG ZXCVB on the left (on 18 keys three keys
+     * a row, so BN and M share the right hand). 26 keys still splits only when the user
      * turns splitting on. The cuts count letter keys, so they move past the Shift the page adds in
      * front of the last letter row and below a password field's digit row.
      */

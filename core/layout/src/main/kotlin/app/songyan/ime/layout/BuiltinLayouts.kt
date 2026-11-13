@@ -285,8 +285,8 @@ object BuiltinLayouts {
 
     /**
      * Where the 26- and 18-key layouts split when nothing saved says otherwise: each hand keeps its
-     * letters from a physical keyboard, QWERT ASDFG ZXCVB on the left (on 18 keys three, three and
-     * four keys, the BN pair following its B). The cuts count letter keys; the keyboard draws Shift
+     * letters from a physical keyboard, QWERT ASDFG ZXCVB on the left (on 18 keys three keys a
+     * row, so BN and M share the right hand). The cuts count letter keys; the keyboard draws Shift
      * outside the rows. A copy counts as the bundled layout (id, name, note and split are ignored),
      * so the cuts do not depend on what the layout is called. Null for any other layout, for one
      * whose keys or settings differ from the bundled one, and for a split with saved cuts.
@@ -315,7 +315,7 @@ object BuiltinLayouts {
         handSplit(definition)?.let { definition.withSplit(it) } ?: definition
 
     private val STANDARD_LETTER_ROW_BREAKS = listOf(5, 5, 5)
-    private val MERGED18_ROW_BREAKS = listOf(3, 3, 4)
+    private val MERGED18_ROW_BREAKS = listOf(3, 3, 3)
 
     // MARK: - 9-key quick symbols
 

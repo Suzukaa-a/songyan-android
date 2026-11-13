@@ -38,8 +38,8 @@
     },
     "name" : "星河",
     "spacing" : {
-      "visualInsetX" : 0,
-      "visualInsetY" : 1
+      "visualInsetX" : 0.5,
+      "visualInsetY" : 1.25
     },
     "typography" : {
       "candidateSize" : 21,

@@ -34,6 +34,8 @@ class RecommendedSchemesOrderTest {
     fun everyOtherLanguageKeepsTheCatalogOrder() {
         assertEquals(DEFAULT_ORDER, ordered("en-US"))
         assertEquals(DEFAULT_ORDER, ordered("zh-CN"))
+        assertEquals(DEFAULT_ORDER, ordered("zh-Hans-HK"))
+        assertEquals(DEFAULT_ORDER, ordered("zh-Hans-TW"))
         assertEquals(DEFAULT_ORDER, ordered("fr-FR"))
         assertEquals(DEFAULT_ORDER, ordered())
     }

@@ -275,6 +275,9 @@ object RecommendedSchemes {
         val primary = systemLanguageTags.firstOrNull { it.isNotBlank() } ?: return catalog
         val system = runCatching { Locale.forLanguageTag(primary.trim()) }.getOrNull() ?: return catalog
         if (system.language.isBlank()) return catalog
+        // Region picks the traditional-script methods, but a user who chose Simplified Chinese there
+        // still types pinyin: only the script they read decides.
+        if (system.language == "zh" && system.script.equals("Hans", ignoreCase = true)) return catalog
         val promoted = catalog.filter { scheme -> scheme.languageTags.any { matches(it, system) } }
         if (promoted.isEmpty()) return catalog
         return promoted + catalog.filter { it !in promoted }

@@ -257,7 +257,7 @@ internal fun KeyboardView.rebuildKana12(surface: Kana12Surface) {
         Kana12Geometry.resolve(
             widthDp = widthDp,
             heightDp = heightDp,
-            keyGapHorizontalDp = metrics.keyGapHorizontalDp.toDouble(),
+            keyGapHorizontalDp = (scaledKeyGapHorizontal(null) / density).toDouble(),
             keyGapVerticalDp = metrics.keyGapVerticalDp.toDouble(),
             leftRailBands = railBands(leading, Kana12Geometry.DEFAULT_LEFT_BANDS),
             rightRailBands = railBands(trailing, Kana12Geometry.DEFAULT_RIGHT_BANDS),

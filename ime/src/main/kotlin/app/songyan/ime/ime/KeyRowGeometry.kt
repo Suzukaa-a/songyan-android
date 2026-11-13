@@ -372,6 +372,28 @@ internal object KeyHitZones {
 }
 
 /**
+ * Skins set their key gaps for a phone's keys; the widest phone column, gap included, is about
+ * 44 dp. Where a board's ten letter columns are wider (landscape, an unfolded or tablet screen; per
+ * half when split) the horizontal gap grows in the same proportion, so a skin keeps the look its
+ * author drew and every phone keeps it exactly. The iOS keyboard uses the same rule.
+ */
+internal object KeyGapScale {
+    const val REFERENCE_PITCH_DP = 44.0
+    private const val COLUMNS = 10
+
+    /** The factor for a key area [widthDp] wide whose skin gap is [gapDp]; never below 1. */
+    fun of(
+        widthDp: Double,
+        gapDp: Double,
+        split: LayoutSplitConfiguration?,
+    ): Double {
+        val plan = split?.let { SplitFrame.plan(it, widthDp, COLUMNS, gapDp) }
+        val columns = widthDp - 2 * (plan?.inset ?: 0.0) - (plan?.gutter ?: 0.0)
+        return max(1.0, (columns + gapDp) / COLUMNS / REFERENCE_PITCH_DP)
+    }
+}
+
+/**
  * How a split keyboard spends its width (dp): an outer margin on both sides so the halves do not
  * run into the screen edges, then the gutter, and the keys take the rest. The automatic gutter is
  * narrower than the shared model's thumb-reach one so the keys get wider; each half still stops

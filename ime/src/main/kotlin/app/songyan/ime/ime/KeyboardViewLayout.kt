@@ -197,6 +197,16 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
 }
 
 /**
+ * The skin's horizontal key gap in px for this board ([KeyGapScale]). Every page of a board uses
+ * the same width, so flipping a page never changes the gaps.
+ */
+internal fun KeyboardView.scaledKeyGapHorizontal(split: LayoutSplitConfiguration?): Float {
+    val widthDp = contentFrame(split).width / density - 2 * metrics.keyAreaHorizontalPaddingDp
+    val gap = metrics.keyGapHorizontalDp
+    return (gap * KeyGapScale.of(widthDp.toDouble(), gap.toDouble(), split)).toFloat() * density
+}
+
+/**
  * The split that applies to the page being drawn at the current width, or null for an unsplit keyboard.
  * Judged on the full surface width, as [contentFrame] judges it. The returned copy is resolved so the
  * row solvers, which see a narrower inner width, do not apply the default threshold a second time.
@@ -297,7 +307,7 @@ internal fun KeyboardView.rebuild() {
     var left = frame.left + padding
     var inner = frame.width - 2 * padding
     if (inner <= 0f) return
-    val gap = metrics.keyGapHorizontalDp * density
+    val gap = scaledKeyGapHorizontal(split)
     val rowHeight = rowHeightFor(rows.size)
     rowOffsetY = metrics.keyAreaBottomGapDp / 2 * density
     insetX = KeyInsets.rowHorizontal()
@@ -363,7 +373,7 @@ internal fun KeyboardView.rebuildWithRails(
     val outerLeft = frame.left + padding
     val outerInner = frame.width - 2 * padding
     if (outerInner <= 0f) return
-    val gap = metrics.keyGapHorizontalDp * density
+    val gap = scaledKeyGapHorizontal(split)
     val rowHeight = rowHeightFor(rows.size)
     rowOffsetY = metrics.keyAreaBottomGapDp / 2 * density
     insetX = KeyInsets.rowHorizontal()
@@ -487,7 +497,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
     // The shell solves its own gutters; the drawn keycap is inset so the visual gutter still
     // matches the row pages (5 dp horizontally, 8 dp vertically).
     val spacing = built.metrics.spacing.toFloat() * density
-    insetX = KeyInsets.phoneHorizontal(metrics.keyGapHorizontalDp * density, spacing)
+    insetX = KeyInsets.phoneHorizontal(scaledKeyGapHorizontal(null), spacing)
     // The shell's bands have no vertical gutter of their own: the drawn keycap supplies it.
     insetY = KeyInsets.phoneVertical(metrics.keyGapVerticalDp * density)
     // The physical shell is what identifies the key set: composition only relabels rail slots.

@@ -387,8 +387,11 @@ internal object KeyGapScale {
     /** Rows keep their height on a wide board, so the gap between them grows at half the rate. */
     fun vertical(columnScale: Double): Double = 1 + 0.5 * max(0.0, columnScale - 1)
 
-    /** Corners grow at half the rate too, so a wide key does not read as a box. */
-    fun corner(columnScale: Double): Double = 1 + 0.5 * max(0.0, columnScale - 1)
+    /**
+     * Corners grow at a quarter of the rate, so a wide key does not read as a box. The Android
+     * built-in radius (8 dp) already starts rounder than the iOS one (6 pt), which grows at half.
+     */
+    fun corner(columnScale: Double): Double = 1 + 0.25 * max(0.0, columnScale - 1)
 
     /** Labels grow at a quarter of the rate: enough to fill a wide key, still within the row height. */
     fun label(columnScale: Double): Double = 1 + 0.25 * max(0.0, columnScale - 1)

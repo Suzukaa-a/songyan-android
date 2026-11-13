@@ -23,12 +23,12 @@ class KeyGapScaleTest {
         val scale = KeyGapScale.of(width, 5.5, null)
         assertEquals((width + 5.5) / 10 / KeyGapScale.REFERENCE_PITCH_DP, scale, 1e-9)
         // The gap across outgrows the columns; the gap between rows, corners and labels, whose row
-        // height does not grow, grow slower, labels slowest.
+        // height does not grow, grow slower, corners and labels slowest.
         assertTrue(KeyGapScale.horizontal(scale) > scale)
         assertTrue(KeyGapScale.vertical(scale) in 1.0..scale)
         assertTrue(KeyGapScale.corner(scale) in 1.0..scale)
         assertTrue(KeyGapScale.label(scale) > 1.0)
-        assertTrue(KeyGapScale.label(scale) < KeyGapScale.corner(scale))
+        assertTrue(KeyGapScale.corner(scale) < KeyGapScale.vertical(scale))
         for (factor in listOf(
             KeyGapScale::horizontal,
             KeyGapScale::vertical,

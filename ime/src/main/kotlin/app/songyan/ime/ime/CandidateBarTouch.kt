@@ -152,10 +152,11 @@ internal fun CandidateBarView.onMove(event: MotionEvent): Boolean {
         return true
     }
     // A slide along the scroll axis that starts on the candidates scrolls them instead of
-    // committing the chip it started on.
+    // committing the chip it started on. A row that fits has nothing to scroll, so its drift stays
+    // a press, as in a RecyclerView whose items all fit.
     val travelled = if (expanded) abs(event.y - gestureY) else abs(event.x - gestureX)
     val fromViewport = viewport.contains(gestureX.toInt(), gestureY.toInt()) && !inReadings(gestureX, gestureY)
-    if (travelled > touchSlop && fromViewport && (maxScroll() > 0f || canOverscroll())) {
+    if (travelled > touchSlop && fromViewport && maxScroll() > 0f) {
         cancelPress()
         scrollingGesture = true
         parent?.requestDisallowInterceptTouchEvent(true)
@@ -165,8 +166,26 @@ internal fun CandidateBarView.onMove(event: MotionEvent): Boolean {
         return true
     }
     val press = pressed ?: return true
-    if (abs(event.x - press.downX) > touchSlop || abs(event.y - press.downY) > touchSlop) cancelPress()
+    if (!pressHolds(press, event.x, event.y)) cancelPress()
     return true
+}
+
+/**
+ * Whether the finger is still over the pressed candidate: its cell grown by the touch slop, so a
+ * drift that stays on the word keeps the press the way a button keeps a touch inside its bounds.
+ */
+internal fun CandidateBarView.pressHolds(
+    press: Press,
+    x: Float,
+    y: Float,
+): Boolean {
+    val cell = cells.getOrNull(press.cell) ?: return false
+    val cx = if (expanded) x else x + scroll
+    val cy = if (expanded) y + scroll else y
+    return cx >= cell.left - touchSlop &&
+        cx <= cell.right + touchSlop &&
+        cy >= cell.top - touchSlop &&
+        cy <= cell.bottom + touchSlop
 }
 
 /** Whether a point lies in the inline readings' section of the collapsed row. */
@@ -182,9 +201,6 @@ internal fun CandidateBarView.dragReadings(delta: Float) {
     readingScroll = next
     invalidate()
 }
-
-/** A page that fits still gives under the finger: the edge effect shows it was understood. */
-internal fun CandidateBarView.canOverscroll(): Boolean = snapshot.candidates.isNotEmpty() && contentExtent > 0f
 
 internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     ui.removeCallbacks(longPress)
@@ -249,8 +265,9 @@ internal fun CandidateBarView.onUp(event: MotionEvent): Boolean {
     beginFade(down, control)
     if (reading >= 0) {
         if (hit == readingBase + reading) readings.getOrNull(reading)?.let { onReading(reading, it.label) }
-    } else if (press != null && hit >= 0 && hit < entries.size) {
-        val choice = candidateChoice(press, hit)
+    } else if (press != null && pressHolds(press, event.x, event.y)) {
+        // A press only survives the move while the finger stays on its word, so it releases there.
+        val choice = candidateChoice(press, press.cell)
         if (choice != null) {
             ImePerf.commitStart()
             onCandidate(choice)

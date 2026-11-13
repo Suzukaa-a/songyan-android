@@ -1101,6 +1101,31 @@ class RealEngineEditorTest {
             assertTrue("the tapped word is committed, got '${host.text()}'", host.text().startsWith(shown))
         }
 
+    /** A press that drifts off its axis but stays on the word still picks it: only scrolling takes a touch. */
+    @Test
+    fun aCandidatePressThatDriftsOnTheWordStillCommitsIt() =
+        withHost { host ->
+            host.start()
+            for (key in "ji") host.tap(key.toString())
+            host.awaitComposing()
+            val target = host.stripLabels().first()
+            host.driftOnCandidate(target, dx = 0f, dy = host.touchSlop() * 1.5f)
+            host.awaitField(target.substringBefore(' '))
+        }
+
+    /** A row that fits has nothing to scroll, so a sideways drift on a word is still a press on it. */
+    @Test
+    fun aSidewaysDriftOnARowThatFitsStillCommits() =
+        withHost { host ->
+            host.start()
+            for (key in "nihao") host.tap(key.toString())
+            host.awaitComposing()
+            host.main { assertEquals("the row fits", 0f, host.find(CandidateBarView::class.java).maxScroll()) }
+            val target = host.stripLabels().first()
+            host.driftOnCandidate(target, dx = host.touchSlop() * 1.5f, dy = 0f)
+            host.awaitField(target.substringBefore(' '))
+        }
+
     @Test
     fun everyCandidateOfThePageIsReachable() =
         withHost { host ->
@@ -3578,6 +3603,37 @@ class RealEngineEditorTest {
             return barLabels().filterNot { it == expand }
         }
 
+        fun touchSlop(): Float =
+            android.view.ViewConfiguration
+                .get(context)
+                .scaledTouchSlop
+                .toFloat()
+
+        /** Presses the candidate [label], slides the finger by ([dx], [dy]) in small steps, and lifts it there. */
+        fun driftOnCandidate(
+            label: String,
+            dx: Float,
+            dy: Float,
+        ) {
+            val center = barItemCenter(label)
+            val start = SystemClock.uptimeMillis()
+            main { touchBar(start, MotionEvent.ACTION_DOWN, center, start) }
+            for (step in 1..DRIFT_STEPS) {
+                SystemClock.sleep(DRAG_STEP_MS)
+                val point = center.first + dx * step / DRIFT_STEPS to center.second + dy * step / DRIFT_STEPS
+                main { touchBar(SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE, point, start) }
+            }
+            main {
+                touchBar(
+                    SystemClock.uptimeMillis(),
+                    MotionEvent.ACTION_UP,
+                    center.first + dx to center.second + dy,
+                    start,
+                )
+            }
+            awaitIdle()
+        }
+
         /** A real finger tap on the candidate [label], brought into view first the way TalkBack focus does. */
         fun touchCandidate(label: String) {
             main {
@@ -4087,6 +4143,7 @@ class RealEngineEditorTest {
 
         /** About one candidate cell of strip beside the expand control on a phone-density screen. */
         private const val STRIP_WIDTH_PX = 240
+        private const val DRIFT_STEPS = 6
 
         /** A row where two inline readings already take more than half of the strip. */
         private const val CROWDED_WIDTH_PX = 540

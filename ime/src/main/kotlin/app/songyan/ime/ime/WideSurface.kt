@@ -55,7 +55,7 @@ internal object WideSurface {
 
     /**
      * The blank margin (dp) kept on each side of a [surfaceDp] wide surface for a [perMille] share of
-     * its width. Only a large surface, one wider than [largeAboveDp] (the user's split width), gets one:
+     * its width. Only a large surface, one wider than [largeAboveDp] (the user's margin width), gets one:
      * a margin is for keeping keys within thumb reach on a wide screen, and a phone needs all of its
      * width. It is cut so the key area keeps [MINIMUM_KEY_AREA_DP].
      */
@@ -88,9 +88,9 @@ internal object WideSurface {
     /**
      * The key area on a [surfaceDp] wide surface. A split keyboard takes the whole surface (its halves
      * stay within thumb reach through the gutter); an unsplit one is capped and docked. Whether the
-     * surface is large, and so splits and gets the side margin, is judged on its full width against
-     * [automaticAboveDp], so a margin never undoes the split; the cap then sees the width left after
-     * the margin, and the insets include it.
+     * surface splits is judged on its full width against [automaticAboveDp], and whether it gets the
+     * side margin against [marginAboveDp], so a margin never undoes the split; the cap then sees the
+     * width left after the margin, and the insets include it.
      */
     fun plan(
         surfaceDp: Double,
@@ -99,8 +99,9 @@ internal object WideSurface {
         capDp: Double = Double.POSITIVE_INFINITY,
         automaticAboveDp: Double = LayoutSplitConfiguration.AUTOMATIC_MAXIMUM_WIDTH,
         sideMarginPerMille: Int = 0,
+        marginAboveDp: Double = automaticAboveDp,
     ): KeyboardWideContentPlan {
-        val margin = sideMargin(surfaceDp, sideMarginPerMille, automaticAboveDp)
+        val margin = sideMargin(surfaceDp, sideMarginPerMille, marginAboveDp)
         val inner = surfaceDp - 2 * margin
         val plan =
             if (split?.isActive(surfaceDp, automaticAboveDp) == true) {

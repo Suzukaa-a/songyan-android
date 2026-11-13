@@ -138,6 +138,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.widePosition.collect { keyboard.dock = KeyboardContentDock.of(it) } }
     scope.launch { source.splitMode.collect { keyboard.splitMode = SplitMode.resolve(it) } }
     scope.launch { source.splitWidthDp.collect { keyboard.splitWidthDp = KeyboardGeometry.clampSplitWidthDp(it) } }
+    scope.launch { source.marginWidthDp.collect { keyboard.marginWidthDp = KeyboardGeometry.clampSplitWidthDp(it) } }
     scope.launch {
         source.sideMarginPerMille.collect {
             keyboard.sideMarginPerMille =
@@ -223,6 +224,9 @@ internal suspend fun KeyboardController.readPreferences() {
     runCatching { source.splitMode.first() }.getOrNull()?.let { keyboard.splitMode = SplitMode.resolve(it) }
     runCatching { source.splitWidthDp.first() }.getOrNull()?.let {
         keyboard.splitWidthDp = KeyboardGeometry.clampSplitWidthDp(it)
+    }
+    runCatching { source.marginWidthDp.first() }.getOrNull()?.let {
+        keyboard.marginWidthDp = KeyboardGeometry.clampSplitWidthDp(it)
     }
     runCatching { source.sideMarginPerMille.first() }.getOrNull()?.let {
         keyboard.sideMarginPerMille = KeyboardGeometry.clampSideMarginPerMille(it)

@@ -177,7 +177,7 @@ internal class ContentFrame(
  * The key area of a view [width] px wide. Only tablets (and unfolded foldables) cap and dock the
  * layouts that stop growing ([WideSurface.contentCapDp]): a phone turned sideways has no room to
  * waste, and a centred narrow keyboard there reads as a floating slab. A split keyboard takes the whole width, its halves kept within reach by the gutter.
- * The user's side margin applies only when the surface is wider than the split width. In one-handed
+ * The user's side margin applies only when the surface is wider than the margin width. In one-handed
  * mode this view is already the narrowed column, so the margin comes off that column and the minimum
  * key area still holds.
  */
@@ -192,6 +192,7 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
             capDp = if (tablet) wideContentCapDp else Double.POSITIVE_INFINITY,
             automaticAboveDp = splitWidthDp.toDouble(),
             sideMarginPerMille = sideMarginPerMille,
+            marginAboveDp = marginWidthDp.toDouble(),
         )
     return ContentFrame(plan.leadingInset.toFloat() * density, plan.contentWidth.toFloat() * density)
 }

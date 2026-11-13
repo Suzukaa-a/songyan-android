@@ -132,6 +132,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val widePosition = store.widePositionPercent
             override val splitMode = store.splitMode
             override val splitWidthDp = store.splitWidthDp
+            override val marginWidthDp = store.marginWidthDp
             override val sideMarginPerMille = store.sideMarginPerMille
             override val readingPlacement = store.readingPlacement
             override val shuangpinHints = store.shuangpinHints

@@ -27,6 +27,9 @@ interface SettingsPreferences {
     /** Key area width in dp above which the automatic split shows, in the [SPLIT_WIDTH_MIN_DP]..[SPLIT_WIDTH_MAX_DP] range. */
     val splitWidthDp: Flow<Int>
 
+    /** Key area width in dp above which the side margin shows, in the split width's range. */
+    val marginWidthDp: Flow<Int>
+
     /** Blank margin on each side of a large surface in per mille of its width, 0..[SIDE_MARGIN_MAX_PER_MILLE] in [SIDE_MARGIN_STEP_PER_MILLE] steps. */
     val sideMarginPerMille: Flow<Int>
 
@@ -134,6 +137,8 @@ interface SettingsPreferences {
 
     suspend fun setSplitWidthDp(value: Int)
 
+    suspend fun setMarginWidthDp(value: Int)
+
     suspend fun setSideMarginPerMille(value: Int)
 
     /** Null returns to following the system. */
@@ -192,7 +197,7 @@ interface SettingsPreferences {
         const val SPLIT_WIDTH_DEFAULT_DP = 600
         const val SIDE_MARGIN_MAX_PER_MILLE = 100
         const val SIDE_MARGIN_STEP_PER_MILLE = 5
-        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 75
+        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 50
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50
@@ -253,6 +258,7 @@ class InMemorySettingsPreferences(
     private val release = MutableStateFlow(false)
     private val bottomGap = MutableStateFlow(0)
     private val splitWidth = MutableStateFlow(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP)
+    private val marginWidth = MutableStateFlow(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP)
     private val sideMargin = MutableStateFlow(SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE)
     private val longPress = MutableStateFlow<Int?>(null)
     private val switchKey = MutableStateFlow(false)
@@ -323,6 +329,7 @@ class InMemorySettingsPreferences(
     override val keyHeight: Flow<String> = height.asStateFlow()
     override val bottomGapDp: Flow<Int> = bottomGap.asStateFlow()
     override val splitWidthDp: Flow<Int> = splitWidth.asStateFlow()
+    override val marginWidthDp: Flow<Int> = marginWidth.asStateFlow()
     override val sideMarginPerMille: Flow<Int> = sideMargin.asStateFlow()
     override val longPressDelayMs: Flow<Int?> = longPress.asStateFlow()
     override val showSwitchKey: Flow<Boolean> = switchKey.asStateFlow()
@@ -407,6 +414,16 @@ class InMemorySettingsPreferences(
             "bad split width: $value"
         }
         splitWidth.value = value
+    }
+
+    override suspend fun setMarginWidthDp(value: Int) {
+        require(
+            value in SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP &&
+                (value - SettingsPreferences.SPLIT_WIDTH_MIN_DP) % SettingsPreferences.SPLIT_WIDTH_STEP_DP == 0,
+        ) {
+            "bad margin width: $value"
+        }
+        marginWidth.value = value
     }
 
     override suspend fun setSideMarginPerMille(value: Int) {

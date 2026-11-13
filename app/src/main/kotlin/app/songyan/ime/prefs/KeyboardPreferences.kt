@@ -267,7 +267,17 @@ class KeyboardPreferences(
             .map { clampSplitWidth(it[KEY_SPLIT_WIDTH] ?: SPLIT_WIDTH_DEFAULT_DP) }
             .distinctUntilChanged()
 
-    /** Blank margin on each side of a large surface in per mille of its width; 0..100 in steps of 5, 25 by default. */
+    /**
+     * Key area width in dp above which the side margin shows, in the split width's range. Until it is
+     * set it follows the stored split width, which used to decide both.
+     */
+    val marginWidthDp: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { clampSplitWidth(it[KEY_MARGIN_WIDTH] ?: it[KEY_SPLIT_WIDTH] ?: SPLIT_WIDTH_DEFAULT_DP) }
+            .distinctUntilChanged()
+
+    /** Blank margin on each side of a large surface in per mille of its width; 0..100 in steps of 5, 50 by default. */
     val sideMarginPerMille: Flow<Int> =
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
@@ -420,6 +430,10 @@ class KeyboardPreferences(
 
     suspend fun setSplitWidthDp(value: Int) {
         appContext.keyboardDataStore.edit { it[KEY_SPLIT_WIDTH] = clampSplitWidth(value) }
+    }
+
+    suspend fun setMarginWidthDp(value: Int) {
+        appContext.keyboardDataStore.edit { it[KEY_MARGIN_WIDTH] = clampSplitWidth(value) }
     }
 
     suspend fun setSideMarginPerMille(value: Int) {
@@ -596,7 +610,7 @@ class KeyboardPreferences(
         const val SPLIT_WIDTH_DEFAULT_DP = 600
         const val SIDE_MARGIN_MAX_PER_MILLE = 100
         const val SIDE_MARGIN_STEP_PER_MILLE = 5
-        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 75
+        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 50
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50
@@ -642,6 +656,7 @@ class KeyboardPreferences(
         private val KEY_HEIGHT = stringPreferencesKey("key_height")
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SPLIT_WIDTH = intPreferencesKey("split_width_dp")
+        private val KEY_MARGIN_WIDTH = intPreferencesKey("margin_width_dp")
         private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_per_mille")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")

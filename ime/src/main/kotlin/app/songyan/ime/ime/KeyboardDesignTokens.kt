@@ -49,7 +49,7 @@ data class KeyboardDesignTokens(
     /** Horizontal gutter between adjacent keys (dp). */
     val keyGapHorizontalDp: Float = 5.5f,
     /** Vertical gutter between adjacent key rows (dp). */
-    val keyGapVerticalDp: Float = 8f,
+    val keyGapVerticalDp: Float = 9f,
     /** Horizontal padding outside the key area, so the edge keys do not touch the screen (dp). */
     val keyAreaHorizontalPaddingDp: Float = 3f,
     /** Empty band kept below the last key row (dp); it is the phone's bottom breathing room. */

@@ -85,7 +85,7 @@ class SettingsPreferencesTest {
         runTest {
             val preferences = InMemorySettingsPreferences()
             assertEquals(600, preferences.splitWidthDp.first())
-            assertEquals(75, preferences.sideMarginPerMille.first())
+            assertEquals(50, preferences.sideMarginPerMille.first())
             preferences.setSplitWidthDp(840)
             preferences.setSideMarginPerMille(40)
             assertEquals(840, preferences.splitWidthDp.first())

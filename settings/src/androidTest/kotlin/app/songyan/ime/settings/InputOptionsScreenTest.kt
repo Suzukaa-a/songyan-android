@@ -260,6 +260,6 @@ class InputOptionsScreenTest {
         show()
         compose.onNodeWithText(str(R.string.options_side_margin_title)).performScrollTo().performClick()
         compose.onNode(hasText(str(R.string.options_reset_default)) and hasAnyAncestor(isDialog())).performClick()
-        assertEquals(75, sideMargin)
+        assertEquals(50, sideMargin)
     }
 }

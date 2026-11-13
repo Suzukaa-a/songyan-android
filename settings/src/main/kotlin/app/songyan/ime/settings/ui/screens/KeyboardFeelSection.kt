@@ -51,6 +51,7 @@ data class KeyboardFeelState(
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",
     val splitWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
+    val marginWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
     val sideMarginPerMille: Int = SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE,
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
@@ -73,9 +74,11 @@ fun KeyboardFeelSection(
     onWidePositionCustom: (Int) -> Unit = {},
     onSplitMode: (String) -> Unit = {},
     onSplitWidth: (Int) -> Unit = {},
+    onMarginWidth: (Int) -> Unit = {},
     onSideMargin: (Int) -> Unit = {},
 ) {
     var splitWidthOpen by rememberSaveable { mutableStateOf(false) }
+    var marginWidthOpen by rememberSaveable { mutableStateOf(false) }
     var sideMarginOpen by rememberSaveable { mutableStateOf(false) }
     if (splitWidthOpen) {
         ValueSliderDialog(
@@ -90,6 +93,21 @@ fun KeyboardFeelSection(
                 stringResource(R.string.options_reset_default)
                     .takeIf { state.splitWidthDp != SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP },
             onReset = { onSplitWidth(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP) },
+        )
+    }
+    if (marginWidthOpen) {
+        ValueSliderDialog(
+            title = stringResource(R.string.options_margin_width_title),
+            range = SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP,
+            step = SettingsPreferences.SPLIT_WIDTH_STEP_DP,
+            initial = state.marginWidthDp,
+            label = { stringResource(R.string.options_split_width_value, it) },
+            onConfirm = onMarginWidth,
+            onDismiss = { marginWidthOpen = false },
+            resetLabel =
+                stringResource(R.string.options_reset_default)
+                    .takeIf { state.marginWidthDp != SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP },
+            onReset = { onMarginWidth(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP) },
         )
     }
     if (sideMarginOpen) {
@@ -257,11 +275,15 @@ fun KeyboardFeelSection(
                 onClick = { onSplitMode(mode) },
             )
         }
-        // Shown even with splitting off: the same width decides where the side margin applies.
         SettingsRow(
             title = stringResource(R.string.options_split_width_title),
             subtitle = stringResource(R.string.options_split_width_subtitle, state.splitWidthDp),
             onClick = { splitWidthOpen = true },
+        )
+        SettingsRow(
+            title = stringResource(R.string.options_margin_width_title),
+            subtitle = stringResource(R.string.options_margin_width_subtitle, state.marginWidthDp),
+            onClick = { marginWidthOpen = true },
         )
         SettingsRow(
             title = stringResource(R.string.options_side_margin_title),

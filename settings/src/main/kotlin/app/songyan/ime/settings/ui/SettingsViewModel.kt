@@ -184,6 +184,7 @@ class SettingsViewModel(
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
         collectPreference(preferences.bottomGapDp) { copy(keyboardFeel = keyboardFeel.copy(bottomGapDp = it)) }
         collectPreference(preferences.splitWidthDp) { copy(keyboardFeel = keyboardFeel.copy(splitWidthDp = it)) }
+        collectPreference(preferences.marginWidthDp) { copy(keyboardFeel = keyboardFeel.copy(marginWidthDp = it)) }
         collectPreference(
             preferences.sideMarginPerMille,
         ) { copy(keyboardFeel = keyboardFeel.copy(sideMarginPerMille = it)) }
@@ -337,6 +338,15 @@ class SettingsViewModel(
             return
         }
         viewModelScope.launch { preferences.setSplitWidthDp(value) }
+    }
+
+    fun setMarginWidthDp(value: Int) {
+        if (value !in SettingsPreferences.SPLIT_WIDTH_MIN_DP..SettingsPreferences.SPLIT_WIDTH_MAX_DP ||
+            (value - SettingsPreferences.SPLIT_WIDTH_MIN_DP) % SettingsPreferences.SPLIT_WIDTH_STEP_DP != 0
+        ) {
+            return
+        }
+        viewModelScope.launch { preferences.setMarginWidthDp(value) }
     }
 
     fun setSideMarginPerMille(value: Int) {

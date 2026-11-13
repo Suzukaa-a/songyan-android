@@ -86,6 +86,35 @@ class WideSurfaceTest {
     }
 
     @Test
+    fun theMarginWidthDecidesTheMarginApartFromTheSplitWidth() {
+        val split = LayoutSplitConfiguration()
+        // Splits above 600 but keeps its full width until the surface passes 800.
+        val splitOnly =
+            WideSurface.plan(
+                700.0,
+                split,
+                KeyboardContentDock.CENTER,
+                automaticAboveDp = 600.0,
+                sideMarginPerMille = 50,
+                marginAboveDp = 800.0,
+            )
+        assertEquals(700.0, splitOnly.contentWidth, 1e-9)
+        assertFalse(splitOnly.active)
+        // A margin from 500 on a phone-sized surface that never splits.
+        val marginOnly =
+            WideSurface.plan(
+                550.0,
+                null,
+                KeyboardContentDock.CENTER,
+                automaticAboveDp = 600.0,
+                sideMarginPerMille = 50,
+                marginAboveDp = 500.0,
+            )
+        assertEquals(27.5, marginOnly.leadingInset, 1e-9)
+        assertEquals(550.0 - 55.0, marginOnly.contentWidth, 1e-9)
+    }
+
+    @Test
     fun aTabletTakesTheShareThenCapsAndDocksOnTheRemainder() {
         assertEquals(25.6, WideSurface.sideMargin(1024.0, 25), 1e-9)
         val tablet = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, capDp = CAP, sideMarginPerMille = 25)

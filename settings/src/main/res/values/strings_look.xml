@@ -56,9 +56,11 @@
     <string name="options_split_on">Split on large screens</string>
     <string name="options_split_on_body">Every layout splits into a left and a right half.</string>
     <string name="options_split_off">Never split</string>
-    <string name="options_split_width_title">Large screen width</string>
-    <string name="options_split_width_subtitle">The keyboard counts as large when wider than %1$d dp</string>
+    <string name="options_split_width_title">Split width</string>
+    <string name="options_split_width_subtitle">Splits automatically when the keyboard is wider than %1$d dp</string>
     <string name="options_split_width_value">%1$d dp</string>
+    <string name="options_margin_width_title">Margin width</string>
+    <string name="options_margin_width_subtitle">Adds side margins when the keyboard is wider than %1$d dp</string>
     <string name="options_side_margin_title">Side margins on large screens</string>
     <string name="options_side_margin_none">None</string>
     <string name="options_side_margin_value">%1$s%% of the width</string>

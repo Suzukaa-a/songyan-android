@@ -90,23 +90,24 @@ internal fun KeyboardView.labelTextSizeSp(
     key: LayoutKey,
     label: String,
 ): Float =
-    when (key.action.type) {
-        LayoutActionKind.SPACE -> metrics.spaceKeyTextSizeSp
-        LayoutActionKind.LANGUAGE_SWITCH -> metrics.languageKeyTextSizeSp
-        LayoutActionKind.PAGE_SWITCH, LayoutActionKind.LAYOUT_PAGE_SWITCH -> metrics.pageKeyTextSizeSp
-        LayoutActionKind.ENTER -> metrics.enterKeyTextSizeSp
-        LayoutActionKind.SHIFT,
-        LayoutActionKind.BACKSPACE,
-        -> metrics.keyLabelSmallTextSizeSp
-        LayoutActionKind.CODE, LayoutActionKind.LITERAL ->
-            // One size per key class: a merged two-letter key reads at the same size as a
-            // single letter, so a row never mixes sizes.
-            if (isPhoneDigitGroup(key, label)) metrics.phoneDigitTextSizeSp else metrics.keyLabelTextSizeSp
-        // The twelve-key surface's kana faces and its arrow-only caret key read as keycap text.
-        LayoutActionKind.KANA, LayoutActionKind.KANA_MODIFIER, LayoutActionKind.CURSOR_LEFT ->
-            metrics.keyLabelTextSizeSp
-        else -> metrics.keyLabelSmallTextSizeSp
-    }
+    KeyGapScale.label(boardColumnScale).toFloat() *
+        when (key.action.type) {
+            LayoutActionKind.SPACE -> metrics.spaceKeyTextSizeSp
+            LayoutActionKind.LANGUAGE_SWITCH -> metrics.languageKeyTextSizeSp
+            LayoutActionKind.PAGE_SWITCH, LayoutActionKind.LAYOUT_PAGE_SWITCH -> metrics.pageKeyTextSizeSp
+            LayoutActionKind.ENTER -> metrics.enterKeyTextSizeSp
+            LayoutActionKind.SHIFT,
+            LayoutActionKind.BACKSPACE,
+            -> metrics.keyLabelSmallTextSizeSp
+            LayoutActionKind.CODE, LayoutActionKind.LITERAL ->
+                // One size per key class: a merged two-letter key reads at the same size as a
+                // single letter, so a row never mixes sizes.
+                if (isPhoneDigitGroup(key, label)) metrics.phoneDigitTextSizeSp else metrics.keyLabelTextSizeSp
+            // The twelve-key surface's kana faces and its arrow-only caret key read as keycap text.
+            LayoutActionKind.KANA, LayoutActionKind.KANA_MODIFIER, LayoutActionKind.CURSOR_LEFT ->
+                metrics.keyLabelTextSizeSp
+            else -> metrics.keyLabelSmallTextSizeSp
+        }
 
 /** A nine-key digit group ("ABC" on the 2 key) is one compact label, not a letter keycap. */
 internal fun KeyboardView.isPhoneDigitGroup(
@@ -467,7 +468,7 @@ internal fun KeyboardView.drawCursorCue(canvas: Canvas) {
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = CURSOR_CUE_STROKE_DP * density
         paint.color = palette.accent
-        canvas.drawRoundRect(drawBounds, metrics.keyRadiusDp * density, metrics.keyRadiusDp * density, paint)
+        canvas.drawRoundRect(drawBounds, keyRadiusPx(), keyRadiusPx(), paint)
         paint.style = Paint.Style.FILL
         return
     }

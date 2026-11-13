@@ -132,7 +132,7 @@ object KeyboardGeometry {
     /** Each side of a large surface keeps this share of its width (per mille) as blank margin, chosen in this range and step. */
     const val SIDE_MARGIN_MAX_PER_MILLE = 100
     const val SIDE_MARGIN_STEP_PER_MILLE = 5
-    const val SIDE_MARGIN_DEFAULT_PER_MILLE = 25
+    const val SIDE_MARGIN_DEFAULT_PER_MILLE = 75
 
     fun clampSplitWidthDp(value: Int): Int =
         (value.coerceIn(SPLIT_WIDTH_MIN_DP, SPLIT_WIDTH_MAX_DP) - SPLIT_WIDTH_MIN_DP) / SPLIT_WIDTH_STEP_DP *

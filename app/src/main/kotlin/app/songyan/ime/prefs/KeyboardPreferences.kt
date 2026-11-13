@@ -596,7 +596,7 @@ class KeyboardPreferences(
         const val SPLIT_WIDTH_DEFAULT_DP = 600
         const val SIDE_MARGIN_MAX_PER_MILLE = 100
         const val SIDE_MARGIN_STEP_PER_MILLE = 5
-        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 25
+        const val SIDE_MARGIN_DEFAULT_PER_MILLE = 75
         const val LONG_PRESS_MIN_MS = 150
         const val LONG_PRESS_MAX_MS = 1000
         const val LONG_PRESS_STEP_MS = 50

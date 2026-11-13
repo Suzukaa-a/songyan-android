@@ -6,8 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Every phone draws a skin's key gap exactly; wider columns grow it in proportion, so the gap keeps
- * the share of the key its author drew, the same as on iOS.
+ * Every phone draws a skin exactly; wider columns grow its gaps, labels and corners, by the same
+ * rates as on iOS.
  */
 class KeyGapScaleTest {
     @Test
@@ -18,12 +18,25 @@ class KeyGapScaleTest {
     }
 
     @Test
-    fun widerColumnsGrowTheGapInProportion() {
+    fun widerColumnsGrowTheGapsLabelsAndCorners() {
         val width = 800.0
-        val scale = KeyGapScale.of(width, 5.0, null)
-        assertEquals((width + 5.0) / 10 / KeyGapScale.REFERENCE_PITCH_DP, scale, 1e-9)
-        val pitch = (width + 5.0 * scale) / 10
-        assertEquals(5.0 / KeyGapScale.REFERENCE_PITCH_DP, 5.0 * scale / pitch, 0.01)
+        val scale = KeyGapScale.of(width, 5.5, null)
+        assertEquals((width + 5.5) / 10 / KeyGapScale.REFERENCE_PITCH_DP, scale, 1e-9)
+        // The gap across outgrows the columns; the gap between rows, corners and labels, whose row
+        // height does not grow, grow slower, labels slowest.
+        assertTrue(KeyGapScale.horizontal(scale) > scale)
+        assertTrue(KeyGapScale.vertical(scale) in 1.0..scale)
+        assertTrue(KeyGapScale.corner(scale) in 1.0..scale)
+        assertTrue(KeyGapScale.label(scale) > 1.0)
+        assertTrue(KeyGapScale.label(scale) < KeyGapScale.corner(scale))
+        for (factor in listOf(
+            KeyGapScale::horizontal,
+            KeyGapScale::vertical,
+            KeyGapScale::corner,
+            KeyGapScale::label,
+        )) {
+            assertEquals(1.0, factor(1.0), 0.0)
+        }
     }
 
     @Test

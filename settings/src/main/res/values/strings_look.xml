@@ -19,8 +19,8 @@
     <string name="candidate_bar_row_gap">Row spacing</string>
     <string name="candidate_bar_column_gap">Column spacing</string>
     <string name="appearance_copy_suffix"> (custom)</string>
-    <string name="appearance_key_gap_scaling_title">Wider key gaps on large screens</string>
-    <string name="appearance_key_gap_scaling_body">In landscape, on an unfolded foldable and on a tablet, the gaps between keys grow with the keys.</string>
+    <string name="appearance_key_gap_scaling_title">Larger gaps and labels on large screens</string>
+    <string name="appearance_key_gap_scaling_body">In landscape, on an unfolded foldable and on a tablet, key gaps, labels and corners grow with the keys.</string>
     <string name="appearance_section_candidates">Candidate bar</string>
     <string name="appearance_section_files">Appearance files</string>
     <string name="appearance_import_title">Import appearance file</string>

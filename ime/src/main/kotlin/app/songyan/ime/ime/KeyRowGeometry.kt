@@ -374,14 +374,26 @@ internal object KeyHitZones {
 /**
  * Skins set their key gaps for a phone's keys; the widest phone column, gap included, is about
  * 44 dp. Where a board's ten letter columns are wider (landscape, an unfolded or tablet screen; per
- * half when split) the horizontal gap grows in the same proportion, so a skin keeps the look its
- * author drew and every phone keeps it exactly. The iOS keyboard uses the same rule.
+ * half when split) the gaps, labels and corners grow with them, so a wide board does not read as
+ * one slab of keys; every phone keeps the skin exactly. The iOS keyboard uses the same rule.
  */
 internal object KeyGapScale {
     const val REFERENCE_PITCH_DP = 44.0
     private const val COLUMNS = 10
 
-    /** The factor for a key area [widthDp] wide whose skin gap is [gapDp]; never below 1. */
+    /** The gap across grows a little faster than the columns, so wide keys stay visibly apart. */
+    fun horizontal(columnScale: Double): Double = 1 + 1.5 * max(0.0, columnScale - 1)
+
+    /** Rows keep their height on a wide board, so the gap between them grows at half the rate. */
+    fun vertical(columnScale: Double): Double = 1 + 0.5 * max(0.0, columnScale - 1)
+
+    /** Corners grow at half the rate too, so a wide key does not read as a box. */
+    fun corner(columnScale: Double): Double = 1 + 0.5 * max(0.0, columnScale - 1)
+
+    /** Labels grow at a quarter of the rate: enough to fill a wide key, still within the row height. */
+    fun label(columnScale: Double): Double = 1 + 0.25 * max(0.0, columnScale - 1)
+
+    /** How much wider a key area [widthDp] wide makes the columns than a phone's, for a skin gap of [gapDp]; never below 1. */
     fun of(
         widthDp: Double,
         gapDp: Double,

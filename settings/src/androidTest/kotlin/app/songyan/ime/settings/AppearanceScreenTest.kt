@@ -73,6 +73,8 @@ class AppearanceScreenTest {
                 AppearanceScreen(
                     onBack = {},
                     onOpenCandidateBar = { candidateBarOpened++ },
+                    keyGapScaling = true,
+                    onKeyGapScalingChanged = {},
                     viewModel =
                         viewModel(
                             factory =

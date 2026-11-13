@@ -298,6 +298,10 @@ class KeyboardController(
     /** The symbol branch chosen on the 123 / symbol pages; null follows the editor. */
     internal var symbolMarksOverride: Boolean? = null
     internal var layoutKind = KeyboardLayoutKind.QWERTY26
+        set(value) {
+            field = value
+            keyboard.wideContentCapDp = WideSurface.contentCapDp(value)
+        }
     internal var schemaId = BuiltinTemplateSchemas.QUANPIN
     internal var preferredLayout = KeyboardLayoutKind.QWERTY26
 

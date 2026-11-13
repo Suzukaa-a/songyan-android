@@ -38,8 +38,8 @@
     },
     "name" : "暖纸",
     "spacing" : {
-      "visualInsetX" : 0.5,
-      "visualInsetY" : 1.25
+      "visualInsetX" : 0.75,
+      "visualInsetY" : 2
     },
     "typography" : {
       "candidateSize" : 21,

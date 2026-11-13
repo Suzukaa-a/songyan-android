@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardWideContentPlan
 import app.songyan.ime.candidate.KeyboardWideContentPolicy
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.LayoutSplitConfiguration
 
 /**
@@ -36,8 +37,18 @@ internal object WideSurface {
     /** A surface at most this wide (dp) is phone-sized: full width, never split by the automatic rule. */
     const val PHONE_MAXIMUM_DP = 600
 
-    /** The key area never grows wider than this when it is not split (dp). */
-    const val CONTENT_MAXIMUM_DP = 600.0
+    /**
+     * The widest an unsplit key area of [kind] grows (dp): the nine-key shell and the merged pads read
+     * as one unit and stop growing; the full keyboard keeps stretching, its side margin is what keeps
+     * the keys within reach. The iOS keyboard caps the same layouts.
+     */
+    fun contentCapDp(kind: KeyboardLayoutKind): Double =
+        when (kind) {
+            KeyboardLayoutKind.PHONE9 -> KeyboardWideContentPolicy.PHONE_NINE_MAXIMUM_CONTENT_WIDTH
+            KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18 ->
+                KeyboardWideContentPolicy.MERGED_MAXIMUM_CONTENT_WIDTH
+            KeyboardLayoutKind.QWERTY26 -> Double.POSITIVE_INFINITY
+        }
 
     /** The key area never gets narrower than this (dp), whatever side margin is chosen. */
     const val MINIMUM_KEY_AREA_DP = 280.0
@@ -85,7 +96,7 @@ internal object WideSurface {
         surfaceDp: Double,
         split: LayoutSplitConfiguration?,
         dock: KeyboardContentDock,
-        capDp: Double = CONTENT_MAXIMUM_DP,
+        capDp: Double = Double.POSITIVE_INFINITY,
         automaticAboveDp: Double = LayoutSplitConfiguration.AUTOMATIC_MAXIMUM_WIDTH,
         sideMarginPerMille: Int = 0,
     ): KeyboardWideContentPlan {

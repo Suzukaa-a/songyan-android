@@ -123,13 +123,27 @@ class KeyboardView(
             relayout()
         }
 
-    /** Wide boards widen the skin's key gaps with their columns ([KeyGapScale]); on by default. */
+    /** Wide boards grow the skin's gaps, labels and corners with their columns ([KeyGapScale]); on by default. */
     var keyGapScaling: Boolean = true
         set(value) {
             if (field == value) return
             field = value
             relayout()
         }
+
+    /** The widest an unsplit key area grows on a tablet (dp); see [WideSurface.contentCapDp]. */
+    var wideContentCapDp: Double = Double.POSITIVE_INFINITY
+        set(value) {
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
+    /** The column scale of the board last laid out ([columnScale]); labels and corners follow it. */
+    internal var boardColumnScale = 1.0
+
+    /** The keycap corner radius in px on this board. */
+    internal fun keyRadiusPx(): Float = (metrics.keyRadiusDp * KeyGapScale.corner(boardColumnScale)).toFloat() * density
 
     /** The globe icon, loaded when the first switch key draws. */
     internal val globeIcon: Drawable? by lazy {
@@ -741,7 +755,7 @@ class KeyboardView(
             // touch target and the dispatch never move.
             val scale = if (pressed) KeyMotion.pressScale() else KeyMotion.releaseScale(now, releases[i], motionScale)
             if (scale < 1f) scaleAroundCenter(drawBounds, scale)
-            val radius = metrics.keyRadiusDp * density
+            val radius = keyRadiusPx()
             // A translucent cap would show its own shadow through itself.
             if (metrics.keyShadowOpacity > 0f && !(railKey && !railChosen) && Color.alpha(baseColor) == 0xFF) {
                 // The shadow tightens while the key is pressed, as on iOS: less opacity, half the offset.
@@ -864,7 +878,7 @@ class KeyboardView(
         }
         if (left >= right || top >= bottom) return
         drawBounds.set(left + insetX, top + insetY, right - insetX, bottom - insetY)
-        val radius = metrics.keyRadiusDp * density
+        val radius = keyRadiusPx()
         paint.style = Paint.Style.FILL
         paint.color = palette.control
         canvas.drawRoundRect(drawBounds, radius, radius, paint)

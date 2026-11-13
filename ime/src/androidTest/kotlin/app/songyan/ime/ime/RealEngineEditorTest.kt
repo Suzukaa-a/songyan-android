@@ -2932,6 +2932,10 @@ class RealEngineEditorTest {
             host.preferences.widePosition.value = 25
             host.start(width = 2400)
             val density = host.density
+            // The full keyboard keeps stretching; a layout that stops growing (a merged pad) docks.
+            val cap = WideSurface.contentCapDp(KeyboardLayoutKind.MERGED14)
+            host.main2 { host.find(KeyboardView::class.java).wideContentCapDp = cap }
+            host.awaitIdle()
             // The large-screen side margin comes off both sides first; the position shares what is left.
             val marginPx =
                 host.main2 {
@@ -2944,7 +2948,7 @@ class RealEngineEditorTest {
                         ).toFloat() *
                         density
                 }
-            val freePx = 2400f - 2 * marginPx - WideSurface.CONTENT_MAXIMUM_DP.toFloat() * density
+            val freePx = 2400f - 2 * marginPx - cap.toFloat() * density
 
             fun keyAreaLeft(): Float =
                 host.main2 {

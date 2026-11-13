@@ -14,9 +14,9 @@ class KeyboardDesignTokensTest {
         assertEquals(56f, portrait.rowHeightDp)
         assertEquals(8f, portrait.keyRadiusDp)
         assertEquals(22f, portrait.keyLabelTextSizeSp)
-        // Cap 49-50 dp with a 6-7 dp gap between rows.
-        val cap = portrait.rowHeightDp - portrait.keyGapVerticalDp
-        assertTrue(cap in 49f..50f)
+        // A 48 dp cap with an 8 dp gap between rows, the same gaps as the iOS keyboard.
+        assertEquals(8f, portrait.keyGapVerticalDp)
+        assertEquals(48f, portrait.rowHeightDp - portrait.keyGapVerticalDp)
         assertEquals(
             portrait.candidateBarHeightDp + 4 * portrait.rowHeightDp + portrait.keyAreaBottomGapDp,
             portrait.totalHeightDp,

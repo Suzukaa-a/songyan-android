@@ -174,9 +174,9 @@ internal class ContentFrame(
 )
 
 /**
- * The key area of a view [width] px wide. Only tablets (and unfolded foldables) cap and dock it
- * at 600 dp: a phone turned sideways has no room to waste, and a centred narrow keyboard there reads
- * as a floating slab. A split keyboard takes the whole width, its halves kept within reach by the gutter.
+ * The key area of a view [width] px wide. Only tablets (and unfolded foldables) cap and dock the
+ * layouts that stop growing ([WideSurface.contentCapDp]): a phone turned sideways has no room to
+ * waste, and a centred narrow keyboard there reads as a floating slab. A split keyboard takes the whole width, its halves kept within reach by the gutter.
  * The user's side margin applies only when the surface is wider than the split width. In one-handed
  * mode this view is already the narrowed column, so the margin comes off that column and the minimum
  * key area still holds.
@@ -189,7 +189,7 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
             surfaceDp,
             split,
             dock,
-            capDp = if (tablet) WideSurface.CONTENT_MAXIMUM_DP else Double.POSITIVE_INFINITY,
+            capDp = if (tablet) wideContentCapDp else Double.POSITIVE_INFINITY,
             automaticAboveDp = splitWidthDp.toDouble(),
             sideMarginPerMille = sideMarginPerMille,
         )
@@ -197,15 +197,22 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
 }
 
 /**
- * The skin's horizontal key gap in px for this board ([KeyGapScale]). Every page of a board uses
- * the same width, so flipping a page never changes the gaps.
+ * How much wider this board's columns are than a phone's ([KeyGapScale]), or 1 when the user turned
+ * the scaling off. Every page of a board uses the same width, so flipping a page never changes it.
  */
-internal fun KeyboardView.scaledKeyGapHorizontal(split: LayoutSplitConfiguration?): Float {
+internal fun KeyboardView.columnScale(split: LayoutSplitConfiguration?): Double {
+    if (!keyGapScaling) return 1.0
     val widthDp = contentFrame(split).width / density - 2 * metrics.keyAreaHorizontalPaddingDp
-    val gap = metrics.keyGapHorizontalDp
-    if (!keyGapScaling) return gap * density
-    return (gap * KeyGapScale.of(widthDp.toDouble(), gap.toDouble(), split)).toFloat() * density
+    return KeyGapScale.of(widthDp.toDouble(), metrics.keyGapHorizontalDp.toDouble(), split)
 }
+
+/** The skin's horizontal key gap in px for this board. */
+internal fun KeyboardView.scaledKeyGapHorizontal(split: LayoutSplitConfiguration?): Float =
+    (metrics.keyGapHorizontalDp * KeyGapScale.horizontal(columnScale(split))).toFloat() * density
+
+/** The skin's gap between rows in px for this board. */
+internal fun KeyboardView.scaledKeyGapVertical(split: LayoutSplitConfiguration?): Float =
+    (metrics.keyGapVerticalDp * KeyGapScale.vertical(columnScale(split))).toFloat() * density
 
 /**
  * The split that applies to the page being drawn at the current width, or null for an unsplit keyboard.
@@ -309,10 +316,11 @@ internal fun KeyboardView.rebuild() {
     var inner = frame.width - 2 * padding
     if (inner <= 0f) return
     val gap = scaledKeyGapHorizontal(split)
+    boardColumnScale = columnScale(split)
     val rowHeight = rowHeightFor(rows.size)
     rowOffsetY = metrics.keyAreaBottomGapDp / 2 * density
     insetX = KeyInsets.rowHorizontal()
-    insetY = KeyInsets.rowVertical(metrics.keyGapVerticalDp * density)
+    insetY = KeyInsets.rowVertical(scaledKeyGapVertical(split))
     var columns = KeyRowSolver.columns(rows, showsGlobe)
     var rowSplit: KeyRowSolver.RowSplit? = null
     if (split != null) {
@@ -375,10 +383,11 @@ internal fun KeyboardView.rebuildWithRails(
     val outerInner = frame.width - 2 * padding
     if (outerInner <= 0f) return
     val gap = scaledKeyGapHorizontal(split)
+    boardColumnScale = columnScale(split)
     val rowHeight = rowHeightFor(rows.size)
     rowOffsetY = metrics.keyAreaBottomGapDp / 2 * density
     insetX = KeyInsets.rowHorizontal()
-    insetY = KeyInsets.rowVertical(metrics.keyGapVerticalDp * density)
+    insetY = KeyInsets.rowVertical(scaledKeyGapVertical(split))
     val chrome = rails.chrome
     val across =
         KeyboardPageChromeMetrics.resolve(
@@ -499,8 +508,9 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
     // matches the row pages (5 dp horizontally, 8 dp vertically).
     val spacing = built.metrics.spacing.toFloat() * density
     insetX = KeyInsets.phoneHorizontal(scaledKeyGapHorizontal(null), spacing)
+    boardColumnScale = columnScale(null)
     // The shell's bands have no vertical gutter of their own: the drawn keycap supplies it.
-    insetY = KeyInsets.phoneVertical(metrics.keyGapVerticalDp * density)
+    insetY = KeyInsets.phoneVertical(scaledKeyGapVertical(null))
     // The physical shell is what identifies the key set: composition only relabels rail slots.
     val physical =
         built.keys.map { placed ->

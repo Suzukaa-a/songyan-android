@@ -97,10 +97,10 @@ class Kana12Geometry private constructor(
         const val GRID_COLUMNS = 3
 
         /** The default horizontal gutter between two caps (dp), matching KeyboardDesignTokens. */
-        const val DEFAULT_KEY_GAP_HORIZONTAL_DP: Double = 5.0
+        const val DEFAULT_KEY_GAP_HORIZONTAL_DP: Double = 5.5
 
         /** The default vertical gutter between two cap rows (dp), matching KeyboardDesignTokens. */
-        const val DEFAULT_KEY_GAP_VERTICAL_DP: Double = 6.5
+        const val DEFAULT_KEY_GAP_VERTICAL_DP: Double = 8.0
 
         /** The reference keyboard's leading rail: four keys, one band each. */
         val DEFAULT_LEFT_BANDS: List<Int> = List(BAND_COUNT) { 1 }

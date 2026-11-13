@@ -1,6 +1,7 @@
 package app.songyan.ime.ime
 
 import app.songyan.ime.candidate.KeyboardContentDock
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.LayoutSplitConfiguration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -10,16 +11,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WideSurfaceTest {
+    private companion object {
+        /** A layout that stops growing, such as a merged pad, on a tablet. */
+        const val CAP = 600.0
+    }
+
+    @Test
+    fun onlyTheNineKeyShellAndTheMergedPadsStopGrowing() {
+        assertEquals(444.0, WideSurface.contentCapDp(KeyboardLayoutKind.PHONE9), 0.0)
+        assertEquals(520.0, WideSurface.contentCapDp(KeyboardLayoutKind.MERGED14), 0.0)
+        assertEquals(520.0, WideSurface.contentCapDp(KeyboardLayoutKind.MERGED18), 0.0)
+        assertEquals(Double.POSITIVE_INFINITY, WideSurface.contentCapDp(KeyboardLayoutKind.QWERTY26), 0.0)
+        // The full keyboard keeps stretching on a tablet; only the side margin narrows it.
+        val full = WideSurface.plan(1024.0, null, KeyboardContentDock.CENTER, sideMarginPerMille = 75)
+        assertEquals(1024.0 - 2 * 76.8, full.contentWidth, 1e-9)
+    }
+
     @Test
     fun anUnsplitKeyboardIsCappedAndDockedOnAWideSurface() {
-        val centre = WideSurface.plan(1024.0, null, KeyboardContentDock.CENTER)
+        val centre = WideSurface.plan(1024.0, null, KeyboardContentDock.CENTER, capDp = CAP)
         assertEquals(600.0, centre.contentWidth, 1e-9)
         assertEquals(212.0, centre.leadingInset, 1e-9)
         assertEquals(212.0, centre.trailingInset, 1e-9)
-        val left = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT)
+        val left = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, capDp = CAP)
         assertEquals(0.0, left.leadingInset, 1e-9)
         assertEquals(424.0, left.trailingInset, 1e-9)
-        val right = WideSurface.plan(1024.0, null, KeyboardContentDock.RIGHT)
+        val right = WideSurface.plan(1024.0, null, KeyboardContentDock.RIGHT, capDp = CAP)
         assertEquals(424.0, right.leadingInset, 1e-9)
         assertEquals(0.0, right.trailingInset, 1e-9)
     }
@@ -71,7 +88,7 @@ class WideSurfaceTest {
     @Test
     fun aTabletTakesTheShareThenCapsAndDocksOnTheRemainder() {
         assertEquals(25.6, WideSurface.sideMargin(1024.0, 25), 1e-9)
-        val tablet = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, sideMarginPerMille = 25)
+        val tablet = WideSurface.plan(1024.0, null, KeyboardContentDock.LEFT, capDp = CAP, sideMarginPerMille = 25)
         assertEquals(600.0, tablet.contentWidth, 1e-9)
         assertEquals(25.6, tablet.leadingInset, 1e-9)
         assertEquals(1024.0 - 600.0 - 25.6, tablet.trailingInset, 1e-9)
@@ -119,7 +136,7 @@ class WideSurfaceTest {
     @Test
     fun aSplitThatIsOffDoesNotTakeTheSurface() {
         val off = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF)
-        assertEquals(600.0, WideSurface.plan(1024.0, off, KeyboardContentDock.CENTER).contentWidth, 1e-9)
+        assertEquals(600.0, WideSurface.plan(1024.0, off, KeyboardContentDock.CENTER, capDp = CAP).contentWidth, 1e-9)
     }
 
     @Test
@@ -141,7 +158,7 @@ class WideSurfaceTest {
 
     @Test
     fun aPercentDocksTheKeyAreaThatShareOfTheFreeSpaceFromTheLeft() {
-        val plan = WideSurface.plan(1000.0, null, KeyboardContentDock.of(25))
+        val plan = WideSurface.plan(1000.0, null, KeyboardContentDock.of(25), capDp = CAP)
         assertEquals(100.0, plan.leadingInset, 1e-9)
         assertEquals(300.0, plan.trailingInset, 1e-9)
     }

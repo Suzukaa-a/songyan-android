@@ -18,8 +18,8 @@
     <string name="candidate_bar_row_gap">行の間隔</string>
     <string name="candidate_bar_column_gap">列の間隔</string>
     <string name="appearance_copy_suffix">（カスタム）</string>
-    <string name="appearance_key_gap_scaling_title">大きな画面でキーの間隔を広げる</string>
-    <string name="appearance_key_gap_scaling_body">横向き、開いた折りたたみ端末、タブレットでは、キーの間隔がキーと一緒に広がります。</string>
+    <string name="appearance_key_gap_scaling_title">大きな画面で間隔と文字を大きくする</string>
+    <string name="appearance_key_gap_scaling_body">横向き、開いた折りたたみ端末、タブレットでは、キーの間隔・文字・角の丸みがキーと一緒に大きくなります。</string>
     <string name="appearance_section_candidates">候補バー</string>
     <string name="appearance_section_files">外観ファイル</string>
     <string name="appearance_import_title">外観ファイルをインポート</string>

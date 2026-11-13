@@ -330,7 +330,7 @@ data class SkinDefinition(
                         candidateSize = 18.0,
                     ),
                 keycap = Keycap(cornerRadius = 8.0, shadow = "none"),
-                spacing = Spacing(visualInsetX = 0.5, visualInsetY = 1.25),
+                spacing = Spacing(visualInsetX = 0.75, visualInsetY = 2.0),
                 variants =
                     Variants(
                         light =

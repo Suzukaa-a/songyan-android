@@ -127,7 +127,7 @@ internal fun KeyboardView.drawKana12Preview(canvas: Canvas) {
     val pivotY = ((press.startY - frame.topPx) / density).toDouble()
     val cells = Kana12Flick.previewBounds(pivotX, pivotY, surface)
     val selected = press.kanaDirection
-    val radius = metrics.keyRadiusDp * density
+    val radius = keyRadiusPx()
     val centerGlyph = Kana12Rows.rowFor(rowId)?.center ?: labels.getOrNull(press.key)
     for ((direction, rect) in cells) {
         val box =
@@ -258,7 +258,7 @@ internal fun KeyboardView.rebuildKana12(surface: Kana12Surface) {
             widthDp = widthDp,
             heightDp = heightDp,
             keyGapHorizontalDp = (scaledKeyGapHorizontal(null) / density).toDouble(),
-            keyGapVerticalDp = metrics.keyGapVerticalDp.toDouble(),
+            keyGapVerticalDp = (scaledKeyGapVertical(null) / density).toDouble(),
             leftRailBands = railBands(leading, Kana12Geometry.DEFAULT_LEFT_BANDS),
             rightRailBands = railBands(trailing, Kana12Geometry.DEFAULT_RIGHT_BANDS),
         )

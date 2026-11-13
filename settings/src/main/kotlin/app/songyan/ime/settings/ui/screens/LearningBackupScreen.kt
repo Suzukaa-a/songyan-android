@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileDownload
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -41,9 +43,11 @@ import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.LearningBackupSummary
 import app.songyan.ime.settings.state.QuarantinedAvailability
 import app.songyan.ime.settings.state.QuarantinedLearningSummary
+import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.ui.LearningBackupViewModel
 import app.songyan.ime.settings.ui.LearningNotice
 import app.songyan.ime.settings.ui.components.ImeDialog
+import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsRow
 import app.songyan.ime.settings.ui.components.SettingsScaffold
@@ -65,6 +69,8 @@ private val BACKUP_TYPES =
 @Composable
 fun LearningBackupScreen(
     onBack: (() -> Unit)?,
+    snapshotDays: Int,
+    onSnapshotDaysChanged: (Int) -> Unit,
     viewModel: LearningBackupViewModel = viewModel(factory = LearningBackupViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,8 +167,23 @@ fun LearningBackupScreen(
                     onClick = { if (state.available && !state.busy) viewModel.exportSafetyBackup() },
                 )
             }
+            SectionHeader(stringResource(R.string.learning_snapshots_section))
+            Column(modifier = Modifier.selectableGroup()) {
+                SettingsPreferences.LEARNING_SNAPSHOT_DAY_CHOICES.forEach { days ->
+                    RadioRow(
+                        title = snapshotIntervalLabel(days),
+                        selected = days == snapshotDays,
+                        onClick = { onSnapshotDaysChanged(days) },
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.learning_snapshot_interval_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             if (state.snapshots.isNotEmpty()) {
-                SectionHeader(stringResource(R.string.learning_snapshots_section))
                 state.snapshots.forEach { snapshot ->
                     SettingsRow(
                         title = stringResource(R.string.learning_snapshot_title),
@@ -344,3 +365,12 @@ private fun describe(summary: LearningBackupSummary): String {
         DateFormat.getMediumDateFormat(context).format(date) + " " + DateFormat.getTimeFormat(context).format(date)
     return stringResource(R.string.learning_backup_detail, summary.sourceName, formatted)
 }
+
+@Composable
+private fun snapshotIntervalLabel(days: Int): String =
+    when (days) {
+        0 -> stringResource(R.string.learning_snapshot_interval_off)
+        1 -> stringResource(R.string.learning_snapshot_interval_daily)
+        7 -> stringResource(R.string.learning_snapshot_interval_weekly)
+        else -> pluralStringResource(R.plurals.learning_snapshot_interval_days, days, days)
+    }

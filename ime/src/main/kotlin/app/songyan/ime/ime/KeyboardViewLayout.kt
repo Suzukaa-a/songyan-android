@@ -203,6 +203,7 @@ internal fun KeyboardView.contentFrame(split: LayoutSplitConfiguration?): Conten
 internal fun KeyboardView.scaledKeyGapHorizontal(split: LayoutSplitConfiguration?): Float {
     val widthDp = contentFrame(split).width / density - 2 * metrics.keyAreaHorizontalPaddingDp
     val gap = metrics.keyGapHorizontalDp
+    if (!keyGapScaling) return gap * density
     return (gap * KeyGapScale.of(widthDp.toDouble(), gap.toDouble(), split)).toFloat() * density
 }
 

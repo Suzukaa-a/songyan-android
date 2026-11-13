@@ -44,6 +44,9 @@ data class KeyboardFeelState(
     val oneHand: String = "off",
     val oneHandWidthPercent: Int = KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT,
     val cursorSwipeAnywhere: Boolean = false,
+    val keyGapScaling: Boolean = true,
+    /** Days between automatic learning copies; 0 is off. */
+    val learningSnapshotDays: Int = SettingsPreferences.LEARNING_SNAPSHOT_DEFAULT_DAYS,
     val widePosition: String = "center",
     val widePositionCustom: Int = SettingsPreferences.WIDE_POSITION_CENTER,
     val splitMode: String = "layout",

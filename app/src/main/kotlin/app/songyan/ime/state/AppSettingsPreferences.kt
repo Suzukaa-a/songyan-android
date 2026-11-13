@@ -33,6 +33,8 @@ class AppSettingsPreferences(
     override val oneHand: Flow<String> = preferences.oneHand
     override val oneHandWidthPercent: Flow<Int> = preferences.oneHandWidthPercent
     override val cursorSwipeAnywhere: Flow<Boolean> = preferences.cursorSwipeAnywhere
+    override val keyGapScaling: Flow<Boolean> = preferences.keyGapScaling
+    override val learningSnapshotDays: Flow<Int> = preferences.learningSnapshotDays
 
     override val widePosition: Flow<String> = preferences.widePosition
     override val widePositionCustom: Flow<Int> = preferences.widePositionCustom
@@ -95,6 +97,10 @@ class AppSettingsPreferences(
     override suspend fun setOneHandWidthPercent(value: Int) = preferences.setOneHandWidthPercent(value)
 
     override suspend fun setCursorSwipeAnywhere(value: Boolean) = preferences.setCursorSwipeAnywhere(value)
+
+    override suspend fun setKeyGapScaling(value: Boolean) = preferences.setKeyGapScaling(value)
+
+    override suspend fun setLearningSnapshotDays(value: Int) = preferences.setLearningSnapshotDays(value)
 
     override val candidateTextSize: Flow<String> = preferences.candidateTextSize
     override val collapsedCandidateComments: Flow<Boolean> = preferences.collapsedCandidateComments

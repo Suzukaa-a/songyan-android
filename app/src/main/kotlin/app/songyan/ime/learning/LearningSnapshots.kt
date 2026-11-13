@@ -2,6 +2,7 @@ package app.songyan.ime.learning
 
 import app.songyan.ime.content.LearningBackupArchive
 import app.songyan.ime.content.LearningBackupException
+import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.storage.AppStorage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Instant
+import kotlin.math.max
 
 /**
  * Automatic, rotating copies of the learning data in app-private storage, so the userdb is never
@@ -40,12 +42,16 @@ class LearningSnapshots(
 
     private val mutex = Mutex()
 
-    /** Takes a snapshot when one is due; returns whether it did. Failures leave the existing ones as they were. */
-    suspend fun snapshotIfDue(): Boolean =
+    /**
+     * Takes a snapshot when one is due; returns whether it did. [days] is the user's interval
+     * ([LearningSnapshotInterval]); 0 turns automatic copies off. Failures leave the existing ones as they were.
+     */
+    suspend fun snapshotIfDue(days: Int = LearningSnapshotInterval.DEFAULT_DAYS): Boolean =
         mutex.withLock {
+            if (days <= 0) return false
             val newest = withContext(ioDispatcher) { names().maxOfOrNull { seconds(it) } }
             val now = clock().epochSecond
-            if (newest != null && now - newest < minIntervalSeconds) return false
+            if (newest != null && now - newest < max(minIntervalSeconds, days * DAY_SECONDS)) return false
             val modified = service.learningModifiedAt() ?: return false
             if (newest != null && modified / MILLIS <= newest) return false
             val archive =
@@ -136,7 +142,17 @@ class LearningSnapshots(
     companion object {
         const val DEFAULT_KEEP = 3
         const val DEFAULT_INTERVAL_SECONDS = 24L * 60 * 60
+        private const val DAY_SECONDS = 24L * 60 * 60
         private const val MILLIS = 1000L
         private val NAME = Regex("snapshot-(\\d{1,12})\\.json")
     }
+}
+
+/** How often the keyboard keeps an automatic copy, in days ([SettingsPreferences.LEARNING_SNAPSHOT_DAY_CHOICES]). */
+object LearningSnapshotInterval {
+    const val DEFAULT_DAYS = SettingsPreferences.LEARNING_SNAPSHOT_DEFAULT_DAYS
+
+    /** A stored value outside the choices reads as the default. */
+    fun resolve(days: Int?): Int =
+        days?.takeIf { it in SettingsPreferences.LEARNING_SNAPSHOT_DAY_CHOICES } ?: DEFAULT_DAYS
 }

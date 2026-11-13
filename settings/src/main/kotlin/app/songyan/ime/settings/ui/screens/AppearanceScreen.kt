@@ -58,6 +58,7 @@ import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsRow
 import app.songyan.ime.settings.ui.components.SettingsScaffold
+import app.songyan.ime.settings.ui.components.SwitchRow
 import app.songyan.ime.settings.ui.openWebPage
 import app.songyan.ime.settings.ui.theme.ThemeMode
 import app.songyan.ime.settings.ui.theme.ThemePreferencesHolder
@@ -73,6 +74,8 @@ import app.songyan.ime.settings.ui.theme.ThemePreferencesHolder
 fun AppearanceScreen(
     onBack: (() -> Unit)?,
     onOpenCandidateBar: () -> Unit,
+    keyGapScaling: Boolean,
+    onKeyGapScalingChanged: (Boolean) -> Unit,
     viewModel: AppearanceViewModel = viewModel(factory = AppearanceViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -175,6 +178,13 @@ fun AppearanceScreen(
                     )
                 }
             }
+
+            SwitchRow(
+                title = stringResource(R.string.appearance_key_gap_scaling_title),
+                subtitle = stringResource(R.string.appearance_key_gap_scaling_body),
+                checked = keyGapScaling,
+                onCheckedChange = onKeyGapScalingChanged,
+            )
 
             SectionHeader(stringResource(R.string.appearance_section_candidates))
             SettingsRow(

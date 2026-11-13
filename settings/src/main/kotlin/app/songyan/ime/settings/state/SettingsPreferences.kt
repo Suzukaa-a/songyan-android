@@ -76,6 +76,16 @@ interface SettingsPreferences {
 
     suspend fun setCursorSwipeAnywhere(value: Boolean)
 
+    /** Wide boards widen the skin's key gaps with their columns (on by default). */
+    val keyGapScaling: Flow<Boolean>
+
+    /** Days between automatic learning copies, one of [LEARNING_SNAPSHOT_DAY_CHOICES]; 0 is off. */
+    val learningSnapshotDays: Flow<Int>
+
+    suspend fun setLearningSnapshotDays(value: Int)
+
+    suspend fun setKeyGapScaling(value: Boolean)
+
     /** Where the key area sits on a wide surface: left, center, right or custom (the number in [widePositionCustom]). */
     val widePosition: Flow<String>
 
@@ -211,6 +221,10 @@ interface SettingsPreferences {
         val SPLIT_MODES = listOf("layout", "on", "off")
         val FLICK_DIRECTIONS = listOf("off", "up", "down")
         const val DEFAULT_FLICK_DIRECTION = "up"
+
+        /** Automatic learning copies: daily by default, every 3 days, weekly, or off (0). */
+        const val LEARNING_SNAPSHOT_DEFAULT_DAYS = 1
+        val LEARNING_SNAPSHOT_DAY_CHOICES = listOf(1, 3, 7, 0)
         val READING_PLACEMENTS = listOf("row", "inline")
         const val DEFAULT_READING_PLACEMENT = "row"
     }
@@ -349,6 +363,19 @@ class InMemorySettingsPreferences(
     override val oneHand: Flow<String> = hand.asStateFlow()
     override val oneHandWidthPercent: Flow<Int> = handWidth.asStateFlow()
     override val cursorSwipeAnywhere: Flow<Boolean> = cursorSwipe.asStateFlow()
+    private val snapshotDays = MutableStateFlow(SettingsPreferences.LEARNING_SNAPSHOT_DEFAULT_DAYS)
+    override val learningSnapshotDays: Flow<Int> = snapshotDays.asStateFlow()
+
+    override suspend fun setLearningSnapshotDays(value: Int) {
+        snapshotDays.value = value
+    }
+
+    private val gapScaling = MutableStateFlow(true)
+    override val keyGapScaling: Flow<Boolean> = gapScaling.asStateFlow()
+
+    override suspend fun setKeyGapScaling(value: Boolean) {
+        gapScaling.value = value
+    }
 
     override suspend fun setOneHandWidthPercent(value: Int) {
         handWidth.value = KeyboardOneHandLayoutPolicy.clampedWidthPercent(value)

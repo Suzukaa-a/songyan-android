@@ -141,6 +141,22 @@ class LearningSnapshotsTest {
         }
 
     @Test
+    fun theUserPicksTheIntervalAndOffTakesNone() =
+        runBlocking {
+            val f = Fixture()
+            f.learn(f.now, "你好\t1")
+            assertFalse("off takes none", f.snapshots.snapshotIfDue(days = 0))
+            assertTrue(f.snapshots.snapshotIfDue(days = 7))
+
+            f.now += 3 * 24 * 3600
+            f.learn(f.now, "你好\t2")
+            assertFalse("a week has not passed", f.snapshots.snapshotIfDue(days = 7))
+            assertTrue("every 3 days is due", f.snapshots.snapshotIfDue(days = 3))
+            assertEquals(1, LearningSnapshotInterval.resolve(5))
+            assertEquals(7, LearningSnapshotInterval.resolve(7))
+        }
+
+    @Test
     fun onlyTheNewestThreeSnapshotsStayAndTemporaryFilesAreCleared() =
         runBlocking {
             val f = Fixture()

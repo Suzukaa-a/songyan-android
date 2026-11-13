@@ -587,6 +587,8 @@ private fun NavGraphBuilder.settingsGraph(
         AppearanceScreen(
             onBack = topBack(navController),
             onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
+            keyGapScaling = state.value.keyboardFeel.keyGapScaling,
+            onKeyGapScalingChanged = viewModel::setKeyGapScaling,
         )
     }
 
@@ -743,7 +745,11 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.LEARNING) {
-        LearningBackupScreen(onBack = topBack(navController))
+        LearningBackupScreen(
+            onBack = topBack(navController),
+            snapshotDays = state.value.keyboardFeel.learningSnapshotDays,
+            onSnapshotDaysChanged = viewModel::setLearningSnapshotDays,
+        )
     }
 
     composable(SettingsRoutes.TRY_OUT) {

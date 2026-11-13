@@ -268,6 +268,14 @@
     <string name="learning_safety_title">匯出合併前的備份</string>
     <string name="learning_backup_detail">%1$s · %2$s</string>
     <string name="learning_snapshots_section">自動副本</string>
+    <string name="learning_snapshot_interval_daily">每天</string>
+    <string name="learning_snapshot_interval_weekly">每週</string>
+    <string name="learning_snapshot_interval_off">關閉</string>
+    <string name="learning_snapshot_interval_body">學到新詞後，鍵盤收起時按這個頻率存一份，保留最近 3 份。</string>
+    <plurals name="learning_snapshot_interval_days">
+        <item quantity="one">每 %d 天</item>
+        <item quantity="other">每 %d 天</item>
+    </plurals>
     <string name="learning_snapshot_title">從自動副本恢復</string>
     <string name="learning_footer">備份可以與 iOS 版松煙互通。備份包含個人詞庫，請妥善儲存。</string>
     <string name="learning_confirm_title">合併這份備份？</string>

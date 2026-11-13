@@ -268,6 +268,14 @@
     <string name="learning_safety_title">导出合并前的备份</string>
     <string name="learning_backup_detail">%1$s · %2$s</string>
     <string name="learning_snapshots_section">自动副本</string>
+    <string name="learning_snapshot_interval_daily">每天</string>
+    <string name="learning_snapshot_interval_weekly">每周</string>
+    <string name="learning_snapshot_interval_off">关闭</string>
+    <string name="learning_snapshot_interval_body">学到新词后，键盘收起时按这个频率存一份，保留最近 3 份。</string>
+    <plurals name="learning_snapshot_interval_days">
+        <item quantity="one">每 %d 天</item>
+        <item quantity="other">每 %d 天</item>
+    </plurals>
     <string name="learning_snapshot_title">从自动副本恢复</string>
     <string name="learning_footer">备份可以与 iOS 版松烟互通。备份包含个人词库，请妥善保存。</string>
     <string name="learning_confirm_title">合并这份备份？</string>

@@ -17,6 +17,7 @@ import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
 import app.songyan.ime.layout.T9QuickSymbolStore
+import app.songyan.ime.learning.LearningSnapshotInterval
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.storage.AppStorage
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,24 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
             .map { it[KEY_CURSOR_SWIPE_ANYWHERE] ?: false }
+            .distinctUntilChanged()
+
+    /** Days between automatic learning copies ([LearningSnapshotInterval]); 0 is off. */
+    val learningSnapshotDays: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { LearningSnapshotInterval.resolve(it[KEY_LEARNING_SNAPSHOT_DAYS]) }
+            .distinctUntilChanged()
+
+    suspend fun setLearningSnapshotDays(value: Int) {
+        appContext.keyboardDataStore.edit { it[KEY_LEARNING_SNAPSHOT_DAYS] = LearningSnapshotInterval.resolve(value) }
+    }
+
+    /** Wide boards widen the skin's key gaps with their columns; on by default. */
+    val keyGapScaling: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_KEY_GAP_SCALING] ?: true }
             .distinctUntilChanged()
 
     /** "left" / "center" / "right" / "custom": where the key area sits on a surface wider than 600 dp. */
@@ -430,6 +449,10 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_CURSOR_SWIPE_ANYWHERE] = value }
     }
 
+    suspend fun setKeyGapScaling(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_KEY_GAP_SCALING] = value }
+    }
+
     suspend fun setOneHandWidthPercent(value: Int) {
         appContext.keyboardDataStore.edit {
             it[KEY_ONE_HAND_WIDTH] = KeyboardOneHandLayoutPolicy.clampedWidthPercent(value)
@@ -641,6 +664,8 @@ class KeyboardPreferences(
         private val KEY_ONE_HAND = stringPreferencesKey("one_hand")
         private val KEY_ONE_HAND_WIDTH = intPreferencesKey("one_hand_width_percent")
         private val KEY_CURSOR_SWIPE_ANYWHERE = booleanPreferencesKey("cursor_swipe_anywhere")
+        private val KEY_KEY_GAP_SCALING = booleanPreferencesKey("key_gap_scaling")
+        private val KEY_LEARNING_SNAPSHOT_DAYS = intPreferencesKey("learning_snapshot_days")
         private val KEY_ACTIVE_SCHEMA = stringPreferencesKey("active_schema_id")
         private val KEY_RECONCILED_GENERATION = stringPreferencesKey("reconciled_generation")
         private val KEY_RECONCILED_NAMESPACE = stringPreferencesKey("reconciled_namespace")

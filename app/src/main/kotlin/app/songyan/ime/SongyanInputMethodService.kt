@@ -85,6 +85,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -127,6 +128,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val oneHand = store.oneHand
             override val oneHandWidthPercent = store.oneHandWidthPercent
             override val cursorSwipeAnywhere = store.cursorSwipeAnywhere
+            override val keyGapScaling = store.keyGapScaling
             override val widePosition = store.widePositionPercent
             override val splitMode = store.splitMode
             override val splitWidthDp = store.splitWidthDp
@@ -887,7 +889,8 @@ class SongyanInputMethodService : InputMethodService() {
                 delay(SNAPSHOT_QUIET_MS)
                 withContext(NonCancellable) {
                     try {
-                        snapshots.snapshotIfDue()
+                        val days = (application as SongyanApplication).keyboardPreferences.learningSnapshotDays.first()
+                        snapshots.snapshotIfDue(days)
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {

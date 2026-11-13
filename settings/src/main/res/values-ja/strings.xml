@@ -267,6 +267,14 @@
     <string name="learning_safety_title">統合前のバックアップをエクスポート</string>
     <string name="learning_backup_detail">%1$s · %2$s</string>
     <string name="learning_snapshots_section">自動コピー</string>
+    <string name="learning_snapshot_interval_daily">毎日</string>
+    <string name="learning_snapshot_interval_weekly">毎週</string>
+    <string name="learning_snapshot_interval_off">オフ</string>
+    <string name="learning_snapshot_interval_body">新しい語を学習したら、キーボードを閉じたときにこの頻度でコピーを保存します。最新の 3 件を残します。</string>
+    <plurals name="learning_snapshot_interval_days">
+        <item quantity="one">%d 日ごと</item>
+        <item quantity="other">%d 日ごと</item>
+    </plurals>
     <string name="learning_snapshot_title">自動コピーから復元</string>
     <string name="learning_footer">バックアップは iOS 版の松煙とも共通です。個人の語が入っているので、大切に保管してください。</string>
     <string name="learning_confirm_title">このバックアップを統合しますか？</string>

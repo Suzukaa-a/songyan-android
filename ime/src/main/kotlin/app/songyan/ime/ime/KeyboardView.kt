@@ -123,6 +123,14 @@ class KeyboardView(
             relayout()
         }
 
+    /** Wide boards widen the skin's key gaps with their columns ([KeyGapScale]); on by default. */
+    var keyGapScaling: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
     /** The globe icon, loaded when the first switch key draws. */
     internal val globeIcon: Drawable? by lazy {
         ContextCompat.getDrawable(context, R.drawable.ic_toolbar_globe)?.mutate()

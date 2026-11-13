@@ -57,6 +57,9 @@ interface KeyboardPreferencesSource {
     /** Sliding sideways over the keys moves the cursor while nothing is being typed. */
     val cursorSwipeAnywhere: Flow<Boolean> get() = flowOf(false)
 
+    /** Wide boards widen the skin's key gaps with their columns. */
+    val keyGapScaling: Flow<Boolean> get() = flowOf(true)
+
     /** [CandidateTextSize.id]; the standard size when the owner stores no choice. */
     val candidateTextSize: Flow<String> get() = flowOf(CandidateTextSize.DEFAULT.id)
 

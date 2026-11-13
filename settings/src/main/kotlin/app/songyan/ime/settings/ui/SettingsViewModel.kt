@@ -209,6 +209,10 @@ class SettingsViewModel(
         collectPreference(preferences.cursorSwipeAnywhere) {
             copy(keyboardFeel = keyboardFeel.copy(cursorSwipeAnywhere = it))
         }
+        collectPreference(preferences.keyGapScaling) { copy(keyboardFeel = keyboardFeel.copy(keyGapScaling = it)) }
+        collectPreference(preferences.learningSnapshotDays) {
+            copy(keyboardFeel = keyboardFeel.copy(learningSnapshotDays = it))
+        }
         collectPreference(preferences.widePosition) { copy(keyboardFeel = keyboardFeel.copy(widePosition = it)) }
         collectPreference(preferences.widePositionCustom) {
             copy(keyboardFeel = keyboardFeel.copy(widePositionCustom = it))
@@ -388,6 +392,14 @@ class SettingsViewModel(
 
     fun setOneHandWidthPercent(value: Int) {
         viewModelScope.launch { preferences.setOneHandWidthPercent(value) }
+    }
+
+    fun setLearningSnapshotDays(value: Int) {
+        viewModelScope.launch { preferences.setLearningSnapshotDays(value) }
+    }
+
+    fun setKeyGapScaling(value: Boolean) {
+        viewModelScope.launch { preferences.setKeyGapScaling(value) }
     }
 
     fun setCursorSwipeAnywhere(value: Boolean) {

@@ -268,6 +268,14 @@
     <string name="learning_safety_title">Export backup from before the merge</string>
     <string name="learning_backup_detail">%1$s · %2$s</string>
     <string name="learning_snapshots_section">Automatic copies</string>
+    <string name="learning_snapshot_interval_daily">Every day</string>
+    <string name="learning_snapshot_interval_weekly">Every week</string>
+    <string name="learning_snapshot_interval_off">Off</string>
+    <string name="learning_snapshot_interval_body">After the keyboard learns new words, it keeps a copy this often when it is put away. The newest 3 are kept.</string>
+    <plurals name="learning_snapshot_interval_days">
+        <item quantity="one">Every %d day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
     <string name="learning_snapshot_title">Restore from an automatic copy</string>
     <string name="learning_footer">Backups also work with Songyan on iOS. They contain your personal words, so keep them safe.</string>
     <string name="learning_confirm_title">Merge this backup?</string>

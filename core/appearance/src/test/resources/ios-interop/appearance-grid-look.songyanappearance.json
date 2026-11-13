@@ -38,7 +38,7 @@
     "name" : "网格外观",
     "spacing" : {
       "visualInsetX" : 0.75,
-      "visualInsetY" : 2
+      "visualInsetY" : 2.5
     },
     "typography" : {
       "candidateSize" : 21,

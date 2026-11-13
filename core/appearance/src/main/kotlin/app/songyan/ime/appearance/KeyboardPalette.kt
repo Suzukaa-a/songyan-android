@@ -114,7 +114,7 @@ data class KeyboardPalette(
 
     companion object {
         const val DEFAULT_KEY_GAP_HORIZONTAL_DP: Double = 6.0
-        const val DEFAULT_KEY_GAP_VERTICAL_DP: Double = 8.0
+        const val DEFAULT_KEY_GAP_VERTICAL_DP: Double = 9.0
         const val DEFAULT_MIN_TOUCH_TARGET_DP: Double = 48.0
         const val DEFAULT_PINYIN_TEXT_SIZE_SP: Double = 13.0
         const val DEFAULT_KEY_LABEL_SMALL_TEXT_SIZE_SP: Double = 14.0

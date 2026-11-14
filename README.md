@@ -36,9 +36,9 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 
 ## Privacy policy
 
-Songyan itself collects no personal data and sends nothing to its developers. A script you run may send the text it handles to the sites that script declares (see below); that transfer goes through Songyan's script process, not Songyan's servers.
+Songyan itself collects no personal data and sends nothing to its developers. A script you run may send the text it handles to the sites that script declares or the addresses you give it (see below); that transfer goes through Songyan's script process, not Songyan's servers.
 
-Songyan itself does not go online. The scripts you install can only reach the sites they declare.
+Songyan itself does not go online. The scripts you install can only reach the sites they declare and the addresses you enter in their settings; plain http reaches only an address you entered on this device or your local network.
 Extensions are separate apps you install yourself, and the system shows you the permissions they use.
 
 - What you type stays on your device. The words it learns, your phrases, the clipboard history
@@ -49,7 +49,7 @@ Extensions are separate apps you install yourself, and the system shows you the 
   Those requests go to the site that hosts the file (for example GitHub), which sees your IP
   address as with any download; nothing about you or your typing is sent.
 - While a script runs, its requests are made by Songyan's script process and only to the sites that
-  script declares. Nothing else about you or your typing is sent.
+  script declares or the addresses you entered in its settings. Nothing else about you or your typing is sent.
 - Voice input records only while a take is running (you start and stop it with the microphone
   button), and only if you have chosen a voice script. The temporary recording is handed to that
   script and deleted after the run.
@@ -59,7 +59,7 @@ Extensions are separate apps you install yourself, and the system shows you the 
   appearances and your Rime configuration files, never the clipboard history. Backup is run by
   the system and your Google account, not by Songyan.
 - Permissions: internet and network state for the downloads above and for the sites your scripts
-  declare; the microphone for voice input; a foreground service and notification while an input
+  reach; the microphone for voice input; a foreground service and notification while an input
   scheme is being prepared; vibration for key feedback.
 - Uninstalling the app deletes all of its data. Questions: open an issue in this repository.
 

@@ -260,4 +260,23 @@ class CandidateLayoutsTest {
         val second = expanded.cells.filter { it.top > 0f }
         assertEquals(start, second.first().left, 0.001f)
     }
+
+    @Test
+    fun theExpandedRowsUnderTheStripAreATableOfEqualColumns() {
+        // The strip fits three 60s in 200 (12 inset each side); the rest is a table.
+        val widths = listOf(60f, 60f, 60f) + List(12) { if (it % 4 == 3) 150f else 50f }
+        val result = ExpandedFlowLayout.table(widths, 300f, 48f, 44f, start = 12f, end = 12f, firstRowGap = 5f)
+        val first = result.cells.filter { it.top == 0f }
+        assertEquals(listOf(0, 1, 2, 3), first.map { it.index })
+        val table = result.cells.filter { it.top > 0f }
+        // Every cell is a whole number of equal columns and every full row reaches the edge.
+        val unit = table.minOf { it.right - it.left }
+        for (cell in table) {
+            val spans = (cell.right - cell.left) / unit
+            assertEquals(Math.round(spans).toFloat(), spans, 0.01f)
+        }
+        val rows = table.groupBy { it.top }.values.toList()
+        for (row in rows.dropLast(1)) assertEquals(300f, row.maxOf { it.right }, 0.01f)
+        assertEquals(widths.size, result.cells.size)
+    }
 }

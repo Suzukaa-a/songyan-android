@@ -17,6 +17,7 @@ import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
 import app.songyan.ime.layout.T9QuickSymbolStore
+import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.learning.LearningSnapshotInterval
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.storage.AppStorage
@@ -267,6 +268,13 @@ class KeyboardPreferences(
             .map { clampSplitWidth(it[KEY_SPLIT_WIDTH] ?: SPLIT_WIDTH_DEFAULT_DP) }
             .distinctUntilChanged()
 
+    /** The wide-screen middle gap in percent at a 1000 dp keyboard ([WideMiddleGap]), 10 by default. */
+    val middleGapPercent: Flow<Int> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { WideMiddleGap.clampedPercent(it[KEY_MIDDLE_GAP] ?: WideMiddleGap.DEFAULT_PERCENT) }
+            .distinctUntilChanged()
+
     /**
      * Key area width in dp above which the side margin shows, in the split width's range. Until it is
      * set it follows the stored split width, which used to decide both.
@@ -430,6 +438,10 @@ class KeyboardPreferences(
 
     suspend fun setSplitWidthDp(value: Int) {
         appContext.keyboardDataStore.edit { it[KEY_SPLIT_WIDTH] = clampSplitWidth(value) }
+    }
+
+    suspend fun setMiddleGapPercent(value: Int) {
+        appContext.keyboardDataStore.edit { it[KEY_MIDDLE_GAP] = WideMiddleGap.clampedPercent(value) }
     }
 
     suspend fun setMarginWidthDp(value: Int) {
@@ -657,6 +669,7 @@ class KeyboardPreferences(
         private val KEY_BOTTOM_GAP = intPreferencesKey("bottom_gap_dp")
         private val KEY_SPLIT_WIDTH = intPreferencesKey("split_width_dp")
         private val KEY_MARGIN_WIDTH = intPreferencesKey("margin_width_dp")
+        private val KEY_MIDDLE_GAP = intPreferencesKey("middle_gap_percent")
         private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_per_mille")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")

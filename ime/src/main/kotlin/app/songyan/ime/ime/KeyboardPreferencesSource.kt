@@ -81,6 +81,9 @@ interface KeyboardPreferencesSource {
     /** Key area width in dp above which the side margin shows, [KeyboardGeometry.clampSplitWidthDp] steps. */
     val marginWidthDp: Flow<Int> get() = flowOf(KeyboardGeometry.SPLIT_WIDTH_DEFAULT_DP)
 
+    /** The wide-screen middle gap in percent at a 1000 dp keyboard ([app.songyan.ime.layout.WideMiddleGap]). */
+    val middleGapPercent: Flow<Int> get() = flowOf(app.songyan.ime.layout.WideMiddleGap.DEFAULT_PERCENT)
+
     /** Blank margin on each side of a large surface in per mille of its width, [KeyboardGeometry.clampSideMarginPerMille] steps. */
     val sideMarginPerMille: Flow<Int> get() = flowOf(KeyboardGeometry.SIDE_MARGIN_DEFAULT_PER_MILLE)
 

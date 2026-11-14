@@ -12,6 +12,7 @@ import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.settings.state.AppKeyboardInfo
 import app.songyan.ime.settings.state.CurrentMainLayout
 import app.songyan.ime.settings.state.DictionaryImportGateway
@@ -184,6 +185,9 @@ class SettingsViewModel(
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
         collectPreference(preferences.bottomGapDp) { copy(keyboardFeel = keyboardFeel.copy(bottomGapDp = it)) }
         collectPreference(preferences.splitWidthDp) { copy(keyboardFeel = keyboardFeel.copy(splitWidthDp = it)) }
+        collectPreference(preferences.middleGapPercent) {
+            copy(keyboardFeel = keyboardFeel.copy(middleGapPercent = it))
+        }
         collectPreference(preferences.marginWidthDp) { copy(keyboardFeel = keyboardFeel.copy(marginWidthDp = it)) }
         collectPreference(
             preferences.sideMarginPerMille,
@@ -338,6 +342,11 @@ class SettingsViewModel(
             return
         }
         viewModelScope.launch { preferences.setSplitWidthDp(value) }
+    }
+
+    fun setMiddleGapPercent(value: Int) {
+        if (value !in WideMiddleGap.MIN_PERCENT..WideMiddleGap.MAX_PERCENT) return
+        viewModelScope.launch { preferences.setMiddleGapPercent(value) }
     }
 
     fun setMarginWidthDp(value: Int) {

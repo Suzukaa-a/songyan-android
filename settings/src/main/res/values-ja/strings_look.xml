@@ -60,6 +60,9 @@
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_margin_width_title">余白を付け始める幅</string>
     <string name="options_margin_width_subtitle">キーボードの幅が %1$d dp を超えると左右に余白を付けます</string>
+    <string name="options_middle_gap_title">横長画面の中央の間隔</string>
+    <string name="options_middle_gap_subtitle">キーボード幅 1000 dp で約 %1$d dp、広いほど大きくなります</string>
+    <string name="options_middle_gap_value">約 %1$d dp</string>
     <string name="options_side_margin_title">大画面での左右の余白</string>
     <string name="options_side_margin_none">なし</string>
     <string name="options_side_margin_value">幅の %1$s%%</string>

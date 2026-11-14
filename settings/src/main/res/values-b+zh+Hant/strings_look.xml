@@ -61,6 +61,9 @@
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_margin_width_title">留白判定寬度</string>
     <string name="options_margin_width_subtitle">鍵盤寬度超過 %1$d dp 時兩側留白</string>
+    <string name="options_middle_gap_title">寬螢幕中間間距</string>
+    <string name="options_middle_gap_subtitle">鍵盤寬 1000 dp 時約 %1$d dp，越寬越大</string>
+    <string name="options_middle_gap_value">約 %1$d dp</string>
     <string name="options_side_margin_title">大螢幕兩側留白</string>
     <string name="options_side_margin_none">無</string>
     <string name="options_side_margin_value">寬度的 %1$s%%</string>

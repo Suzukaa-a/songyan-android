@@ -107,6 +107,15 @@ class KeyboardView(
             relayout()
         }
 
+    /** The wide-screen middle gap in percent ([app.songyan.ime.layout.WideMiddleGap]); splits read it as they resolve. */
+    var middleGapPercent: Int = app.songyan.ime.layout.WideMiddleGap.DEFAULT_PERCENT
+        set(value) {
+            app.songyan.ime.layout.WideMiddleGap.percent = value
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
     /** The key area width (dp) above which the side margin shows. */
     var marginWidthDp: Int = KeyboardGeometry.SPLIT_WIDTH_DEFAULT_DP
         set(value) {

@@ -5,6 +5,7 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.WideMiddleGap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -445,8 +446,8 @@ internal object KeyGapScale {
 /**
  * How a split keyboard spends its width (dp): an outer margin on both sides so the halves do not
  * run into the screen edges, then the gutter, and the keys take the rest. The automatic gutter is
- * narrower than the shared model's thumb-reach one so the keys get wider; each half still stops
- * at [MAXIMUM_HALF_DP] and a wider window opens the gutter instead. The keys never drop below the
+ * the user's wide-screen middle gap ([WideMiddleGap]); each half still stops at [MAXIMUM_HALF_DP]
+ * and a wider window opens the gutter instead. The keys never drop below the
  * split's minimum: when the width is short the margin goes first, then the gutter.
  */
 internal object SplitFrame {
@@ -458,7 +459,6 @@ internal object SplitFrame {
     private const val MARGIN_SHARE = 0.025
     private const val MARGIN_MIN_DP = 8.0
     private const val MARGIN_MAX_DP = 20.0
-    private const val GUTTER_SHARE = 0.2
     const val MAXIMUM_HALF_DP = 300.0
 
     fun plan(
@@ -474,7 +474,7 @@ internal object SplitFrame {
         val margin = (width * MARGIN_SHARE).coerceIn(MARGIN_MIN_DP, MARGIN_MAX_DP)
         val requested =
             if (split.automaticGap) {
-                max(width * GUTTER_SHARE, width - 2 * margin - 2 * MAXIMUM_HALF_DP)
+                max(WideMiddleGap.width(width, WideMiddleGap.percent), width - 2 * margin - 2 * MAXIMUM_HALF_DP)
             } else {
                 shared
             }

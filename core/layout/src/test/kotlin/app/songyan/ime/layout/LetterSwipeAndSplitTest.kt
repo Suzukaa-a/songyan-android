@@ -143,9 +143,10 @@ class LayoutSplitConfigurationTest {
         assertEquals(0.0, gaps[1], 1e-9)
         assertEquals(0.0, gaps[2], 1e-9)
         for (index in 4 until gaps.size) assertTrue(gaps[index] > gaps[index - 1])
-        assertTrue(gaps[5] > 834 * 0.3)
+        assertTrue(gaps[5] >= WideMiddleGap.width(834.0, WideMiddleGap.percent))
+        // A forced split on a cover screen still keeps the wide-screen middle gap's small gutter.
         val forced = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.ALWAYS)
-        assertEquals(110.0, forced.gap(466.0, keyCount = 10), 0.001)
+        assertEquals(WideMiddleGap.width(466.0, WideMiddleGap.percent), forced.gap(466.0, keyCount = 10), 0.001)
     }
 
     @Test

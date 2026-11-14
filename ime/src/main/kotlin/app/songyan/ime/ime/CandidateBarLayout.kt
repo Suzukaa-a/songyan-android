@@ -138,16 +138,14 @@ internal fun CandidateBarView.layoutExpanded() {
     val layout =
         when (style.expandedMode) {
             CandidateBarDefinition.Expanded.Mode.ADAPTIVE ->
-                ExpandedFlowLayout.layout(
+                ExpandedFlowLayout.table(
                     intrinsic = entries.map(::chipWidth),
                     available = viewport.width().toFloat(),
-                    gap = gapX,
                     rowHeight = barPx,
                     minWidth = minChipWidthPx,
-                    rowGap = gapY,
                     start = stripInsetPx,
                     end = stripInsetPx,
-                    // Row 1 is the collapsed row, so it keeps the collapsed spacing; later rows use the user's column gap.
+                    // Row 1 is the collapsed row, so it keeps the collapsed spacing.
                     firstRowGap = cellSpacingPx,
                 )
             CandidateBarDefinition.Expanded.Mode.LIST ->

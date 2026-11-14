@@ -190,7 +190,9 @@ data class LayoutSplitConfiguration(
             )
         val requested =
             if (automaticGap) {
-                maxOf(width * DEFAULT_GAP_FRACTION, width - maximumContentWidth)
+                // The automatic gutter is the user's wide-screen middle gap; a wider surface opens
+                // it further once a half reaches its maximum.
+                maxOf(WideMiddleGap.width(width, WideMiddleGap.percent), width - maximumContentWidth)
             } else {
                 width * gapFraction
             }

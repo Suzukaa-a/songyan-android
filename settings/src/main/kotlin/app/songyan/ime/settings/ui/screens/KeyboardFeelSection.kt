@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
+import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.ui.components.RadioRow
@@ -52,6 +53,7 @@ data class KeyboardFeelState(
     val splitMode: String = "layout",
     val splitWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
     val marginWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
+    val middleGapPercent: Int = WideMiddleGap.DEFAULT_PERCENT,
     val sideMarginPerMille: Int = SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE,
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
@@ -75,10 +77,12 @@ fun KeyboardFeelSection(
     onSplitMode: (String) -> Unit = {},
     onSplitWidth: (Int) -> Unit = {},
     onMarginWidth: (Int) -> Unit = {},
+    onMiddleGap: (Int) -> Unit = {},
     onSideMargin: (Int) -> Unit = {},
 ) {
     var splitWidthOpen by rememberSaveable { mutableStateOf(false) }
     var marginWidthOpen by rememberSaveable { mutableStateOf(false) }
+    var middleGapOpen by rememberSaveable { mutableStateOf(false) }
     var sideMarginOpen by rememberSaveable { mutableStateOf(false) }
     if (splitWidthOpen) {
         ValueSliderDialog(
@@ -108,6 +112,21 @@ fun KeyboardFeelSection(
                 stringResource(R.string.options_reset_default)
                     .takeIf { state.marginWidthDp != SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP },
             onReset = { onMarginWidth(SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP) },
+        )
+    }
+    if (middleGapOpen) {
+        ValueSliderDialog(
+            title = stringResource(R.string.options_middle_gap_title),
+            range = WideMiddleGap.MIN_PERCENT..WideMiddleGap.MAX_PERCENT,
+            step = WideMiddleGap.STEP_PERCENT,
+            initial = state.middleGapPercent,
+            label = { stringResource(R.string.options_middle_gap_value, it * 10) },
+            onConfirm = onMiddleGap,
+            onDismiss = { middleGapOpen = false },
+            resetLabel =
+                stringResource(R.string.options_reset_default)
+                    .takeIf { state.middleGapPercent != WideMiddleGap.DEFAULT_PERCENT },
+            onReset = { onMiddleGap(WideMiddleGap.DEFAULT_PERCENT) },
         )
     }
     if (sideMarginOpen) {
@@ -284,6 +303,11 @@ fun KeyboardFeelSection(
             title = stringResource(R.string.options_margin_width_title),
             subtitle = stringResource(R.string.options_margin_width_subtitle, state.marginWidthDp),
             onClick = { marginWidthOpen = true },
+        )
+        SettingsRow(
+            title = stringResource(R.string.options_middle_gap_title),
+            subtitle = stringResource(R.string.options_middle_gap_subtitle, state.middleGapPercent * 10),
+            onClick = { middleGapOpen = true },
         )
         SettingsRow(
             title = stringResource(R.string.options_side_margin_title),

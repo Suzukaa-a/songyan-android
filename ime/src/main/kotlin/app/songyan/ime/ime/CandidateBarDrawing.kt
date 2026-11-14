@@ -14,6 +14,7 @@ import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
+import app.songyan.ime.candidate.CandidateBarDefinition
 import app.songyan.ime.ime.CandidateBarView.Companion.FADE_MS
 import app.songyan.ime.ime.CandidateBarView.Control
 import app.songyan.ime.ime.CandidateBarView.Entry
@@ -35,6 +36,9 @@ internal fun CandidateBarView.drawEntries(canvas: Canvas) {
     val origin = if (expanded) 0f else viewport.left.toFloat()
     val visibleStart = scroll + origin
     val visibleEnd = visibleStart + viewportExtent()
+    if (expanded && style.expandedMode == CandidateBarDefinition.Expanded.Mode.ADAPTIVE) {
+        drawTableRules(canvas, visibleStart, visibleEnd)
+    }
     // Only the cells on screen are visited, however many pages the list has read.
     val count = minOf(entries.size, cells.size)
     var i = firstCellReaching(visibleStart)
@@ -43,6 +47,34 @@ internal fun CandidateBarView.drawEntries(canvas: Canvas) {
         if ((if (expanded) box.top else box.left) > visibleEnd) break
         drawChip(canvas, i)
         i++
+    }
+}
+
+/**
+ * The expanded table's faint rules: one above every row under the collapsed one, across the
+ * width and down to the bottom of the area even below the last candidate, and one between two
+ * cells of a row, short of its top and bottom. They show where each candidate's touch ends.
+ */
+internal fun CandidateBarView.drawTableRules(
+    canvas: Canvas,
+    visibleStart: Float,
+    visibleEnd: Float,
+) {
+    paint.color = palette.divider
+    paint.strokeWidth = max(1f, density / 2)
+    val right = viewport.width().toFloat()
+    var top = barPx
+    while (top < visibleEnd) {
+        if (top >= visibleStart) canvas.drawLine(0f, top, right, top, paint)
+        top += barPx
+    }
+    val inset = 12 * density
+    for (i in cells.indices) {
+        val cell = cells[i]
+        if (cell.top < barPx || cell.bottom < visibleStart || cell.top > visibleEnd) continue
+        val next = cells.getOrNull(i + 1)
+        if (next == null || next.top != cell.top) continue
+        canvas.drawLine(cell.right, cell.top + inset, cell.right, cell.bottom - inset, paint)
     }
 }
 

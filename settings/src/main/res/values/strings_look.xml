@@ -61,6 +61,9 @@
     <string name="options_split_width_value">%1$d dp</string>
     <string name="options_margin_width_title">Margin width</string>
     <string name="options_margin_width_subtitle">Adds side margins when the keyboard is wider than %1$d dp</string>
+    <string name="options_middle_gap_title">Middle gap on wide screens</string>
+    <string name="options_middle_gap_subtitle">About %1$d dp on a 1000 dp keyboard, wider on wider screens</string>
+    <string name="options_middle_gap_value">About %1$d dp</string>
     <string name="options_side_margin_title">Side margins on large screens</string>
     <string name="options_side_margin_none">None</string>
     <string name="options_side_margin_value">%1$s%% of the width</string>

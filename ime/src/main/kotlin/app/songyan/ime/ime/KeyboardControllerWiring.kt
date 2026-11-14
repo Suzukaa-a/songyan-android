@@ -78,6 +78,7 @@ internal fun KeyboardController.wireViews() {
         enqueueRepeat(stillHeld) { dispatch(action) }
     }
     keyboard.onPopupChanged = { syncBackOwnership() }
+    keyboard.onBoardScaleChanged = { candidates.boardScale = it }
     candidates.onPopupChanged = { syncBackOwnership() }
     keyboard.onDoubleShift = {
         enqueue {

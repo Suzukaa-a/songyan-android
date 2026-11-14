@@ -158,6 +158,14 @@ class KeyboardView(
 
     /** The column scale of the board last laid out ([columnScale]); labels and corners follow it. */
     internal var boardColumnScale = 1.0
+        set(value) {
+            if (field == value) return
+            field = value
+            onBoardScaleChanged(KeyGapScale.label(value).toFloat())
+        }
+
+    /** The labels' growth on this board changed ([KeyGapScale.label]); the candidate bar follows it. */
+    var onBoardScaleChanged: (Float) -> Unit = {}
 
     /** The keycap corner radius in px on this board. */
     internal fun keyRadiusPx(): Float = (metrics.keyRadiusDp * KeyGapScale.corner(boardColumnScale)).toFloat() * density

@@ -148,6 +148,20 @@ class CandidateBarView(
     internal var style = CandidateBarStyle.current(context.resources.configuration.fontScale)
     internal var textScale = textScaleFor(context)
 
+    /**
+     * How much the keys' labels grow on this wide board ([KeyGapScale.label]): candidates grow with
+     * them, their text, padding and spacing alike, so they keep their proportions to the keys.
+     */
+    var boardScale = 1f
+        set(value) {
+            if (field == value) return
+            field = value
+            textScale = textScaleFor(context) * value
+            rebuild()
+            requestLayout()
+            invalidate()
+        }
+
     /** A reading row sits right above (14 / 18 keys): the candidate text then keeps a little distance from it. */
     internal var underReadingRow = false
         set(value) {
@@ -348,8 +362,8 @@ class CandidateBarView(
 
     internal val startPaddingPx: Float get() = metrics.candidateStartPaddingDp * density
     internal val chipGapPx: Float get() = metrics.candidateChipGapDp * density
-    internal val chipPaddingPx: Float get() = metrics.candidateChipPaddingDp * density
-    internal val cellSpacingPx: Float get() = metrics.candidateCellSpacingDp * density
+    internal val chipPaddingPx: Float get() = metrics.candidateChipPaddingDp * density * boardScale
+    internal val cellSpacingPx: Float get() = metrics.candidateCellSpacingDp * density * boardScale
 
     /** Where the strip's first cell starts, so its text lines up with the row's start padding. */
     internal val stripInsetPx: Float get() = (startPaddingPx - chipPaddingPx).coerceAtLeast(0f)
@@ -611,7 +625,7 @@ class CandidateBarView(
         metrics = palette.tokens.withCandidateTextFactor(textSizeFactor)
         applyTypeface()
         style = CandidateBarStyle.current(context.resources.configuration.fontScale)
-        textScale = textScaleFor(context)
+        textScale = textScaleFor(context) * boardScale
         icons.clear()
         rebuild()
         requestLayout()

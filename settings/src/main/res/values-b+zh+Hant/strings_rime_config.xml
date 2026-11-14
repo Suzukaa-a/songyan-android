@@ -27,7 +27,7 @@
     <string name="rime_config_script_create">新增</string>
     <string name="rime_config_scripts_unused">你的 Lua 指令碼還沒有使用。點「應用更改」並確認後才會使用。</string>
     <string name="rime_config_scripts_first_title">使用你自己的 Lua 指令碼？</string>
-    <string name="rime_config_scripts_first_body">Lua 指令碼能讀取你輸入的所有內容。松煙已禁止 Lua 指令碼執行命令、載入外部程式和聯網，但指令碼引擎自身的漏洞仍可能被利用。只使用你信任來源的指令碼。</string>
+    <string name="rime_config_scripts_first_body">Lua 指令碼能讀取你輸入的所有內容。松煙已禁止 Lua 指令碼執行命令、載入外部程式和連網，但指令碼引擎自身的漏洞仍可能被利用。只使用你信任來源的指令碼。</string>
     <string name="rime_config_scripts_changed">以下 Lua 指令碼有改動。</string>
     <string name="rime_config_scripts_use">使用</string>
     <string name="rime_editor_scripts_banner">這個檔案帶有 Lua 指令碼。Lua 指令碼能讀取你輸入的內容，只在你信任來源時使用。</string>

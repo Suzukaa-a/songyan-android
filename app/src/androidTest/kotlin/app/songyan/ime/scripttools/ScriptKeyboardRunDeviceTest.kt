@@ -176,7 +176,8 @@ class ScriptKeyboardRunDeviceTest {
                             client.getOutputStream().apply {
                                 write(
                                     (
-                                        "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: " +
+                                        "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n" +
+                                            "Content-Length: " +
                                             bytes.size + "\r\nConnection: close\r\n\r\n"
                                     ).toByteArray(),
                                 )

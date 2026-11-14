@@ -391,9 +391,6 @@ class ScriptsViewModel(
         }
     }
 
-    /** Replaces the stored source from the editor: the edited text is stored first, then the
-     *  previous entry is deleted, so a failure in between loses nothing the user still had. */
-
     /** Saves the editor's text. A new script is added and confirmed; an edit replaces the
      *  stored source in place and asks for confirmation only when its declarations changed. */
     fun applyEdit(

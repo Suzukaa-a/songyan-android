@@ -34,7 +34,7 @@
     <string name="schemes_scheme_import_link">從連結匯入</string>
     <string name="schemes_scheme_link_label">ZIP 連結或 GitHub 倉庫地址</string>
     <string name="schemes_scheme_link_invalid">請輸入以 https 開頭的連結。</string>
-    <string name="schemes_scheme_link_note">輕觸「下載」後才會聯網，檔案最大 1.5 GB。</string>
+    <string name="schemes_scheme_link_note">輕觸「下載」後才會連網，檔案最大 1.5 GB。</string>
     <string name="schemes_scheme_link_confirm">下載</string>
     <string name="schemes_recommended_section">推薦</string>
     <string name="schemes_recommended_rime_ice_name">雾凇拼音</string>

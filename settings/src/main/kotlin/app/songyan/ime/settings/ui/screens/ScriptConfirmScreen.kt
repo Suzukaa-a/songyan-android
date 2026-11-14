@@ -234,12 +234,6 @@ fun ScriptConfirmScreen(
     }
 }
 
-/**
- * The "what it can read" line: a voice script records the take and gets only that, while a text
- * script reads the selection, or the text before the cursor when nothing is selected. Both are
- * stated on the confirmation page because it is the user's only disclosure before the script runs.
- */
-
 /** The sites a script may reach, as the confirmation and detail pages list them: its declared
  *  hosts, then one row for the addresses typed into its url settings. */
 @Composable
@@ -262,5 +256,10 @@ internal fun runLimitText(seconds: Int): String =
         pluralStringResource(R.plurals.scripts_run_limit_seconds, seconds, seconds)
     }
 
+/**
+ * The "what it can read" line: a voice script records the take and gets only that, while a text
+ * script reads the selection, or the text before the cursor when nothing is selected. Both are
+ * stated on the confirmation page because it is the user's only disclosure before the script runs.
+ */
 internal fun readsBodyRes(needsAudio: Boolean): Int =
     if (needsAudio) R.string.scripts_confirm_reads_audio else R.string.scripts_confirm_reads_body

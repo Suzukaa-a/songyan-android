@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">指令碼</string>
-    <string name="row_scripts_subtitle">單檔案小工具：文字進，文字出</string>
+    <string name="row_scripts_subtitle">給鍵盤加你自己的功能</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">指令碼</string>
@@ -25,7 +25,7 @@
     <!-- Add sheet -->
     <string name="scripts_add_paste">貼上指令碼文字</string>
     <string name="scripts_add_file">選擇檔案</string>
-    <string name="scripts_add_link">從 HTTPS 連結</string>
+    <string name="scripts_add_link">從連結新增</string>
     <string name="scripts_add_editor">在這裡寫指令碼</string>
     <string name="scripts_add_paste_title">貼上指令碼</string>
     <string name="scripts_add_paste_label">指令碼文字</string>
@@ -41,7 +41,7 @@
     <string name="scripts_guide_copied">說明已複製。貼上到與 AI 的對話中即可。</string>
     <string name="scripts_guide_failed">讀取說明失敗，請重試。</string>
     <string name="scripts_guide_clipboard_label">給 AI 的說明</string>
-    <string name="scripts_example_title">例子（不聯網）</string>
+    <string name="scripts_example_title">例子（不連網）</string>
 
     <string name="scripts_pending_badge">待確認</string>
     <string name="scripts_enable_script">啟用 %1$s</string>
@@ -68,7 +68,7 @@
     <string name="scripts_confirm_section_connects">會連的網站</string>
     <string name="scripts_confirm_connects_none">沒有宣告任何網站</string>
     <string name="scripts_connects_typed">你在設定裡填的地址</string>
-    <string name="scripts_connects_none">不聯網</string>
+    <string name="scripts_connects_none">不連網</string>
     <string name="scripts_confirm_timeout">最長執行</string>
     <plurals name="scripts_run_limit_seconds">
         <item quantity="other">最長 %d 秒</item>
@@ -76,14 +76,14 @@
     <plurals name="scripts_run_limit_minutes">
         <item quantity="other">最長 %d 分鐘</item>
     </plurals>
-    <string name="scripts_confirm_connects_none_body">它不會聯網。</string>
+    <string name="scripts_confirm_connects_none_body">它不會連網。</string>
     <string name="scripts_confirm_section_settings">要填的設定</string>
     <string name="scripts_confirm_action">確認</string>
-    <string name="scripts_confirm_note">讀完上面的清單再確認。金鑰只存在這臺裝置上，不會包含在分享內容裡。</string>
+    <string name="scripts_confirm_note">金鑰只存在這臺裝置上。</string>
     <string name="scripts_pending_title">需要確認</string>
     <string name="scripts_pending_body">這個指令碼的宣告變了。使用前請再讀一遍。</string>
     <string name="scripts_unavailable_title">在這臺裝置上不可用</string>
-    <string name="scripts_unavailable_body">此鍵盤無法提供這個指令碼需要的輸入，因此它無法在這裡執行。</string>
+    <string name="scripts_unavailable_body">這臺裝置上不可用。</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">文字</string>
@@ -91,15 +91,15 @@
     <string name="scripts_secret_suffix">（金鑰）</string>
 
     <!-- Trial run -->
-    <string name="scripts_test_section">試一試</string>
-    <string name="scripts_test_input_label">要傳送的文字</string>
+    <string name="scripts_test_section">試執行</string>
+    <string name="scripts_test_input_label">要處理的文字</string>
     <string name="scripts_test_run">執行</string>
     <string name="scripts_test_copy">複製</string>
     <string name="scripts_test_copied">已複製</string>
     <string name="scripts_test_outputs">輸出</string>
     <string name="scripts_test_no_output">指令碼沒有返回內容。</string>
-    <string name="scripts_test_console">控制檯</string>
-    <string name="scripts_test_console_shortened">控制檯（內容已截短）</string>
+    <string name="scripts_test_console">日誌</string>
+    <string name="scripts_test_console_shortened">日誌（已截短）</string>
     <string name="scripts_test_cancelled">執行已取消。</string>
 
     <!-- Detail page -->
@@ -120,21 +120,21 @@
     <string name="scripts_delete_confirm">刪除</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">指令碼已刪除，此操作無法撤銷。</string>
+    <string name="scripts_notice_deleted">已刪除。</string>
     <string name="scripts_notice_up_to_date">已是最新。</string>
-    <string name="scripts_notice_updated">發現更新。使用前請讀一讀改了什麼。</string>
+    <string name="scripts_notice_updated">指令碼要求變了，需要重新確認。</string>
     <string name="scripts_notice_exported">已分享。</string>
     <string name="scripts_notice_export_failed">分享失敗，請重試。</string>
 
     <!-- Engine refusals, one wording per machine code -->
-    <string name="scripts_error_timeout">指令碼執行太久，已停止。</string>
+    <string name="scripts_error_timeout">執行超時。</string>
     <string name="scripts_error_out_of_memory">指令碼佔用記憶體過多，已停止。</string>
-    <string name="scripts_error_address_not_allowed">指令碼嘗試訪問它沒有宣告的網站。</string>
-    <string name="scripts_error_network_failure">網路請求失敗。</string>
+    <string name="scripts_error_address_not_allowed">這個指令碼不能連線這個地址。</string>
+    <string name="scripts_error_network_failure">網路連線失敗，請重試。</string>
     <string name="scripts_error_bad_header">檔案開頭的宣告不合法。</string>
     <string name="scripts_error_unsupported_api">這個指令碼需要更新版本的松煙輸入法。</string>
-    <string name="scripts_error_capability">這個指令碼需要的輸入是此鍵盤無法提供的。</string>
-    <string name="scripts_error_unavailable">指令碼功能暫時不可用，請更新或重新安裝松煙。</string>
+    <string name="scripts_error_capability">這臺裝置上不可用。</string>
+    <string name="scripts_error_unavailable">指令碼暫時無法執行，請重試。</string>
     <string name="scripts_error_generic">指令碼失敗：%1$s</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

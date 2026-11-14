@@ -46,8 +46,8 @@
     <string name="ime_expand">展開候選</string>
     <string name="ime_toolbar_input_methods">鍵盤配置與輸入方式</string>
     <string name="ime_toolbar_hide">收起鍵盤</string>
-    <string name="ime_toolbar_tools">工具</string>
-    <string name="ime_tool_panel_title">工具</string>
+    <string name="ime_toolbar_tools">指令碼</string>
+    <string name="ime_tool_panel_title">指令碼</string>
     <string name="ime_tool_panel_unavailable">此輸入框無法使用工具。</string>
     <string name="ime_tool_panel_select_hint">請從下面選擇。</string>
     <string name="ime_tool_panel_running">正在執行…</string>
@@ -59,8 +59,9 @@
     <string name="ime_tool_panel_undo">撤銷</string>
     <string name="ime_tool_panel_close">關閉</string>
     <string name="ime_tool_panel_written">已寫入。</string>
+    <string name="ime_tool_panel_copied">已複製。</string>
     <string name="ime_tool_panel_truncated">文字較長，僅使用末尾部分。</string>
-    <string name="ime_tool_panel_no_text">此輸入框沒有可用文字。</string>
+    <string name="ime_tool_panel_no_text">先選中文字，或把游標放到文字後面。</string>
     <string name="ime_tool_panel_cancelled">已取消。</string>
     <string name="ime_tool_panel_field_changed">輸入框已切換，未寫入。</string>
     <string name="ime_tool_panel_edited">寫入後文字已變化，未改動。</string>

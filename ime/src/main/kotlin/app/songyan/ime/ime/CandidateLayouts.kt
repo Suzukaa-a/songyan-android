@@ -139,6 +139,33 @@ internal object ExpandedFlowLayout {
  * in the list's own numbering, absolute for a paged list, and its text), or the same text where the
  * engine's new page put it, and otherwise nothing at all.
  */
+/** Which candidate a tap between cells belongs to. */
+internal object CandidateHit {
+    /**
+     * The cell of [cells] (left, top, right, bottom) nearest to ([x], [y]) on its row, if the tap
+     * lies within [slack] of it sideways; -1 otherwise. Cells that touch leave nothing to resolve.
+     */
+    fun nearest(
+        cells: List<List<Float>>,
+        x: Float,
+        y: Float,
+        slack: Float,
+    ): Int {
+        var best = -1
+        var bestDistance = Float.MAX_VALUE
+        for ((index, cell) in cells.withIndex()) {
+            val (left, top, right, bottom) = cell
+            if (y < top || y >= bottom) continue
+            val distance = if (x < left) left - x else if (x > right) x - right else 0f
+            if (distance < bestDistance) {
+                best = index
+                bestDistance = distance
+            }
+        }
+        return if (best >= 0 && bestDistance <= slack) best else -1
+    }
+}
+
 internal object CandidateRelease {
     data class Pressed(
         val cell: Int,

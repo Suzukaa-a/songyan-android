@@ -1032,7 +1032,15 @@ class CandidateBarView(
         if (!withCandidates) return -1
         val cx = if (expanded) x else x + scroll
         val cy = if (expanded) y + scroll else y
-        return cells.indexOfFirst { it.contains(cx, cy) }
+        val inside = cells.indexOfFirst { it.contains(cx, cy) }
+        if (inside >= 0) return inside
+        // The gap between two candidates belongs to them, half each: a tap there picks the nearer.
+        return CandidateHit.nearest(
+            cells.map { listOf(it.left, it.top, it.right, it.bottom) },
+            cx,
+            cy,
+            cellSpacingPx,
+        )
     }
 
     internal fun popupAt(

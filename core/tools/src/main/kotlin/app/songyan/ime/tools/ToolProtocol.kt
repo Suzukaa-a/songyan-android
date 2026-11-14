@@ -15,6 +15,9 @@ data class ToolDescriptor(
     val id: String,
     val title: String,
     val requiredCapabilities: Set<ToolCapability>,
+    /** The tool's own run budget when it knows better than the host (a script that declares a
+     *  long timeout for a slow model); null uses [ToolLimits.timeoutMillis]. */
+    val timeoutMillis: Long? = null,
 )
 
 /**

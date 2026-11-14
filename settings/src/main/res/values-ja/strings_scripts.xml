@@ -50,8 +50,7 @@
     <string name="scripts_missing_title">このスクリプトはもうありません</string>
     <string name="scripts_settings_edit">設定を変更</string>
     <string name="scripts_settings_title">スクリプトの設定</string>
-    <string name="scripts_setting_choice_hint">自由入力：スクリプトが受け付ける値を入力してください（説明を参照）。</string>
-    <string name="scripts_setting_url_invalid">アドレスは http:// または https:// で始まる必要があります。</string>
+    <string name="scripts_setting_url_invalid">HTTPS のアドレス、またはローカルネットワーク内の http アドレスを入力してください。</string>
     <string name="scripts_secret_keep_hint">空欄のままにすると保存済みのシークレットを保持します。</string>
     <string name="scripts_secret_clear">保存済みのシークレットを削除</string>
     <string name="scripts_secret_show">シークレットを表示</string>

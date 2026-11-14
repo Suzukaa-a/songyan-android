@@ -23,5 +23,11 @@ internal class TransportLatch : ScriptTransportCallback.Stub() {
         latch.countDown()
     }
 
-    fun await(timeoutSeconds: Long): Boolean = latch.await(timeoutSeconds, TimeUnit.SECONDS)
+    fun await(timeoutMillis: Long): Boolean = latch.await(timeoutMillis, TimeUnit.MILLISECONDS)
+
+    /** Wakes the engine thread without an answer when the user cancels the run. */
+    fun cancel() {
+        reply = ProxyTransport.Reply(false, 0, null, null, null, null, "cancelled")
+        latch.countDown()
+    }
 }

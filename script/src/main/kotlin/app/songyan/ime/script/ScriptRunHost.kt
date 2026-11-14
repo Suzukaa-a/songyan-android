@@ -9,7 +9,14 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class ScriptRunHost(
     private val declaredHosts: List<String>,
-    private val transport: (url: String, method: String, headersJson: String?, body: ByteArray?) -> FetchReply,
+    private val settingUrls: List<String>,
+    private val transport: (
+        url: String,
+        method: String,
+        headersJson: String?,
+        body: ByteArray?,
+        timeoutMillis: Long,
+    ) -> FetchReply,
 ) {
     /** What the transport did: [accepted] with the response parts, or the refusal reason. */
     data class FetchReply(
@@ -25,7 +32,7 @@ class ScriptRunHost(
     fun authorize(
         url: String,
         phase: Int,
-    ): Boolean = ScriptAddressPolicy.authorize(url, declaredHosts).allowed
+    ): Boolean = ScriptAddressPolicy.authorize(url, declaredHosts, settingUrls).allowed
 
     /** Called from C during the run; the reply is handed back through [ScriptNative.setFetchReply]. */
     fun fetch(
@@ -33,9 +40,10 @@ class ScriptRunHost(
         method: String,
         headersJson: String?,
         body: ByteArray?,
+        timeoutMillis: Long,
     ) {
         val reply =
-            runCatching { transport(url, method, headersJson, body) }.getOrElse { error ->
+            runCatching { transport(url, method, headersJson, body, timeoutMillis) }.getOrElse { error ->
                 FetchReply(accepted = false, error = error.javaClass.simpleName + ": " + (error.message ?: ""))
             }
         ScriptNative.setFetchReply(

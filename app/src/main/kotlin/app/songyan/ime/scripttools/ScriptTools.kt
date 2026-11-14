@@ -3,6 +3,7 @@ package app.songyan.ime.scripttools
 import app.songyan.ime.ime.tools.ToolCatalog
 import app.songyan.ime.ime.tools.ToolExecutor
 import app.songyan.ime.script.ScriptEntry
+import app.songyan.ime.script.ScriptLimits
 import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.tools.ToolCapability
 import app.songyan.ime.tools.ToolDescriptor
@@ -10,15 +11,17 @@ import app.songyan.ime.tools.ToolLimits
 import kotlinx.coroutines.CancellationException
 
 /**
- * Host policy for one tool run. These limits belong to the keyboard's tool state machine, not to
- * the script C contract, so they are not shared values: they match the iOS ToolKit provisional
- * numbers so both platforms behave alike, and are tuned here after measurement.
+ * Host policy for one tool run, the same numbers iOS uses. The default budget is the shared
+ * contract's run duration plus a second, so the engine reports a timeout before the panel does;
+ * a script's @timeout extends it per tool.
  */
 object ToolPipelineLimits {
+    const val SLACK_MILLIS = 1_000L
+
     val PRODUCTION =
         ToolLimits(
             maxInputUnits = 20_000,
-            timeoutMillis = 4_000,
+            timeoutMillis = ScriptLimits.DURATION_MS + SLACK_MILLIS,
             undoWindowMillis = 30_000,
             maxResults = 3,
         )
@@ -44,6 +47,7 @@ class ScriptToolCatalog(
                     id = "script:" + entry.id,
                     title = entry.name,
                     requiredCapabilities = setOf(ToolCapability.TEXT),
+                    timeoutMillis = ScriptLimits.durationMillis(entry.timeoutSeconds) + ToolPipelineLimits.SLACK_MILLIS,
                 )
             }
 }

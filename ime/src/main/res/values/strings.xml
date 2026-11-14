@@ -83,6 +83,7 @@
     <string name="ime_tool_panel_unavailable">Tools are unavailable in this field.</string>
     <string name="ime_tool_panel_select_hint">Choose one below.</string>
     <string name="ime_tool_panel_running">Running…</string>
+    <string name="ime_tool_panel_running_elapsed">Running… %1$s</string>
     <string name="ime_tool_panel_cancel">Cancel</string>
     <string name="ime_tool_panel_copy">Copy</string>
     <string name="ime_tool_panel_replace">Replace</string>

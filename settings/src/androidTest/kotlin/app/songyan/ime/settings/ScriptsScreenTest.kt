@@ -160,8 +160,18 @@ class ScriptsScreenTest {
         compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[2].label))
         compose.onNodeWithText(DECLARED_SETTINGS[1].label).assertExists()
         compose.onNodeWithText(DECLARED_SETTINGS[2].label).assertExists()
-        // A choice is free text with a hint, not a dropdown: the contract has no option list yet.
-        compose.onNodeWithText(str(R.string.scripts_setting_choice_hint)).assertExists()
+        // A choice is a menu of its declared options, starting on the first one.
+        compose.onNodeWithText("正式").assertExists().performClick()
+        compose.onNodeWithText("随意").assertExists().performClick()
+        compose.onNodeWithText("随意").assertExists()
+        // An address the script could not reach blocks confirming.
+        compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[1].label))
+        compose
+            .onNode(
+                hasText(DECLARED_SETTINGS[1].label) and hasSetTextAction(),
+            ).performTextInput("http://llm.example.com")
+        compose.onNodeWithText(str(R.string.scripts_setting_url_invalid)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_confirm_action)).assertIsNotEnabled()
     }
 
     @Test

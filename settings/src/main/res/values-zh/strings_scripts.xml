@@ -50,8 +50,7 @@
     <string name="scripts_missing_title">这个脚本已不存在</string>
     <string name="scripts_settings_edit">修改设置</string>
     <string name="scripts_settings_title">脚本设置</string>
-    <string name="scripts_setting_choice_hint">自由填写：输入脚本接受的值（见脚本说明）。</string>
-    <string name="scripts_setting_url_invalid">地址需以 http:// 或 https:// 开头。</string>
+    <string name="scripts_setting_url_invalid">请输入 HTTPS 地址，或局域网里的 http 地址。</string>
     <string name="scripts_secret_keep_hint">留空表示保留已保存的密钥。</string>
     <string name="scripts_secret_clear">清除已保存的密钥</string>
     <string name="scripts_secret_show">显示密钥</string>

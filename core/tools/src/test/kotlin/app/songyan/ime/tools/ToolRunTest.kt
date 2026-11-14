@@ -98,6 +98,16 @@ class ToolRunTest {
     }
 
     @Test
+    fun aToolsOwnTimeoutReplacesTheHostLimit() {
+        val run = begin(tool = textTool.copy(timeoutMillis = 300_000))
+        assertEquals(300_000, run.timeoutMillis)
+        now = 299_999
+        assertNull(run.tick())
+        assertTrue(run.complete(run.runId, listOf("slow but in time")))
+        assertEquals(ToolPhase.PREVIEWING, run.phase)
+    }
+
+    @Test
     fun aLateResultIsRejectedByTheDeadlineEvenWithoutATick() {
         val run = begin()
         now = 100

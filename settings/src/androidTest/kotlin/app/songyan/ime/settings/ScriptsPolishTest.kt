@@ -146,7 +146,7 @@ class ScriptsPolishTest {
                         "script-1" to
                             mapOf(
                                 DECLARED_SETTINGS[1].key to "https://saved.example/v1",
-                                DECLARED_SETTINGS[2].key to "wide",
+                                DECLARED_SETTINGS[2].key to "随意",
                             ),
                     )
             }
@@ -164,12 +164,13 @@ class ScriptsPolishTest {
         }
         // The pinned bar leaves less height; the last field lives below the first viewport.
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(DECLARED_SETTINGS[2].label))
-        compose.onNodeWithText("wide").assertExists()
+        // A saved option that is not the default stays selected.
+        compose.onNodeWithText("随意").assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_action)).performClick()
 
         val sent = registry.confirms.single().second
         assertEquals("https://saved.example/v1", sent[DECLARED_SETTINGS[1].key])
-        assertEquals("wide", sent[DECLARED_SETTINGS[2].key])
+        assertEquals("随意", sent[DECLARED_SETTINGS[2].key])
         // The untouched secret never travels: a blank secret keeps the stored one.
         assertEquals(listOf(emptySet<String>()), registry.clearedSecrets.map { it.second })
     }
@@ -242,7 +243,7 @@ class ScriptsPolishTest {
                         "script-1" to
                             mapOf(
                                 DECLARED_SETTINGS[1].key to "https://saved.example/v1",
-                                DECLARED_SETTINGS[2].key to "wide",
+                                DECLARED_SETTINGS[2].key to "随意",
                             ),
                     )
             }

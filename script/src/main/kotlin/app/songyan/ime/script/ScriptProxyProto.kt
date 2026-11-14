@@ -155,19 +155,8 @@ internal object ScriptProxyProto {
             put("needsAudio", needsAudio)
             put("availableOnThisHost", availableOnThisHost)
             put("confirmationPending", confirmationPending)
-            put(
-                "settings",
-                JsonArray(
-                    settings.map { field ->
-                        buildJsonObject {
-                            put("key", field.key)
-                            put("kind", field.kind.name)
-                            put("label", field.label)
-                            put("secret", field.secret)
-                        }
-                    },
-                ),
-            )
+            put("settings", JsonArray(settings.map { it.toJson() }))
+            timeoutSeconds?.let { put("timeoutSeconds", it) }
             put(
                 "originKind",
                 when (sourceOrigin) {
@@ -197,15 +186,10 @@ internal object ScriptProxyProto {
             availableOnThisHost = this["availableOnThisHost"]?.jsonPrimitive?.contentOrNull == "true",
             confirmationPending = this["confirmationPending"]?.jsonPrimitive?.contentOrNull == "true",
             settings =
-                (this["settings"]?.jsonArray ?: JsonArray(emptyList())).map { node ->
-                    val field = node.jsonObject
-                    ScriptSettingField(
-                        field["key"]!!.jsonPrimitive.content,
-                        ScriptSettingKind.valueOf(field["kind"]!!.jsonPrimitive.content),
-                        field["label"]!!.jsonPrimitive.content,
-                        field["secret"]?.jsonPrimitive?.contentOrNull == "true",
-                    )
+                (this["settings"]?.jsonArray ?: JsonArray(emptyList())).map {
+                    ScriptSettingField.fromJson(it.jsonObject)
                 },
+            timeoutSeconds = this["timeoutSeconds"]?.jsonPrimitive?.contentOrNull?.toInt(),
             sourceOrigin =
                 when (this["originKind"]?.jsonPrimitive?.contentOrNull) {
                     "file" -> ScriptSourceOrigin.File(this["originName"]!!.jsonPrimitive.content)
@@ -229,19 +213,8 @@ internal object ScriptProxyProto {
                     put("description", description ?: "")
                     put("connects", JsonArray(connects.map { JsonPrimitive(it) }))
                     put("needsAudio", needsAudio)
-                    put(
-                        "settings",
-                        JsonArray(
-                            settings.map { field ->
-                                buildJsonObject {
-                                    put("key", field.key)
-                                    put("kind", field.kind.name)
-                                    put("label", field.label)
-                                    put("secret", field.secret)
-                                }
-                            },
-                        ),
-                    )
+                    put("settings", JsonArray(settings.map { it.toJson() }))
+                    timeoutSeconds?.let { put("timeoutSeconds", it) }
                 }
             is ScriptHeader.Refused ->
                 buildJsonObject {
@@ -261,16 +234,11 @@ internal object ScriptProxyProto {
                 description = this["description"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotEmpty() },
                 connects = (this["connects"]?.jsonArray ?: JsonArray(emptyList())).map { it.jsonPrimitive.content },
                 settings =
-                    (this["settings"]?.jsonArray ?: JsonArray(emptyList())).map { node ->
-                        val field = node.jsonObject
-                        ScriptSettingField(
-                            field["key"]!!.jsonPrimitive.content,
-                            ScriptSettingKind.valueOf(field["kind"]!!.jsonPrimitive.content),
-                            field["label"]!!.jsonPrimitive.content,
-                            field["secret"]?.jsonPrimitive?.contentOrNull == "true",
-                        )
+                    (this["settings"]?.jsonArray ?: JsonArray(emptyList())).map {
+                        ScriptSettingField.fromJson(it.jsonObject)
                     },
                 needsAudio = this["needsAudio"]?.jsonPrimitive?.contentOrNull == "true",
+                timeoutSeconds = this["timeoutSeconds"]?.jsonPrimitive?.contentOrNull?.toInt(),
             )
         } else {
             ScriptHeader.Refused(
@@ -350,6 +318,7 @@ internal object ScriptProxyProto {
                                 },
                             label = field["label"]!!.jsonPrimitive.content,
                             secret = false,
+                            options = field["options"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                         )
                     } +
                         secrets.map { node ->
@@ -362,6 +331,7 @@ internal object ScriptProxyProto {
                             )
                         },
                 needsAudio = needs.any { it.jsonPrimitive.content == "audio" },
+                timeoutSeconds = header["timeoutSeconds"]?.jsonPrimitive?.contentOrNull?.toInt(),
             )
         }
         return ScriptHeader.Refused(

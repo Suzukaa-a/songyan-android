@@ -1,5 +1,14 @@
 package app.songyan.ime.script
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
 /** A stored script, as the list and the confirmation page see it. The source bytes never travel
  * with the metadata: reading them requires [ScriptRegistry.source], so a settings list can be
  * built from the cache without starting the proxy process or touching the engine. */
@@ -18,6 +27,8 @@ data class ScriptEntry(
     val confirmationPending: Boolean,
     val settings: List<ScriptSettingField>,
     val sourceOrigin: ScriptSourceOrigin,
+    /** The script's @timeout in seconds, or null to use the host's duration. */
+    val timeoutSeconds: Int? = null,
 )
 
 /** One @setting or @secret of the header, in declaration order (the settings page shows it). */
@@ -26,7 +37,30 @@ data class ScriptSettingField(
     val kind: ScriptSettingKind,
     val label: String,
     val secret: Boolean,
-)
+    /** A choice setting's options in declaration order, the first being the default. */
+    val options: List<String> = emptyList(),
+) {
+    /** One JSON shape for every place a field is stored or sent, so none can drop a property. */
+    fun toJson(): JsonObject =
+        buildJsonObject {
+            put("key", key)
+            put("kind", kind.name)
+            put("label", label)
+            put("secret", secret)
+            if (options.isNotEmpty()) put("options", JsonArray(options.map { JsonPrimitive(it) }))
+        }
+
+    companion object {
+        fun fromJson(node: JsonObject): ScriptSettingField =
+            ScriptSettingField(
+                key = node["key"]!!.jsonPrimitive.content,
+                kind = ScriptSettingKind.valueOf(node["kind"]!!.jsonPrimitive.content),
+                label = node["label"]!!.jsonPrimitive.content,
+                secret = node["secret"]?.jsonPrimitive?.contentOrNull == "true",
+                options = node["options"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+            )
+    }
+}
 
 enum class ScriptSettingKind { TEXT, URL, CHOICE }
 
@@ -58,6 +92,8 @@ sealed interface ScriptHeader {
         val connects: List<String>,
         val settings: List<ScriptSettingField>,
         val needsAudio: Boolean,
+        /** The script's @timeout in seconds, or null to use the host's duration. */
+        val timeoutSeconds: Int? = null,
     ) : ScriptHeader
 
     /** [code] is the machine name from the shared contract (header/apiVersion/...). */

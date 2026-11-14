@@ -130,6 +130,8 @@ class ScriptMinimalExampleWriteBackTest {
                         ScriptCaseRun.DEFAULT_HEAP_BYTES.toString(),
                         "--duration-ms",
                         ScriptCaseRun.DEFAULT_DURATION_MS.toString(),
+                        "--compute-ms",
+                        ScriptCaseRun.DEFAULT_COMPUTE_MS.toString(),
                         "--request-count",
                         ScriptCaseRun.DEFAULT_REQUEST_COUNT.toString(),
                         "--response-bytes",

@@ -143,7 +143,6 @@ static songyan_script_fetch_action run_fetch(void *userdata, songyan_script_run 
                                               const songyan_script_fetch_request *request,
                                               songyan_script_fetch_response *response,
                                               const char **error_message) {
-    (void)run;
     script_run_context *context = userdata;
     JNIEnv *env = run_env(context);
     if (env == NULL) {
@@ -152,7 +151,7 @@ static songyan_script_fetch_action run_fetch(void *userdata, songyan_script_run 
     }
     jclass klass = (*env)->GetObjectClass(env, context->host);
     jmethodID method = (*env)->GetMethodID(env, klass, "fetch",
-                                           "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[B)V");
+                                           "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BJ)V");
     if (method == NULL) {
         (*env)->DeleteLocalRef(env, klass);
         *error_message = "the host has no transport";
@@ -171,12 +170,13 @@ static songyan_script_fetch_action run_fetch(void *userdata, songyan_script_run 
                                        (const jbyte *)request->body);
         }
     }
-    /* Synchronous on purpose: the transport runs in the proxy process over Binder, the engine
-     * thread waits, and the injected duration limit still bounds the whole run. The reply lands
-     * in pending_reply through setFetchReply. */
+    /* Synchronous on purpose: the transport runs in the proxy process over Binder and the engine
+     * thread waits. The bridge stops its compute clock for this call, and the request gets what is
+     * left of the run's duration, so a slow server is bounded by the run and nothing else. The
+     * reply lands in pending_reply through setFetchReply. */
     memset(&pending_reply, 0, sizeof(pending_reply));
     (*env)->CallVoidMethod(env, context->host, method, url_string, method_string,
-                           headers_string, body_array);
+                           headers_string, body_array, (jlong)songyan_script_run_ms_left(run));
     (*env)->DeleteLocalRef(env, url_string);
     (*env)->DeleteLocalRef(env, method_string);
     if (headers_string != NULL) {
@@ -329,8 +329,8 @@ static jbyteArray result_json(JNIEnv *env, const songyan_script_run_result *resu
 JNIEXPORT jlong JNICALL
 Java_app_songyan_ime_script_ScriptNative_createRun(
     JNIEnv *env, jclass type, jbyteArray source, jbyteArray settings, jbyteArray text,
-    jbyteArray audio, jint source_bytes, jint heap_bytes, jint duration_ms, jint request_count,
-    jint response_bytes, jint input_text_bytes) {
+    jbyteArray audio, jint source_bytes, jint heap_bytes, jint duration_ms, jint compute_ms,
+    jint request_count, jint response_bytes, jint input_text_bytes) {
     (void)type;
     if (!guard_ok(env)) return 0;
     jclass host_class = (*env)->FindClass(env, "app/songyan/ime/script/ScriptRunHost");
@@ -365,6 +365,7 @@ Java_app_songyan_ime_script_ScriptNative_createRun(
     limits.source_bytes = (size_t)source_bytes;
     limits.heap_bytes = (size_t)heap_bytes;
     limits.duration_ms = (uint32_t)duration_ms;
+    limits.compute_ms = (uint32_t)compute_ms;
     limits.request_count = (uint32_t)request_count;
     limits.response_bytes = (size_t)response_bytes;
     limits.input_text_bytes = (size_t)input_text_bytes;

@@ -142,7 +142,7 @@ class ScriptSharedCasesTest {
                 .list("script-cases")!!
                 .filter { it != "cases" }
                 .sorted()
-        assertEquals("the sync set has 30 contract cases", 30, cases.size)
+        assertEquals("the sync set has 39 contract cases", 39, cases.size)
         cases.forEach { case -> runContractCase(case) }
     }
 
@@ -181,6 +181,7 @@ class ScriptSharedCasesTest {
         file("logLimit.txt")?.let { arguments += listOf("--log-limit", it.toString(StandardCharsets.UTF_8).trim()) }
         // cancel.txt is the --cancel-pending flag; its content is not read.
         if (file("cancel.txt") != null) arguments += "--cancel-pending"
+        file("hostWait.txt")?.let { arguments += listOf("--host-wait-ms", it.toString(StandardCharsets.UTF_8).trim()) }
         val capabilities =
             file("capabilities.txt")?.toString(StandardCharsets.UTF_8)?.trim() ?: "text"
         arguments += listOf("--capabilities", capabilities)
@@ -197,6 +198,8 @@ class ScriptSharedCasesTest {
                 (overrides["heapBytes"] ?: ScriptCaseRun.DEFAULT_HEAP_BYTES.toString()),
                 "--duration-ms",
                 (overrides["durationMs"] ?: ScriptCaseRun.DEFAULT_DURATION_MS.toString()),
+                "--compute-ms",
+                (overrides["computeMs"] ?: ScriptCaseRun.DEFAULT_COMPUTE_MS.toString()),
                 "--request-count",
                 (overrides["requestCount"] ?: ScriptCaseRun.DEFAULT_REQUEST_COUNT.toString()),
                 "--response-bytes",
@@ -223,7 +226,7 @@ class ScriptSharedCasesTest {
     @Test
     fun executionCasesMatchGoldenJson() {
         val cases = context.assets.list("script-execution/cases")!!.sorted()
-        assertEquals("the sync set has 54 execution cases", 54, cases.size)
+        assertEquals("the sync set has 58 execution cases", 58, cases.size)
         cases.forEach { case -> runExecutionCase(case) }
     }
 }

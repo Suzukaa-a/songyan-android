@@ -291,6 +291,29 @@ class ToolPanelDeviceTest {
         assertEquals("hello", target.text)
     }
 
+    /** A tool's own timeout outlives the host limit, and the running state counts the wait. */
+    @Test
+    fun aLongRunKeepsItsOwnTimeoutAndCountsTheWait() {
+        val target = field("hello")
+        activate(target)
+        var now = 1_000L
+        val shortLimits = ToolLimits(maxInputUnits = 64, timeoutMillis = 100, undoWindowMillis = null, maxResults = 3)
+        val slowTool = tool.copy(timeoutMillis = 600_000)
+        val slowCatalog = ToolCatalog { listOf(slowTool) }
+        val bridge = EditorToolGatewayBridge(editor, slowCatalog, shortLimits, info = { target.info }, clock = { now })
+        val reply = CompletableDeferred<List<String>>()
+        val controller = ToolPanelController(bridge, ToolExecutor { _, _ -> reply.await() }, scope, clock = { now })
+        instrumentation.runOnMainSync { controller.start(slowTool) }
+        now += 75_000
+        Thread.sleep(1_500)
+        instrumentation.waitForIdleSync()
+        val running = controller.state()
+        assertEquals(ToolPhase.RUNNING, running.phase)
+        assertEquals(75L, running.elapsedSeconds)
+        instrumentation.runOnMainSync { reply.complete(listOf("SLOW")) }
+        assertEquals(ToolPhase.PREVIEWING, awaitPhase(controller, ToolPhase.PREVIEWING).phase)
+    }
+
     @Test
     fun timeoutAndNoResultShowTheirOwnCopy() {
         lateinit var view: ToolPanelView

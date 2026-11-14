@@ -1,6 +1,5 @@
 package app.songyan.ime.settings.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +18,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,15 +48,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.script.ScriptEntry
 import app.songyan.ime.script.ScriptRunOutcome
-import app.songyan.ime.script.ScriptSettingField
-import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsNotice
 import app.songyan.ime.settings.ui.ScriptsViewModel
@@ -616,7 +608,7 @@ private fun ScriptSettingsDialog(
                     saving = true
                     viewModel.updateSettings(scriptId, values, clearSecrets.toSet())
                 },
-                enabled = !state.busy,
+                enabled = !state.busy && !hasUnreachableAddress(entry.settings, values),
             ) {
                 if (state.busy) {
                     CircularProgressIndicator(
@@ -638,7 +630,7 @@ private fun ScriptSettingsDialog(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             entry.settings.forEach { field ->
-                SettingsEditField(
+                ScriptSettingInput(
                     field = field,
                     value = values[field.key] ?: "",
                     clearSaved = field.key in clearSecrets,
@@ -652,84 +644,6 @@ private fun ScriptSettingsDialog(
                             }
                     },
                 )
-            }
-        }
-    }
-}
-
-/** One field of the settings dialog; the same masking, validation and secret rules as the
- *  confirmation page. */
-@Composable
-private fun SettingsEditField(
-    field: ScriptSettingField,
-    value: String,
-    clearSaved: Boolean,
-    onChange: (String) -> Unit,
-    onClearSaved: (Boolean) -> Unit,
-) {
-    var reveal by rememberSaveable(field.key) { mutableStateOf(false) }
-    val addressInvalid =
-        field.kind == ScriptSettingKind.URL &&
-            value.isNotBlank() &&
-            !value.trim().startsWith("http://") &&
-            !value.trim().startsWith("https://")
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            label = {
-                Text(
-                    field.label +
-                        if (field.secret) stringResource(R.string.scripts_secret_suffix) else "",
-                )
-            },
-            supportingText = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        when {
-                            addressInvalid -> stringResource(R.string.scripts_setting_url_invalid)
-                            field.kind == ScriptSettingKind.URL -> stringResource(R.string.scripts_setting_kind_url)
-                            field.kind == ScriptSettingKind.CHOICE ->
-                                stringResource(R.string.scripts_setting_choice_hint)
-                            else -> stringResource(R.string.scripts_setting_kind_text)
-                        },
-                    )
-                    if (field.secret) Text(stringResource(R.string.scripts_secret_keep_hint))
-                }
-            },
-            isError = addressInvalid,
-            singleLine = true,
-            visualTransformation =
-                if (field.secret && !reveal) {
-                    PasswordVisualTransformation()
-                } else {
-                    VisualTransformation.None
-                },
-            trailingIcon =
-                if (field.secret) {
-                    {
-                        IconButton(onClick = { reveal = !reveal }) {
-                            Icon(
-                                imageVector = if (reveal) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription =
-                                    stringResource(
-                                        if (reveal) R.string.scripts_secret_hide else R.string.scripts_secret_show,
-                                    ),
-                            )
-                        }
-                    }
-                } else {
-                    null
-                },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (field.secret) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clickable { onClearSaved(!clearSaved) },
-            ) {
-                Checkbox(checked = clearSaved, onCheckedChange = onClearSaved)
-                Text(stringResource(R.string.scripts_secret_clear))
             }
         }
     }

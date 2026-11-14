@@ -24,6 +24,17 @@ class ScriptIsolatedService : Service() {
             Thread(runnable, "songyan-script-case")
         }
 
+    /** Runs get their own thread, so a header parse never waits behind a minutes-long run. */
+    private val runExecutor =
+        Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "songyan-script-run")
+        }
+
+    /** Set by [ScriptIsolatedProcess.cancelRun]; read on the run thread, which alone calls C. */
+    @Volatile private var cancelRequested = false
+
+    @Volatile private var waitingFetch: TransportLatch? = null
+
     override fun onBind(intent: Intent): IBinder = binder
 
     private val binder: ScriptIsolatedProcess.Stub =
@@ -34,10 +45,12 @@ class ScriptIsolatedService : Service() {
                 text: ByteArray?,
                 audio: ParcelFileDescriptor?,
                 declaredHosts: MutableList<String>,
+                settingUrls: MutableList<String>,
                 transport: ScriptTransport,
                 callback: ScriptIsolatedCallback,
             ) {
-                executor.execute {
+                cancelRequested = false
+                runExecutor.execute {
                     try {
                         /* The descriptor is this process's to close: read the recorded audio out
                          * once, before the engine starts, so a long run holds no caller resource. */
@@ -45,11 +58,20 @@ class ScriptIsolatedService : Service() {
                             audio?.let { descriptor ->
                                 ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes() }
                             }
+                        var handle = 0L
                         val host =
-                            ScriptRunHost(declaredHosts) { url, method, headers, body ->
+                            ScriptRunHost(declaredHosts, settingUrls) { url, method, headers, body, timeoutMillis ->
                                 val latch = TransportLatch()
-                                transport.fetch(url, method, headers, body, latch)
-                                if (!latch.await(70)) {
+                                waitingFetch = latch
+                                if (!cancelRequested) transport.fetch(url, method, headers, body, timeoutMillis, latch)
+                                // A little past the run's own deadline, so the engine reports it.
+                                val answered = cancelRequested || latch.await(timeoutMillis + FETCH_SLACK_MS)
+                                waitingFetch = null
+                                if (cancelRequested) {
+                                    // This is the run thread, the only one that touches the engine.
+                                    ScriptNative.cancelRun(handle)
+                                    ScriptRunHost.FetchReply(accepted = false, error = "cancelled")
+                                } else if (!answered) {
                                     ScriptRunHost.FetchReply(accepted = false, error = "the transport did not answer")
                                 } else {
                                     val reply = latch.reply
@@ -65,18 +87,19 @@ class ScriptIsolatedService : Service() {
                                 }
                             }
                         ScriptRunHost.install(host)
-                        val handle =
+                        handle =
                             ScriptNative.createRun(
                                 source,
                                 settingsJson,
                                 text,
                                 audioBytes,
-                                ScriptCaseRun.PROVISIONAL_SOURCE_BYTES.toInt(),
-                                ScriptCaseRun.PROVISIONAL_HEAP_BYTES.toInt(),
-                                ScriptCaseRun.PROVISIONAL_DURATION_MS.toInt(),
-                                ScriptCaseRun.PROVISIONAL_REQUEST_COUNT.toInt(),
-                                ScriptCaseRun.PROVISIONAL_RESPONSE_BYTES.toInt(),
-                                ScriptCaseRun.PROVISIONAL_INPUT_TEXT_BYTES.toInt(),
+                                ScriptLimits.SOURCE_BYTES.toInt(),
+                                ScriptLimits.HEAP_BYTES.toInt(),
+                                ScriptLimits.DURATION_MS.toInt(),
+                                ScriptLimits.COMPUTE_MS.toInt(),
+                                ScriptLimits.REQUEST_COUNT.toInt(),
+                                ScriptLimits.RESPONSE_BYTES.toInt(),
+                                ScriptLimits.INPUT_TEXT_BYTES.toInt(),
                             )
                         if (handle == 0L) {
                             callback.finished(-1, "", "the run was refused")
@@ -87,6 +110,7 @@ class ScriptIsolatedService : Service() {
                          * stepping until a terminal state is all the loop does. */
                         var step: Int
                         while (true) {
+                            if (cancelRequested) ScriptNative.cancelRun(handle)
                             step = ScriptNative.stepRun(handle)
                             if (step >= 2) break
                         }
@@ -111,6 +135,11 @@ class ScriptIsolatedService : Service() {
                         callback.finished(-1, "", error.message ?: error.javaClass.simpleName)
                     }
                 }
+            }
+
+            override fun cancelRun() {
+                cancelRequested = true
+                waitingFetch?.cancel()
             }
 
             override fun run(
@@ -187,8 +216,13 @@ class ScriptIsolatedService : Service() {
             }
         }
 
+    private companion object {
+        const val FETCH_SLACK_MS = 2_000L
+    }
+
     override fun onDestroy() {
         executor.shutdownNow()
+        runExecutor.shutdownNow()
         super.onDestroy()
     }
 }

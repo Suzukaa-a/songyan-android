@@ -93,7 +93,7 @@ class ScriptStore(
         val id = idGenerator()
         val dir = File(root, "scripts/" + id)
         check(dir.mkdirs() && dir.isDirectory) { "cannot create " + dir }
-        File(dir, "source.js").writeBytes(source)
+        writeAtomically(File(dir, "source.js"), source)
         writeState(dir, newState(header, origin))
         val catalog = readCatalog().toMutableList()
         catalog.add(id)
@@ -120,6 +120,7 @@ class ScriptStore(
         state["confirmedApi"] = JsonPrimitive(declarations.apiVersion)
         state["confirmedConnects"] = buildJsonArray { declarations.connects.forEach { add(JsonPrimitive(it)) } }
         state["confirmedSettings"] = fields.toJsonArray()
+        state["confirmedNeedsAudio"] = JsonPrimitive(declarations.needsAudio)
         state["declarationsChanged"] = JsonPrimitive(false)
         if (firstConfirmation) {
             state["enabled"] = JsonPrimitive(true)
@@ -183,7 +184,14 @@ class ScriptStore(
                 } else {
                     plain[field.key]?.jsonPrimitive?.contentOrNull
                 }
-            field.key to (stored ?: "")
+            val value = stored ?: ""
+            // A choice always runs with one of its options: the first is the default.
+            field.key to
+                if (field.kind == ScriptSettingKind.CHOICE && value !in field.options) {
+                    field.options.firstOrNull() ?: value
+                } else {
+                    value
+                }
         }
     }
 
@@ -199,12 +207,10 @@ class ScriptStore(
             return true
         }
         val confirmedSettings = state["confirmedSettings"]?.jsonArray ?: return true
-        if (confirmedSettings.count() != current.settings.size) return true
-        for (index in 0 until confirmedSettings.count()) {
-            val node = confirmedSettings[index].jsonObject
-            if (node["key"]?.jsonPrimitive?.contentOrNull != current.settings[index].key) return true
-        }
-        return false
+        // Any change the confirmation page shows (a label, a kind, an option) asks again.
+        if (confirmedSettings.map { it.jsonObject.toField() } != current.settings) return true
+        val confirmedAudio = state["confirmedNeedsAudio"]?.jsonPrimitive?.contentOrNull
+        return confirmedAudio != null && confirmedAudio != current.needsAudio.toString()
     }
 
     fun entry(
@@ -219,13 +225,14 @@ class ScriptStore(
         header: ScriptHeader.Parsed,
     ) {
         val dir = dirOf(id)
-        File(dir, "source.js").writeBytes(source)
+        writeAtomically(File(dir, "source.js"), source)
         val state = readState(dir).toMutableMap()
         state["name"] = JsonPrimitive(header.name)
         state["description"] = JsonPrimitive(header.description ?: "")
         state["apiVersion"] = JsonPrimitive(header.apiVersion)
         state["connects"] = buildJsonArray { header.connects.forEach { add(JsonPrimitive(it)) } }
         state["needsAudio"] = JsonPrimitive(header.needsAudio)
+        header.timeoutSeconds?.let { state["timeoutSeconds"] = JsonPrimitive(it) } ?: state.remove("timeoutSeconds")
         state["declarationsChanged"] = JsonPrimitive(declarationsChanged(id, header))
         writeState(dir, JsonObject(state))
     }
@@ -246,6 +253,7 @@ class ScriptStore(
             put("apiVersion", header.apiVersion)
             put("connects", JsonArray(header.connects.map { JsonPrimitive(it) }))
             put("needsAudio", header.needsAudio)
+            header.timeoutSeconds?.let { put("timeoutSeconds", it) }
             put("confirmedApi", 0)
             put("confirmedConnects", JsonArray(emptyList()))
             put("declarationsChanged", false)
@@ -264,7 +272,23 @@ class ScriptStore(
 
     private fun writeCatalog(ids: List<String>) {
         root.mkdirs()
-        File(root, "catalog.json").writeText(JsonArray(ids.map { JsonPrimitive(it) }).toString())
+        writeAtomically(File(root, "catalog.json"), JsonArray(ids.map { JsonPrimitive(it) }).toString().toByteArray())
+    }
+
+    /** Runs read the store on their own thread while settings write it, so a reader must never
+     *  see half a file: each write lands under a temporary name and replaces the file at once. */
+    private fun writeAtomically(
+        file: File,
+        bytes: ByteArray,
+    ) {
+        val temporary = File(file.parentFile, file.name + ".tmp")
+        temporary.writeBytes(bytes)
+        java.nio.file.Files.move(
+            temporary.toPath(),
+            file.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+        )
     }
 
     private fun readState(dir: File): JsonObject {
@@ -278,7 +302,7 @@ class ScriptStore(
         dir: File,
         state: JsonObject,
     ) {
-        File(dir, "state.json").writeText(state.toString())
+        writeAtomically(File(dir, "state.json"), state.toString().toByteArray())
     }
 
     private fun writeSettings(
@@ -340,7 +364,7 @@ class ScriptStore(
                 put("iv", Base64.getEncoder().encodeToString(cipher.iv))
                 put("data", Base64.getEncoder().encodeToString(encrypted))
             }
-        file.writeText(blob.toString())
+        writeAtomically(file, blob.toString().toByteArray())
     }
 
     private fun readSecrets(dir: File): Map<String, String> {
@@ -386,28 +410,13 @@ class ScriptStore(
             confirmationPending = confirmedApi == 0 || declarationsChanged,
             settings = fields,
             sourceOrigin = decodeOrigin(state["origin"]?.jsonObject),
+            timeoutSeconds = state["timeoutSeconds"]?.jsonPrimitive?.contentOrNull?.toInt(),
         )
     }
 
-    private fun JsonObject.toField(): ScriptSettingField =
-        ScriptSettingField(
-            key = this["key"]!!.jsonPrimitive.content,
-            kind = ScriptSettingKind.valueOf(this["kind"]!!.jsonPrimitive.content),
-            label = this["label"]!!.jsonPrimitive.content,
-            secret = this["secret"]!!.jsonPrimitive.content == "true",
-        )
+    private fun JsonObject.toField(): ScriptSettingField = ScriptSettingField.fromJson(this)
 
-    private fun List<ScriptSettingField>.toJsonArray(): JsonArray =
-        JsonArray(
-            map { field ->
-                buildJsonObject {
-                    put("key", field.key)
-                    put("kind", field.kind.name)
-                    put("label", field.label)
-                    put("secret", field.secret)
-                }
-            },
-        )
+    private fun List<ScriptSettingField>.toJsonArray(): JsonArray = JsonArray(map { it.toJson() })
 
     private fun encodeOrigin(origin: ScriptSourceOrigin): JsonObject =
         when (origin) {

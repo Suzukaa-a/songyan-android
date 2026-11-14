@@ -4,20 +4,11 @@ package app.songyan.ime.script
  * iOS harnesses (Tools/Script/tests/run.sh and run-execution.sh) and lives in one place so the
  * device run and any future host-side runner cannot drift apart. */
 object ScriptCaseRun {
-    /** Production limits, identical to iOS ScriptToolConfiguration.provisional so both platforms
-     *  enforce the same contract. Provisional: they make the shipped example runnable; S0 device
-     *  measurements replace them on both platforms together. */
-    const val PROVISIONAL_SOURCE_BYTES = 262144L
-    const val PROVISIONAL_HEAP_BYTES = 8388608L
-    const val PROVISIONAL_DURATION_MS = 4000L
-    const val PROVISIONAL_REQUEST_COUNT = 1L
-    const val PROVISIONAL_RESPONSE_BYTES = 65536L
-    const val PROVISIONAL_INPUT_TEXT_BYTES = 65536L
-
     /** Default limits of the shared execution harness: fixed test values, not shipped policy. */
     const val DEFAULT_SOURCE_BYTES = 1048576L
     const val DEFAULT_HEAP_BYTES = 8388608L
     const val DEFAULT_DURATION_MS = 4000L
+    const val DEFAULT_COMPUTE_MS = 4000L
     const val DEFAULT_REQUEST_COUNT = 8L
     const val DEFAULT_RESPONSE_BYTES = 1048576L
     const val DEFAULT_INPUT_TEXT_BYTES = 20000L

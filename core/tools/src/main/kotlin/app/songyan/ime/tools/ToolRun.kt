@@ -223,8 +223,11 @@ class ToolRun private constructor(
         return true
     }
 
+    /** This run's budget: the tool's own when it declares one. */
+    val timeoutMillis: Long get() = tool.timeoutMillis ?: limits.timeoutMillis
+
     /** The same deadline tick uses, so a late result cannot slip in when no tick has run. */
-    private fun pastDeadline(now: Long): Boolean = now - startedAtMillis >= limits.timeoutMillis
+    private fun pastDeadline(now: Long): Boolean = now - startedAtMillis >= timeoutMillis
 
     /**
      * Starts another run of the same tool with the next id from the host's session. Old results are stale:

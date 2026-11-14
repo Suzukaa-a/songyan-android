@@ -50,8 +50,7 @@
     <string name="scripts_missing_title">這個指令碼已不存在</string>
     <string name="scripts_settings_edit">修改設定</string>
     <string name="scripts_settings_title">指令碼設定</string>
-    <string name="scripts_setting_choice_hint">自由填寫：輸入指令碼接受的值（見指令碼說明）。</string>
-    <string name="scripts_setting_url_invalid">地址需以 http:// 或 https:// 開頭。</string>
+    <string name="scripts_setting_url_invalid">請輸入 HTTPS 位址，或區域網路裡的 http 位址。</string>
     <string name="scripts_secret_keep_hint">留空表示保留已儲存的金鑰。</string>
     <string name="scripts_secret_clear">清除已儲存的金鑰</string>
     <string name="scripts_secret_show">顯示金鑰</string>

@@ -22,6 +22,7 @@ internal object ScriptNative {
         sourceBytes: Int,
         heapBytes: Int,
         durationMs: Int,
+        computeMs: Int,
         requestCount: Int,
         responseBytes: Int,
         inputTextBytes: Int,

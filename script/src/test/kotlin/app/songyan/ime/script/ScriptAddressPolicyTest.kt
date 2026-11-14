@@ -1,60 +1,51 @@
 package app.songyan.ime.script
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
-/** The proxy is the only place a script's network reach is decided, so the rules are pinned by
- *  JVM tests: declared hosts over HTTPS yes, undeclared no, plain HTTP only on the LAN. */
+/** The proxy is the only place a script's network reach is decided on Android, and it runs the
+ *  Kotlin copy of the shared rule. This replays the shared table synced from the iOS repository,
+ *  so both implementations answer every line the same way. */
 class ScriptAddressPolicyTest {
-    private val declared = listOf("api.example.com", "cdn.example.com")
-
-    @Test
-    fun declaredHttpsHostIsAllowed() {
-        assertEquals(true, ScriptAddressPolicy.authorize("https://api.example.com/v1", declared).allowed)
+    private fun table(): File {
+        var dir = File(System.getProperty("user.dir")).absoluteFile
+        repeat(6) {
+            val candidate = File(dir, "src/androidTest/assets/script-address-cases.txt")
+            if (candidate.isFile) return candidate
+            dir = dir.parentFile ?: return@repeat
+        }
+        error("cannot locate the synced address table")
     }
 
     @Test
-    fun undeclaredHostIsDeniedEvenOnHttps() {
-        val decision = ScriptAddressPolicy.authorize("https://evil.example.com/x", declared)
-        assertEquals(false, decision.allowed)
-        assertNotNull(decision.reason)
+    fun everyLineOfTheSharedTableHoldsHere() {
+        val failures = mutableListOf<String>()
+        var count = 0
+        for (line in table().readLines()) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) continue
+            val columns = trimmed.split('|')
+            assertEquals("malformed line: $trimmed", 3, columns.size)
+            val head = columns[0].trim().split(Regex("\\s+"))
+            val expected = head[0] == "allowed"
+            val url = head[1]
+            val declared = columns[1].trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            val typed = columns[2].trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            val actual = ScriptAddressPolicy.authorize(url, declared, typed).allowed
+            if (actual != expected) failures += "$url: ${if (actual) "allowed" else "denied"}, expected ${head[0]}"
+            count++
+        }
+        assertTrue("the table is empty", count > 0)
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
     @Test
-    fun subDomainIsNotTheDeclaredHost() {
-        assertEquals(false, ScriptAddressPolicy.authorize("https://x.api.example.com/", declared).allowed)
-    }
-
-    @Test
-    fun portAndUserInfoDoNotHideTheHost() {
-        assertEquals(true, ScriptAddressPolicy.authorize("https://api.example.com:8443/t", declared).allowed)
-        assertEquals(false, ScriptAddressPolicy.authorize("https://user@api.example.com/", declared).allowed)
-    }
-
-    @Test
-    fun loopbackHttpIsAllowedWhenDeclared() {
-        assertEquals(true, ScriptAddressPolicy.authorize("http://127.0.0.1:8080/hook", listOf("127.0.0.1")).allowed)
-    }
-
-    @Test
-    fun publicHttpIsDeniedEvenWhenDeclared() {
-        val decision = ScriptAddressPolicy.authorize("http://api.example.com/v1", declared)
-        assertEquals(false, decision.allowed)
-        assertNotNull(decision.reason)
-    }
-
-    @Test
-    fun otherSchemesAreDenied() {
-        assertEquals(false, ScriptAddressPolicy.authorize("ftp://api.example.com/f", declared).allowed)
-        assertEquals(false, ScriptAddressPolicy.authorize("file:///etc/hosts", declared).allowed)
-    }
-
-    @Test
-    fun garbageIsDeniedNotThrown() {
-        val decision = ScriptAddressPolicy.authorize("not a url at all", declared)
-        assertEquals(false, decision.allowed)
-        assertNull(null)
+    fun aSettingValueIsValidWhenTheRuleWouldReachIt() {
+        assertTrue(ScriptAddressPolicy.isReachableSettingUrl("https://llm.example.com/v1"))
+        assertTrue(ScriptAddressPolicy.isReachableSettingUrl("http://192.168.1.20:11434"))
+        assertEquals(false, ScriptAddressPolicy.isReachableSettingUrl("http://llm.example.com/v1"))
+        assertEquals(false, ScriptAddressPolicy.isReachableSettingUrl("llm.example.com"))
     }
 }

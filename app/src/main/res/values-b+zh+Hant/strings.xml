@@ -38,7 +38,7 @@
     <string name="dictionary_import_error_download">下載詞庫失敗，請檢查網路後重試。</string>
     <string name="dictionary_import_error_download_timeout">下載時間太長，已停止。請檢查網路後重試。</string>
     <string name="dictionary_import_error_redirects">連結跳轉次數過多，請更換連結。</string>
-    <string name="dictionary_import_error_insecure_redirect">連結跳轉到了不安全的 http 地址，請換一個連結。</string>
+    <string name="dictionary_import_error_insecure_redirect">連結跳轉到了不安全的 http 位址，請換一個連結。</string>
     <string name="dictionary_import_error_deploy">詞庫匯入失敗，請重試。</string>
     <string name="dictionary_import_error_deploy_unavailable">正在處理上一個匯入，完成後再試。</string>
     <string name="dictionary_import_error_timeout">匯入時間太長，已停止。請重試。</string>

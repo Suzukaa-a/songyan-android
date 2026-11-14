@@ -45,44 +45,17 @@ class ScriptProxyService : Service() {
         runCatching { ScriptCatalogSnapshotWriter.write(storeRoot, store.list(hostCapabilities)) }
     }
 
-    /** The fetch surface the isolated process calls during a run; one call per request. */
-    private val transportBinder: ScriptTransport.Stub =
-        object : ScriptTransport.Stub() {
-            override fun fetch(
-                url: String,
-                method: String,
-                headersJson: String?,
-                body: ByteArray?,
-                callback: ScriptTransportCallback,
-            ) {
-                executor.execute {
-                    val reply =
-                        ScriptNetworkTransport.fetch(
-                            url,
-                            method,
-                            headersJson,
-                            body,
-                            declaredHosts(),
-                            ScriptCaseRun.PROVISIONAL_RESPONSE_BYTES,
-                        )
-                    callback.onResult(
-                        reply.accepted,
-                        reply.status,
-                        reply.body,
-                        reply.contentType,
-                        reply.finalUrl,
-                        reply.headersJson,
-                        reply.error,
-                    )
-                }
-            }
+    /** One runner for the service, so a cancel reaches the run it names. */
+    private val runner by lazy { ScriptRunner(this, store) }
+
+    /** Runs wait on the network for up to their duration; they get their own thread so the
+     *  settings screens never wait behind one. Runs stay sequential. */
+    private val runExecutor =
+        Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "songyan-script-proxy-run")
         }
 
-    /** The confirmed @connect list across installed scripts: the transport authorizes against it. */
-    private fun declaredHosts(): List<String> = store.list(hostCapabilities).flatMap { it.connects }
-
-    override fun onBind(intent: Intent): IBinder =
-        if (intent.action == "app.songyan.ime.script.TRANSPORT") transportBinder else binder
+    override fun onBind(intent: Intent): IBinder = binder
 
     private val binder: ScriptProxy.Stub =
         object : ScriptProxy.Stub() {
@@ -227,9 +200,8 @@ class ScriptProxyService : Service() {
                 text: String,
                 reply: ScriptProxyCallback,
             ) {
-                reply(reply) {
-                    val outcome = ScriptRunner(this@ScriptProxyService, store).run(id, text)
-                    ScriptProxyProto.outcome(outcome)
+                reply(reply, runExecutor) {
+                    ScriptProxyProto.outcome(runner.run(id, text))
                 }
             }
 
@@ -238,9 +210,8 @@ class ScriptProxyService : Service() {
                 text: String,
                 reply: ScriptProxyCallback,
             ) {
-                reply(reply) {
-                    val outcome = ScriptRunner(this@ScriptProxyService, store).run(id, text)
-                    ScriptProxyProto.outcome(outcome)
+                reply(reply, runExecutor) {
+                    ScriptProxyProto.outcome(runner.run(id, text))
                 }
             }
 
@@ -249,9 +220,9 @@ class ScriptProxyService : Service() {
                 audio: ParcelFileDescriptor,
                 reply: ScriptProxyCallback,
             ) {
-                reply(reply) {
+                reply(reply, runExecutor) {
                     try {
-                        val outcome = ScriptRunner(this@ScriptProxyService, store).runAudio(id, audio)
+                        val outcome = runner.runAudio(id, audio)
                         ScriptProxyProto.outcome(outcome)
                     } finally {
                         // The descriptor is this process's after the Binder call; the isolated run
@@ -262,7 +233,7 @@ class ScriptProxyService : Service() {
             }
 
             override fun cancel(id: String) {
-                ScriptRunner(this@ScriptProxyService, store).cancel(id)
+                runner.cancel(id)
             }
         }
 
@@ -290,22 +261,25 @@ class ScriptProxyService : Service() {
 
     private inline fun reply(
         callback: ScriptProxyCallback,
+        on: java.util.concurrent.Executor = executor,
         crossinline body: () -> String,
     ) {
-        executor.execute {
+        on.execute {
             val payload =
                 try {
                     body()
                 } catch (error: Throwable) {
                     ScriptProxyProto.error(error.message ?: error.javaClass.simpleName)
                 }
-            runCatching { refreshSnapshot() }
+            // A run changes nothing the catalog shows; only store work refreshes the snapshot.
+            if (on === executor) runCatching { refreshSnapshot() }
             callback.onResult(true, payload)
         }
     }
 
     override fun onDestroy() {
         executor.shutdownNow()
+        runExecutor.shutdownNow()
         super.onDestroy()
     }
 }

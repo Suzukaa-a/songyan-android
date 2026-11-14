@@ -53,6 +53,7 @@
     <string name="ime_tool_panel_unavailable">この入力欄ではツールを使えません。</string>
     <string name="ime_tool_panel_select_hint">下から選んでください。</string>
     <string name="ime_tool_panel_running">実行中…</string>
+    <string name="ime_tool_panel_running_elapsed">実行中… %1$s</string>
     <string name="ime_tool_panel_cancel">キャンセル</string>
     <string name="ime_tool_panel_copy">コピー</string>
     <string name="ime_tool_panel_replace">置換</string>

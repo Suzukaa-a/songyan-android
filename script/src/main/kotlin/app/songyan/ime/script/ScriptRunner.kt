@@ -8,7 +8,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.util.concurrent.ConcurrentHashMap
+import java.net.HttpURLConnection
 
 /** Runs one stored script through the isolated process on the production path: the C state
  *  machine drives the engine, and fetch travels Binder-to-proxy for the real network. The
@@ -17,13 +17,31 @@ internal class ScriptRunner(
     private val context: Context,
     private val store: ScriptStore,
 ) {
-    private val cancelled = ConcurrentHashMap.newKeySet<String>()
+    /** The run in progress. Runs are sequential, so one slot is enough; cancel acts on it. */
+    private class Active(
+        val id: String,
+    ) {
+        @Volatile var cancelled = false
+
+        @Volatile var isolated: ScriptIsolatedProcess? = null
+
+        @Volatile var connection: HttpURLConnection? = null
+
+        fun cancel() {
+            cancelled = true
+            runCatching { isolated?.cancelRun() }
+            runCatching { connection?.disconnect() }
+        }
+    }
+
+    @Volatile private var active: Active? = null
 
     /** Keeps the local transport binder alive while the isolated process holds its proxy. */
     private var activeTransport: ScriptTransport.Stub? = null
 
+    /** Stops [id] if it is running: the engine stops, and the request it waits on is dropped. */
     fun cancel(id: String) {
-        cancelled.add(id)
+        active?.takeIf { it.id == id }?.cancel()
     }
 
     fun run(
@@ -51,7 +69,22 @@ internal class ScriptRunner(
         audio: ParcelFileDescriptor?,
         audioSize: Long,
     ): ScriptRunOutcome {
-        cancelled.remove(id)
+        val run = Active(id)
+        active = run
+        try {
+            return runActive(run, text, audio, audioSize)
+        } finally {
+            if (active === run) active = null
+        }
+    }
+
+    private fun runActive(
+        run: Active,
+        text: ByteArray?,
+        audio: ParcelFileDescriptor?,
+        audioSize: Long,
+    ): ScriptRunOutcome {
+        val id = run.id
         val source =
             store.source(id) ?: return ScriptRunOutcome.Failed(
                 "unavailable",
@@ -65,6 +98,11 @@ internal class ScriptRunner(
             ScriptAudioInput.refusal(header.needsAudio, audioSize)?.let { return it }
         }
         val settings = store.settingsOf(id, header.settings)
+        // The user's own service: hosts typed into url settings are reachable under the shared rule.
+        val settingUrls =
+            header.settings
+                .filter { it.kind == ScriptSettingKind.URL && !it.secret }
+                .mapNotNull { settings[it.key]?.takeIf(String::isNotBlank) }
         val transport =
             object : ScriptTransport.Stub() {
                 override fun fetch(
@@ -72,6 +110,7 @@ internal class ScriptRunner(
                     method: String,
                     headersJson: String?,
                     body: ByteArray?,
+                    timeoutMillis: Long,
                     callback: ScriptTransportCallback,
                 ) {
                     val reply =
@@ -82,7 +121,10 @@ internal class ScriptRunner(
                                 headersJson,
                                 body,
                                 header.connects,
-                                ScriptCaseRun.PROVISIONAL_RESPONSE_BYTES,
+                                settingUrls,
+                                ScriptLimits.RESPONSE_BYTES,
+                                timeoutMillis,
+                                onConnection = { run.connection = it },
                             )
                         }.getOrElse { error ->
                             ProxyTransport.Reply(
@@ -95,6 +137,7 @@ internal class ScriptRunner(
                                 error.javaClass.simpleName + ": " + (error.message ?: ""),
                             )
                         }
+                    run.connection = null
                     callback.onResult(
                         reply.accepted,
                         reply.status,
@@ -116,17 +159,23 @@ internal class ScriptRunner(
                         text,
                         audio,
                         header.connects,
+                        settingUrls,
                         transport,
                         callback,
                     )
+                    // One-way calls on one binder arrive in order, so a cancel sent now (or one that
+                    // came in while the run was being sent) lands after the run has started.
+                    run.isolated = service
+                    if (run.cancelled) service.cancelRun()
                 }
             } finally {
                 activeTransport = null
+                run.isolated = null
             }
         if (answer == null) {
             return ScriptRunOutcome.Failed("unavailable", "the isolated service did not answer", 0)
         }
-        if (cancelled.remove(id) || answer.first == 125) {
+        if (run.cancelled || answer.first == 125) {
             return ScriptRunOutcome.Cancelled
         }
         return outcomeFromReport(answer.second)

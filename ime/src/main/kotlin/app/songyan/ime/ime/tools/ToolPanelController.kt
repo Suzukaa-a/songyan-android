@@ -32,6 +32,8 @@ class ToolPanelController(
         val canUndo: Boolean,
         val write: ToolWriteResult? = null,
         val undo: ToolUndoResult? = null,
+        /** How long the run in progress has been going, so a slow model reads as waiting. */
+        val elapsedSeconds: Long = 0,
     )
 
     var onChanged: (State) -> Unit = {}
@@ -40,6 +42,7 @@ class ToolPanelController(
     private var selected: ToolDescriptor? = null
     private var task: Job? = null
     private var timeout: Job? = null
+    private var ticker: Job? = null
     private var writeOutcome: ToolWriteResult? = null
     private var undoOutcome: ToolUndoResult? = null
 
@@ -57,6 +60,8 @@ class ToolPanelController(
             canUndo = current?.canUndo(clock()) == true,
             write = writeOutcome,
             undo = undoOutcome,
+            elapsedSeconds =
+                if (current?.phase == ToolPhase.RUNNING) current.elapsedMillis(clock()) / 1000 else 0,
         )
     }
 
@@ -87,9 +92,16 @@ class ToolPanelController(
                 started.complete(started.runId, results)
                 publish()
             }
+        ticker =
+            scope.launch {
+                while (started.phase == ToolPhase.RUNNING) {
+                    delay(1_000)
+                    if (started.phase == ToolPhase.RUNNING) publish()
+                }
+            }
         timeout =
             scope.launch {
-                delay(bridge.limits.timeoutMillis + TIMEOUT_SLACK_MS)
+                delay(started.timeoutMillis + TIMEOUT_SLACK_MS)
                 // The model names the task to cancel on timeout; a late tick does nothing.
                 if (started.tick(clock()) != null) task?.cancel()
                 publish()
@@ -158,6 +170,8 @@ class ToolPanelController(
         task = null
         timeout?.cancel()
         timeout = null
+        ticker?.cancel()
+        ticker = null
         run = null
         selected = null
     }

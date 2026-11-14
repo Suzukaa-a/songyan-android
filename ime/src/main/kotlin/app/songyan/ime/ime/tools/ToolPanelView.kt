@@ -134,7 +134,17 @@ class ToolPanelView(
         } else {
             when (state.phase) {
                 ToolPhase.RUNNING -> {
-                    status.setText(R.string.ime_tool_panel_running)
+                    // A few seconds in, the elapsed time shows the run is waiting, not stuck.
+                    if (state.elapsedSeconds >= ELAPSED_SHOWN_AFTER_SECONDS) {
+                        val seconds = state.elapsedSeconds
+                        status.text =
+                            context.getString(
+                                R.string.ime_tool_panel_running_elapsed,
+                                String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60),
+                            )
+                    } else {
+                        status.setText(R.string.ime_tool_panel_running)
+                    }
                     progress.visibility = VISIBLE
                     addAction(R.string.ime_tool_panel_cancel, ActionStyle.TEXT) { onCancel() }
                 }
@@ -462,6 +472,8 @@ class ToolPanelView(
     private fun padding(dp: Int): Int = (dp * density).toInt()
 
     private companion object {
+        const val ELAPSED_SHOWN_AFTER_SECONDS = 3L
+
         /** Lines a long result shows before the fold link appears. */
         const val RESULT_MAX_LINES = 3
 

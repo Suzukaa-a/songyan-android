@@ -1,11 +1,9 @@
 package app.songyan.ime.settings.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,16 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,14 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.script.ScriptEntry
-import app.songyan.ime.script.ScriptSettingField
-import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.components.HideKeyboardOnEnter
@@ -177,7 +166,7 @@ fun ScriptConfirmScreen(
                     item { SectionHeader(stringResource(R.string.scripts_confirm_section_settings)) }
                     items(entry.settings.size) { index ->
                         val field = entry.settings[index]
-                        SettingField(
+                        ScriptSettingInput(
                             field = field,
                             value = values[field.key] ?: "",
                             clearSaved = field.key in clearSecrets,
@@ -190,6 +179,7 @@ fun ScriptConfirmScreen(
                                         clearSecrets - field.key
                                     }
                             },
+                            modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
                 }
@@ -213,7 +203,7 @@ fun ScriptConfirmScreen(
                 Column(modifier = Modifier.fillMaxWidth().imePadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Button(
                         onClick = { viewModel.confirm(entry.id, values, clearSecrets.toSet()) },
-                        enabled = !state.busy,
+                        enabled = !state.busy && !hasUnreachableAddress(entry.settings, values),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (state.busy) {
@@ -239,84 +229,3 @@ fun ScriptConfirmScreen(
  */
 internal fun readsBodyRes(needsAudio: Boolean): Int =
     if (needsAudio) R.string.scripts_confirm_reads_audio else R.string.scripts_confirm_reads_body
-
-/** One @setting or @secret of the header: a field labelled as declared, masked when secret. */
-@Composable
-private fun SettingField(
-    field: ScriptSettingField,
-    value: String,
-    clearSaved: Boolean,
-    onChange: (String) -> Unit,
-    onClearSaved: (Boolean) -> Unit,
-) {
-    var reveal by rememberSaveable(field.key) { mutableStateOf(false) }
-    val addressInvalid =
-        field.kind == ScriptSettingKind.URL &&
-            value.isNotBlank() &&
-            !value.trim().startsWith("http://") &&
-            !value.trim().startsWith("https://")
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            label = {
-                Text(
-                    field.label +
-                        if (field.secret) stringResource(R.string.scripts_secret_suffix) else "",
-                )
-            },
-            supportingText = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        when {
-                            addressInvalid -> stringResource(R.string.scripts_setting_url_invalid)
-                            field.kind == ScriptSettingKind.URL -> stringResource(R.string.scripts_setting_kind_url)
-                            field.kind == ScriptSettingKind.CHOICE ->
-                                stringResource(R.string.scripts_setting_choice_hint)
-                            else -> stringResource(R.string.scripts_setting_kind_text)
-                        },
-                    )
-                    if (field.secret) Text(stringResource(R.string.scripts_secret_keep_hint))
-                }
-            },
-            isError = addressInvalid,
-            singleLine = true,
-            visualTransformation =
-                if (field.secret && !reveal) {
-                    PasswordVisualTransformation()
-                } else {
-                    VisualTransformation.None
-                },
-            trailingIcon =
-                if (field.secret) {
-                    {
-                        IconButton(onClick = { reveal = !reveal }) {
-                            Icon(
-                                imageVector = if (reveal) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription =
-                                    stringResource(
-                                        if (reveal) R.string.scripts_secret_hide else R.string.scripts_secret_show,
-                                    ),
-                            )
-                        }
-                    }
-                } else {
-                    null
-                },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        )
-        if (field.secret) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable { onClearSaved(!clearSaved) },
-            ) {
-                Checkbox(checked = clearSaved, onCheckedChange = onClearSaved)
-                Text(stringResource(R.string.scripts_secret_clear))
-            }
-        }
-    }
-}

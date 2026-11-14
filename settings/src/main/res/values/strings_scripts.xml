@@ -50,8 +50,7 @@
     <string name="scripts_missing_title">This script is no longer available</string>
     <string name="scripts_settings_edit">Edit settings</string>
     <string name="scripts_settings_title">Script settings</string>
-    <string name="scripts_setting_choice_hint">Free text: type a value the script accepts.</string>
-    <string name="scripts_setting_url_invalid">The address must start with http:// or https://</string>
+    <string name="scripts_setting_url_invalid">Enter an HTTPS address, or an http address on your local network.</string>
     <string name="scripts_secret_keep_hint">Leave blank to keep the saved secret.</string>
     <string name="scripts_secret_clear">Clear the saved secret</string>
     <string name="scripts_secret_show">Show secret</string>

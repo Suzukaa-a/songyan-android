@@ -181,7 +181,7 @@ internal val DECLARED_SETTINGS =
     listOf(
         ScriptSettingField("token", ScriptSettingKind.TEXT, "API token", secret = true),
         ScriptSettingField("endpoint", ScriptSettingKind.URL, "Endpoint", secret = false),
-        ScriptSettingField("mode", ScriptSettingKind.CHOICE, "Mode", secret = false),
+        ScriptSettingField("mode", ScriptSettingKind.CHOICE, "Mode", secret = false, options = listOf("正式", "随意")),
     )
 
 internal fun declaredEntry(

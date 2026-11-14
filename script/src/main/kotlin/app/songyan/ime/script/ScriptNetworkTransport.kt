@@ -13,6 +13,7 @@ import java.net.URL
  *  [ScriptProxyService]'s transport binder entry; the isolated process never opens a socket. */
 internal object ScriptNetworkTransport {
     const val MAX_REDIRECTS = 3
+    private const val CONNECT_TIMEOUT_MS = 15_000
 
     fun fetch(
         url: String,
@@ -20,16 +21,22 @@ internal object ScriptNetworkTransport {
         headersJson: String?,
         body: ByteArray?,
         declaredHosts: List<String>,
+        settingUrls: List<String>,
         responseLimit: Long,
+        timeoutMillis: Long,
+        onConnection: (HttpURLConnection) -> Unit = {},
     ): ProxyTransport.Reply {
         var current = url
         var redirects = 0
+        val deadline = System.currentTimeMillis() + timeoutMillis
         while (true) {
-            val decision = ScriptAddressPolicy.authorize(current, declaredHosts)
+            val decision = ScriptAddressPolicy.authorize(current, declaredHosts, settingUrls)
             if (!decision.allowed) {
                 return ProxyTransport.Reply(false, 0, null, null, null, null, decision.reason)
             }
-            val reply = perform(current, method, headersJson, body, responseLimit)
+            val left = deadline - System.currentTimeMillis()
+            if (left <= 0) return ProxyTransport.Reply(false, 0, null, null, null, null, "the run's time is up")
+            val reply = perform(current, method, headersJson, body, responseLimit, left, onConnection)
             if (reply.accepted && reply.status / 100 == 3 && redirects < MAX_REDIRECTS) {
                 val location =
                     reply.headersJson?.let { headers ->
@@ -60,12 +67,18 @@ internal object ScriptNetworkTransport {
         headersJson: String?,
         body: ByteArray?,
         responseLimit: Long,
+        timeoutMillis: Long,
+        onConnection: (HttpURLConnection) -> Unit,
     ): ProxyTransport.Reply {
         return try {
             val connection = URL(url).openConnection() as HttpURLConnection
+            // Cancelling the run disconnects this connection from another thread.
+            onConnection(connection)
             connection.requestMethod = method.uppercase()
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 30_000
+            // The script's own duration bounds the request; a slow model may take minutes.
+            val timeout = timeoutMillis.coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+            connection.connectTimeout = minOf(timeout, CONNECT_TIMEOUT_MS)
+            connection.readTimeout = timeout
             connection.instanceFollowRedirects = false
             headersJson?.let { headers ->
                 runCatching {

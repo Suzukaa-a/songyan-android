@@ -4,6 +4,7 @@
 package app.songyan.ime.script;
 
 oneway interface ScriptTransport {
-    void fetch(String url, String method, in String headersJson, in byte[] body,
+    // [timeoutMillis] is what is left of the run's duration; the request may not outlive it.
+    void fetch(String url, String method, in String headersJson, in byte[] body, long timeoutMillis,
                app.songyan.ime.script.ScriptTransportCallback callback);
 }

@@ -51,6 +51,7 @@
     <string name="ime_tool_panel_unavailable">此輸入框無法使用工具。</string>
     <string name="ime_tool_panel_select_hint">請從下面選擇。</string>
     <string name="ime_tool_panel_running">正在執行…</string>
+    <string name="ime_tool_panel_running_elapsed">正在執行… %1$s</string>
     <string name="ime_tool_panel_cancel">取消</string>
     <string name="ime_tool_panel_copy">複製</string>
     <string name="ime_tool_panel_replace">取代</string>

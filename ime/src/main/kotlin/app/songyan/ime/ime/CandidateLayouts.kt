@@ -131,14 +131,6 @@ internal object ExpandedFlowLayout {
     ): List<Cell> = cells.filter { it.bottom > scroll && it.top < scroll + viewport }
 }
 
-/**
- * What a candidate release commits, as a pure decision.
- *
- * The engine can replace the candidate list between touch down and touch up, so the cell index on
- * its own never identifies a word: a release commits the identity captured on touch down (its index
- * in the list's own numbering, absolute for a paged list, and its text), or the same text where the
- * engine's new page put it, and otherwise nothing at all.
- */
 /** Which candidate a tap between cells belongs to. */
 internal object CandidateHit {
     /**
@@ -156,7 +148,14 @@ internal object CandidateHit {
         for ((index, cell) in cells.withIndex()) {
             val (left, top, right, bottom) = cell
             if (y < top || y >= bottom) continue
-            val distance = if (x < left) left - x else if (x > right) x - right else 0f
+            val distance =
+                if (x < left) {
+                    left - x
+                } else if (x > right) {
+                    x - right
+                } else {
+                    0f
+                }
             if (distance < bestDistance) {
                 best = index
                 bestDistance = distance
@@ -166,6 +165,14 @@ internal object CandidateHit {
     }
 }
 
+/**
+ * What a candidate release commits, as a pure decision.
+ *
+ * The engine can replace the candidate list between touch down and touch up, so the cell index on
+ * its own never identifies a word: a release commits the identity captured on touch down (its index
+ * in the list's own numbering, absolute for a paged list, and its text), or the same text where the
+ * engine's new page put it, and otherwise nothing at all.
+ */
 internal object CandidateRelease {
     data class Pressed(
         val cell: Int,

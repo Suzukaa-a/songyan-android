@@ -169,6 +169,9 @@ class PhoneKeypadMetrics private constructor(
         /** The minimum comfortable touch target. */
         const val MINIMUM_TOUCH_TARGET: Double = 44.0
 
+        /** The narrowest a rail gets beside a digit: its share on a regular phone (about 58 of 84 dp). */
+        const val MINIMUM_RAIL_SHARE: Double = 0.7
+
         /** Preferred number-key width. Wider shells grow the rails instead. */
         const val PREFERRED_DIGIT_WIDTH: Double = 84.0
 
@@ -219,6 +222,12 @@ class PhoneKeypadMetrics private constructor(
                 val digitAvailable = (shellWidth - spacing * 4 - MINIMUM_TOUCH_TARGET * 2) / 3
                 digit = minOf(PREFERRED_DIGIT_WIDTH, digitAvailable)
                 rail = minOf((shellWidth - digit * 3 - spacing * 4) / 2, digit)
+                // A narrow shell does not take everything out of the rails: once they would fall
+                // below MINIMUM_RAIL_SHARE of a digit, the digits give way too and both shrink together.
+                if (rail < digit * MINIMUM_RAIL_SHARE) {
+                    digit = (shellWidth - spacing * 4) / (3 + 2 * MINIMUM_RAIL_SHARE)
+                    rail = digit * MINIMUM_RAIL_SHARE
+                }
                 if (rail < MINIMUM_TOUCH_TARGET) {
                     rail = MINIMUM_TOUCH_TARGET
                     digit = maxOf(0.0, (shellWidth - spacing * 4 - rail * 2) / 3)

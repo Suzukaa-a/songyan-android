@@ -534,4 +534,12 @@ class SplitSpaceRowGeometryTest {
             assertEquals(width.toString(), width, g.leftWidth + g.gap + g.spacing + g.rightWidth, 0.001)
         }
     }
+
+    /** A shell narrower than a phone shrinks the digits with the rails instead of squeezing the rails to the touch minimum. */
+    @Test
+    fun aNarrowShellKeepsTheRailsInProportion() {
+        val m = PhoneKeypadMetrics.resolve(336.0)
+        assertEquals(m.digitWidth * PhoneKeypadMetrics.MINIMUM_RAIL_SHARE, m.railWidth, 1e-6)
+        assertTrue(m.railWidth > 50.0)
+    }
 }

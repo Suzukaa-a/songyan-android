@@ -225,25 +225,22 @@ class EditorToolGatewayDeviceTest {
             target.edit.setSelection(target.edit.text.length)
             editor.onUpdateSelection(6, 11, target.edit.text.length, target.edit.text.length, -1, -1)
         }
-        // The source no longer matches the run, so this is not a replace; the model refuses the
-        // insert fallback while the selection is live, and nothing is written.
-        assertEquals(
-            ToolWriteResult.Blocked(WriteBlockReason.UNSUPPORTED_INSERTION),
-            gateway.replace(run, target.info),
-        )
-        assertEquals("hello world", target.text)
+        // The source no longer matches the run, so this is not a replace: the result goes in at the
+        // caret the user moved to, and the text they had selected is untouched.
+        assertEquals(ToolWriteResult.Applied, gateway.replace(run, target.info))
+        assertEquals("hello worldX", target.text)
     }
 
     @Test
-    fun insertWithALiveSelectionIsRefusedAndLeavesItAlone() {
+    fun insertAfterALiveSelectionKeepsTheSelectedTextAndUndoes() {
         val target = field("hello world", selection = 6 to 11)
         val (run, gateway) = begin(target, "X")
-        assertEquals(
-            ToolWriteResult.Blocked(WriteBlockReason.UNSUPPORTED_INSERTION),
-            gateway.insert(run, target.info),
-        )
+        assertEquals(ToolWriteResult.Applied, gateway.insert(run, target.info))
+        assertEquals("hello worldX", target.text)
+        // The framework reports the caret after the inserted text.
+        instrumentation.runOnMainSync { editor.onUpdateSelection(6, 11, 12, 12, -1, -1) }
+        assertEquals(ToolUndoResult.Applied, gateway.undo(run, target.info))
         assertEquals("hello world", target.text)
-        assertEquals(ToolPhase.PREVIEWING, run.phase)
     }
 
     @Test

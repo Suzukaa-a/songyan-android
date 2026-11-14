@@ -58,7 +58,26 @@ sealed interface ToolFailure {
 
     data object NoResult : ToolFailure
 
+    /** [code] names the failure when the host classified it (a script runtime's error name);
+     *  null or [ToolRunException.TOOL_OWN_WORDS] means [message] is the tool's own words. */
     data class ToolError(
         val message: String?,
+        val code: String? = null,
+        val line: Int = 0,
     ) : ToolFailure
+}
+
+/**
+ * A run that failed with a classified reason. A host throws it so the panel can word known reasons
+ * itself and show a tool's own message as written, with the line it names when there is one.
+ */
+open class ToolRunException(
+    val code: String,
+    message: String,
+    val line: Int = 0,
+) : IllegalStateException(message) {
+    companion object {
+        /** The failure is the tool's own: its message is shown verbatim. */
+        const val TOOL_OWN_WORDS = "script"
+    }
 }

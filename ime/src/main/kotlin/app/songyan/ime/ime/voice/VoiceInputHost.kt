@@ -63,8 +63,11 @@ sealed interface VoiceScriptResult {
 
     data class Failed(
         val problem: VoiceInputProblem,
-        /** The engine's own message; diagnostics only, never user copy. */
+        /** The script's own message when [code] is "script"; otherwise a diagnostic, never shown. */
         val detail: String?,
+        /** The script runtime's error name (timeout, addressNotAllowed…), when it gave one. */
+        val code: String? = null,
+        val line: Int = 0,
     ) : VoiceScriptResult
 }
 

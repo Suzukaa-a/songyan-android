@@ -243,7 +243,7 @@ class ScriptsViewModelTest {
         }
 
     @Test
-    fun editedSourceIsStoredAndReplacesTheOldScript() =
+    fun anEditIsSavedInPlaceAndKeepsTheScript() =
         runTest(dispatcher) {
             registry.store(entry("old-1"))
             val viewModel = viewModel()
@@ -252,30 +252,36 @@ class ScriptsViewModelTest {
             viewModel.applyEdit("old-1", "// @api 1\nconsole.log(3)")
             advanceUntilIdle()
 
-            assertEquals(
-                "// @api 1\nconsole.log(3)",
-                registry.adds
-                    .single()
-                    .first
-                    .toString(Charsets.UTF_8),
-            )
-            assertEquals(ScriptSourceOrigin.Edited, registry.adds.single().second)
-            assertEquals(listOf("old-1"), registry.deletes)
-            assertEquals(
-                "script-1",
-                viewModel.uiState.value.pendingConfirmation
-                    ?.id,
-            )
+            // Same id: settings, secrets, order and the switch belong to it and stay.
+            assertEquals(listOf("old-1" to "// @api 1\nconsole.log(3)"), registry.replaces)
+            assertEquals(emptyList<Pair<ByteArray, ScriptSourceOrigin>>(), registry.adds)
+            assertEquals(emptyList<String>(), registry.deletes)
+            assertEquals(null, viewModel.uiState.value.pendingConfirmation)
+            assertEquals(ScriptsNotice.Saved, viewModel.uiState.value.notice)
             assertEquals(false, viewModel.uiState.value.busy)
-            assertEquals(
-                listOf("script-1"),
-                viewModel.uiState.value.entries
-                    .map { it.id },
-            )
         }
 
     @Test
-    fun editingANewScriptDeletesNothing() =
+    fun anEditThatChangesTheDeclarationsAsksForConfirmation() =
+        runTest(dispatcher) {
+            registry.store(entry("old-1"))
+            registry.replacePending = true
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.applyEdit("old-1", "// @api 1\n// @connect api.example.com")
+            advanceUntilIdle()
+
+            assertEquals(
+                "old-1",
+                viewModel.uiState.value.pendingConfirmation
+                    ?.id,
+            )
+            assertEquals(emptyList<String>(), registry.deletes)
+        }
+
+    @Test
+    fun editingANewScriptAddsIt() =
         runTest(dispatcher) {
             val viewModel = viewModel()
             advanceUntilIdle()
@@ -283,24 +289,7 @@ class ScriptsViewModelTest {
             viewModel.applyEdit("", "// @api 1")
             advanceUntilIdle()
 
-            assertEquals(emptyList<String>(), registry.deletes)
-            assertEquals(
-                "script-1",
-                viewModel.uiState.value.pendingConfirmation
-                    ?.id,
-            )
-        }
-
-    @Test
-    fun anEditThatStoresUnderTheSameIdDeletesNothing() =
-        runTest(dispatcher) {
-            registry.store(entry("script-1"))
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            viewModel.applyEdit("script-1", "// @api 1")
-            advanceUntilIdle()
-
+            assertEquals(ScriptSourceOrigin.Edited, registry.adds.single().second)
             assertEquals(emptyList<String>(), registry.deletes)
             assertEquals(
                 "script-1",
@@ -579,7 +568,7 @@ class ScriptsViewModelTest {
             registry.store(entry("script-1"))
             val viewModel = viewModel()
             advanceUntilIdle()
-            viewModel.beginTest("script-1")
+            viewModel.editTestInput("script-1", "hello")
 
             viewModel.delete("script-1")
             advanceUntilIdle()
@@ -599,12 +588,13 @@ class ScriptsViewModelTest {
             val viewModel = viewModel()
             advanceUntilIdle()
 
-            viewModel.beginTest("script-1")
-            viewModel.editTestInput("hello")
-            viewModel.runTest()
+            // Typing opens the box; the text reaches the run and stays for the next one.
+            viewModel.editTestInput("script-1", "hello")
+            viewModel.runTest("script-1")
             advanceUntilIdle()
 
             assertEquals(listOf("script-1" to "hello"), registry.runs)
+            assertEquals("hello", viewModel.test.value?.input)
             assertEquals(
                 ScriptRunOutcome.Success(listOf("script-1:hello"), emptyList(), false),
                 viewModel.test.value?.outcome,
@@ -620,8 +610,7 @@ class ScriptsViewModelTest {
             advanceUntilIdle()
             registry.failure = IllegalStateException("the engine is gone")
 
-            viewModel.beginTest("script-1")
-            viewModel.runTest()
+            viewModel.runTest("script-1")
             advanceUntilIdle()
 
             assertEquals(ScriptRunOutcome.Failed("script", "the engine is gone", 0), viewModel.test.value?.outcome)
@@ -636,8 +625,7 @@ class ScriptsViewModelTest {
             advanceUntilIdle()
             registry.runResult = ScriptRunOutcome.Failed("addressNotAllowed", "the host is not declared", 4)
 
-            viewModel.beginTest("script-1")
-            viewModel.runTest()
+            viewModel.runTest("script-1")
             advanceUntilIdle()
 
             assertEquals(
@@ -647,18 +635,19 @@ class ScriptsViewModelTest {
         }
 
     @Test
-    fun cancelTestClosesTheBoxAndCancelsTheRun() =
+    fun cancelTestStopsTheRunAndKeepsTheText() =
         runTest(dispatcher) {
             registry.store(entry("script-1"))
             val viewModel = viewModel()
             advanceUntilIdle()
 
-            viewModel.beginTest("script-1")
-            viewModel.cancelTest()
+            viewModel.editTestInput("script-1", "hello")
+            viewModel.cancelTest("script-1")
             advanceUntilIdle()
 
             assertEquals(listOf("script-1"), registry.cancels)
-            assertNull(viewModel.test.value)
+            assertEquals("hello", viewModel.test.value?.input)
+            assertEquals(ScriptRunOutcome.Cancelled, viewModel.test.value?.outcome)
         }
 
     /** The in-memory registry the screen talks to; each call records its arguments so the test can
@@ -689,6 +678,8 @@ class ScriptsViewModelTest {
         val deletes = mutableListOf<String>()
         val updates = mutableListOf<String>()
         val runs = mutableListOf<Pair<String, String>>()
+        val replaces = mutableListOf<Pair<String, String>>()
+        var replacePending = false
         val cancels = mutableListOf<String>()
 
         fun store(vararg entries: ScriptEntry) {
@@ -786,6 +777,15 @@ class ScriptsViewModelTest {
                 return replace(id) { fresh }
             }
             return replace(id) { it.copy(confirmationPending = false) }
+        }
+
+        override suspend fun replaceSource(
+            id: String,
+            source: ByteArray,
+        ): ScriptEntry {
+            replaces += id to source.toString(Charsets.UTF_8)
+            failIfAsked()
+            return replace(id) { it.copy(confirmationPending = replacePending) }
         }
 
         override suspend fun delete(id: String) {

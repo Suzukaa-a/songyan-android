@@ -223,10 +223,12 @@ class ScriptStore(
         id: String,
         source: ByteArray,
         header: ScriptHeader.Parsed,
+        origin: ScriptSourceOrigin? = null,
     ) {
         val dir = dirOf(id)
         writeAtomically(File(dir, "source.js"), source)
         val state = readState(dir).toMutableMap()
+        origin?.let { state["origin"] = encodeOrigin(it) }
         state["name"] = JsonPrimitive(header.name)
         state["description"] = JsonPrimitive(header.description ?: "")
         state["apiVersion"] = JsonPrimitive(header.apiVersion)

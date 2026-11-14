@@ -46,8 +46,8 @@
     <string name="ime_expand">展开候选</string>
     <string name="ime_toolbar_input_methods">键盘布局与输入方式</string>
     <string name="ime_toolbar_hide">收起键盘</string>
-    <string name="ime_toolbar_tools">工具</string>
-    <string name="ime_tool_panel_title">工具</string>
+    <string name="ime_toolbar_tools">脚本</string>
+    <string name="ime_tool_panel_title">脚本</string>
     <string name="ime_tool_panel_unavailable">此输入框无法使用工具。</string>
     <string name="ime_tool_panel_select_hint">请从下面选择。</string>
     <string name="ime_tool_panel_running">正在运行…</string>
@@ -59,8 +59,9 @@
     <string name="ime_tool_panel_undo">撤销</string>
     <string name="ime_tool_panel_close">关闭</string>
     <string name="ime_tool_panel_written">已写入。</string>
+    <string name="ime_tool_panel_copied">已复制。</string>
     <string name="ime_tool_panel_truncated">文字较长，仅使用末尾部分。</string>
-    <string name="ime_tool_panel_no_text">此输入框没有可用文字。</string>
+    <string name="ime_tool_panel_no_text">先选中文字，或把光标放到文字后面。</string>
     <string name="ime_tool_panel_cancelled">已取消。</string>
     <string name="ime_tool_panel_field_changed">输入框已切换，未写入。</string>
     <string name="ime_tool_panel_edited">写入后文字已变化，未改动。</string>
@@ -71,6 +72,12 @@
     <string name="ime_tool_panel_no_result">工具没有返回结果。</string>
     <string name="ime_tool_panel_failed">工具运行失败。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
+    <string name="ime_tool_error_at_line">%1$s（第 %2$d 行）</string>
+    <string name="ime_tool_error_timeout">运行超时。</string>
+    <string name="ime_tool_error_out_of_memory">脚本占用内存过多。</string>
+    <string name="ime_tool_error_address">这个脚本不能连接这个地址。</string>
+    <string name="ime_tool_error_network">网络连接失败，请重试。</string>
+    <string name="ime_tool_error_capability">这台设备上不可用。</string>
     <string name="ime_tool_panel_retry">重试</string>
     <string name="ime_tool_panel_expand">展开结果</string>
     <string name="ime_tool_panel_collapse">收起结果</string>

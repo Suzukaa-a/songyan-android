@@ -48,8 +48,8 @@
     <string name="ime_menu_title">キーボード</string>
     <string name="ime_toolbar_input_methods">キー配列と入力方式</string>
     <string name="ime_toolbar_hide">キーボードを閉じる</string>
-    <string name="ime_toolbar_tools">ツール</string>
-    <string name="ime_tool_panel_title">ツール</string>
+    <string name="ime_toolbar_tools">スクリプト</string>
+    <string name="ime_tool_panel_title">スクリプト</string>
     <string name="ime_tool_panel_unavailable">この入力欄ではツールを使えません。</string>
     <string name="ime_tool_panel_select_hint">下から選んでください。</string>
     <string name="ime_tool_panel_running">実行中…</string>
@@ -61,8 +61,9 @@
     <string name="ime_tool_panel_undo">元に戻す</string>
     <string name="ime_tool_panel_close">閉じる</string>
     <string name="ime_tool_panel_written">書き込みました。</string>
+    <string name="ime_tool_panel_copied">コピーしました。</string>
     <string name="ime_tool_panel_truncated">テキストが長いため末尾のみ使用しました。</string>
-    <string name="ime_tool_panel_no_text">この入力欄に使えるテキストがありません。</string>
+    <string name="ime_tool_panel_no_text">テキストを選択するか、テキストの後ろにカーソルを置いてください。</string>
     <string name="ime_tool_panel_cancelled">キャンセルしました。</string>
     <string name="ime_tool_panel_field_changed">入力欄が切り替わったため書き込みませんでした。</string>
     <string name="ime_tool_panel_edited">書き込み後にテキストが変わったため変更しませんでした。</string>
@@ -73,6 +74,12 @@
     <string name="ime_tool_panel_no_result">ツールから結果がありません。</string>
     <string name="ime_tool_panel_failed">ツールを実行できませんでした。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
+    <string name="ime_tool_error_at_line">%1$s（%2$d 行目）</string>
+    <string name="ime_tool_error_timeout">タイムアウトしました。</string>
+    <string name="ime_tool_error_out_of_memory">スクリプトのメモリ使用量が多すぎます。</string>
+    <string name="ime_tool_error_address">このスクリプトはこのアドレスに接続できません。</string>
+    <string name="ime_tool_error_network">ネットワークに接続できませんでした。もう一度お試しください。</string>
+    <string name="ime_tool_error_capability">この端末では使えません。</string>
     <string name="ime_tool_panel_retry">再試行</string>
     <string name="ime_tool_panel_expand">結果を展開</string>
     <string name="ime_tool_panel_collapse">結果を折りたたむ</string>

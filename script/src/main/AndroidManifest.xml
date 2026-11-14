@@ -7,9 +7,10 @@
          holds this permission's use for script fetches (it does not load the engine at all). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Cleartext is allowed at the platform level only because the script transport is the one
-         place the plan tolerates plain HTTP: ScriptAddressPolicy still restricts it to declared
-         loopback / link-local / site-local hosts, and settings downloads stay HTTPS-only in code. -->
+    <!-- Android allows cleartext per app, not per process, so this applies to the whole app. Only
+         the script transport uses it: ScriptAddressPolicy lets plain http through only to a local
+         address the user typed into a script's settings. Every other download in the app checks
+         for https in code (ScriptFetcher, scheme and dictionary links) and refuses http. -->
     <application android:usesCleartextTraffic="true">
         <service
             android:name="app.songyan.ime.script.ScriptIsolatedService"

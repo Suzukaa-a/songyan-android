@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">Scripts</string>
-    <string name="row_scripts_subtitle">Single-file helpers: text in, text out</string>
+    <string name="row_scripts_subtitle">Add your own features to the keyboard</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">Scripts</string>
@@ -25,7 +25,7 @@
     <!-- Add sheet -->
     <string name="scripts_add_paste">Paste script text</string>
     <string name="scripts_add_file">Choose a file</string>
-    <string name="scripts_add_link">From an HTTPS link</string>
+    <string name="scripts_add_link">From a link</string>
     <string name="scripts_add_editor">Write a script here</string>
     <string name="scripts_add_paste_title">Paste the script</string>
     <string name="scripts_add_paste_label">Script text</string>
@@ -56,6 +56,7 @@
     <string name="scripts_secret_show">Show secret</string>
     <string name="scripts_secret_hide">Hide secret</string>
     <string name="scripts_notice_settings_saved">Settings saved.</string>
+    <string name="scripts_notice_saved">Saved.</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">Confirm script</string>
@@ -66,14 +67,25 @@
     <string name="scripts_confirm_reads_audio">It records while it runs (the microphone is needed) and hands the recording to the script; the script sees no other input.</string>
     <string name="scripts_confirm_section_connects">Sites it may connect to</string>
     <string name="scripts_confirm_connects_none">No sites declared</string>
-    <string name="scripts_confirm_connects_none_body">This script never connects to the network.</string>
+    <string name="scripts_connects_typed">Addresses you enter in its settings</string>
+    <string name="scripts_connects_none">Does not go online</string>
+    <string name="scripts_confirm_timeout">Longest run</string>
+    <plurals name="scripts_run_limit_seconds">
+        <item quantity="one">Up to %d second</item>
+        <item quantity="other">Up to %d seconds</item>
+    </plurals>
+    <plurals name="scripts_run_limit_minutes">
+        <item quantity="one">Up to %d minute</item>
+        <item quantity="other">Up to %d minutes</item>
+    </plurals>
+    <string name="scripts_confirm_connects_none_body">It does not go online.</string>
     <string name="scripts_confirm_section_settings">Settings it needs</string>
     <string name="scripts_confirm_action">Confirm</string>
-    <string name="scripts_confirm_note">Confirm only after reading the list above. Secrets stay on this device and are never included in what you share.</string>
+    <string name="scripts_confirm_note">Secrets stay on this device.</string>
     <string name="scripts_pending_title">Needs confirmation</string>
     <string name="scripts_pending_body">What this script declares has changed. Read it again before using it.</string>
     <string name="scripts_unavailable_title">Not available on this device</string>
-    <string name="scripts_unavailable_body">This keyboard cannot provide the input this script needs, so it cannot run here.</string>
+    <string name="scripts_unavailable_body">Not available on this device.</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">Text</string>
@@ -82,14 +94,14 @@
 
     <!-- Trial run -->
     <string name="scripts_test_section">Trial run</string>
-    <string name="scripts_test_input_label">Text to send</string>
+    <string name="scripts_test_input_label">Text to process</string>
     <string name="scripts_test_run">Run</string>
     <string name="scripts_test_copy">Copy</string>
     <string name="scripts_test_copied">Copied</string>
     <string name="scripts_test_outputs">Outputs</string>
     <string name="scripts_test_no_output">The script returned nothing.</string>
-    <string name="scripts_test_console">Console</string>
-    <string name="scripts_test_console_shortened">Console (shortened)</string>
+    <string name="scripts_test_console">Log</string>
+    <string name="scripts_test_console_shortened">Log (shortened)</string>
     <string name="scripts_test_cancelled">The run was cancelled.</string>
 
     <!-- Detail page -->
@@ -110,21 +122,21 @@
     <string name="scripts_delete_confirm">Delete</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">Script deleted. This cannot be undone.</string>
+    <string name="scripts_notice_deleted">Deleted.</string>
     <string name="scripts_notice_up_to_date">Already up to date.</string>
-    <string name="scripts_notice_updated">Update found. Read what changed before using it.</string>
+    <string name="scripts_notice_updated">The script asks for something new. Confirm it again.</string>
     <string name="scripts_notice_exported">Shared.</string>
     <string name="scripts_notice_export_failed">Unable to share. Please try again.</string>
 
     <!-- Engine refusals, one wording per machine code -->
-    <string name="scripts_error_timeout">The script ran too long and was stopped.</string>
+    <string name="scripts_error_timeout">Timed out.</string>
     <string name="scripts_error_out_of_memory">The script used too much memory and was stopped.</string>
-    <string name="scripts_error_address_not_allowed">The script tried to reach a site it did not declare.</string>
-    <string name="scripts_error_network_failure">The network request failed.</string>
+    <string name="scripts_error_address_not_allowed">This script can\'t reach this address.</string>
+    <string name="scripts_error_network_failure">Network error. Try again.</string>
     <string name="scripts_error_bad_header">The file\'s header declarations are not valid.</string>
     <string name="scripts_error_unsupported_api">This script needs a newer version of Songyan.</string>
-    <string name="scripts_error_capability">This script needs an input this keyboard cannot offer.</string>
-    <string name="scripts_error_unavailable">Scripts are unavailable right now. Update or reinstall Songyan.</string>
+    <string name="scripts_error_capability">Not available on this device.</string>
+    <string name="scripts_error_unavailable">Scripts can\'t run right now. Try again.</string>
     <string name="scripts_error_generic">The script failed: %1$s</string>
     <string name="scripts_error_at_line">%1$s (line %2$d)</string>
 </resources>

@@ -71,6 +71,12 @@
     <string name="ime_tool_panel_no_result">工具沒有返回結果。</string>
     <string name="ime_tool_panel_failed">工具執行失敗。</string>
     <string name="ime_tool_panel_error_with_tool">%1$s：%2$s</string>
+    <string name="ime_tool_error_at_line">%1$s（第 %2$d 行）</string>
+    <string name="ime_tool_error_timeout">執行超時。</string>
+    <string name="ime_tool_error_out_of_memory">指令碼佔用記憶體過多。</string>
+    <string name="ime_tool_error_address">這個指令碼不能連線這個地址。</string>
+    <string name="ime_tool_error_network">網路連線失敗，請重試。</string>
+    <string name="ime_tool_error_capability">這臺裝置上不可用。</string>
     <string name="ime_tool_panel_retry">重試</string>
     <string name="ime_tool_panel_expand">展開結果</string>
     <string name="ime_tool_panel_collapse">收起結果</string>

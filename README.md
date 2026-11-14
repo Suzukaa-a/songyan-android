@@ -46,7 +46,7 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
 Songyan itself collects no personal data and sends nothing to its developers. The scripts you add
 are the exception: when one runs, it sends the text it works on to the sites it declares or the
 addresses you enter in its settings (plain http reaches only an address you entered on this device
-or your local network). Those requests come from Songyan's script process, not Songyan's servers.
+or your local network). Those requests go straight from your phone, not through Songyan's servers.
 Extensions are separate apps you install yourself, and the system shows you the permissions they
 use.
 
@@ -57,7 +57,7 @@ use.
   ask it to: downloading an input scheme, dictionary or model, or importing from a link you enter.
   Those requests go to the site that hosts the file (for example GitHub), which sees your IP
   address as with any download; nothing about you or your typing is sent.
-- While a script runs, its requests are made by Songyan's script process and only to the sites that
+- While a script runs, its requests go only to the sites that
   script declares or the addresses you entered in its settings. Nothing else about you or your typing is sent.
 - Voice input records only while a take is running (you start and stop it with the microphone
   button), and only if you have chosen a voice script. The temporary recording is handed to that

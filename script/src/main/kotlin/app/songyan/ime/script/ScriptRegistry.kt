@@ -187,6 +187,13 @@ interface ScriptRegistry {
      *  fresh confirmation, or the unchanged one when they did not. */
     suspend fun checkUpdate(id: String): ScriptEntry
 
+    /** Saves an edit in place: id, settings, secrets, order and the switch stay; confirmation
+     *  reopens only when the declarations changed. */
+    suspend fun replaceSource(
+        id: String,
+        source: ByteArray,
+    ): ScriptEntry
+
     suspend fun delete(id: String)
 
     /** Trial run in the sandbox page: the input text, the panel's outputs and console lines. */

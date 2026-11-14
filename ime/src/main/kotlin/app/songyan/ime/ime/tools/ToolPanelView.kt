@@ -150,18 +150,21 @@ class ToolPanelView(
                 }
                 ToolPhase.PREVIEWING -> {
                     val preview = state.preview
-                    status.setText(
-                        when {
-                            preview == null -> R.string.ime_tool_panel_failed
-                            preview.isTruncated -> R.string.ime_tool_panel_truncated
-                            else -> R.string.ime_tool_panel_select_hint
-                        },
-                    )
+                    // Only a choice needs a hint; one result speaks for itself.
+                    when {
+                        preview == null -> status.setText(R.string.ime_tool_panel_failed)
+                        preview.isTruncated -> status.setText(R.string.ime_tool_panel_truncated)
+                        preview.results.size > 1 -> status.setText(R.string.ime_tool_panel_select_hint)
+                        else -> status.text = ""
+                    }
                     preview?.results?.forEachIndexed { index, result ->
                         addResult(index, result, index == preview.selectedIndex)
                     }
                     // The write actions read in the order of their weight: the one that replaces
                     // the selection is primary, inserting after it is tonal, copying is text.
+                    state.tool?.let { previewed ->
+                        addAction(R.string.ime_tool_panel_retry, ActionStyle.TEXT) { onRun(previewed) }
+                    }
                     addAction(R.string.ime_tool_panel_copy, ActionStyle.TEXT) {
                         if (onCopy()) showCopyTip()
                     }
@@ -353,10 +356,10 @@ class ToolPanelView(
 
     /**
      * Copying has no state of its own in the model, so the panel says it happened itself: the
-     * status line shows the existing "Done." copy for two seconds and then repaints the state.
+     * status line says "Copied" for two seconds and then repaints the state.
      */
     private fun showCopyTip() {
-        status.setText(R.string.ime_tool_panel_written)
+        status.setText(R.string.ime_tool_panel_copied)
         copyTip?.let(tipHandler::removeCallbacks)
         val tip =
             Runnable {
@@ -445,11 +448,22 @@ class ToolPanelView(
     private fun failureText(state: ToolPanelController.State): CharSequence {
         val failed = state.failedToolCopy()
         if (failed != null) {
-            return when {
-                failed.title != null && failed.message != null ->
-                    context.getString(R.string.ime_tool_panel_error_with_tool, failed.title, failed.message)
-                failed.message != null -> failed.message
-                else -> context.getString(R.string.ime_tool_panel_failed)
+            val reason =
+                failed.code?.let(::codeText)
+                    ?: failed.message?.let { words ->
+                        if (failed.line >
+                            0
+                        ) {
+                            context.getString(R.string.ime_tool_error_at_line, words, failed.line)
+                        } else {
+                            words
+                        }
+                    }
+                    ?: context.getString(R.string.ime_tool_panel_failed)
+            return if (failed.title != null) {
+                context.getString(R.string.ime_tool_panel_error_with_tool, failed.title, reason)
+            } else {
+                reason
             }
         }
         return context.getString(
@@ -468,6 +482,19 @@ class ToolPanelView(
             },
         )
     }
+
+    /** Fixed wording for the reasons a script runtime classifies; the same set iOS uses. */
+    private fun codeText(code: String): String =
+        context.getString(
+            when (code) {
+                "timeout" -> R.string.ime_tool_error_timeout
+                "outOfMemory" -> R.string.ime_tool_error_out_of_memory
+                "addressNotAllowed" -> R.string.ime_tool_error_address
+                "networkFailure" -> R.string.ime_tool_error_network
+                "capabilityUnavailable" -> R.string.ime_tool_error_capability
+                else -> R.string.ime_tool_panel_failed
+            },
+        )
 
     private fun padding(dp: Int): Int = (dp * density).toInt()
 

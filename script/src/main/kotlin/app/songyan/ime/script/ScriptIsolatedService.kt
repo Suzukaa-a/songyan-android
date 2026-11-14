@@ -63,7 +63,14 @@ class ScriptIsolatedService : Service() {
                             ScriptRunHost(declaredHosts, settingUrls) { url, method, headers, body, timeoutMillis ->
                                 val latch = TransportLatch()
                                 waitingFetch = latch
-                                if (!cancelRequested) transport.fetch(url, method, headers, body, timeoutMillis, latch)
+                                if (!cancelRequested) {
+                                    val bodyFd = body?.let(::bodyDescriptor)
+                                    try {
+                                        transport.fetch(url, method, headers, bodyFd, timeoutMillis, latch)
+                                    } finally {
+                                        bodyFd?.close()
+                                    }
+                                }
                                 // A little past the run's own deadline, so the engine reports it.
                                 val answered = cancelRequested || latch.await(timeoutMillis + FETCH_SLACK_MS)
                                 waitingFetch = null
@@ -215,6 +222,19 @@ class ScriptIsolatedService : Service() {
                 }
             }
         }
+
+    /** An anonymous in-memory file holding a request body; the receiver reads it from the start. */
+    private fun bodyDescriptor(bytes: ByteArray): ParcelFileDescriptor {
+        val fd = Os.memfd_create("script-body", 0)
+        try {
+            var offset = 0
+            while (offset < bytes.size) offset += Os.write(fd, bytes, offset, bytes.size - offset)
+            Os.lseek(fd, 0, OsConstants.SEEK_SET)
+            return ParcelFileDescriptor.dup(fd)
+        } finally {
+            Os.close(fd)
+        }
+    }
 
     private companion object {
         const val FETCH_SLACK_MS = 2_000L

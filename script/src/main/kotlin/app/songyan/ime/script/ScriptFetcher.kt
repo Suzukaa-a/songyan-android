@@ -6,7 +6,8 @@ import java.net.URL
 /** Downloads a script link once, at import or update time. HTTPS only, bounded size, one redirect
  *  hop at most - the import path is not a browser. */
 internal object ScriptFetcher {
-    const val MAX_BYTES = 1 shl 20
+    /** A script larger than this could not be imported anyway. */
+    const val MAX_BYTES = ScriptLimits.SOURCE_BYTES.toInt()
 
     fun download(
         url: String,
@@ -20,8 +21,10 @@ internal object ScriptFetcher {
         try {
             when (connection.responseCode / 100) {
                 2 -> {
+                    // Content-Length is absent for chunked and transparently gunzipped responses (raw
+                    // GitHub files, gists), so the bounded read below is the only size check.
                     val size = connection.contentLengthLong
-                    require(size in 0..MAX_BYTES.toLong()) { "the script is too large: " + size }
+                    require(size <= MAX_BYTES.toLong()) { "the script is too large: " + size }
                     return connection.inputStream.use { stream ->
                         // InputStream.readNBytes needs API 33; read with a bound of our own.
                         val buffer = ByteArray(MAX_BYTES + 1)

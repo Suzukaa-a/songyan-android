@@ -114,7 +114,7 @@ class VoiceInputHostImpl(
             is ScriptRunOutcome.Success ->
                 VoiceScriptResult.Text(outcome.outputs.firstOrNull { it.isNotBlank() }.orEmpty())
             is ScriptRunOutcome.Failed ->
-                VoiceScriptResult.Failed(VoiceInputProblem.SCRIPT_FAILED, outcome.message)
+                VoiceScriptResult.Failed(VoiceInputProblem.SCRIPT_FAILED, outcome.message, outcome.code, outcome.line)
             ScriptRunOutcome.Cancelled -> VoiceScriptResult.Failed(VoiceInputProblem.SCRIPT_FAILED, null)
         }
 

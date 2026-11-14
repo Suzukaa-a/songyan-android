@@ -78,8 +78,8 @@
     <string name="ime_glyph_delete" translatable="false">⌫</string>
     <string name="ime_toolbar_input_methods">Keyboard layout and input method</string>
     <string name="ime_toolbar_hide">Hide keyboard</string>
-    <string name="ime_toolbar_tools">Tools</string>
-    <string name="ime_tool_panel_title">Tools</string>
+    <string name="ime_toolbar_tools">Scripts</string>
+    <string name="ime_tool_panel_title">Scripts</string>
     <string name="ime_tool_panel_unavailable">Tools are unavailable in this field.</string>
     <string name="ime_tool_panel_select_hint">Choose one below.</string>
     <string name="ime_tool_panel_running">Running…</string>
@@ -91,8 +91,9 @@
     <string name="ime_tool_panel_undo">Undo</string>
     <string name="ime_tool_panel_close">Close</string>
     <string name="ime_tool_panel_written">Done.</string>
+    <string name="ime_tool_panel_copied">Copied.</string>
     <string name="ime_tool_panel_truncated">The text is long; only its end was used.</string>
-    <string name="ime_tool_panel_no_text">This field has no usable text.</string>
+    <string name="ime_tool_panel_no_text">Select some text, or put the cursor after the text.</string>
     <string name="ime_tool_panel_cancelled">The tool was cancelled.</string>
     <string name="ime_tool_panel_field_changed">The input field changed; nothing was written.</string>
     <string name="ime_tool_panel_edited">The text changed after the write; it was not touched.</string>
@@ -103,6 +104,12 @@
     <string name="ime_tool_panel_no_result">The tool returned no result.</string>
     <string name="ime_tool_panel_failed">The tool did not run.</string>
     <string name="ime_tool_panel_error_with_tool">%1$s: %2$s</string>
+    <string name="ime_tool_error_at_line">%1$s (line %2$d)</string>
+    <string name="ime_tool_error_timeout">Timed out.</string>
+    <string name="ime_tool_error_out_of_memory">The script used too much memory.</string>
+    <string name="ime_tool_error_address">This script can\'t reach this address.</string>
+    <string name="ime_tool_error_network">Network error. Try again.</string>
+    <string name="ime_tool_error_capability">Not available on this device.</string>
     <string name="ime_tool_panel_retry">Retry</string>
     <string name="ime_tool_panel_expand">Expand result</string>
     <string name="ime_tool_panel_collapse">Collapse result</string>

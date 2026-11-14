@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -275,7 +276,13 @@ class ScriptsPolishTest {
     fun aConfirmationWithoutSitesStatesItUnderItsOwnHeading() {
         val registry =
             FakeScriptRegistry().apply {
-                store(declaredEntry(pending = true, connects = emptyList()))
+                store(
+                    declaredEntry(
+                        pending = true,
+                        connects = emptyList(),
+                        settings = DECLARED_SETTINGS.filter { it.kind != ScriptSettingKind.URL },
+                    ),
+                )
             }
         show(registry)
         waitFor(SCRIPT_NAME)
@@ -286,6 +293,18 @@ class ScriptsPolishTest {
         waitFor(str(R.string.scripts_confirm_section_connects))
         compose.onNodeWithText(str(R.string.scripts_confirm_connects_none)).assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_connects_none_body)).assertExists()
+    }
+
+    @Test
+    fun aScriptWithOnlyAnAddressSettingIsNotCalledOffline() {
+        val registry = FakeScriptRegistry().apply { store(declaredEntry(pending = true, connects = emptyList())) }
+        show(registry)
+        waitFor(SCRIPT_NAME)
+        compose.onNodeWithText(SCRIPT_NAME).performClick()
+
+        // It sends text to whatever address the user types, so it must not claim to stay offline.
+        waitFor(str(R.string.scripts_connects_typed))
+        compose.onNodeWithText(str(R.string.scripts_confirm_connects_none)).assertDoesNotExist()
     }
 
     @Test
@@ -349,6 +368,9 @@ class ScriptsPolishTest {
         compose.onNode(hasSetTextAction()).performTextInput("输入")
         compose.onNodeWithText(str(R.string.scripts_test_run)).performClick()
         waitFor(str(R.string.scripts_test_outputs))
+        // What was typed is what the run received, and the box keeps it for the next run.
+        assertEquals(listOf("script-1" to "输入"), registry.trials)
+        compose.onNode(hasSetTextAction()).assert(hasText("输入"))
         compose.onNodeWithText(str(R.string.scripts_test_copy)).performClick()
         waitFor(str(R.string.scripts_test_copied))
 

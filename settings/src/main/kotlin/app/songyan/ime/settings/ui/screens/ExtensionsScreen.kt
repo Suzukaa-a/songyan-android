@@ -491,10 +491,11 @@ private fun lastCallText(call: AddonCallInfo): String {
                 AddonCallKind.PANEL -> R.string.extensions_call_kind_panel
             },
         )
+    val seconds = String.format(java.util.Locale.getDefault(), "%.1f", call.durationMs / 1000.0)
     return if (call.error.isNullOrBlank()) {
-        stringResource(R.string.extensions_last_call, kind, call.durationMs)
+        stringResource(R.string.extensions_last_call, kind, seconds)
     } else {
-        stringResource(R.string.extensions_last_call_error, kind, call.durationMs, call.error)
+        stringResource(R.string.extensions_last_call_error, kind, seconds, call.error)
     }
 }
 

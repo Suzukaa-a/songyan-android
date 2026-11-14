@@ -94,6 +94,7 @@ fun ScriptDetailScreen(
     val updatedText = stringResource(R.string.scripts_notice_updated)
     val deletedText = stringResource(R.string.scripts_notice_deleted)
     val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
+    val savedText = stringResource(R.string.scripts_notice_saved)
     val copiedText = stringResource(R.string.scripts_test_copied)
     val scope = rememberCoroutineScope()
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
@@ -111,6 +112,7 @@ fun ScriptDetailScreen(
                 is ScriptsNotice.Updated -> updatedText
                 ScriptsNotice.Deleted -> deletedText
                 ScriptsNotice.SettingsSaved -> settingsSavedText
+                ScriptsNotice.Saved -> savedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
                 null -> null
             }
@@ -259,9 +261,9 @@ fun ScriptDetailScreen(
                     input = test?.takeIf { it.entryId == scriptId }?.input ?: "",
                     running = test?.takeIf { it.entryId == scriptId }?.running == true,
                     outcome = test?.takeIf { it.entryId == scriptId }?.outcome,
-                    onInput = viewModel::editTestInput,
-                    onRun = viewModel::runTest,
-                    onBegin = { viewModel.beginTest(scriptId) },
+                    onInput = { viewModel.editTestInput(scriptId, it) },
+                    onRun = { viewModel.runTest(scriptId) },
+                    onCancel = { viewModel.cancelTest(scriptId) },
                     onCopied = { scope.launch { snackbar.showSnackbar(copiedText) } },
                 )
             }
@@ -298,11 +300,28 @@ fun ScriptDetailScreen(
                     )
                 }
             }
-            if (entry.connects.isNotEmpty()) {
+            item {
+                val sites = connectRows(entry)
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.scripts_connects)) },
+                    supportingContent = {
+                        Text(
+                            if (sites.isEmpty()) {
+                                stringResource(
+                                    R.string.scripts_connects_none,
+                                )
+                            } else {
+                                sites.joinToString("\n")
+                            },
+                        )
+                    },
+                )
+            }
+            entry.timeoutSeconds?.let { seconds ->
                 item {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.scripts_connects)) },
-                        supportingContent = { Text(entry.connects.joinToString("\n")) },
+                        headlineContent = { Text(stringResource(R.string.scripts_confirm_timeout)) },
+                        supportingContent = { Text(runLimitText(seconds)) },
                     )
                 }
             }
@@ -374,7 +393,7 @@ private fun TestBox(
     outcome: ScriptRunOutcome?,
     onInput: (String) -> Unit,
     onRun: () -> Unit,
-    onBegin: () -> Unit,
+    onCancel: () -> Unit,
     onCopied: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -390,10 +409,7 @@ private fun TestBox(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                onBegin()
-                onRun()
-            }, enabled = !running) {
+            Button(onClick = onRun, enabled = !running) {
                 if (running) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
@@ -405,6 +421,10 @@ private fun TestBox(
                     Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
                 }
                 Text(stringResource(R.string.scripts_test_run))
+            }
+            // A run may wait on a slow service for minutes; it can always be stopped.
+            if (running) {
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.scripts_cancel)) }
             }
         }
         outcome?.let { answer ->

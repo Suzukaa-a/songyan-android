@@ -70,6 +70,9 @@ sealed interface ScriptsNotice {
     /** The detail page's settings form was saved. */
     data object SettingsSaved : ScriptsNotice
 
+    /** An edit was saved and its declarations did not change. */
+    data object Saved : ScriptsNotice
+
     data class ActionFailed(
         val failure: ScriptFailure,
     ) : ScriptsNotice
@@ -390,54 +393,80 @@ class ScriptsViewModel(
 
     /** Replaces the stored source from the editor: the edited text is stored first, then the
      *  previous entry is deleted, so a failure in between loses nothing the user still had. */
+
+    /** Saves the editor's text. A new script is added and confirmed; an edit replaces the
+     *  stored source in place and asks for confirmation only when its declarations changed. */
     fun applyEdit(
         id: String,
         text: String,
     ) {
         viewModelScope.launch {
             mutable.update { it.copy(busy = true, importFailure = null) }
+            val bytes = text.toByteArray(Charsets.UTF_8)
             val entry =
                 try {
-                    registry.add(text.toByteArray(Charsets.UTF_8), ScriptSourceOrigin.Edited)
+                    if (id.isEmpty()) {
+                        registry.add(
+                            bytes,
+                            ScriptSourceOrigin.Edited,
+                        )
+                    } else {
+                        registry.replaceSource(id, bytes)
+                    }
                 } catch (e: Exception) {
                     mutable.update { it.copy(busy = false, importFailure = failureOf(e)) }
                     return@launch
                 }
-            if (id.isNotEmpty() && id != entry.id) {
-                runCatching { registry.delete(id) }
-            }
             mutable.update {
-                it.copy(busy = false, pendingConfirmation = entry, entries = registry.entries)
+                if (id.isEmpty() || entry.confirmationPending) {
+                    it.copy(busy = false, pendingConfirmation = entry, entries = registry.entries)
+                } else {
+                    it.copy(busy = false, entries = registry.entries, notice = ScriptsNotice.Saved)
+                }
             }
         }
     }
 
-    fun beginTest(entryId: String) {
-        mutableTest.value = ScriptTestState(entryId = entryId)
+    /** The trial box belongs to one script; typing into it opens it, and the text stays across
+     *  runs so the user can run the same input again. */
+    fun editTestInput(
+        entryId: String,
+        text: String,
+    ) {
+        mutableTest.update { state ->
+            if (state?.entryId ==
+                entryId
+            ) {
+                state.copy(input = text)
+            } else {
+                ScriptTestState(entryId = entryId, input = text)
+            }
+        }
     }
 
-    fun editTestInput(text: String) {
-        mutableTest.update { state -> state?.copy(input = text) }
-    }
-
-    fun runTest() {
-        val state = mutableTest.value ?: return
+    fun runTest(entryId: String) {
+        val current = mutableTest.value?.takeIf { it.entryId == entryId } ?: ScriptTestState(entryId = entryId)
+        if (current.running) return
+        mutableTest.value = current.copy(running = true, outcome = null)
         viewModelScope.launch {
-            mutableTest.update { it?.copy(running = true) }
             val outcome =
                 try {
-                    registry.runTrial(state.entryId, state.input)
+                    registry.runTrial(entryId, current.input)
                 } catch (e: Exception) {
                     ScriptRunOutcome.Failed(failureOf(e).code, e.message ?: "", 0)
                 }
-            mutableTest.update { it?.copy(running = false, outcome = outcome) }
+            mutableTest.update { state ->
+                state?.takeIf { it.entryId == entryId }?.copy(running = false, outcome = outcome)
+            }
         }
     }
 
-    fun cancelTest() {
-        val state = mutableTest.value ?: return
-        viewModelScope.launch { runCatching { registry.cancel(state.entryId) } }
-        mutableTest.value = null
+    /** Stops a trial that is still waiting; the box keeps its text and says the run was cancelled. */
+    fun cancelTest(entryId: String) {
+        viewModelScope.launch { runCatching { registry.cancel(entryId) } }
+        mutableTest.update { state ->
+            state?.takeIf { it.entryId == entryId }?.copy(running = false, outcome = ScriptRunOutcome.Cancelled)
+        }
     }
 
     private fun failureOf(e: Exception): ScriptFailure =

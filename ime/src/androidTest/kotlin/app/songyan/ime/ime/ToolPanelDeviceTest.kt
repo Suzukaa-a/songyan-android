@@ -46,6 +46,7 @@ import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
@@ -246,7 +247,7 @@ class ToolPanelDeviceTest {
     }
 
     @Test
-    fun anInsertOverASelectionShowsTheModelReason() {
+    fun anInsertAfterASelectionKeepsTheSelectedText() {
         val target = field("hello world")
         val bridge = bridge(target)
         val controller = controller(target, bridge, ToolExecutor { _, _ -> listOf("X") })
@@ -260,12 +261,8 @@ class ToolPanelDeviceTest {
         controller.start(tool)
         awaitPhase(controller, ToolPhase.PREVIEWING)
         controller.insert()
-        assertEquals(
-            ToolWriteResult.Blocked(WriteBlockReason.UNSUPPORTED_INSERTION),
-            controller.state().write,
-        )
-        assertEquals("hello world", target.text)
-        assertEquals(context.getString(R.string.ime_tool_panel_selection), reasonText(controller))
+        assertEquals(ToolWriteResult.Applied, controller.state().write)
+        assertEquals("hello worldX", target.text)
     }
 
     @Test
@@ -579,15 +576,15 @@ class ToolPanelDeviceTest {
 
     @Test
     fun copyingSaysSoForAMomentAndThenReturnsToTheHint() {
-        val view = showPreview(listOf("x"), selected = 0)
+        val view = showPreview(listOf("x", "y"), selected = 0)
         var copied = true
         instrumentation.runOnMainSync {
             view.onCopy = { copied }
             requireNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_copy))).performClick()
         }
         assertEquals(
-            "a copy says it happened",
-            context.getString(R.string.ime_tool_panel_written),
+            "a copy says it was copied, not written",
+            context.getString(R.string.ime_tool_panel_copied),
             statusText(view),
         )
 
@@ -608,6 +605,13 @@ class ToolPanelDeviceTest {
             context.getString(R.string.ime_tool_panel_select_hint),
             statusText(view),
         )
+    }
+
+    @Test
+    fun aSingleResultNeedsNoHintAndCanBeRetried() {
+        val view = showPreview(listOf("x"), selected = 0)
+        assertEquals("", statusText(view))
+        assertNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_retry)))
     }
 
     @Test

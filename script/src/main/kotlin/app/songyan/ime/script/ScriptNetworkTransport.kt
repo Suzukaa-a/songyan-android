@@ -25,18 +25,24 @@ internal object ScriptNetworkTransport {
         responseLimit: Long,
         timeoutMillis: Long,
         onConnection: (HttpURLConnection) -> Unit = {},
+        cancelled: () -> Boolean = { false },
     ): ProxyTransport.Reply {
         var current = url
+        var currentMethod = method
+        var currentHeaders = headersJson
+        var currentBody = body
         var redirects = 0
         val deadline = System.currentTimeMillis() + timeoutMillis
         while (true) {
+            // A cancel that lands between redirects, or before the first connection, sends nothing.
+            if (cancelled()) return ProxyTransport.Reply(false, 0, null, null, null, null, "cancelled")
             val decision = ScriptAddressPolicy.authorize(current, declaredHosts, settingUrls)
             if (!decision.allowed) {
                 return ProxyTransport.Reply(false, 0, null, null, null, null, decision.reason)
             }
             val left = deadline - System.currentTimeMillis()
             if (left <= 0) return ProxyTransport.Reply(false, 0, null, null, null, null, "the run's time is up")
-            val reply = perform(current, method, headersJson, body, responseLimit, left, onConnection)
+            val reply = perform(current, currentMethod, currentHeaders, currentBody, responseLimit, left, onConnection)
             if (reply.accepted && reply.status / 100 == 3 && redirects < MAX_REDIRECTS) {
                 val location =
                     reply.headersJson?.let { headers ->
@@ -52,13 +58,38 @@ internal object ScriptNetworkTransport {
                         }.getOrNull()
                     } ?: reply.finalUrl
                 if (location != null) {
-                    current = URI(current).resolve(location).toString()
+                    val next = URI(current).resolve(location)
+                    // Credentials go only to the host the script addressed, never to a redirect target.
+                    if (!next.host.equals(URI(current).host, ignoreCase = true)) {
+                        currentHeaders = withoutCredentials(currentHeaders)
+                    }
+                    // 303, and 301/302 after a POST, continue as a GET without the body (RFC 9110 15.4).
+                    if (reply.status == 303 || (reply.status in 301..302 && currentMethod.equals("POST", true))) {
+                        currentMethod = "GET"
+                        currentBody = null
+                    }
+                    current = next.toString()
                     redirects++
                     continue
                 }
             }
             return reply
         }
+    }
+
+    private val credentialHeaders = setOf("authorization", "proxy-authorization", "cookie")
+
+    private fun withoutCredentials(headersJson: String?): String? {
+        headersJson ?: return null
+        val headers =
+            runCatching {
+                kotlinx.serialization.json.Json
+                    .parseToJsonElement(headersJson)
+                    .jsonObject
+            }.getOrNull() ?: return null
+        return kotlinx.serialization.json
+            .JsonObject(headers.filterKeys { it.lowercase() !in credentialHeaders })
+            .toString()
     }
 
     private fun perform(
@@ -95,23 +126,14 @@ internal object ScriptNetworkTransport {
                 connection.outputStream.use { it.write(body) }
             }
             val status = connection.responseCode
-            val headers = StringBuilder("{")
-            var first = true
-            for ((name, valuess) in connection.headerFields) {
-                if (name == null) continue
-                for (value in valuess) {
-                    if (!first) headers.append(",")
-                    first = false
-                    headers.append(
-                        String.format(
-                            "\"%s\":\"%s\"",
-                            name.replace("\"", ""),
-                            value.replace("\\", "\\\\").replace("\"", ""),
-                        ),
-                    )
-                }
-            }
-            headers.append("}")
+            // Repeated header names join with ", " (RFC 9110 5.3); the JSON encoder escapes the rest.
+            val headers =
+                kotlinx.serialization.json.JsonObject(
+                    connection.headerFields
+                        .filterKeys { it != null }
+                        .mapKeys { it.key.lowercase() }
+                        .mapValues { kotlinx.serialization.json.JsonPrimitive(it.value.joinToString(", ")) },
+                )
             val stream = if (status / 100 == 2) connection.inputStream else connection.errorStream
             val collected =
                 stream?.use { input ->

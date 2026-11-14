@@ -310,7 +310,7 @@ class VoiceInputController(
                     val take = recording as VoiceRecordingResult.Recorded
                     val result = host.runAudio(script.id, take.wav)
                     if (result is VoiceScriptResult.Failed) {
-                        finishWith(problemMessage(result.problem))
+                        finishWith(scriptFailureMessage(script.name, result))
                         return@launch
                     }
                     commit((result as VoiceScriptResult.Text).text)
@@ -367,6 +367,33 @@ class VoiceInputController(
             runCatching { if (addonTake) host.cancelAddonVoice() else host.cancelRecording() }
         }
         addonTake = false
+    }
+
+    /** A voice script's failure in the words the tool panel uses: the script's own message under
+     *  its name, fixed wording for the reasons the runtime classifies, the generic line otherwise. */
+    private fun scriptFailureMessage(
+        name: String,
+        failure: VoiceScriptResult.Failed,
+    ): String {
+        val reason =
+            when (failure.code) {
+                "script" ->
+                    failure.detail?.trim()?.takeIf { it.isNotEmpty() }?.let { words ->
+                        if (failure.line >
+                            0
+                        ) {
+                            context.getString(R.string.ime_tool_error_at_line, words, failure.line)
+                        } else {
+                            words
+                        }
+                    }
+                "timeout" -> context.getString(R.string.ime_tool_error_timeout)
+                "outOfMemory" -> context.getString(R.string.ime_tool_error_out_of_memory)
+                "addressNotAllowed" -> context.getString(R.string.ime_tool_error_address)
+                "networkFailure" -> context.getString(R.string.ime_tool_error_network)
+                else -> null
+            } ?: return problemMessage(failure.problem)
+        return context.getString(R.string.ime_tool_panel_error_with_tool, name, reason)
     }
 
     private fun problemMessage(problem: VoiceInputProblem): String =

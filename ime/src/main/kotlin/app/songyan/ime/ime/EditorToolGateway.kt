@@ -197,10 +197,22 @@ class EditorToolGateway(
                     }
                 WriteKind.INSERT -> {
                     val ic = editor.connection()
-                    if (ic == null || !ic.getSelectedText(0).isNullOrEmpty()) {
-                        false
-                    } else {
-                        editor.update("", listOf(request.text))
+                    when {
+                        ic == null -> false
+                        ic.getSelectedText(0).isNullOrEmpty() -> editor.update("", listOf(request.text))
+                        // After a run on a selection the result goes right after it and the selected
+                        // text stays: the caret collapses to the selection's end, where the model
+                        // placed the inserted span, and the text is committed there.
+                        editor.selection.known && editor.selection.end == request.range.start -> {
+                            ic.beginBatchEdit()
+                            try {
+                                ic.setSelection(request.range.start, request.range.start) &&
+                                    editor.update("", listOf(request.text))
+                            } finally {
+                                ic.endBatchEdit()
+                            }
+                        }
+                        else -> false
                     }
                 }
             }
@@ -354,14 +366,14 @@ class EditorToolGateway(
 
         /**
          * Only the abilities this gateway actually implements and verifies: it replaces the tail it
-         * re-read before the caret (replacePrecedingTail), and it does not insert while a selection
-         * is live (an insert over a live selection is refused in [applyWrite]), so it does not
-         * declare insertPreservingSelection. A truncated selection is refused rather than written.
+         * re-read before the caret (replacePrecedingTail), and it inserts after a live selection
+         * without touching the selected text (insertPreservingSelection, see [applyWrite]). A
+         * truncated selection is refused rather than written.
          */
         val CAPABILITIES =
             ToolDocumentCapabilities(
                 replacePrecedingTail = true,
-                insertPreservingSelection = false,
+                insertPreservingSelection = true,
             )
     }
 }

@@ -50,4 +50,8 @@ oneway interface ScriptProxy {
     void runAudio(String id, in android.os.ParcelFileDescriptor audio, app.songyan.ime.script.ScriptProxyCallback reply);
 
     void cancel(String id);
+
+    // An edit made in the app: the script keeps its id, settings, secrets, order and switch, and is
+    // asked to be confirmed again only when its declarations changed.
+    void replaceSource(String id, in byte[] source, app.songyan.ime.script.ScriptProxyCallback reply);
 }

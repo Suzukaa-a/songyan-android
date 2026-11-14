@@ -147,6 +147,8 @@ class ScriptsScreenTest {
         compose.onNodeWithText(str(R.string.scripts_confirm_reads)).assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_section_connects)).assertExists()
         DECLARED_SITES.forEach { compose.onNodeWithText(it).assertExists() }
+        // The url setting is a site too: the user's own address is disclosed with the declared ones.
+        compose.onNodeWithText(str(R.string.scripts_connects_typed)).assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_section_settings)).assertExists()
         // The pinned confirm bar leaves less list height, and a LazyColumn only composes what is
         // near the viewport: scroll to each field before asserting it.

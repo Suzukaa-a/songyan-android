@@ -131,6 +131,16 @@ internal class FakeScriptRegistry : ScriptRegistry {
         return replace(id) { fresh.copy(id = id, order = it.order, enabled = it.enabled) }
     }
 
+    val replaces = mutableListOf<String>()
+
+    override suspend fun replaceSource(
+        id: String,
+        source: ByteArray,
+    ): ScriptEntry {
+        replaces += id
+        return replace(id) { it }
+    }
+
     override suspend fun delete(id: String) {
         stored.removeAll { it.id == id }
         entries = stored.toList()
@@ -139,10 +149,15 @@ internal class FakeScriptRegistry : ScriptRegistry {
     /** What a trial run answers; a test seeds it to drive the output and copy paths. */
     var trialOutcome: ScriptRunOutcome = ScriptRunOutcome.Success(emptyList(), emptyList(), false)
 
+    val trials = mutableListOf<Pair<String, String>>()
+
     override suspend fun runTrial(
         id: String,
         text: String,
-    ): ScriptRunOutcome = trialOutcome
+    ): ScriptRunOutcome {
+        trials += id to text
+        return trialOutcome
+    }
 
     override suspend fun run(
         id: String,

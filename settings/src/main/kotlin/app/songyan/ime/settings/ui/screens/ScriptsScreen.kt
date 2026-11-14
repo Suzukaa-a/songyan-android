@@ -108,6 +108,7 @@ fun ScriptsScreen(
     val updatedText = stringResource(R.string.scripts_notice_updated)
     val exportFailedText = stringResource(R.string.scripts_notice_export_failed)
     val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
+    val savedText = stringResource(R.string.scripts_notice_saved)
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
     // notice it belongs to is the current one.
     val actionFailureText =
@@ -136,6 +137,7 @@ fun ScriptsScreen(
                 ScriptsNotice.ExportFailed -> exportFailedText
                 ScriptsNotice.Exported -> null
                 ScriptsNotice.SettingsSaved -> settingsSavedText
+                ScriptsNotice.Saved -> savedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
             }
         when (text) {

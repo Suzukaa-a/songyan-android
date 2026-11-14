@@ -5,6 +5,7 @@ import app.songyan.ime.tools.ToolFailure
 import app.songyan.ime.tools.ToolPhase
 import app.songyan.ime.tools.ToolPreview
 import app.songyan.ime.tools.ToolRun
+import app.songyan.ime.tools.ToolRunException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -85,7 +86,8 @@ class ToolPanelController(
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Throwable) {
-                        started.fail(started.runId, error.message)
+                        val coded = error as? ToolRunException
+                        started.fail(started.runId, error.message, code = coded?.code, line = coded?.line ?: 0)
                         publish()
                         return@launch
                     }

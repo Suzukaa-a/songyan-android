@@ -44,6 +44,11 @@ internal class ScriptRunner(
         active?.takeIf { it.id == id }?.cancel()
     }
 
+    /** Stops whatever is running; the service is going away and nobody will read the answer. */
+    fun cancelAll() {
+        active?.cancel()
+    }
+
     fun run(
         id: String,
         text: String,
@@ -109,12 +114,13 @@ internal class ScriptRunner(
                     url: String,
                     method: String,
                     headersJson: String?,
-                    body: ByteArray?,
+                    bodyFd: ParcelFileDescriptor?,
                     timeoutMillis: Long,
                     callback: ScriptTransportCallback,
                 ) {
                     val reply =
                         runCatching {
+                            val body = bodyFd?.let(::readBody)
                             ScriptNetworkTransport.fetch(
                                 url,
                                 method,
@@ -125,6 +131,7 @@ internal class ScriptRunner(
                                 ScriptLimits.RESPONSE_BYTES,
                                 timeoutMillis,
                                 onConnection = { run.connection = it },
+                                cancelled = { run.cancelled },
                             )
                         }.getOrElse { error ->
                             ProxyTransport.Reply(
@@ -152,7 +159,9 @@ internal class ScriptRunner(
         activeTransport = transport
         val answer =
             try {
-                IsolatedCall.call(context) { service, callback ->
+                // The run's own duration (its @timeout, or the shipped one) plus room to start.
+                val wait = ScriptLimits.durationMillis(header.timeoutSeconds) + ISOLATED_SLACK_MS
+                IsolatedCall.call(context, wait) { service, callback ->
                     service.runScript(
                         source,
                         settingsToJson(settings).toByteArray(Charsets.UTF_8),
@@ -180,6 +189,21 @@ internal class ScriptRunner(
         }
         return outcomeFromReport(answer.second)
     }
+
+    /** Reads a request body the isolated process wrote, bounded by the engine's heap: a body
+     *  cannot be larger than what the script could hold. */
+    private fun readBody(descriptor: ParcelFileDescriptor): ByteArray =
+        ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { input ->
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                out.write(buffer, 0, read)
+                check(out.size() <= ScriptLimits.HEAP_BYTES) { "the request body is too large" }
+            }
+            out.toByteArray()
+        }
 
     private fun settingsToJson(settings: Map<String, String>): String {
         if (settings.isEmpty()) return "{}"
@@ -210,6 +234,9 @@ internal class ScriptRunner(
     }
 
     companion object {
+        /** Room for binding the isolated process and starting the engine beyond the run's duration. */
+        private const val ISOLATED_SLACK_MS = 30_000L
+
         /** Maps the run report: ok -> outputs/logs, ok:false -> the contract error code. */
         fun outcomeFromReport(report: String): ScriptRunOutcome {
             if (report.isEmpty()) {

@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">脚本</string>
-    <string name="row_scripts_subtitle">单文件小工具：文字进，文字出</string>
+    <string name="row_scripts_subtitle">给键盘加你自己的功能</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">脚本</string>
@@ -25,7 +25,7 @@
     <!-- Add sheet -->
     <string name="scripts_add_paste">粘贴脚本文字</string>
     <string name="scripts_add_file">选择文件</string>
-    <string name="scripts_add_link">从 HTTPS 链接</string>
+    <string name="scripts_add_link">从链接添加</string>
     <string name="scripts_add_editor">在这里写脚本</string>
     <string name="scripts_add_paste_title">粘贴脚本</string>
     <string name="scripts_add_paste_label">脚本文字</string>
@@ -56,6 +56,7 @@
     <string name="scripts_secret_show">显示密钥</string>
     <string name="scripts_secret_hide">隐藏密钥</string>
     <string name="scripts_notice_settings_saved">设置已保存。</string>
+    <string name="scripts_notice_saved">已保存。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">确认脚本</string>
@@ -66,14 +67,23 @@
     <string name="scripts_confirm_reads_audio">运行时会录音（需要麦克风），录音交给这个脚本；脚本看不到其他输入。</string>
     <string name="scripts_confirm_section_connects">会连的网站</string>
     <string name="scripts_confirm_connects_none">没有声明任何网站</string>
-    <string name="scripts_confirm_connects_none_body">这个脚本不会连接网络。</string>
+    <string name="scripts_connects_typed">你在设置里填的地址</string>
+    <string name="scripts_connects_none">不联网</string>
+    <string name="scripts_confirm_timeout">最长运行</string>
+    <plurals name="scripts_run_limit_seconds">
+        <item quantity="other">最长 %d 秒</item>
+    </plurals>
+    <plurals name="scripts_run_limit_minutes">
+        <item quantity="other">最长 %d 分钟</item>
+    </plurals>
+    <string name="scripts_confirm_connects_none_body">它不会联网。</string>
     <string name="scripts_confirm_section_settings">要填的设置</string>
     <string name="scripts_confirm_action">确认</string>
-    <string name="scripts_confirm_note">读完上面的清单再确认。密钥只存在这台设备上，不会包含在分享内容里。</string>
+    <string name="scripts_confirm_note">密钥只存在这台设备上。</string>
     <string name="scripts_pending_title">需要确认</string>
     <string name="scripts_pending_body">这个脚本的声明变了。使用前请再读一遍。</string>
     <string name="scripts_unavailable_title">在这台设备上不可用</string>
-    <string name="scripts_unavailable_body">此键盘无法提供这个脚本需要的输入，因此它无法在这里运行。</string>
+    <string name="scripts_unavailable_body">这台设备上不可用。</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">文字</string>
@@ -81,15 +91,15 @@
     <string name="scripts_secret_suffix">（密钥）</string>
 
     <!-- Trial run -->
-    <string name="scripts_test_section">试一试</string>
-    <string name="scripts_test_input_label">要发送的文字</string>
+    <string name="scripts_test_section">试运行</string>
+    <string name="scripts_test_input_label">要处理的文字</string>
     <string name="scripts_test_run">运行</string>
     <string name="scripts_test_copy">复制</string>
     <string name="scripts_test_copied">已复制</string>
     <string name="scripts_test_outputs">输出</string>
     <string name="scripts_test_no_output">脚本没有返回内容。</string>
-    <string name="scripts_test_console">控制台</string>
-    <string name="scripts_test_console_shortened">控制台（内容已截短）</string>
+    <string name="scripts_test_console">日志</string>
+    <string name="scripts_test_console_shortened">日志（已截短）</string>
     <string name="scripts_test_cancelled">运行已取消。</string>
 
     <!-- Detail page -->
@@ -110,21 +120,21 @@
     <string name="scripts_delete_confirm">删除</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">脚本已删除，此操作无法撤销。</string>
+    <string name="scripts_notice_deleted">已删除。</string>
     <string name="scripts_notice_up_to_date">已是最新。</string>
-    <string name="scripts_notice_updated">发现更新。使用前请读一读改了什么。</string>
+    <string name="scripts_notice_updated">脚本要求变了，需要重新确认。</string>
     <string name="scripts_notice_exported">已分享。</string>
     <string name="scripts_notice_export_failed">分享失败，请重试。</string>
 
     <!-- Engine refusals, one wording per machine code -->
-    <string name="scripts_error_timeout">脚本运行太久，已停止。</string>
+    <string name="scripts_error_timeout">运行超时。</string>
     <string name="scripts_error_out_of_memory">脚本占用内存过多，已停止。</string>
-    <string name="scripts_error_address_not_allowed">脚本尝试访问它没有声明的网站。</string>
-    <string name="scripts_error_network_failure">网络请求失败。</string>
+    <string name="scripts_error_address_not_allowed">这个脚本不能连接这个地址。</string>
+    <string name="scripts_error_network_failure">网络连接失败，请重试。</string>
     <string name="scripts_error_bad_header">文件开头的声明不合法。</string>
     <string name="scripts_error_unsupported_api">这个脚本需要更新版本的松烟输入法。</string>
-    <string name="scripts_error_capability">这个脚本需要的输入是此键盘无法提供的。</string>
-    <string name="scripts_error_unavailable">脚本功能暂时不可用，请更新或重新安装松烟。</string>
+    <string name="scripts_error_capability">这台设备上不可用。</string>
+    <string name="scripts_error_unavailable">脚本暂时无法运行，请重试。</string>
     <string name="scripts_error_generic">脚本失败：%1$s</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

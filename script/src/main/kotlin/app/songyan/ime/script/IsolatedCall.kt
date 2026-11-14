@@ -13,8 +13,10 @@ import java.util.concurrent.TimeUnit
 internal object IsolatedCall {
     fun call(
         context: Context,
+        waitMillis: Long = CallbackLatch.DEFAULT_WAIT_MILLIS,
         action: (ScriptIsolatedProcess, ScriptIsolatedCallback) -> Unit,
     ): Triple<Int, String, String>? {
+        val callback = CallbackLatch()
         var bound: IBinder? = null
         val ready = CountDownLatch(1)
         val connection =
@@ -27,7 +29,8 @@ internal object IsolatedCall {
                     ready.countDown()
                 }
 
-                override fun onServiceDisconnected(name: ComponentName) = Unit
+                // The isolated process died (a crash or the system reclaiming it): stop waiting now.
+                override fun onServiceDisconnected(name: ComponentName) = callback.abandon()
             }
         val intent =
             Intent().setComponent(
@@ -38,9 +41,12 @@ internal object IsolatedCall {
         }
         return try {
             check(ready.await(30, TimeUnit.SECONDS)) { "the isolated service did not connect" }
-            val callback = CallbackLatch()
             action(ScriptIsolatedProcess.Stub.asInterface(bound), callback)
-            if (callback.await()) Triple(callback.exitCode, callback.stdout, callback.stderr) else null
+            if (callback.await(waitMillis) && callback.answered) {
+                Triple(callback.exitCode, callback.stdout, callback.stderr)
+            } else {
+                null
+            }
         } finally {
             context.unbindService(connection)
         }

@@ -8,6 +8,7 @@ import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.tools.ToolCapability
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolLimits
+import app.songyan.ime.tools.ToolRunException
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -52,12 +53,13 @@ class ScriptToolCatalog(
             }
 }
 
-/** Raised when the script host reports a refusal; the message reaches the failure preview. */
+/** Raised when the script host reports a refusal; the panel words the code and shows a script's
+ *  own message as written. */
 class ScriptToolRunException(
-    val code: String,
+    code: String,
     message: String,
-    val line: Int,
-) : IllegalStateException(if (line > 0) message + " (line " + line + ")" else message)
+    line: Int,
+) : ToolRunException(code, message, line)
 
 /**
  * Runs one script through the installed [ScriptRegistry]. The proxy and the isolated engine start
@@ -71,17 +73,12 @@ class ScriptToolExecutor(
         input: String,
     ): List<String> {
         val id = tool.id.removePrefix(SCRIPT_PREFIX)
-        val current = registry()
-        try {
-            return when (val outcome = current.run(id, input)) {
-                is app.songyan.ime.script.ScriptRunOutcome.Success -> outcome.outputs
-                is app.songyan.ime.script.ScriptRunOutcome.Failed ->
-                    throw ScriptToolRunException(outcome.code, outcome.message, outcome.line)
-                app.songyan.ime.script.ScriptRunOutcome.Cancelled -> throw CancellationException("script cancelled")
-            }
-        } catch (cancelled: CancellationException) {
-            runCatching { current.cancel(id) }
-            throw cancelled
+        // The registry stops the run itself when this coroutine is cancelled.
+        return when (val outcome = registry().run(id, input)) {
+            is app.songyan.ime.script.ScriptRunOutcome.Success -> outcome.outputs
+            is app.songyan.ime.script.ScriptRunOutcome.Failed ->
+                throw ScriptToolRunException(outcome.code, outcome.message, outcome.line)
+            app.songyan.ime.script.ScriptRunOutcome.Cancelled -> throw CancellationException("script cancelled")
         }
     }
 

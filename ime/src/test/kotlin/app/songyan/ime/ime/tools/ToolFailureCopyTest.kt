@@ -51,6 +51,23 @@ class ToolFailureCopyTest {
     }
 
     @Test
+    fun aClassifiedReasonHidesTheRuntimeDiagnostic() {
+        val copy =
+            state(
+                ToolFailure.ToolError("the script ran longer than 30000 ms", code = "timeout"),
+            ).failedToolCopy()
+
+        assertEquals(FailedToolCopy(title = "加书名号", message = null, code = "timeout"), copy)
+    }
+
+    @Test
+    fun aScriptsOwnErrorKeepsItsWordsAndLine() {
+        val copy = state(ToolFailure.ToolError("401 密钥无效", code = "script", line = 7)).failedToolCopy()
+
+        assertEquals(FailedToolCopy(title = "加书名号", message = "401 密钥无效", code = null, line = 7), copy)
+    }
+
+    @Test
     fun fixedFailuresDoNotCarryToolWords() {
         assertNull(state(ToolFailure.TimedOut).failedToolCopy())
         assertNull(state(ToolFailure.NoResult).failedToolCopy())

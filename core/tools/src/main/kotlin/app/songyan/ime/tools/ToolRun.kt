@@ -213,13 +213,15 @@ class ToolRun private constructor(
         runId: String,
         message: String?,
         now: Long = clock(),
+        code: String? = null,
+        line: Int = 0,
     ): Boolean {
         if (phase != ToolPhase.RUNNING || runId != this.runId) return false
         if (pastDeadline(now)) {
             failWithoutInput(ToolFailure.TimedOut)
             return false
         }
-        failWithoutInput(ToolFailure.ToolError(message))
+        failWithoutInput(ToolFailure.ToolError(message, code, line))
         return true
     }
 

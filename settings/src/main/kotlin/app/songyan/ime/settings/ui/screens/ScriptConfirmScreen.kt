@@ -33,11 +33,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.script.ScriptEntry
+import app.songyan.ime.script.ScriptSettingKind
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsViewModel
 import app.songyan.ime.settings.ui.components.HideKeyboardOnEnter
@@ -113,6 +115,8 @@ fun ScriptConfirmScreen(
             }
             return@SettingsScaffold
         }
+        // A url setting is a site too: the script reaches whatever address the user fills in.
+        val sites = connectRows(entry)
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -137,10 +141,10 @@ fun ScriptConfirmScreen(
                 // The section header is always present, like "What it is": an empty list is a
                 // statement under the heading, not a site row that happens to say "none".
                 item { SectionHeader(stringResource(R.string.scripts_confirm_section_connects)) }
-                if (entry.connects.isNotEmpty()) {
-                    items(entry.connects.size) { index ->
+                if (sites.isNotEmpty()) {
+                    items(sites.size) { index ->
                         ListItem(
-                            headlineContent = { Text(entry.connects[index]) },
+                            headlineContent = { Text(sites[index]) },
                             leadingContent = { Icon(Icons.Outlined.TravelExplore, contentDescription = null) },
                         )
                     }
@@ -160,6 +164,14 @@ fun ScriptConfirmScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                }
+                entry.timeoutSeconds?.let { seconds ->
+                    item {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.scripts_confirm_timeout)) },
+                            supportingContent = { Text(runLimitText(seconds)) },
+                        )
                     }
                 }
                 if (entry.settings.isNotEmpty()) {
@@ -227,5 +239,28 @@ fun ScriptConfirmScreen(
  * script reads the selection, or the text before the cursor when nothing is selected. Both are
  * stated on the confirmation page because it is the user's only disclosure before the script runs.
  */
+
+/** The sites a script may reach, as the confirmation and detail pages list them: its declared
+ *  hosts, then one row for the addresses typed into its url settings. */
+@Composable
+internal fun connectRows(entry: ScriptEntry): List<String> {
+    val typed =
+        if (entry.settings.any { it.kind == ScriptSettingKind.URL }) {
+            listOf(stringResource(R.string.scripts_connects_typed))
+        } else {
+            emptyList()
+        }
+    return entry.connects + typed
+}
+
+/** "Up to N seconds", in minutes from two minutes up. */
+@Composable
+internal fun runLimitText(seconds: Int): String =
+    if (seconds >= 120) {
+        pluralStringResource(R.plurals.scripts_run_limit_minutes, seconds / 60, seconds / 60)
+    } else {
+        pluralStringResource(R.plurals.scripts_run_limit_seconds, seconds, seconds)
+    }
+
 internal fun readsBodyRes(needsAudio: Boolean): Int =
     if (needsAudio) R.string.scripts_confirm_reads_audio else R.string.scripts_confirm_reads_body

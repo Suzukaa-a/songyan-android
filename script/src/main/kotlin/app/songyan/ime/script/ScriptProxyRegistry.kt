@@ -138,6 +138,16 @@ class ScriptProxyRegistry(
         return entry
     }
 
+    override suspend fun replaceSource(
+        id: String,
+        source: ByteArray,
+    ): ScriptEntry {
+        val payload = call { proxy, callback -> proxy.replaceSource(id, source, callback) }
+        val entry = ScriptProxyProto.parseEntry(payload)
+        reloadAfterMutation()
+        return entry
+    }
+
     override suspend fun delete(id: String) {
         call { proxy, callback -> proxy.delete(id, callback) }
         reloadAfterMutation()
@@ -147,7 +157,8 @@ class ScriptProxyRegistry(
         id: String,
         text: String,
     ): ScriptRunOutcome {
-        val payload = call { proxy, callback -> proxy.runTrial(id, text, callback) }
+        val payload =
+            call(RUN_WAIT_SECONDS, abort = { it.cancel(id) }) { proxy, callback -> proxy.runTrial(id, text, callback) }
         return ScriptProxyProto.parseOutcome(payload)
     }
 
@@ -155,7 +166,8 @@ class ScriptProxyRegistry(
         id: String,
         text: String,
     ): ScriptRunOutcome {
-        val payload = call { proxy, callback -> proxy.run(id, text, callback) }
+        val payload =
+            call(RUN_WAIT_SECONDS, abort = { it.cancel(id) }) { proxy, callback -> proxy.run(id, text, callback) }
         return ScriptProxyProto.parseOutcome(payload)
     }
 
@@ -170,7 +182,10 @@ class ScriptProxyRegistry(
             withContext(Dispatchers.IO) {
                 val audio = memfdOf(wav)
                 try {
-                    call { proxy, callback -> proxy.runAudio(id, audio, callback) }
+                    call(
+                        RUN_WAIT_SECONDS,
+                        abort = { it.cancel(id) },
+                    ) { proxy, callback -> proxy.runAudio(id, audio, callback) }
                 } finally {
                     audio.close()
                 }
@@ -179,7 +194,7 @@ class ScriptProxyRegistry(
     }
 
     override suspend fun cancel(id: String) {
-        withBinder { proxy -> proxy.cancel(id) }
+        withBinder { proxy, _ -> proxy.cancel(id) }
     }
 
     /** The recorded WAV crosses as a descriptor: a Binder transaction carries at most 1 MB, and a
@@ -199,20 +214,48 @@ class ScriptProxyRegistry(
 
     // --- binder plumbing ---
 
-    private suspend fun call(action: (ScriptProxy, ProxyLatch) -> Unit): String =
+    /**
+     * One request and its answer. [abort] runs when the caller gives up (the panel closed, the
+     * field changed, a timeout): it is sent on this same binding before it is released, because a
+     * proxy left with no binding is destroyed and a later, separate cancel would reach a fresh
+     * instance that knows nothing of the run.
+     */
+    private suspend fun call(
+        waitSeconds: Long = CALL_WAIT_SECONDS,
+        abort: ((ScriptProxy) -> Unit)? = null,
+        action: (ScriptProxy, ProxyLatch) -> Unit,
+    ): String =
         withContext(Dispatchers.IO) {
-            withBinder { proxy ->
+            withBinder(abort) { proxy, onDisconnect ->
                 val latch = ProxyLatch()
+                // A proxy that dies mid-call never answers; its death ends the wait at once.
+                onDisconnect { latch.abandon() }
                 action(proxy, latch)
-                check(latch.await(90)) { "the script proxy did not answer" }
-                latch.payload ?: error("the script proxy returned nothing")
+                check(latch.await(waitSeconds)) { "the script proxy did not answer" }
+                latch.payload ?: error("the script proxy stopped")
             }
         }
 
-    private suspend fun <T> withBinder(block: (ScriptProxy) -> T): T =
+    private suspend fun <T> withBinder(
+        abort: ((ScriptProxy) -> Unit)? = null,
+        block: (ScriptProxy, (() -> Unit) -> Unit) -> T,
+    ): T =
         suspendCancellableCoroutine { continuation ->
             var bound: IBinder? = null
             val ready = java.util.concurrent.CountDownLatch(1)
+
+            val disconnectListener =
+                java.util.concurrent.atomic
+                    .AtomicReference<(() -> Unit)?>(null)
+            // The worker and a cancellation both release the binding; only the first may, because a
+            // second unbindService throws and would take the process down from a bare thread.
+            val unbound =
+                java.util.concurrent.atomic
+                    .AtomicBoolean(false)
+
+            fun unbindOnce(connection: ServiceConnection) {
+                if (unbound.compareAndSet(false, true)) runCatching { appContext.unbindService(connection) }
+            }
             val connection =
                 object : ServiceConnection {
                     override fun onServiceConnected(
@@ -223,7 +266,9 @@ class ScriptProxyRegistry(
                         ready.countDown()
                     }
 
-                    override fun onServiceDisconnected(name: ComponentName) = Unit
+                    override fun onServiceDisconnected(name: ComponentName) {
+                        disconnectListener.get()?.invoke()
+                    }
                 }
             val intent = Intent().setComponent(ComponentName(appContext, ScriptProxyService::class.java))
             if (!appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE)) {
@@ -246,18 +291,20 @@ class ScriptProxyRegistry(
                             negotiation,
                         )
                         check(negotiation.await(30L)) { "the script proxy did not answer hello" }
-                        val result = block(proxy)
+                        val result = block(proxy) { listener -> disconnectListener.set(listener) }
                         continuation.resumeWith(Result.success(result))
                     } catch (error: Throwable) {
                         continuation.resumeWith(Result.failure(error))
                     } finally {
-                        appContext.unbindService(connection)
+                        unbindOnce(connection)
                     }
                 }
             worker.start()
             continuation.invokeOnCancellation {
+                // One-way and non-blocking, so it is safe from the cancelling thread.
+                bound?.let { binder -> abort?.let { runCatching { it(ScriptProxy.Stub.asInterface(binder)) } } }
                 worker.interrupt()
-                runCatching { appContext.unbindService(connection) }
+                unbindOnce(connection)
             }
         }
 
@@ -277,6 +324,14 @@ class ScriptProxyRegistry(
                 }.toString()
             ScriptSourceOrigin.Edited -> buildJsonObject { put("kind", "edited") }.toString()
         }
+
+    private companion object {
+        const val CALL_WAIT_SECONDS = 90L
+
+        /** The longest a script may declare plus room for the header parse and the engine start;
+         *  the proxy always answers within the run's own duration, this only guards a lost reply. */
+        const val RUN_WAIT_SECONDS = ScriptLimits.MAX_TIMEOUT_SECONDS + 60L
+    }
 }
 
 /** Parks the caller until the proxy's oneway reply lands. */
@@ -299,4 +354,9 @@ private class ProxyLatch : ScriptProxyCallback.Stub() {
     }
 
     fun await(timeoutSeconds: Long): Boolean = latch.await(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+
+    /** Ends the wait without an answer: the proxy process is gone. */
+    fun abandon() {
+        latch.countDown()
+    }
 }

@@ -195,6 +195,21 @@ class ScriptProxyService : Service() {
                 }
             }
 
+            override fun replaceSource(
+                id: String,
+                source: ByteArray,
+                reply: ScriptProxyCallback,
+            ) {
+                reply(reply) {
+                    val header =
+                        HeaderParser.parse(this@ScriptProxyService, source) as? ScriptHeader.Parsed
+                            ?: return@reply ScriptProxyProto.error("the header is refused")
+                    // An edited script no longer matches its link, so a later update must not undo the edit.
+                    store.replaceSource(id, source, header, ScriptSourceOrigin.Edited)
+                    ScriptProxyProto.entry(store.entry(id, hostCapabilities)!!)
+                }
+            }
+
             override fun runTrial(
                 id: String,
                 text: String,
@@ -278,6 +293,8 @@ class ScriptProxyService : Service() {
     }
 
     override fun onDestroy() {
+        // Interrupting the run thread does not stop a blocking socket read; disconnect it too.
+        runner.cancelAll()
         executor.shutdownNow()
         runExecutor.shutdownNow()
         super.onDestroy()

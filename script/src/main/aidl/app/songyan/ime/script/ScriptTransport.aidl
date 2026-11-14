@@ -4,7 +4,8 @@
 package app.songyan.ime.script;
 
 oneway interface ScriptTransport {
-    // [timeoutMillis] is what is left of the run's duration; the request may not outlive it.
-    void fetch(String url, String method, in String headersJson, in byte[] body, long timeoutMillis,
-               app.songyan.ime.script.ScriptTransportCallback callback);
+    // [timeoutMillis] is what is left of the run's duration; the request may not outlive it. The
+    // body crosses as a descriptor: an uploaded recording is larger than a one-way transaction.
+    void fetch(String url, String method, in String headersJson, in android.os.ParcelFileDescriptor body,
+               long timeoutMillis, app.songyan.ime.script.ScriptTransportCallback callback);
 }

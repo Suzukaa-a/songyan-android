@@ -285,6 +285,11 @@ class VoiceInputViewModelTest {
 
         override suspend fun checkUpdate(id: String): ScriptEntry = throw ScriptRegistryUnavailable()
 
+        override suspend fun replaceSource(
+            id: String,
+            source: ByteArray,
+        ): ScriptEntry = throw ScriptRegistryUnavailable()
+
         override suspend fun delete(id: String) = throw ScriptRegistryUnavailable()
 
         override suspend fun runTrial(

@@ -2,7 +2,7 @@
 <resources>
     <!-- Home entry -->
     <string name="row_scripts_title">スクリプト</string>
-    <string name="row_scripts_subtitle">1 ファイルで完結するツール：文字を受け取り、文字を返します</string>
+    <string name="row_scripts_subtitle">キーボードに自分の機能を追加</string>
 
     <!-- Scripts list -->
     <string name="scripts_title">スクリプト</string>
@@ -25,7 +25,7 @@
     <!-- Add sheet -->
     <string name="scripts_add_paste">スクリプトの文字を貼り付け</string>
     <string name="scripts_add_file">ファイルを選択</string>
-    <string name="scripts_add_link">HTTPS リンクから</string>
+    <string name="scripts_add_link">リンクから追加</string>
     <string name="scripts_add_editor">ここでスクリプトを書く</string>
     <string name="scripts_add_paste_title">スクリプトを貼り付け</string>
     <string name="scripts_add_paste_label">スクリプトの文字</string>
@@ -56,6 +56,7 @@
     <string name="scripts_secret_show">シークレットを表示</string>
     <string name="scripts_secret_hide">シークレットを隠す</string>
     <string name="scripts_notice_settings_saved">設定を保存しました。</string>
+    <string name="scripts_notice_saved">保存しました。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">スクリプトを確認</string>
@@ -66,14 +67,23 @@
     <string name="scripts_confirm_reads_audio">実行中に録音し（マイクが必要です）、その録音をスクリプトに渡します。スクリプトはほかの入力を見られません。</string>
     <string name="scripts_confirm_section_connects">接続できるサイト</string>
     <string name="scripts_confirm_connects_none">宣言されたサイトはありません</string>
-    <string name="scripts_confirm_connects_none_body">このスクリプトはネットワークに接続しません。</string>
+    <string name="scripts_connects_typed">設定で入力したアドレス</string>
+    <string name="scripts_connects_none">オンラインに接続しません</string>
+    <string name="scripts_confirm_timeout">最長実行時間</string>
+    <plurals name="scripts_run_limit_seconds">
+        <item quantity="other">最長 %d 秒</item>
+    </plurals>
+    <plurals name="scripts_run_limit_minutes">
+        <item quantity="other">最長 %d 分</item>
+    </plurals>
+    <string name="scripts_confirm_connects_none_body">オンラインに接続しません。</string>
     <string name="scripts_confirm_section_settings">入力を求める設定</string>
     <string name="scripts_confirm_action">確認</string>
-    <string name="scripts_confirm_note">上の内容を読んでから確認してください。シークレットはこの端末にのみ保存され、共有する内容には含まれません。</string>
+    <string name="scripts_confirm_note">シークレットはこの端末にのみ保存されます。</string>
     <string name="scripts_pending_title">確認が必要です</string>
     <string name="scripts_pending_body">このスクリプトの宣言が変わりました。使う前にもう一度お読みください。</string>
     <string name="scripts_unavailable_title">この端末では利用できません</string>
-    <string name="scripts_unavailable_body">このスクリプトが必要とする入力をこのキーボードは提供できないため、ここでは実行できません。</string>
+    <string name="scripts_unavailable_body">この端末では使えません。</string>
 
     <!-- Settings fields -->
     <string name="scripts_setting_kind_text">テキスト</string>
@@ -81,15 +91,15 @@
     <string name="scripts_secret_suffix">（シークレット）</string>
 
     <!-- Trial run -->
-    <string name="scripts_test_section">試してみる</string>
-    <string name="scripts_test_input_label">送る文字</string>
+    <string name="scripts_test_section">試し実行</string>
+    <string name="scripts_test_input_label">処理するテキスト</string>
     <string name="scripts_test_run">実行</string>
     <string name="scripts_test_copy">コピー</string>
     <string name="scripts_test_copied">コピーしました</string>
     <string name="scripts_test_outputs">出力</string>
     <string name="scripts_test_no_output">スクリプトは何も返しませんでした。</string>
-    <string name="scripts_test_console">コンソール</string>
-    <string name="scripts_test_console_shortened">コンソール（省略あり）</string>
+    <string name="scripts_test_console">ログ</string>
+    <string name="scripts_test_console_shortened">ログ（一部省略）</string>
     <string name="scripts_test_cancelled">実行はキャンセルされました。</string>
 
     <!-- Detail page -->
@@ -110,21 +120,21 @@
     <string name="scripts_delete_confirm">削除</string>
 
     <!-- Notices -->
-    <string name="scripts_notice_deleted">スクリプトを削除しました。元に戻せません。</string>
+    <string name="scripts_notice_deleted">削除しました。</string>
     <string name="scripts_notice_up_to_date">最新です。</string>
-    <string name="scripts_notice_updated">更新があります。使う前に何が変わったかお読みください。</string>
+    <string name="scripts_notice_updated">スクリプトの要件が変わりました。もう一度確認してください。</string>
     <string name="scripts_notice_exported">共有しました。</string>
     <string name="scripts_notice_export_failed">共有できませんでした。もう一度お試しください。</string>
 
     <!-- Engine refusals, one wording per machine code -->
-    <string name="scripts_error_timeout">スクリプトの実行が長すぎるため停止しました。</string>
+    <string name="scripts_error_timeout">タイムアウトしました。</string>
     <string name="scripts_error_out_of_memory">スクリプトがメモリを使いすぎたため停止しました。</string>
-    <string name="scripts_error_address_not_allowed">スクリプトが宣言していないサイトへ接続しようとしました。</string>
-    <string name="scripts_error_network_failure">ネットワークリクエストに失敗しました。</string>
+    <string name="scripts_error_address_not_allowed">このスクリプトはこのアドレスに接続できません。</string>
+    <string name="scripts_error_network_failure">ネットワークに接続できませんでした。もう一度お試しください。</string>
     <string name="scripts_error_bad_header">ファイル先頭の宣言が正しくありません。</string>
     <string name="scripts_error_unsupported_api">このスクリプトには新しいバージョンの松煙が必要です。</string>
-    <string name="scripts_error_capability">このスクリプトが必要とする入力をこのキーボードは提供できません。</string>
-    <string name="scripts_error_unavailable">スクリプト機能を一時的に利用できません。松煙を更新するか、インストールし直してください。</string>
+    <string name="scripts_error_capability">この端末では使えません。</string>
+    <string name="scripts_error_unavailable">スクリプトを今は実行できません。もう一度お試しください。</string>
     <string name="scripts_error_generic">スクリプトが失敗しました：%1$s</string>
     <string name="scripts_error_at_line">%1$s（%2$d 行目）</string>
 </resources>

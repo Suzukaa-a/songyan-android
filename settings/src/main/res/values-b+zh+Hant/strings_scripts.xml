@@ -56,6 +56,7 @@
     <string name="scripts_secret_show">顯示金鑰</string>
     <string name="scripts_secret_hide">隱藏金鑰</string>
     <string name="scripts_notice_settings_saved">設定已儲存。</string>
+    <string name="scripts_notice_saved">已儲存。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">確認指令碼</string>
@@ -66,7 +67,16 @@
     <string name="scripts_confirm_reads_audio">執行時會錄音（需要麥克風），錄音交給這個指令碼；指令碼看不到其他輸入。</string>
     <string name="scripts_confirm_section_connects">會連的網站</string>
     <string name="scripts_confirm_connects_none">沒有宣告任何網站</string>
-    <string name="scripts_confirm_connects_none_body">這個指令碼不會連線網路。</string>
+    <string name="scripts_connects_typed">你在設定裡填的地址</string>
+    <string name="scripts_connects_none">不聯網</string>
+    <string name="scripts_confirm_timeout">最長執行</string>
+    <plurals name="scripts_run_limit_seconds">
+        <item quantity="other">最長 %d 秒</item>
+    </plurals>
+    <plurals name="scripts_run_limit_minutes">
+        <item quantity="other">最長 %d 分鐘</item>
+    </plurals>
+    <string name="scripts_confirm_connects_none_body">它不會聯網。</string>
     <string name="scripts_confirm_section_settings">要填的設定</string>
     <string name="scripts_confirm_action">確認</string>
     <string name="scripts_confirm_note">讀完上面的清單再確認。金鑰只存在這臺裝置上，不會包含在分享內容裡。</string>

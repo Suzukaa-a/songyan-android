@@ -32,14 +32,23 @@ schemes and file formats with [Songyan for iOS](https://github.com/Suzukaa-a/son
   spelling.
 - **Optional features:** fuzzy pinyin, typo correction, prediction, grammar models,
   phrases, clipboard history, emoji, and backups of the words it learned (shared with iOS).
+- **Scripts:** paste or import a bit of JavaScript to add your own feature to the keyboard, such
+  as polishing or translating with your own model. You preview the result before replacing or
+  inserting it, and can undo. The same script works on Android and iOS.
+- **Voice input:** pick a voice script and record with the keyboard's microphone button; the script
+  does the transcription.
+- **Extensions:** install a separate app that supports Songyan and turn it on under Settings >
+  Extensions. It can add text tools, voice input or its own panel.
 - Interface in English, Simplified Chinese, Traditional Chinese and Japanese.
 
 ## Privacy policy
 
-Songyan itself collects no personal data and sends nothing to its developers. A script you run may send the text it handles to the sites that script declares or the addresses you give it (see below); that transfer goes through Songyan's script process, not Songyan's servers.
-
-Songyan itself does not go online. The scripts you install can only reach the sites they declare and the addresses you enter in their settings; plain http reaches only an address you entered on this device or your local network.
-Extensions are separate apps you install yourself, and the system shows you the permissions they use.
+Songyan itself collects no personal data and sends nothing to its developers. The scripts you add
+are the exception: when one runs, it sends the text it works on to the sites it declares or the
+addresses you enter in its settings (plain http reaches only an address you entered on this device
+or your local network). Those requests come from Songyan's script process, not Songyan's servers.
+Extensions are separate apps you install yourself, and the system shows you the permissions they
+use.
 
 - What you type stays on your device. The words it learns, your phrases, the clipboard history
   (off until you turn it on), settings, layouts and appearances are stored in the app's private

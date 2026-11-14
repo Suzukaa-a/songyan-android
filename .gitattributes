@@ -9,3 +9,6 @@
 gradlew text eol=lf
 *.bat text eol=crlf
 *.patch text eol=lf
+
+# The shared CRLF case must keep its CRLF bytes, or it stops testing CRLF.
+script/src/androidTest/assets/script-cases/crlf/script.js -text

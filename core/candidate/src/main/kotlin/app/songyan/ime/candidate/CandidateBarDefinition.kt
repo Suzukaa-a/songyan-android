@@ -234,21 +234,21 @@ data class CandidateBarDefinition(
          * The built-in system default: a 40 dp collapsed strip. The touch budget of the 21 dp
          * primary candidate is about 30 dp, so 40 dp keeps ~5 dp above and below. It writes the page
          * buttons at the trailing end; the file-format default of [Controls.pagePosition] stays
-         * iOS's "both ends".
+         * iOS's "both ends". Candidates sit 5 apart, so two neighbours read as two words.
          */
         val systemDefault: CandidateBarDefinition =
             CandidateBarDefinition(
                 id = SYSTEM_DEFAULT_ID,
                 name = SYSTEM_DEFAULT_ID,
                 collapsed =
-                    Collapsed(height = 40.0, cellPaddingX = 7.0, cellSpacing = 0.0, fillsAvailableWidth = false),
-                expanded = Expanded(rowSpacing = 0.0, columnSpacing = 0.0),
+                    Collapsed(height = 40.0, cellPaddingX = 7.0, cellSpacing = 5.0, fillsAvailableWidth = false),
+                expanded = Expanded(rowSpacing = 0.0, columnSpacing = 5.0),
                 controls = Controls(pagePosition = Controls.PagePosition.TRAILING),
             )
 
         /**
          * Android's built-in candidate area: a 48 dp row (the platform's touch target), 10 dp cell
-         * padding and no spacing. Built-in appearances carry these numbers so the file means what
+         * padding and 5 dp between candidates. Built-in appearances carry these numbers so the file means what
          * the keyboard draws.
          */
         val androidDefault: CandidateBarDefinition =

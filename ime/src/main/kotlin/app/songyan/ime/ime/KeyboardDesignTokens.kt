@@ -100,11 +100,8 @@ data class KeyboardDesignTokens(
      * and its reading comment, halved.
      */
     val candidateChipGapDp: Float = 8f,
-    /**
-     * Space between two cells of the collapsed strip (dp). None: cells touch, so every point of the
-     * row commits a candidate, and the visible gap between two words is their two paddings.
-     */
-    val candidateCellSpacingDp: Float = 0f,
+    /** Space between two cells of the collapsed strip (dp), so two neighbours read as two words. */
+    val candidateCellSpacingDp: Float = 5f,
     /** Left padding of the preedit line and of the candidate row (dp). */
     val candidateStartPaddingDp: Float = 12f,
     /**

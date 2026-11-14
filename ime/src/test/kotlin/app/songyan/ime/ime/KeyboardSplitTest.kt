@@ -65,6 +65,24 @@ class KeyboardSplitTest {
     }
 
     @Test
+    fun theSpaceHalvesAreOneKeyAcrossTheGutter() {
+        val columns = listOf(row("abcd"), listOf(letter("1"), space, letter("2")))
+        val (cut, breaks) = splitColumns(columns, LayoutSplitConfiguration.of(rowBreaks = listOf(2, 0)))
+        val rowSplit = KeyRowSolver.RowSplit(200f, breaks)
+        val slots = KeyRowSolver.slots(cut, 0f, 0f, 50f, 1000f, 4f, rowSplit)
+        val (rows, boxes) = KeyRowSolver.joinSplitSpaces(cut, slots, rowSplit)
+        // The letter row keeps its gutter; the footer has one space bar spanning it.
+        assertEquals(4, rows[0].size)
+        assertEquals(listOf("1", "空格", "2"), rows[1].map { it.label })
+        assertEquals(4.0, rows[1][1].widthWeight, 1e-9)
+        assertEquals(slots[1][1].left, boxes[1][1].left, 0.01f)
+        assertEquals(slots[1][2].right, boxes[1][1].right, 0.01f)
+        assertEquals(slots[1][3], boxes[1][2])
+        // Without a split nothing changes.
+        assertEquals(cut to slots, KeyRowSolver.joinSplitSpaces(cut, slots, null))
+    }
+
+    @Test
     fun theMiddleCutIsTheDefaultForARowWithoutAStoredCut() {
         val (_, breaks) = splitColumns(listOf(row("abcdefghij"), row("abcdefg")), LayoutSplitConfiguration())
         assertEquals(listOf(5, 4), breaks)

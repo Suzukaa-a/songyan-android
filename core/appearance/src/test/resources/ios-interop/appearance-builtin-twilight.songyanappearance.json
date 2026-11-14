@@ -3,7 +3,7 @@
   "candidateBar" : {
     "collapsed" : {
       "cellPaddingX" : 7,
-      "cellSpacing" : 0,
+      "cellSpacing" : 5,
       "fillsAvailableWidth" : false,
       "height" : 40
     },
@@ -15,7 +15,7 @@
       "showsExpand" : true
     },
     "expanded" : {
-      "columnSpacing" : 0,
+      "columnSpacing" : 5,
       "columns" : 2,
       "fullRowTextLength" : 8,
       "mode" : "adaptive",

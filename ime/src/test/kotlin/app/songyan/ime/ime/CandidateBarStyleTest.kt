@@ -14,7 +14,7 @@ class CandidateBarStyleTest {
     private fun bar(
         height: Double = 48.0,
         padding: Double = 10.0,
-        spacing: Double = 0.0,
+        spacing: Double = 5.0,
     ) = CandidateBarDefinition.androidDefault.run {
         copy(collapsed = collapsed.copy(height = height, cellPaddingX = padding, cellSpacing = spacing))
     }
@@ -24,7 +24,7 @@ class CandidateBarStyleTest {
         val applied = CandidateBarStyle.of(CandidateBarDefinition.androidDefault, 18.0).applyTo(tokens)
         assertEquals(48f, applied.candidateBarHeightDp, 0.001f)
         assertEquals(10f, applied.candidateChipPaddingDp, 0.001f)
-        assertEquals(0f, applied.candidateCellSpacingDp, 0.001f)
+        assertEquals(5f, applied.candidateCellSpacingDp, 0.001f)
     }
 
     @Test

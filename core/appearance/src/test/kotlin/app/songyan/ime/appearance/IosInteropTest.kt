@@ -139,7 +139,11 @@ class IosInteropTest {
         // default stays iOS's "both", and an explicit value is honoured on import. The display name is the
         // other legitimate difference: the iOS file carries its localized name, Android resolves it by id.
         // The collapsed row numbers are Android's own, so they are compared against the Android default.
-        val shared = files(AppearanceDocument.FILE_EXTENSION).map { AppearanceDocument.decodeImported(it.readText()) }
+        // The v1 samples are old files kept for reading; only the current export matches today's built-ins.
+        val shared =
+            files(AppearanceDocument.FILE_EXTENSION)
+                .filterNot { it.name.startsWith("v1-") }
+                .map { AppearanceDocument.decodeImported(it.readText()) }
         var compared = 0
         val neutral = CandidateBarDefinition.Controls.PagePosition.BOTH
         for (ios in shared) {

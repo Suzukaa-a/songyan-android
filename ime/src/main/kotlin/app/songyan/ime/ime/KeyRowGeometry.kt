@@ -93,6 +93,40 @@ internal object KeyRowSolver {
         val breaks: List<Int>,
     )
 
+    /**
+     * A split row's space bar comes as two halves either side of the gutter; they are drawn and hit
+     * as one key across it, so the space bar reads as one key and the gutter beside it is not dead.
+     * Returns the rows and their boxes with each such pair joined.
+     */
+    fun joinSplitSpaces(
+        rows: List<List<LayoutKey>>,
+        slots: List<List<KeyBounds>>,
+        split: RowSplit?,
+    ): Pair<List<List<LayoutKey>>, List<List<KeyBounds>>> {
+        if (split == null) return rows to slots
+        val joinedRows = ArrayList<List<LayoutKey>>(rows.size)
+        val joinedSlots = ArrayList<List<KeyBounds>>(slots.size)
+        for ((index, keys) in rows.withIndex()) {
+            val boxes = slots[index]
+            val cut = split.breaks.getOrNull(index)
+            val joins =
+                cut != null &&
+                    cut in 1 until keys.size &&
+                    keys[cut - 1].action.type == LayoutActionKind.SPACE &&
+                    keys[cut].action.type == LayoutActionKind.SPACE
+            if (!joins || cut == null) {
+                joinedRows += keys
+                joinedSlots += boxes
+                continue
+            }
+            val space = keys[cut - 1].copy(width = keys[cut - 1].widthWeight + keys[cut].widthWeight)
+            val box = KeyBounds(boxes[cut - 1].left, boxes[cut - 1].top, boxes[cut].right, boxes[cut].bottom)
+            joinedRows += keys.take(cut - 1) + space + keys.drop(cut + 1)
+            joinedSlots += boxes.take(cut - 1) + box + boxes.drop(cut + 1)
+        }
+        return joinedRows to joinedSlots
+    }
+
     /** The slots of every row, row-major and contiguous horizontally (the halves apart when [split] is given). */
     fun slots(
         rows: List<List<LayoutKey>>,

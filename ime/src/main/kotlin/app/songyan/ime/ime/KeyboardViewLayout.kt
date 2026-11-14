@@ -228,8 +228,9 @@ internal fun KeyboardView.activeSplit(): LayoutSplitConfiguration? {
 }
 
 /**
- * The key columns of a split keyboard: the space bar of the footer becomes one half under each
- * thumb, so each half keeps a usable space key. Other rows are cut where the split says.
+ * The key columns of a split keyboard: the space bar of the footer is shared by the halves, each
+ * keeping a usable share of it (drawn as one key across the gutter, see
+ * [KeyRowSolver.joinSplitSpaces]). Other rows are cut where the split says.
  */
 internal fun splitColumns(
     columns: List<List<LayoutKey>>,
@@ -347,9 +348,14 @@ internal fun KeyboardView.rebuild() {
             inner -= 2 * plan.inset.toFloat() * density
         }
     }
-    // The solved keys are the dispatch keys: a split footer carries two space halves.
-    keys = columns.flatten()
-    val rowSlots = KeyRowSolver.slots(columns, left, rowOffsetY, rowHeight, inner, gap, rowSplit)
+    // The solved keys are the dispatch keys; a split footer's two space halves become one key.
+    val (rowKeys, rowSlots) =
+        KeyRowSolver.joinSplitSpaces(
+            columns,
+            KeyRowSolver.slots(columns, left, rowOffsetY, rowHeight, inner, gap, rowSplit),
+            rowSplit,
+        )
+    keys = rowKeys.flatten()
     bounds = rowSlots.flatten()
     applyKeyFaces()
     // The whole content width is owned, including the outer padding, so no tap is dead.
@@ -431,7 +437,12 @@ internal fun KeyboardView.rebuildWithRails(
     val footerColumns = columns.drop(rails.contentRows)
     val contentSplit = rowSplit?.let { KeyRowSolver.RowSplit(it.gap, it.breaks.take(rails.contentRows)) }
     val footerSplit = rowSplit?.let { KeyRowSolver.RowSplit(it.gap, it.breaks.drop(rails.contentRows)) }
-    val contentSlots = KeyRowSolver.slots(contentColumns, mainLeft, rowOffsetY, rowHeight, mainInner, gap, contentSplit)
+    val (contentKeys, contentSlots) =
+        KeyRowSolver.joinSplitSpaces(
+            contentColumns,
+            KeyRowSolver.slots(contentColumns, mainLeft, rowOffsetY, rowHeight, mainInner, gap, contentSplit),
+            contentSplit,
+        )
     val footerTop = rowOffsetY + rails.contentRows * rowHeight
     val leadingKeys = chrome.leading
     val trailingKeys = chrome.trailing
@@ -464,6 +475,7 @@ internal fun KeyboardView.rebuildWithRails(
         } else {
             KeyRowSolver.slots(footerColumns, footerLeft, footerTop, rowHeight, footerInner, gap, footerSplit)
         }
+    val (footerKeys, footerBoxes) = KeyRowSolver.joinSplitSpaces(footerColumns, footerSlots, footerSplit)
     val minimumKey = rowHeight * RAIL_MIN_KEY_ROWS
     val leadingSlots =
         KeyRailSolver.slots(
@@ -484,8 +496,8 @@ internal fun KeyboardView.rebuildWithRails(
             trailingKeys.map { it.widthWeight },
             minimumKey,
         )
-    keys = columns.flatten() + leadingKeys + trailingKeys
-    val boxes = contentSlots.flatten() + footerSlots.flatten() + leadingSlots + trailingSlots
+    keys = contentKeys.flatten() + footerKeys.flatten() + leadingKeys + trailingKeys
+    val boxes = contentSlots.flatten() + footerBoxes.flatten() + leadingSlots + trailingSlots
     bounds = boxes
     applyKeyFaces()
     // The whole content width is owned, including the outer padding, so no tap is dead.

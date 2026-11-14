@@ -306,7 +306,7 @@
     }
   ],
   "split" : {
-    "activation" : "automatic",
+    "activation" : "off",
     "automaticGap" : true,
     "gapFraction" : 0.32,
     "rowBreaks" : [

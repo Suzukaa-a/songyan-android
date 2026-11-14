@@ -210,3 +210,78 @@ object KeyboardWideContentPolicy {
     /** Real UI widths may be negative or non-finite right after a resize; normalize exactly once. */
     fun normalized(width: Double): Double = if (width.isFinite()) maxOf(0.0, width) else 0.0
 }
+
+/** Where the 9-key keyboard shows its expanded candidates on a screen with room beside it. */
+enum class NineKeyCandidateSide(
+    val wire: String,
+) {
+    LEFT("left"),
+    RIGHT("right"),
+    OFF("off"),
+    ;
+
+    /** The other side; off stays off. */
+    val mirrored: NineKeyCandidateSide
+        get() =
+            when (this) {
+                LEFT -> RIGHT
+                RIGHT -> LEFT
+                OFF -> OFF
+            }
+
+    companion object {
+        /** Unknown or missing stored values fall back to the left, the default. */
+        fun resolve(stored: String?): NineKeyCandidateSide = entries.firstOrNull { it.wire == stored } ?: LEFT
+    }
+}
+
+/** The candidate column beside a docked 9-key keyboard (dp). */
+data class NineKeySideCandidatePlan(
+    /** [NineKeyCandidateSide.LEFT] or [NineKeyCandidateSide.RIGHT], never off. */
+    val side: NineKeyCandidateSide,
+    val candidateWidth: Double,
+    /** The gap between the candidates and the keys; it holds the swap button. */
+    val stripWidth: Double,
+    val keypadWidth: Double,
+) {
+    /** The keys sit on the side away from the candidates. */
+    val keypadDock: KeyboardContentDock
+        get() = if (side == NineKeyCandidateSide.LEFT) KeyboardContentDock.RIGHT else KeyboardContentDock.LEFT
+}
+
+/**
+ * Splits a wide screen into the candidates, a gap and the 9-key keyboard, the same rule as the iOS
+ * keyboard. The gap is the wide-screen middle gap, so the keys come away from the middle and sit
+ * under one thumb at the screen's edge. The candidates sit opposite at a little less than the
+ * keys' width (beside the dark function keys a light list of the same width reads as the wider);
+ * the keys never grow wider than the phone shell, and the gap takes whatever that leaves.
+ */
+object NineKeySideCandidatePolicy {
+    /** The keys never get narrower than this, the same floor as any key area. */
+    const val MINIMUM_KEYPAD_WIDTH: Double = 280.0
+
+    /** The gap holds the swap button and is never narrower than it. */
+    const val MINIMUM_STRIP_WIDTH: Double = 40.0
+
+    const val CANDIDATE_SHARE: Double = 0.9
+
+    fun plan(
+        keyAreaWidth: Double,
+        maximumKeypadWidth: Double,
+        side: NineKeyCandidateSide,
+        gapPercent: Int = app.songyan.ime.layout.WideMiddleGap.DEFAULT_PERCENT,
+    ): NineKeySideCandidatePlan? {
+        if (side == NineKeyCandidateSide.OFF || !keyAreaWidth.isFinite() || !maximumKeypadWidth.isFinite()) return null
+        if (maximumKeypadWidth <= 0.0) return null
+        val strip =
+            maxOf(
+                MINIMUM_STRIP_WIDTH,
+                app.songyan.ime.layout.WideMiddleGap
+                    .width(keyAreaWidth, gapPercent),
+            )
+        val keypad = minOf(maximumKeypadWidth, (keyAreaWidth - strip) / (1 + CANDIDATE_SHARE))
+        if (keypad < MINIMUM_KEYPAD_WIDTH) return null
+        val candidates = keypad * CANDIDATE_SHARE
+        return NineKeySideCandidatePlan(side, candidates, keyAreaWidth - keypad - candidates, keypad)
+    }
+}

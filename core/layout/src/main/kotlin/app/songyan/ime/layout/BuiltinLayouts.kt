@@ -33,9 +33,9 @@ object BuiltinLayouts {
                         ),
                     ) + listOf(controls),
                 note = "两个字母合用一个键，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。",
-                // Wide surfaces split by default so both thumbs reach the merged pairs; a saved
-                // split, including an explicit off, stays authoritative.
-                split = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.AUTOMATIC),
+                // Five merged keys a row cut only three and two: the halves never balance, so the
+                // pad stays whole on a wide screen by default; splitting every layout still splits it.
+                split = LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF),
             )
 
     /**

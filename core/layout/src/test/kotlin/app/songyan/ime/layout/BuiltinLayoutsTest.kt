@@ -171,8 +171,10 @@ class BuiltinLayoutsTest {
     }
 
     @Test
-    fun mergedLayoutsDefaultToAutomaticSplitting() {
-        for (layout in listOf(BuiltinLayouts.merged14, BuiltinLayouts.merged18)) {
+    fun the14KeyPadStaysWholeAndThe18KeyPadSplitsByDefault() {
+        // Five merged keys a row cut only three and two, so the 14-key pad stays whole.
+        assertEquals(LayoutSplitConfiguration.Activation.OFF, BuiltinLayouts.merged14.split!!.activation)
+        for (layout in listOf(BuiltinLayouts.merged18)) {
             val split = layout.split
             assertNotNull(layout.id, split)
             assertEquals(

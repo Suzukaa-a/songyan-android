@@ -52,7 +52,7 @@
     <string name="options_wide_position_custom">自訂</string>
     <string name="options_split_section">拆分鍵盤</string>
     <string name="options_split_layout">跟隨鍵盤配置</string>
-    <string name="options_split_layout_body">14 鍵和 18 鍵在大螢幕上自動拆分，其他佈局可在佈局編輯器裡設定。</string>
+    <string name="options_split_layout_body">18 鍵在大螢幕上自動拆分，其他佈局可在佈局編輯器裡設定。</string>
     <string name="options_split_on">大螢幕上拆分</string>
     <string name="options_split_on_body">所有佈局都分成左右兩半。</string>
     <string name="options_split_off">不拆分</string>

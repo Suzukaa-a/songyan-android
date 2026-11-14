@@ -51,7 +51,7 @@
     <string name="options_wide_position_custom">カスタム</string>
     <string name="options_split_section">キーボードの分割</string>
     <string name="options_split_layout">キー配列に合わせる</string>
-    <string name="options_split_layout_body">14 キーと 18 キーは大画面で自動的に分割されます。ほかのキー配列はキー配列エディタで設定できます。</string>
+    <string name="options_split_layout_body">18 キーは大画面で自動的に分割されます。ほかのキー配列はキー配列エディタで設定できます。</string>
     <string name="options_split_on">大画面で分割する</string>
     <string name="options_split_on_body">すべてのキー配列を左右に分割します。</string>
     <string name="options_split_off">分割しない</string>

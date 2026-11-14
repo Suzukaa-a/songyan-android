@@ -232,6 +232,13 @@ class KeyboardController(
     /** The keyboard's outer view: the column plus the one-handed gutter when it is on. */
     val view: View get() = shell
     internal val candidates = CandidateBarView(context)
+
+    /** The 9-key keyboard's candidates beside its keys on a wide screen, and the button between them. */
+    internal val sideCandidates = CandidateBarView(context).apply { makeSideColumn() }
+    internal val sideSwap = OneHandShell.IconButton(context, swapSide = true, label = R.string.ime_side_candidates_swap)
+
+    /** The side column shows: the band above the keys leaves the candidates to it. */
+    internal var sideCandidatesShown = false
     internal val toolbar = ToolbarView(context)
 
     /** The system's inline autofill suggestions, shown where the toolbar is while the field is idle. */

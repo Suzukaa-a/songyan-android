@@ -126,6 +126,7 @@ class SongyanInputMethodService : InputMethodService() {
             override val toolbarLayout = store.toolbarLayout
             override val releaseHaptic = store.releaseHaptic
             override val oneHand = store.oneHand
+            override val nineKeyCandidateSide = store.nineKeyCandidateSide
             override val oneHandWidthPercent = store.oneHandWidthPercent
             override val cursorSwipeAnywhere = store.cursorSwipeAnywhere
             override val keyGapScaling = store.keyGapScaling
@@ -142,6 +143,8 @@ class SongyanInputMethodService : InputMethodService() {
             override val menuHiddenLayouts = store.menuHiddenLayouts
 
             override suspend fun setOneHand(value: String) = store.setOneHand(value)
+
+            override suspend fun setNineKeyCandidateSide(value: String) = store.setNineKeyCandidateSide(value)
 
             override suspend fun setKeyHeight(value: String) = store.setKeyHeight(value)
 

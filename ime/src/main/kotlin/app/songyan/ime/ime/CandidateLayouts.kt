@@ -116,14 +116,15 @@ internal object ExpandedFlowLayout {
         start: Float = 0f,
         end: Float = 0f,
         firstRowGap: Float = 0f,
+        stripRow: Boolean = true,
     ): Result {
         if (intrinsic.isEmpty() || available <= 0f || rowHeight <= 0f) return Result(emptyList(), 0f)
         val cells = ArrayList<Cell>(intrinsic.size)
-        // Row 1: the collapsed row, unchanged.
+        // Row 1: the collapsed row, unchanged (none in the 9-key side column: all of it is table).
         val cap = max(minWidth, available - start - end)
         var left = start
         var index = 0
-        while (index < intrinsic.size) {
+        while (stripRow && index < intrinsic.size) {
             val width = min(max(minWidth, intrinsic[index]), cap)
             if (left > start && left + width > available - end) break
             cells += Cell(index, left, 0f, left + width, rowHeight)
@@ -132,10 +133,11 @@ internal object ExpandedFlowLayout {
         }
         if (index == intrinsic.size) return Result(cells, rowHeight)
         val sample = intrinsic.subList(index, min(intrinsic.size, index + SAMPLE)).map { max(minWidth, it) }.sorted()
+        val firstTableRow = if (stripRow) 1 else 0
         val target = sample[sample.size * 3 / 4]
         val columns = (available / target).toInt().coerceAtLeast(1)
         val unit = available / columns
-        var row = 1
+        var row = firstTableRow
         val rowCells = ArrayList<Pair<Int, Int>>()
 
         fun flush(fill: Boolean) {

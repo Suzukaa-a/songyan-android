@@ -33,6 +33,9 @@ interface SettingsPreferences {
     /** The wide-screen middle gap in percent at a 1000 dp keyboard ([app.songyan.ime.layout.WideMiddleGap]). */
     val middleGapPercent: Flow<Int>
 
+    /** Where the 9-key candidates show on a wide screen: "left", "right" or "off". */
+    val nineKeyCandidateSide: Flow<String>
+
     /** Blank margin on each side of a large surface in per mille of its width, 0..[SIDE_MARGIN_MAX_PER_MILLE] in [SIDE_MARGIN_STEP_PER_MILLE] steps. */
     val sideMarginPerMille: Flow<Int>
 
@@ -143,6 +146,8 @@ interface SettingsPreferences {
     suspend fun setMarginWidthDp(value: Int)
 
     suspend fun setMiddleGapPercent(value: Int)
+
+    suspend fun setNineKeyCandidateSide(value: String)
 
     suspend fun setSideMarginPerMille(value: Int)
 
@@ -337,6 +342,8 @@ class InMemorySettingsPreferences(
     override val marginWidthDp: Flow<Int> = marginWidth.asStateFlow()
     private val middleGap = MutableStateFlow(app.songyan.ime.layout.WideMiddleGap.DEFAULT_PERCENT)
     override val middleGapPercent: Flow<Int> = middleGap.asStateFlow()
+    private val nineKeySide = MutableStateFlow("left")
+    override val nineKeyCandidateSide: Flow<String> = nineKeySide.asStateFlow()
     override val sideMarginPerMille: Flow<Int> = sideMargin.asStateFlow()
     override val longPressDelayMs: Flow<Int?> = longPress.asStateFlow()
     override val showSwitchKey: Flow<Boolean> = switchKey.asStateFlow()
@@ -440,6 +447,11 @@ class InMemorySettingsPreferences(
             "bad middle gap: $value"
         }
         middleGap.value = value
+    }
+
+    override suspend fun setNineKeyCandidateSide(value: String) {
+        require(value in listOf("left", "right", "off")) { "bad 9-key candidate side: $value" }
+        nineKeySide.value = value
     }
 
     override suspend fun setSideMarginPerMille(value: Int) {

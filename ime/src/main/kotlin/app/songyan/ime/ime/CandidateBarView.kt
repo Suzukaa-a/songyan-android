@@ -20,6 +20,7 @@ import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.EdgeEffect
 import android.widget.OverScroller
+import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.FloatPropertyCompat
 import androidx.dynamicanimation.animation.SpringAnimation
 import app.songyan.ime.candidate.BrowserCandidate
@@ -270,6 +271,27 @@ class CandidateBarView(
         private set
 
     /**
+     * The 9-key keyboard's side column on a wide screen: the expanded list for good, with no
+     * column of controls and no collapsed first row, its rows as tall as the key rows beside it.
+     */
+    var sideMode = false
+        private set
+
+    /** The side column's row height (px), the key rows' pitch. */
+    var sideRowPx = 0f
+        set(value) {
+            if (field == value) return
+            field = value
+            rebuild()
+            invalidate()
+        }
+
+    fun makeSideColumn() {
+        sideMode = true
+        expanded = true
+    }
+
+    /**
      * The height the expanded bar takes, asked for as it expands: the whole keyboard surface (this
      * row plus the key area it hides), so the window keeps its height.
      */
@@ -352,7 +374,9 @@ class CandidateBarView(
     /** The collapsed row's height; expanded cells keep the full bar height as their touch target. */
     internal val barPx: Float
         get() =
-            if (expanded) {
+            if (sideMode && sideRowPx > 0f) {
+                sideRowPx
+            } else if (expanded) {
                 metrics.candidateBarHeightDp * density
             } else {
                 ReadingRowBudget.bandDp(metrics.candidateBarHeightDp, readingRowDp) * density
@@ -742,6 +766,8 @@ class CandidateBarView(
     }
 
     internal fun setExpanded(value: Boolean) {
+        // The side column is the expanded list for good; an empty list does not fold it.
+        if (sideMode) return
         if (expanded != value) cancelPress()
         expanded = value
         if (value) expandedHeightPx = expandedHeight()
@@ -795,6 +821,10 @@ class CandidateBarView(
         widthSpec: Int,
         heightSpec: Int,
     ) {
+        if (sideMode) {
+            setMeasuredDimension(MeasureSpec.getSize(widthSpec), MeasureSpec.getSize(heightSpec))
+            return
+        }
         val height = if (expanded && expandedHeightPx > 0) expandedHeightPx else barPx.toInt()
         setMeasuredDimension(MeasureSpec.getSize(widthSpec), height)
     }
@@ -855,9 +885,18 @@ class CandidateBarView(
     // ---- drawing -------------------------------------------------------------------------------
 
     override fun onDraw(canvas: Canvas) {
-        // Same colour as the keyboard canvas: the candidate bar is the top of the keyboard, not a
-        // separate grey strip.
-        canvas.drawColor(palette.surface)
+        if (sideMode) {
+            // The side column reads as part of the keyboard whether or not anything is typed: a
+            // faint base a shade darker than the keyboard, rounded like the keys.
+            val dark = ColorUtils.calculateLuminance(palette.key) < 0.3
+            paint.color = if (dark) 0x29000000 else 0x0C000000
+            val radius = metrics.keyRadiusDp * density
+            canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, paint)
+        } else {
+            // Same colour as the keyboard canvas: the candidate bar is the top of the keyboard, not a
+            // separate grey strip.
+            canvas.drawColor(palette.surface)
+        }
         drawStatus(canvas)
         val noticeText = notice
         val reveal = revealProgress

@@ -60,6 +60,8 @@ internal fun CandidateBarView.drawTableRules(
     visibleStart: Float,
     visibleEnd: Float,
 ) {
+    // With nothing listed there is nothing to part: the side column's base alone marks the area.
+    if (cells.isEmpty()) return
     paint.color = palette.divider
     paint.strokeWidth = max(1f, density / 2)
     val right = viewport.width().toFloat()
@@ -71,7 +73,7 @@ internal fun CandidateBarView.drawTableRules(
     val inset = 12 * density
     for (i in cells.indices) {
         val cell = cells[i]
-        if (cell.top < barPx || cell.bottom < visibleStart || cell.top > visibleEnd) continue
+        if ((!sideMode && cell.top < barPx) || cell.bottom < visibleStart || cell.top > visibleEnd) continue
         val next = cells.getOrNull(i + 1)
         if (next == null || next.top != cell.top) continue
         canvas.drawLine(cell.right, cell.top + inset, cell.right, cell.bottom - inset, paint)

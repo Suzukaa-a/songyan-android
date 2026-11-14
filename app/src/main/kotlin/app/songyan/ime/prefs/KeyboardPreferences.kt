@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
+import app.songyan.ime.candidate.NineKeyCandidateSide
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
@@ -94,6 +95,13 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.data
             .orDefaultsOnIoError()
             .map { it[KEY_NOTIFICATION_RATIONALE_SHOWN] ?: false }
+            .distinctUntilChanged()
+
+    /** Where the 9-key keyboard shows its candidates on a wide screen: "left" (default), "right" or "off". */
+    val nineKeyCandidateSide: Flow<String> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { NineKeyCandidateSide.resolve(it[KEY_NINE_KEY_CANDIDATE_SIDE]).wire }
             .distinctUntilChanged()
 
     /** "off" / "left" / "right"; one-handed mode is a keyboard presentation choice. */
@@ -601,6 +609,10 @@ class KeyboardPreferences(
         if (value == null) remove(key) else this[key] = value
     }
 
+    suspend fun setNineKeyCandidateSide(value: String) {
+        appContext.keyboardDataStore.edit { it[KEY_NINE_KEY_CANDIDATE_SIDE] = NineKeyCandidateSide.resolve(value).wire }
+    }
+
     suspend fun setOneHand(value: String) {
         require(value in setOf(ONE_HAND_OFF, ONE_HAND_LEFT, ONE_HAND_RIGHT)) { "unknown one-hand mode: $value" }
         appContext.keyboardDataStore.edit { it[KEY_ONE_HAND] = value }
@@ -670,6 +682,7 @@ class KeyboardPreferences(
         private val KEY_SPLIT_WIDTH = intPreferencesKey("split_width_dp")
         private val KEY_MARGIN_WIDTH = intPreferencesKey("margin_width_dp")
         private val KEY_MIDDLE_GAP = intPreferencesKey("middle_gap_percent")
+        private val KEY_NINE_KEY_CANDIDATE_SIDE = stringPreferencesKey("nine_key_candidate_side")
         private val KEY_SIDE_MARGIN = intPreferencesKey("side_margin_per_mille")
         private val KEY_SHOW_SWITCH_KEY = booleanPreferencesKey("show_switch_key")
         private val KEY_LONG_PRESS_MS = intPreferencesKey("long_press_delay_ms")

@@ -141,6 +141,13 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.marginWidthDp.collect { keyboard.marginWidthDp = KeyboardGeometry.clampSplitWidthDp(it) } }
     scope.launch { source.middleGapPercent.collect { keyboard.middleGapPercent = it } }
     scope.launch {
+        source.nineKeyCandidateSide.collect {
+            keyboard.nineKeyCandidateSide =
+                app.songyan.ime.candidate.NineKeyCandidateSide
+                    .resolve(it)
+        }
+    }
+    scope.launch {
         source.sideMarginPerMille.collect {
             keyboard.sideMarginPerMille =
                 KeyboardGeometry.clampSideMarginPerMille(it)
@@ -227,6 +234,11 @@ internal suspend fun KeyboardController.readPreferences() {
         keyboard.splitWidthDp = KeyboardGeometry.clampSplitWidthDp(it)
     }
     runCatching { source.middleGapPercent.first() }.getOrNull()?.let { keyboard.middleGapPercent = it }
+    runCatching { source.nineKeyCandidateSide.first() }.getOrNull()?.let {
+        keyboard.nineKeyCandidateSide =
+            app.songyan.ime.candidate.NineKeyCandidateSide
+                .resolve(it)
+    }
     runCatching { source.marginWidthDp.first() }.getOrNull()?.let {
         keyboard.marginWidthDp = KeyboardGeometry.clampSplitWidthDp(it)
     }

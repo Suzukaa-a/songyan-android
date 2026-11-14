@@ -54,6 +54,7 @@ data class KeyboardFeelState(
     val splitWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
     val marginWidthDp: Int = SettingsPreferences.SPLIT_WIDTH_DEFAULT_DP,
     val middleGapPercent: Int = WideMiddleGap.DEFAULT_PERCENT,
+    val nineKeyCandidateSide: String = "left",
     val sideMarginPerMille: Int = SettingsPreferences.SIDE_MARGIN_DEFAULT_PER_MILLE,
     val readingPlacement: String = SettingsPreferences.DEFAULT_READING_PLACEMENT,
 )
@@ -78,6 +79,7 @@ fun KeyboardFeelSection(
     onSplitWidth: (Int) -> Unit = {},
     onMarginWidth: (Int) -> Unit = {},
     onMiddleGap: (Int) -> Unit = {},
+    onNineKeyCandidateSide: (String) -> Unit = {},
     onSideMargin: (Int) -> Unit = {},
 ) {
     var splitWidthOpen by rememberSaveable { mutableStateOf(false) }
@@ -271,6 +273,28 @@ fun KeyboardFeelSection(
         }
         if (state.widePosition == "custom") {
             WidePositionCustomControls(percent = state.widePositionCustom, onChange = onWidePositionCustom)
+        }
+
+        SectionHeader(stringResource(R.string.options_nine_key_side_section))
+        Text(
+            text = stringResource(R.string.options_nine_key_side_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        for (side in listOf("left", "right", "off")) {
+            RadioRow(
+                title =
+                    stringResource(
+                        when (side) {
+                            "left" -> R.string.options_nine_key_side_left
+                            "right" -> R.string.options_nine_key_side_right
+                            else -> R.string.options_nine_key_side_off
+                        },
+                    ),
+                selected = state.nineKeyCandidateSide == side,
+                onClick = { onNineKeyCandidateSide(side) },
+            )
         }
 
         SectionHeader(stringResource(R.string.options_split_section))

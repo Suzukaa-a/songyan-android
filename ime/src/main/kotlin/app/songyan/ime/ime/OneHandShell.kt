@@ -142,7 +142,8 @@ internal class OneHandShell(
         }
     }
 
-    private class IconButton(
+    /** A 48 dp button drawing the side-swap arrows (or the restore mark); the 9-key side column uses it too. */
+    internal class IconButton(
         context: Context,
         private val swapSide: Boolean,
         label: Int,

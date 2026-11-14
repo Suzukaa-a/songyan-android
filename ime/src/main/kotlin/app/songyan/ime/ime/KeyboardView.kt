@@ -107,6 +107,33 @@ class KeyboardView(
             relayout()
         }
 
+    /** Where the 9-key keyboard shows its candidates on a wide screen; off keeps the keys whole. */
+    var nineKeyCandidateSide: app.songyan.ime.candidate.NineKeyCandidateSide =
+        app.songyan.ime.candidate.NineKeyCandidateSide.LEFT
+        set(value) {
+            if (field == value) return
+            field = value
+            relayout()
+        }
+
+    /**
+     * Where the 9-key side candidates go in this view (px) and the plan they follow; null when they
+     * do not show. Called after each layout that changes them.
+     */
+    var onSideCandidates: (android.graphics.RectF?, app.songyan.ime.candidate.NineKeySideCandidatePlan?) -> Unit =
+        { _, _ -> }
+    private var reportedSide: Pair<android.graphics.RectF?, app.songyan.ime.candidate.NineKeySideCandidatePlan?> =
+        null to null
+
+    internal fun reportSideCandidates(
+        rect: android.graphics.RectF?,
+        plan: app.songyan.ime.candidate.NineKeySideCandidatePlan?,
+    ) {
+        if (reportedSide == rect to plan) return
+        reportedSide = rect to plan
+        onSideCandidates(rect, plan)
+    }
+
     /** The wide-screen middle gap in percent ([app.songyan.ime.layout.WideMiddleGap]); splits read it as they resolve. */
     var middleGapPercent: Int = app.songyan.ime.layout.WideMiddleGap.DEFAULT_PERCENT
         set(value) {

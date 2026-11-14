@@ -44,12 +44,17 @@ internal fun KeyboardController.render() {
     candidatesFiltered = readingFilterShowing(active)
     // Only the engine's own menu is read further page by page; suggestions and a reading filter's
     // matches are shown as they are.
-    candidates.update(
-        if (candidatesFiltered) filteredSnapshot(visible) else visible,
-        browsable = suggestions == null && !candidatesFiltered,
-    )
-    // Idle, the band shows the toolbar; a composition (or a notice) takes it back for candidates.
-    val idle = !visible.isComposing && visible.candidates.isEmpty() && candidates.status == null
+    val shownSnapshot = if (candidatesFiltered) filteredSnapshot(visible) else visible
+    candidates.update(shownSnapshot, browsable = suggestions == null && !candidatesFiltered)
+    if (sideCandidatesShown) {
+        sideCandidates.language = language
+        sideCandidates.update(shownSnapshot, browsable = suggestions == null && !candidatesFiltered)
+    }
+    // Idle, the band shows the toolbar; a composition (or a notice) takes it back for candidates,
+    // unless the 9-key side column shows them.
+    val idle =
+        sideCandidatesShown ||
+            (!visible.isComposing && visible.candidates.isEmpty() && candidates.status == null)
     bandIdle = idle
     // A composition ends the suggestions of the field: the system sends new ones when they apply.
     if (!idle) inlineSuggestions.clear()

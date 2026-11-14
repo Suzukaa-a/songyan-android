@@ -83,6 +83,7 @@ fun InputOptionsScreen(
     onSplitWidthChanged: (Int) -> Unit = {},
     onMarginWidthChanged: (Int) -> Unit = {},
     onMiddleGapChanged: (Int) -> Unit = {},
+    onNineKeyCandidateSideChanged: (String) -> Unit = {},
     onSideMarginChanged: (Int) -> Unit = {},
     onReadingPlacementChanged: (String) -> Unit = {},
     keyFeedback: KeyFeedbackSettings,
@@ -125,6 +126,7 @@ fun InputOptionsScreen(
                 onSplitWidth = onSplitWidthChanged,
                 onMarginWidth = onMarginWidthChanged,
                 onMiddleGap = onMiddleGapChanged,
+                onNineKeyCandidateSide = onNineKeyCandidateSideChanged,
                 onSideMargin = onSideMarginChanged,
             )
             SettingsRow(

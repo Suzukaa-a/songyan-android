@@ -114,6 +114,7 @@
     <string name="ime_candidate_delete_word_done">Deleted \u201c%1$s\u201d</string>
     <string name="ime_candidate_delete_word_kept">\u201c%1$s\u201d was not learned from you, so it cannot be deleted</string>
     <string name="ime_one_hand_swap">Move to the other side</string>
+    <string name="ime_side_candidates_swap">Move the candidates to the other side</string>
     <string name="ime_one_hand_restore">Use full width</string>
     <string name="ime_symbol_lock">Lock</string>
     <string name="ime_symbol_locked">Locked</string>

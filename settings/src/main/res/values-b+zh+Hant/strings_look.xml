@@ -43,6 +43,11 @@
     <string name="appearance_import_storage">沒能儲存外觀，請稍後再試。</string>
     <string name="options_wide_position_section">大螢幕鍵盤位置</string>
     <string name="options_wide_note">在寬度超過 600 dp 的螢幕上生效，例如平板和展開的摺疊螢幕。自訂時，0% 靠最左，50% 居中，100% 靠最右。</string>
+    <string name="options_nine_key_side_section">9 鍵候選區</string>
+    <string name="options_nine_key_side_note">螢幕夠寬時，9 鍵的候選在鍵盤旁展開，鍵盤移到另一側。</string>
+    <string name="options_nine_key_side_left">左側</string>
+    <string name="options_nine_key_side_right">右側</string>
+    <string name="options_nine_key_side_off">關閉</string>
     <string name="options_wide_position_value">%1$d%%</string>
     <string name="options_wide_position_field">位置百分比（0 到 100）</string>
     <string name="options_wide_position_invalid">請輸入 0 到 100 的整數。</string>

@@ -78,7 +78,24 @@ internal fun KeyboardController.wireViews() {
         enqueueRepeat(stillHeld) { dispatch(action) }
     }
     keyboard.onPopupChanged = { syncBackOwnership() }
-    keyboard.onBoardScaleChanged = { candidates.boardScale = it }
+    keyboard.onBoardScaleChanged = {
+        candidates.boardScale = it
+        sideCandidates.boardScale = it
+    }
+    sideCandidates.visibility = View.GONE
+    sideSwap.visibility = View.GONE
+    // Above the column, below the popups: the side column sits over the key area's blank side.
+    frame.addView(sideCandidates, 1, FrameLayout.LayoutParams(0, 0))
+    frame.addView(sideSwap, 2, FrameLayout.LayoutParams(0, 0))
+    keyboard.onSideCandidates = { rect, plan -> placeSideCandidates(rect, plan) }
+    sideSwap.setOnClickListener {
+        val next = keyboard.nineKeyCandidateSide.mirrored
+        keyboard.nineKeyCandidateSide = next
+        scope.launch { preferences?.setNineKeyCandidateSide(next.wire) }
+    }
+    sideCandidates.onPopupChanged = { syncBackOwnership() }
+    sideCandidates.onPressFeedback = { feedback.press(sideCandidates) }
+    wireCandidateChoices(sideCandidates)
     candidates.onPopupChanged = { syncBackOwnership() }
     keyboard.onDoubleShift = {
         enqueue {
@@ -182,40 +199,80 @@ internal fun KeyboardController.wireViews() {
         enqueueRepeat(stillHeld) { dispatch(LayoutAction(LayoutActionKind.BACKSPACE)) }
     }
     candidates.onRetype = { enqueueKey(LayoutAction(LayoutActionKind.CLEAR_INPUT)) }
-    candidates.onLoadMore = { revision, page ->
+    wireCandidateChoices(candidates)
+    candidates.onExpanded = {
+        keyboard.visibility = if (it) View.GONE else View.VISIBLE
+        syncBackOwnership()
+    }
+    menu.onSchema = { id -> enqueue { chooseSchema(id) } }
+    menu.onLayout = { kind -> enqueue { chooseLayout(kind) } }
+    menu.onBoard = { id -> enqueue { chooseBoard(id) } }
+    menu.onQuickContent = { openQuickContentPanel() }
+    menu.onKeyboardSettings = { openKeyboardSettingsPanel() }
+    menu.onEmoji = { openEmojiPanel() }
+    menu.onEdit = { openEditPanel() }
+    menu.onOneHand = {
+        closeKeyboardMenu()
+        toggleOneHand()
+    }
+    menu.onClose = { closeKeyboardMenu() }
+    menu.onSwitchInputMethod = {
+        closeKeyboardMenu()
+        callbacks.inputMethods.switchToOther()
+    }
+    menu.onPickInputMethod = {
+        closeKeyboardMenu()
+        callbacks.inputMethods.pick()
+    }
+    menu.onVoiceInput = {
+        closeKeyboardMenu()
+        callbacks.inputMethods.startVoice()
+    }
+    observePreferences()
+    observeKana12Preferences()
+    observeLayoutCatalog()
+}
+
+/**
+ * What a candidate bar's touches do: load the next page, forget a word, choose a candidate or one of
+ * its characters. The main bar and the 9-key side column each run their own list, so each answers
+ * to its own revision and pages.
+ */
+internal fun KeyboardController.wireCandidateChoices(bar: CandidateBarView) {
+    bar.onLoadMore = { revision, page ->
         val compositionRevision = session?.compositionRevision
         enqueue {
             val active = session.takeIf { ready }
             if (active == null ||
-                revision != candidates.revision ||
+                revision != bar.revision ||
                 active.compositionRevision != compositionRevision
             ) {
-                candidates.loadFailed(revision)
+                bar.loadFailed(revision)
                 return@enqueue
             }
             try {
-                candidates.appendPage(revision, page, active.readCandidatePage(page))
+                bar.appendPage(revision, page, active.readCandidatePage(page))
             } catch (error: CancellationException) {
-                candidates.abandonLoad()
+                bar.abandonLoad()
                 throw error
             } catch (error: Exception) {
-                candidates.loadFailed(revision)
+                bar.loadFailed(revision)
             }
         }
     }
-    candidates.onDeleteWord = { request ->
+    bar.onDeleteWord = { request ->
         val compositionRevision = session?.compositionRevision
         enqueue {
             val active = session.takeIf { ready }
             if (active == null) return@enqueue
             // The list moved on since the long press: deleting by position would hit another word.
-            if (request.revision != candidates.revision || active.compositionRevision != compositionRevision) {
+            if (request.revision != bar.revision || active.compositionRevision != compositionRevision) {
                 return@enqueue
             }
             val gone = active.deleteCandidate(request.absoluteIndex, request.text)
             // Same code, same first page, but later pages shifted: the strip must not keep old indices.
-            candidates.listChanged()
-            candidates.flash(
+            bar.listChanged()
+            bar.flash(
                 context.getString(
                     if (gone) R.string.ime_candidate_delete_word_done else R.string.ime_candidate_delete_word_kept,
                     request.text,
@@ -223,9 +280,9 @@ internal fun KeyboardController.wireViews() {
             )
         }
     }
-    candidates.onCandidate = { choice ->
+    bar.onCandidate = { choice ->
         val revision = session?.compositionRevision
-        val suggested = candidates.suggestionRow
+        val suggested = bar.suggestionRow
         enqueue {
             // Every candidate selection ends the composition the kana model claimed a tail of.
             kana12Reset()
@@ -245,7 +302,7 @@ internal fun KeyboardController.wireViews() {
                 ImePerf.commitDone()
                 return@enqueue
             }
-            val sameList = choice.revision == candidates.revision
+            val sameList = choice.revision == bar.revision
             val shownIsCurrent = sameList && active.compositionRevision == revision
             // A queued key the engine handled by itself (a page key, a moved highlight) leaves the
             // list as it was: a candidate of a paged list is still addressed by its absolute index,
@@ -285,12 +342,12 @@ internal fun KeyboardController.wireViews() {
             ImePerf.commitDone()
         }
     }
-    candidates.onCandidateCharacter = { pick ->
+    bar.onCandidateCharacter = { pick ->
         val revision = session?.compositionRevision
         enqueue {
             val active = session.takeIf { ready }
             if (active != null &&
-                (pick.revision != candidates.revision || active.compositionRevision != revision)
+                (pick.revision != bar.revision || active.compositionRevision != revision)
             ) {
                 // Newer queued input already moved the composition on: taking a character of the
                 // old strip would overwrite it, so the pick is dropped.
@@ -306,35 +363,39 @@ internal fun KeyboardController.wireViews() {
             render()
         }
     }
-    candidates.onExpanded = {
-        keyboard.visibility = if (it) View.GONE else View.VISIBLE
-        syncBackOwnership()
+}
+
+/**
+ * Lays the 9-key side column and its swap button over the blank side of the key area, where the
+ * keyboard put them ([rect] in the keyboard's own pixels), or hides them.
+ */
+internal fun KeyboardController.placeSideCandidates(
+    rect: android.graphics.RectF?,
+    plan: app.songyan.ime.candidate.NineKeySideCandidatePlan?,
+) {
+    val shown = rect != null && plan != null
+    sideCandidatesShown = shown
+    sideCandidates.visibility = if (shown) View.VISIBLE else View.GONE
+    sideSwap.visibility = if (shown) View.VISIBLE else View.GONE
+    if (rect != null && plan != null) {
+        val density = context.resources.displayMetrics.density
+        val left = keyboard.left + rect.left
+        val top = content.top + keyboard.top + rect.top
+        sideCandidates.sideRowPx = rect.height() / KeyboardView.PHONE_ROWS
+        sideCandidates.layoutParams =
+            FrameLayout.LayoutParams(rect.width().toInt(), rect.height().toInt()).apply {
+                leftMargin = left.toInt()
+                topMargin = top.toInt()
+            }
+        val strip = (plan.stripWidth * density).toFloat()
+        val swapLeft =
+            if (plan.side == app.songyan.ime.candidate.NineKeyCandidateSide.LEFT) left + rect.width() else left - strip
+        val target = (48 * density).toInt()
+        sideSwap.layoutParams =
+            FrameLayout.LayoutParams(strip.toInt(), target).apply {
+                leftMargin = swapLeft.toInt()
+                topMargin = (top + rect.height() / 2 - target / 2).toInt()
+            }
     }
-    menu.onSchema = { id -> enqueue { chooseSchema(id) } }
-    menu.onLayout = { kind -> enqueue { chooseLayout(kind) } }
-    menu.onBoard = { id -> enqueue { chooseBoard(id) } }
-    menu.onQuickContent = { openQuickContentPanel() }
-    menu.onKeyboardSettings = { openKeyboardSettingsPanel() }
-    menu.onEmoji = { openEmojiPanel() }
-    menu.onEdit = { openEditPanel() }
-    menu.onOneHand = {
-        closeKeyboardMenu()
-        toggleOneHand()
-    }
-    menu.onClose = { closeKeyboardMenu() }
-    menu.onSwitchInputMethod = {
-        closeKeyboardMenu()
-        callbacks.inputMethods.switchToOther()
-    }
-    menu.onPickInputMethod = {
-        closeKeyboardMenu()
-        callbacks.inputMethods.pick()
-    }
-    menu.onVoiceInput = {
-        closeKeyboardMenu()
-        callbacks.inputMethods.startVoice()
-    }
-    observePreferences()
-    observeKana12Preferences()
-    observeLayoutCatalog()
+    render()
 }

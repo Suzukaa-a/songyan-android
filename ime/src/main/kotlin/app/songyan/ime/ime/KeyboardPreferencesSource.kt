@@ -51,6 +51,9 @@ interface KeyboardPreferencesSource {
     /** [KeyboardOneHandMode.wire]: off, left or right. */
     val oneHand: Flow<String> get() = flowOf(KeyboardOneHandMode.OFF.wire)
 
+    /** [app.songyan.ime.candidate.NineKeyCandidateSide.wire]: the 9-key candidates beside the keys on a wide screen. */
+    val nineKeyCandidateSide: Flow<String> get() = flowOf(app.songyan.ime.candidate.NineKeyCandidateSide.LEFT.wire)
+
     /** The one-handed keyboard's width in percent of the panel. */
     val oneHandWidthPercent: Flow<Int> get() = flowOf(KeyboardOneHandLayoutPolicy.DEFAULT_WIDTH_PERCENT)
 
@@ -121,6 +124,8 @@ interface KeyboardPreferencesSource {
     ): Boolean = false
 
     suspend fun setOneHand(value: String) = Unit
+
+    suspend fun setNineKeyCandidateSide(value: String) = Unit
 
     suspend fun setKeyHeight(value: String) = Unit
 

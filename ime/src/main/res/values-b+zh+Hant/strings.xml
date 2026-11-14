@@ -82,6 +82,7 @@
     <string name="ime_candidate_delete_word_done">已刪除「%1$s」</string>
     <string name="ime_candidate_delete_word_kept">「%1$s」不是你學到的，無法刪除</string>
     <string name="ime_one_hand_swap">切換到另一側</string>
+    <string name="ime_side_candidates_swap">候選區換到另一側</string>
     <string name="ime_one_hand_restore">恢復全寬</string>
     <string name="ime_symbol_lock">鎖定</string>
     <string name="ime_symbol_locked">已鎖定</string>

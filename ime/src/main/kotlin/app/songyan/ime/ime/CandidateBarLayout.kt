@@ -11,7 +11,11 @@ import app.songyan.ime.ime.CandidateBarView.Entry
  * whenever there are candidates so the strip's end never moves.
  */
 internal fun CandidateBarView.controlList(): List<Control> =
-    if (expanded) listOf(Control.BACK, Control.BACKSPACE, Control.RETYPE) else listOf(Control.EXPAND)
+    when {
+        sideMode -> emptyList()
+        expanded -> listOf(Control.BACK, Control.BACKSPACE, Control.RETYPE)
+        else -> listOf(Control.EXPAND)
+    }
 
 /**
  * Measures every entry not yet measured at the current text size: once when it joins the list,
@@ -129,7 +133,7 @@ internal fun CandidateBarView.controlRects(): List<Rect> {
  * Back, Backspace and Retype. The appearance chooses flowing rows, a single column or a column grid.
  */
 internal fun CandidateBarView.layoutExpanded() {
-    val column = columnWidthPx
+    val column = if (sideMode) 0f else columnWidthPx
     readingCells = emptyList()
     readingViewport.setEmpty()
     viewport.set(0, 0, (width - column).toInt(), height)
@@ -147,6 +151,7 @@ internal fun CandidateBarView.layoutExpanded() {
                     end = stripInsetPx,
                     // Row 1 is the collapsed row, so it keeps the collapsed spacing.
                     firstRowGap = cellSpacingPx,
+                    stripRow = !sideMode,
                 )
             CandidateBarDefinition.Expanded.Mode.LIST ->
                 ExpandedFlowLayout.columns(entries.size, 1, viewport.width().toFloat(), gapX, barPx, gapY)

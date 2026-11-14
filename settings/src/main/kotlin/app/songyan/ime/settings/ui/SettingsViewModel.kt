@@ -185,6 +185,9 @@ class SettingsViewModel(
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
         collectPreference(preferences.bottomGapDp) { copy(keyboardFeel = keyboardFeel.copy(bottomGapDp = it)) }
         collectPreference(preferences.splitWidthDp) { copy(keyboardFeel = keyboardFeel.copy(splitWidthDp = it)) }
+        collectPreference(preferences.nineKeyCandidateSide) {
+            copy(keyboardFeel = keyboardFeel.copy(nineKeyCandidateSide = it))
+        }
         collectPreference(preferences.middleGapPercent) {
             copy(keyboardFeel = keyboardFeel.copy(middleGapPercent = it))
         }
@@ -342,6 +345,11 @@ class SettingsViewModel(
             return
         }
         viewModelScope.launch { preferences.setSplitWidthDp(value) }
+    }
+
+    fun setNineKeyCandidateSide(value: String) {
+        if (value !in listOf("left", "right", "off")) return
+        viewModelScope.launch { preferences.setNineKeyCandidateSide(value) }
     }
 
     fun setMiddleGapPercent(value: Int) {

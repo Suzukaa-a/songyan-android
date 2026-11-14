@@ -1,6 +1,11 @@
 package app.songyan.ime.ime
 
+import android.graphics.RectF
 import android.os.LocaleList
+import app.songyan.ime.candidate.KeyboardWideContentPolicy
+import app.songyan.ime.candidate.NineKeyCandidateSide
+import app.songyan.ime.candidate.NineKeySideCandidatePlan
+import app.songyan.ime.candidate.NineKeySideCandidatePolicy
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_HINT_TEXT_SIZE_SP
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_LABEL_TEXT_SIZE_SP
 import app.songyan.ime.ime.KeyboardView.Companion.MIN_SYLLABLE_TEXT_SIZE_SP
@@ -300,6 +305,7 @@ internal fun KeyboardView.rebuild() {
         rebuildPhone(model)
         return
     }
+    reportSideCandidates(null, null)
     val kanaSurface = kana12
     if (kanaSurface != null) {
         rebuildKana12(kanaSurface)
@@ -505,11 +511,55 @@ internal fun KeyboardView.rebuildWithRails(
     settleKeySet(rowKeySetSignature())
 }
 
+/**
+ * The candidates beside the 9-key keyboard on a wide surface ([NineKeySideCandidatePolicy], the
+ * iOS keyboard's rule), or null where the room is short or the user turned them off.
+ */
+internal fun KeyboardView.nineKeySidePlan(): NineKeySideCandidatePlan? {
+    val surfaceDp = width / density.toDouble()
+    if (surfaceDp <= WideSurface.PHONE_MAXIMUM_DP) return null
+    val margin = WideSurface.sideMargin(surfaceDp, sideMarginPerMille, marginWidthDp.toDouble())
+    return NineKeySideCandidatePolicy.plan(
+        surfaceDp - 2 * margin,
+        KeyboardWideContentPolicy.PHONE_NINE_MAXIMUM_CONTENT_WIDTH,
+        nineKeyCandidateSide,
+        middleGapPercent,
+    )
+}
+
+/** The narrowed 9-key keyboard docked away from its side candidates. */
+private fun KeyboardView.sideFrame(plan: NineKeySideCandidatePlan): ContentFrame {
+    val wide =
+        WideSurface.plan(
+            width / density.toDouble(),
+            null,
+            plan.keypadDock,
+            capDp = plan.keypadWidth,
+            automaticAboveDp = splitWidthDp.toDouble(),
+            sideMarginPerMille = sideMarginPerMille,
+            marginAboveDp = marginWidthDp.toDouble(),
+        )
+    return ContentFrame(wide.leadingInset.toFloat() * density, wide.contentWidth.toFloat() * density)
+}
+
 /** Positions the phone shell's keys; the shell model owns every rectangle. */
 internal fun KeyboardView.rebuildPhone(model: ShellModel) {
     if (width <= 0) return
     val padding = metrics.keyAreaHorizontalPaddingDp * density
-    val frame = contentFrame(null)
+    val side = nineKeySidePlan()
+    val frame = if (side != null) sideFrame(side) else contentFrame(null)
+    if (side == null) {
+        reportSideCandidates(null, null)
+    } else {
+        // The candidates take the shell's rows, opposite the keys across the gap.
+        val top = metrics.keyAreaBottomGapDp / 2 * density
+        val bottom = top + keyAreaHeightDp(heightRows) * density
+        val strip = side.stripWidth.toFloat() * density
+        val span = side.candidateWidth.toFloat() * density
+        val left =
+            if (side.side == NineKeyCandidateSide.LEFT) frame.left - strip - span else frame.left + frame.width + strip
+        reportSideCandidates(RectF(left, top, left + span, bottom), side)
+    }
     val fullWidth = frame.width
     val contentWidth = fullWidth - 2 * padding
     if (contentWidth <= 0f) return

@@ -84,6 +84,7 @@
     <string name="ime_candidate_delete_word_done">「%1$s」を削除しました</string>
     <string name="ime_candidate_delete_word_kept">「%1$s」は学習した語ではないため、削除できません</string>
     <string name="ime_one_hand_swap">反対側に移す</string>
+    <string name="ime_side_candidates_swap">候補エリアを反対側へ</string>
     <string name="ime_one_hand_restore">全幅に戻す</string>
     <string name="ime_symbol_lock">ロック</string>
     <string name="ime_symbol_locked">ロック中</string>

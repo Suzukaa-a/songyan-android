@@ -135,7 +135,15 @@ class EditorToolGateway(
         info: EditorInfo?,
     ): ToolWriteResult {
         val current = currentRead(run, info)
-        return when (val start = run.insert(current.documentId, current.cursorIndex, current.privacy)) {
+        // After a selection run the result goes right after the selected text, so the written span
+        // starts at the selection's end, not at its start where a replacement would.
+        val at =
+            if (run.source?.scope == app.songyan.ime.tools.TextScope.SELECTION && editor.selection.known) {
+                maxOf(editor.selection.start, editor.selection.end)
+            } else {
+                current.cursorIndex
+            }
+        return when (val start = run.insert(current.documentId, at, current.privacy)) {
             is WriteStart.Requested -> applyWrite(run, start.request, current)
             is WriteStart.Blocked -> ToolWriteResult.Blocked(start.reason)
             WriteStart.Unavailable -> ToolWriteResult.Unavailable
@@ -203,7 +211,8 @@ class EditorToolGateway(
                         // After a run on a selection the result goes right after it and the selected
                         // text stays: the caret collapses to the selection's end, where the model
                         // placed the inserted span, and the text is committed there.
-                        editor.selection.known && editor.selection.end == request.range.start -> {
+                        editor.selection.known &&
+                            maxOf(editor.selection.start, editor.selection.end) == request.range.start -> {
                             ic.beginBatchEdit()
                             try {
                                 ic.setSelection(request.range.start, request.range.start) &&

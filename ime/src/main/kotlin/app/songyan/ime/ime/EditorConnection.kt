@@ -495,6 +495,28 @@ class EditorConnection(
         return true
     }
 
+    /**
+     * Replaces the selected text with [replacement] in one edit, only when the editor still selects
+     * exactly [expected]. False leaves the editor untouched.
+     */
+    fun replaceSelection(
+        expected: String,
+        replacement: String,
+    ): Boolean {
+        val ic = connection() ?: return false
+        if (keyEventEditor || composing || expected.isEmpty()) return false
+        ic.beginBatchEdit()
+        try {
+            if (ic.getSelectedText(0)?.toString() != expected) return false
+            if (!ic.commitText(replacement, 1)) return false
+            selection.forget()
+            forgetText()
+            return true
+        } finally {
+            ic.endBatchEdit()
+        }
+    }
+
     /** Whether the field is exactly [before], a bare caret, then [after]. */
     fun holdsField(
         before: String,

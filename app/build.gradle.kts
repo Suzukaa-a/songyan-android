@@ -168,6 +168,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(testFixtures(project(":core:rime")))
     androidTestImplementation(libs.androidx.test.rules)
     // Integration tests reach the keyboard's tool pipeline and the script host through the app.
     androidTestImplementation(project(":ime"))

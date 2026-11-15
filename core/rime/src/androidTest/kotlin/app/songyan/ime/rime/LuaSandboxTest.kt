@@ -37,7 +37,7 @@ class LuaSandboxTest {
     fun aScriptCannotLaunchProcessesOpenPipesOrLoadNativeCode() =
         runBlocking {
             val shared = File(root, "shared")
-            EngineTestSupport.copyAssetTree(
+            AssetTrees.copy(
                 instrumentation.context.assets,
                 "${EngineTestSupport.FIXTURE_ASSET_ROOT}/lua-sandbox",
                 shared,

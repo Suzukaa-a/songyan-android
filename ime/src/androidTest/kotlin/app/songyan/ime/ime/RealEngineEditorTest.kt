@@ -2,7 +2,6 @@ package app.songyan.ime.ime
 
 import android.content.ContentValues
 import android.content.Context
-import android.content.res.AssetManager
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -49,6 +48,7 @@ import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutSplitConfiguration
 import app.songyan.ime.layout.ShuangpinHintPresets
+import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
@@ -3063,7 +3063,7 @@ class RealEngineEditorTest {
         val engineSource =
             if (fixtureAssetRoot != null) {
                 val fixtureDir = File(root, "fixture-" + SystemClock.uptimeMillis())
-                copyAssetTree(fixtureAssetRoot, fixtureDir)
+                AssetTrees.copy(instrumentation.context.assets, fixtureAssetRoot, fixtureDir)
                 val deployment = runBlocking { RimeDeployment.deploy(fixtureDir, user, appVersion = "test") }
                 check(deployment.success) { "fixture deployment failed: " + deployment.lastError }
                 fixture = fixtureDir
@@ -3099,31 +3099,6 @@ class RealEngineEditorTest {
                 fixture?.deleteRecursively()
             }
         }
-    }
-
-    /** Copies a fixture out of the androidTest assets into [target], where the engine deploys it. */
-    private fun copyAssetTree(
-        assetPath: String,
-        target: File,
-    ) {
-        val assets = instrumentation.context.assets
-
-        fun copy(
-            path: String,
-            into: File,
-        ) {
-            into.mkdirs()
-            for (name in assets.list(path).orEmpty()) {
-                val childPath = path + "/" + name
-                val child = File(into, name)
-                if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                    copy(childPath, child)
-                } else {
-                    assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
-                }
-            }
-        }
-        copy(assetPath, target)
     }
 
     /**
@@ -4256,7 +4231,7 @@ class RealEngineEditorTest {
             root = File(context.cacheDir, "real-engine-editor")
             root.deleteRecursively()
             source = File(root, "source")
-            copyAssetTree(context.assets, BUILTIN_ASSET_ROOT, source)
+            AssetTrees.copy(context.assets, BUILTIN_ASSET_ROOT, source)
             val deployment =
                 runBlocking {
                     RimeDeployment.deploy(
@@ -4278,7 +4253,7 @@ class RealEngineEditorTest {
         private val smallPageDeployment: Pair<File, File> by lazy {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
             val small = File(root, "source-small")
-            copyAssetTree(context.assets, BUILTIN_ASSET_ROOT, small)
+            AssetTrees.copy(context.assets, BUILTIN_ASSET_ROOT, small)
             val defaults = File(small, "default.yaml")
             val patched = defaults.readText().replace("page_size: 5", "page_size: 2")
             assertNotEquals("the page size line moved", defaults.readText(), patched)
@@ -4300,23 +4275,6 @@ class RealEngineEditorTest {
         @JvmStatic
         fun cleanUp() {
             root.deleteRecursively()
-        }
-
-        private fun copyAssetTree(
-            assets: AssetManager,
-            assetPath: String,
-            target: File,
-        ) {
-            target.mkdirs()
-            for (name in assets.list(assetPath).orEmpty()) {
-                val childPath = "$assetPath/$name"
-                val child = File(target, name)
-                if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                    copyAssetTree(assets, childPath, child)
-                } else {
-                    assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
-                }
-            }
         }
     }
 }

@@ -2,7 +2,6 @@ package app.songyan.ime.ime
 
 import android.app.Activity
 import android.content.Context
-import android.content.res.AssetManager
 import android.graphics.Rect
 import android.os.SystemClock
 import android.text.InputType
@@ -24,6 +23,7 @@ import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
 import app.songyan.ime.layout.LayoutPageTarget
+import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.EngineOptionPreferences
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
@@ -57,7 +57,7 @@ internal class DeployedEngine(
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         root = File(context.cacheDir, "feature-engine-$name").also { it.deleteRecursively() }
         source = File(root, "source")
-        copyAssetTree(context.assets, "rime/builtin", source)
+        AssetTrees.copy(context.assets, "rime/builtin", source)
         if (english) addEnglish(source)
         patch(source)
         val deployment =
@@ -162,23 +162,6 @@ internal class DeployedEngine(
                 """.trimIndent() + "\n"
         assertNotEquals("the translators moved", schema.readText(), patched)
         schema.writeText(patched)
-    }
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = "$assetPath/$name"
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child)
-            } else {
-                assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
-            }
-        }
     }
 }
 

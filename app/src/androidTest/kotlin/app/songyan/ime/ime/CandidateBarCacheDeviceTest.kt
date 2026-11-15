@@ -2,7 +2,6 @@ package app.songyan.ime.ime
 
 import android.app.Instrumentation
 import android.content.Intent
-import android.content.res.AssetManager
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
@@ -11,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.SongyanSettingsActivity
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
@@ -42,7 +42,7 @@ class CandidateBarCacheDeviceTest {
     fun aReplacedCandidateListIsReadAgainAtTheSameVirtualIndex() {
         val root = File(context.cacheDir, ENGINE_DIRECTORY).also { it.deleteRecursively() }
         val source = File(root, "source")
-        copyAssetTree(context.assets, "rime/builtin", source)
+        AssetTrees.copy(context.assets, "rime/builtin", source)
         val deployment =
             runBlocking {
                 RimeDeployment.deploy(source, File(root, "deploy"), RimeEngine.DEFAULT_APP_NAME, "test")
@@ -227,23 +227,6 @@ class CandidateBarCacheDeviceTest {
             SystemClock.sleep(POLL_MS)
         }
         return label
-    }
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = "$assetPath/$name"
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child)
-            } else {
-                assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
-            }
-        }
     }
 
     private companion object {

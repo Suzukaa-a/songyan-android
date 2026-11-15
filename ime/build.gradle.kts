@@ -38,6 +38,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     // Editor behaviour is tested against the real engine, never a stub that does the engine's work.
     androidTestImplementation(project(":core:rime"))
+    androidTestImplementation(testFixtures(project(":core:rime")))
     androidTestImplementation(project(":core:packages"))
     androidTestImplementation(project(":core:tools"))
 }

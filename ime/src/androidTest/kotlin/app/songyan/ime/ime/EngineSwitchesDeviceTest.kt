@@ -1,10 +1,10 @@
 package app.songyan.ime.ime
 
-import android.content.res.AssetManager
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.ime.panels.KeyboardSettingsPanelView
 import app.songyan.ime.keyboard.engine.BuiltinScriptState
 import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.EngineOptionPreferences
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -218,7 +218,7 @@ class EngineSwitchesDeviceTest {
             DeployedEngine("radio-switches", english = false) { source ->
                 val context = InstrumentationRegistry.getInstrumentation().targetContext
                 val opencc = File(source, "opencc")
-                copyTree(context.assets, "rime/opencc", opencc)
+                AssetTrees.copy(context.assets, "rime/opencc", opencc)
                 File(opencc, "custom_faces.txt").writeText("国\t😀\n")
                 File(opencc, "custom_faces.json").writeText(
                     """{"name":"Emoji","segmentation":{"type":"mmseg","dict":{"type":"text","file":"custom_faces.txt"}},"conversion_chain":[{"dict":{"type":"text","file":"custom_faces.txt"}}]}""",
@@ -391,12 +391,12 @@ emoji:
             builtin =
                 DeployedEngine("builtin", english = false) { source ->
                     val context = InstrumentationRegistry.getInstrumentation().targetContext
-                    copyTree(context.assets, "rime/opencc", File(source, "opencc"))
+                    AssetTrees.copy(context.assets, "rime/opencc", File(source, "opencc"))
                 }
             engine =
                 DeployedEngine("switches", english = false) { source ->
                     val context = InstrumentationRegistry.getInstrumentation().targetContext
-                    copyTree(context.assets, "rime/opencc", File(source, "opencc"))
+                    AssetTrees.copy(context.assets, "rime/opencc", File(source, "opencc"))
                     val schema = File(source, "songyan_quanpin.schema.yaml")
                     val text = schema.readText()
                     // Replace the bundled's own filters and switches block with one author-style switch.
@@ -425,22 +425,6 @@ emoji:
         fun cleanUp() {
             engine.delete()
             builtin.delete()
-        }
-
-        private fun copyTree(
-            assets: AssetManager,
-            path: String,
-            target: File,
-        ) {
-            target.mkdirs()
-            for (name in assets.list(path).orEmpty()) {
-                val child = "$path/$name"
-                if (assets.list(child).orEmpty().isNotEmpty()) {
-                    copyTree(assets, child, File(target, name))
-                } else {
-                    assets.open(child).use { input -> File(target, name).outputStream().use { input.copyTo(it) } }
-                }
-            }
         }
     }
 }

@@ -224,9 +224,9 @@ class EngineReplayTest {
         root.deleteRecursively()
         val source = File(root, "source")
         val user = File(root, "user")
-        copyAssetTree(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
+        AssetTrees.copy(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
         // The frontend tables must sit beside the source, as in the app installer.
-        copyAssetTree(instrumentation.targetContext.assets, "rime/opencc", File(source, "opencc"))
+        AssetTrees.copy(instrumentation.targetContext.assets, "rime/opencc", File(source, "opencc"))
         val deployment =
             RimeDeployment.deploy(
                 sharedDataDir = source,
@@ -313,25 +313,6 @@ class EngineReplayTest {
         }
         engine.clearComposition()
         return null
-    }
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = "$assetPath/$name"
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child)
-            } else {
-                assets.open(childPath).use { input ->
-                    child.outputStream().use { output -> input.copyTo(output) }
-                }
-            }
-        }
     }
 
     private data class PlaybackCase(

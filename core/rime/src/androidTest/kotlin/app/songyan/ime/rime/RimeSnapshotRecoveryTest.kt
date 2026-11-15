@@ -3,7 +3,6 @@ package app.songyan.ime.rime
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.rime.EngineTestSupport.BUILTIN_ASSET_ROOT
-import app.songyan.ime.rime.EngineTestSupport.copyAssetTree
 import app.songyan.ime.rime.EngineTestSupport.type
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -77,7 +76,7 @@ class RimeSnapshotRecoveryTest {
             val root = File(context.cacheDir, "engine-snapshot-recovery")
             root.deleteRecursively()
             val source = File(root, "source")
-            copyAssetTree(context.assets, BUILTIN_ASSET_ROOT, source)
+            AssetTrees.copy(context.assets, BUILTIN_ASSET_ROOT, source)
             val user = File(root, "user")
             val deployment = RimeDeployment.deploy(source, user, RimeEngine.DEFAULT_APP_NAME, "test")
             assertTrue("deployment failed: " + deployment.lastError, deployment.success)

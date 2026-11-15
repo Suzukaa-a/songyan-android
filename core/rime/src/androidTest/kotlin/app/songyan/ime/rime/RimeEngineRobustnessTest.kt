@@ -1,6 +1,5 @@
 package app.songyan.ime.rime
 
-import android.content.res.AssetManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.keyboard.engine.EngineBackendError
@@ -57,7 +56,7 @@ class RimeEngineRobustnessTest {
             val root = File(instrumentation.targetContext.cacheDir, "engine-stopped")
             root.deleteRecursively()
             val source = File(root, "source")
-            copyAssetTree(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
+            AssetTrees.copy(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
             val user = File(root, "user")
             val deployment = RimeDeployment.deploy(source, user, RimeEngine.DEFAULT_APP_NAME, "test")
             assertTrue("deployment failed: " + deployment.lastError, deployment.success)
@@ -93,7 +92,7 @@ class RimeEngineRobustnessTest {
             val root = File(instrumentation.targetContext.cacheDir, "engine-cancel")
             root.deleteRecursively()
             val source = File(root, "source")
-            copyAssetTree(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
+            AssetTrees.copy(instrumentation.targetContext.assets, BUILTIN_ASSET_ROOT, source)
             val user = File(root, "user")
             val deployment = RimeDeployment.deploy(source, user, RimeEngine.DEFAULT_APP_NAME, "test")
             assertTrue("deployment failed: " + deployment.lastError, deployment.success)
@@ -203,25 +202,6 @@ class RimeEngineRobustnessTest {
             Thread.sleep(20L)
         }
         return engineThreads() <= atMost
-    }
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = assetPath + "/" + name
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child)
-            } else {
-                assets.open(childPath).use { input ->
-                    child.outputStream().use { output -> input.copyTo(output) }
-                }
-            }
-        }
     }
 
     companion object {

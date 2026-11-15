@@ -7,6 +7,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.packages.SchemePackageImportBuilder
+import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.RimeDeployment
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
@@ -199,7 +200,7 @@ internal object TraditionalSchemeFixture {
             // the prelude's schema_list is only the app's usual fallback.
             target.writeBytes(if (name == "default.yaml") withSchemaList(bytes, schemas) else bytes)
         }
-        copyAssetTree(assets, OPENCC_ASSET_ROOT, File(source, "opencc"), keepExisting = true)
+        AssetTrees.copy(assets, OPENCC_ASSET_ROOT, File(source, "opencc"), keepExisting = true)
     }
 
     private val PRELUDE_FILES = listOf("default.yaml", "key_bindings.yaml", "punctuation.yaml", "symbols.yaml")
@@ -229,24 +230,6 @@ internal object TraditionalSchemeFixture {
         } catch (_: java.io.IOException) {
             null
         }
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-        keepExisting: Boolean = false,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = "$assetPath/$name"
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child, keepExisting)
-            } else if (!keepExisting || !child.exists()) {
-                assets.open(childPath).use { input -> child.outputStream().use { output -> input.copyTo(output) } }
-            }
-        }
-    }
 }
 
 /** Feeds one engine key per character of [keys] through the keyboard's own key actions. */

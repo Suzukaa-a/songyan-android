@@ -1,6 +1,5 @@
 package app.songyan.ime.rime
 
-import android.content.res.AssetManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
@@ -32,7 +31,7 @@ class RimeLearningMergeTest {
         runBlocking {
             root = File(instrumentation.targetContext.cacheDir, "learning-merge").also { it.deleteRecursively() }
             source = File(root, "source")
-            copyAssetTree(instrumentation.targetContext.assets, "rime/builtin", source)
+            AssetTrees.copy(instrumentation.targetContext.assets, "rime/builtin", source)
             val deployment = RimeDeployment.deploy(source, File(root, "deploy"), appVersion = "test")
             assertTrue("deployment failed: ${deployment.lastError}", deployment.success)
             compiled = deployment.compiledDir
@@ -141,21 +140,4 @@ class RimeLearningMergeTest {
             ?.firstOrNull { it.startsWith("c=") }
             ?.removePrefix("c=")
             ?.toIntOrNull()
-
-    private fun copyAssetTree(
-        assets: AssetManager,
-        assetPath: String,
-        target: File,
-    ) {
-        target.mkdirs()
-        for (name in assets.list(assetPath).orEmpty()) {
-            val childPath = "$assetPath/$name"
-            val child = File(target, name)
-            if (assets.list(childPath).orEmpty().isNotEmpty()) {
-                copyAssetTree(assets, childPath, child)
-            } else {
-                assets.open(childPath).use { input -> child.outputStream().use { input.copyTo(it) } }
-            }
-        }
-    }
 }

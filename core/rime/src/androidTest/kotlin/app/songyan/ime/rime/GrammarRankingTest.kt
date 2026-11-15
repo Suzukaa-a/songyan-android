@@ -114,7 +114,7 @@ class GrammarRankingTest {
         inspect: suspend (RimeEngine) -> Unit,
     ): Map<String, List<String>> {
         val shared = File(root, "shared")
-        EngineTestSupport.copyAssetTree(instrumentation.context.assets, FIXTURE_DIR, shared)
+        AssetTrees.copy(instrumentation.context.assets, FIXTURE_DIR, shared)
         File(shared, "wanxiang-lts-zh-hans.json").delete()
         model?.copyTo(File(shared, "$MODEL_NAME.gram"))
         val language = if (model != null) MODEL_NAME else "\"\""

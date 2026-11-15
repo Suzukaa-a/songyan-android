@@ -179,7 +179,7 @@ class RimeAmbiguityTest {
     fun aDeclarationNamingAnotherAdapterIsRefused() =
         runBlocking {
             val shared = File(root, "shared")
-            EngineTestSupport.copyAssetTree(
+            AssetTrees.copy(
                 instrumentation.context.assets,
                 "${EngineTestSupport.FIXTURE_ASSET_ROOT}/ambiguity/bad-bindings",
                 shared,
@@ -310,7 +310,7 @@ class RimeAmbiguityTest {
     private fun withBuiltin(block: suspend (RimeEngine, Map<Pair<String, Int>, String>) -> Unit) =
         runBlocking {
             val shared = File(root, "shared")
-            EngineTestSupport.copyAssetTree(
+            AssetTrees.copy(
                 instrumentation.targetContext.assets,
                 EngineTestSupport.BUILTIN_ASSET_ROOT,
                 shared,

@@ -36,7 +36,7 @@ class RimeLearningRankingTest {
             root = File(instrumentation.targetContext.cacheDir, "learning-ranking").also { it.deleteRecursively() }
             shared = File(root, "shared")
             user = File(root, "user")
-            EngineTestSupport.copyAssetTree(
+            AssetTrees.copy(
                 instrumentation.targetContext.assets,
                 EngineTestSupport.BUILTIN_ASSET_ROOT,
                 shared,

@@ -48,6 +48,8 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = false
     }
+    // Helpers the instrumented tests of this module, :ime and :app share.
+    testFixtures { enable = true }
 }
 
 dependencies {

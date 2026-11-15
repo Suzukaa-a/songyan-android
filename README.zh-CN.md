@@ -18,7 +18,7 @@
 ### 自己设计键盘
 
 <p align="center">
-  <img src=".github/screenshots/layout-editor.png" width="360" alt="布局编辑器：26 键拆分时的键盘排列，下面是所选按键的标题、角标、宽度和点按动作">
+  <img src=".github/screenshots/layout-editor.png" width="360" alt="布局编辑器：26 键的排列，下面是所选按键的标题、角标、宽度和点按动作">
 </p>
 
 - 每个键都能改：标题、角标、宽度、点按动作、长按选项与滑动输入的字符。

@@ -21,7 +21,7 @@ An Android keyboard built on the [RIME](https://rime.im) input method engine. De
 ### Design your own keyboard
 
 <p align="center">
-  <img src=".github/screenshots/layout-editor.png" width="360" alt="Layout editor: the split arrangement of the 26-key layout, with the selected key's label, corner hint, width and tap action below">
+  <img src=".github/screenshots/layout-editor.png" width="360" alt="Layout editor: the 26-key arrangement, with the selected key's label, corner hint, width and tap action below">
 </p>
 
 - Customize any key: its label, corner hint, width, tap action, long-press options, and swipe-input character.

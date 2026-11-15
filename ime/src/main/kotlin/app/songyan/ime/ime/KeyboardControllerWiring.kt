@@ -126,10 +126,9 @@ internal fun KeyboardController.wireViews() {
     keyboard.onLanguageMenu = { openKeyboardMenu() }
     keyboard.onPickInputMethod = { callbacks.inputMethods.pick() }
     keyboard.onSymbolPanel = { openSymbolPanel() }
-    readingRow.onChoice = { index, label -> enqueue { applyRailChoice(index - railScroll, label) } }
-    candidates.onReading = { index, label -> enqueue { applyRailChoice(index - railScroll, label) } }
+    readingRow.onChoice = { index, label -> enqueue { applyRailChoice(index, label) } }
+    candidates.onReading = { index, label -> enqueue { applyRailChoice(index, label) } }
     keyboard.onRailChoice = { position, label -> enqueue { applyRailChoice(position, label) } }
-    keyboard.onRailScroll = { steps -> scrollRail(steps) }
     keyboard.popupLayer = popupLayer
     keyboard.composing = { session?.snapshot?.isComposing == true }
     // Pending raw input counts as typing for the caret-drag choice only: holds and delete keep

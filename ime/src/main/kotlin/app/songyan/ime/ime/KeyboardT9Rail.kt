@@ -69,7 +69,7 @@ internal fun KeyboardController.railEligible(active: InputSession?): Boolean =
         active.snapshot.isComposing &&
         !active.snapshot.isAsciiMode
 
-/** The items in display order; the nine-key rail shows the window [railScroll] picks, the row and inline readings all. */
+/** The items in display order; the nine-key rail, the row and the inline readings all show every one. */
 internal fun KeyboardController.railItems(): List<RailItem> = T9RailPolicy.items(railChoices)
 
 internal fun KeyboardController.clearRail() {
@@ -82,7 +82,7 @@ internal fun KeyboardController.clearRail() {
         ambiguityPicker.clear()
     }
     railRevision = -1
-    railScroll = 0
+    railEpoch += 1
     candidatesFiltered = false
     pageReadings = emptyList()
 }
@@ -147,7 +147,6 @@ internal suspend fun KeyboardController.refreshReadingRail(active: InputSession)
     val snapshot = active.snapshot
     if (readingFilter.revision != revision) {
         readingFilter.reset(revision)
-        railScroll = 0
     }
     readingFilter.setCoverage(readingCoverage(snapshot.rawInput))
     val lock = ambiguityPicker.lock
@@ -284,7 +283,6 @@ internal fun KeyboardController.publishRail(
     val marked = compositionText(active, snapshot)
     if (resolved != railChoices || marked != lastMarked || candidatesFiltered != readingFilterShowing(active)) {
         railChoices = resolved
-        railScroll = T9RailPolicy.clampScroll(T9RailPolicy.items(resolved).size, railScroll)
         if (repaint) {
             render()
             return true
@@ -310,7 +308,7 @@ internal suspend fun KeyboardController.applyRailChoice(
 ) {
     val active = session.takeIf { ready } ?: return
     if (!railEligible(active)) return
-    val item = T9RailPolicy.items(railChoices).getOrNull(railScroll + position)
+    val item = T9RailPolicy.items(railChoices).getOrNull(position)
     if (item == null || item.label != label || item.selected) return
     val revision = active.compositionRevision
     when (item.kind) {
@@ -318,20 +316,12 @@ internal suspend fun KeyboardController.applyRailChoice(
         RailKind.READING -> {
             if (readingFilter.revision != revision || item.label !in readingFilter.options) return
             readingFilter.select(item.label)
-            railScroll = 0
+            railEpoch += 1
             loadReadings(active, revision)
             if (!publishRail(active, revision)) render()
         }
         else -> Unit
     }
-}
-
-/** Vertical scroll of the rail by whole slots. */
-internal fun KeyboardController.scrollRail(steps: Int) {
-    val next = T9RailPolicy.clampScroll(railItems().size, railScroll + steps)
-    if (next == railScroll) return
-    railScroll = next
-    render()
 }
 
 /** Applies a spelling option the engine proved; the lock is recorded so Delete can restore the original input. */
@@ -402,7 +392,7 @@ internal suspend fun KeyboardController.undoRailChoice(active: InputSession): Bo
     if (!railEligible(active)) return false
     if (readingFilter.isFiltering && readingFilter.revision == active.compositionRevision) {
         readingFilter.undoSelection()
-        railScroll = 0
+        railEpoch += 1
         if (!publishRail(active, active.compositionRevision)) render()
         return true
     }

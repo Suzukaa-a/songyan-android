@@ -56,12 +56,20 @@ class T9RailItemsTest {
     }
 
     @Test
-    fun theWindowScrollsAndClamps() {
-        val items = (1..5).map { RailItem("r$it", RailKind.READING) }
-        assertEquals(listOf("r1", "r2", "r3"), T9RailPolicy.window(items, 0).map { it.label })
-        assertEquals(listOf("r3", "r4", "r5"), T9RailPolicy.window(items, 2).map { it.label })
-        assertEquals(listOf("r3", "r4", "r5"), T9RailPolicy.window(items, 9).map { it.label })
-        assertEquals(listOf("r1", "r2", "r3"), T9RailPolicy.window(items, -4).map { it.label })
-        assertEquals(2, T9RailPolicy.window(items.take(2), 3).size)
+    fun theColumnScrollsThroughEveryReadingByPixel() {
+        // A 300 px column shows three 100 px readings of five.
+        assertEquals(100f, RailColumn.pitch(300f))
+        assertEquals(200f, RailColumn.maxOffset(5, 300f))
+        assertEquals(0f, RailColumn.maxOffset(2, 300f))
+        // Unscrolled, a touch reads the reading under it; scrolled 150 px, the list moved by 1.5 readings.
+        assertEquals(0, RailColumn.itemAt(1050f, 0f, 5, 1000f, 300f))
+        assertEquals(2, RailColumn.itemAt(1250f, 0f, 5, 1000f, 300f))
+        assertEquals(1, RailColumn.itemAt(1000f, 150f, 5, 1000f, 300f))
+        assertEquals(3, RailColumn.itemAt(1220f, 150f, 5, 1000f, 300f))
+        // Below the last reading is nothing.
+        assertEquals(-1, RailColumn.itemAt(1250f, 0f, 2, 1000f, 300f))
+        // A slot is named after the reading at its centre.
+        assertEquals(listOf(2, 3, 4), (0..2).map { RailColumn.itemAtSlot(it, 200f, 5, 300f) })
+        assertEquals(listOf(1, 2, 3), (0..2).map { RailColumn.itemAtSlot(it, 120f, 5, 300f) })
     }
 }

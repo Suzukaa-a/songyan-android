@@ -78,7 +78,7 @@ internal fun KeyboardView.handleDown(
     val press =
         Press(
             pointerId = pointerId,
-            snapshot = keySnapshot(slot),
+            snapshot = if (slot in railIndices) railSnapshot(slot, y) else keySnapshot(slot),
             startedAt = SystemClock.uptimeMillis(),
             startX = x,
             startY = y,
@@ -90,6 +90,14 @@ internal fun KeyboardView.handleDown(
     if (codes != null && codes.size > 1) press.tracker = LetterSwipeTracker(codes.size)
     press.flickTarget = flickTarget(press.snapshot)
     pointers.put(pointerId, press)
+    if (slot in railIndices) {
+        press.railStartOffset = railOffset
+        press.railSampleY = y
+        press.railSampleAt = press.startedAt
+        // A touch that stops a moving list only stops it, as in any scroll view.
+        if (stopRailFling()) press.railDragged = true else railPressedItem = press.snapshot.railPosition
+        invalidate()
+    }
     // Accepted press: the tick is synchronous with the touch, not with the release.
     feedback(press.snapshot)
     if (press.snapshot.isBackspace) {
@@ -396,7 +404,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
             mergedMove(press, tracker, x, y)
             continue
         }
-        if (press.snapshot.railPosition >= 0) {
+        if (press.key in railIndices) {
             dragRail(press, y)
             continue
         }
@@ -452,7 +460,7 @@ internal fun KeyboardView.startsCursorSwipe(
         settingOn = cursorSwipeAnywhere,
         isComposing = typing(),
         isIdle = cursorDragIdle() && !press.cursorDragBlocked,
-        ownsSidewaysGesture = press.tracker != null || isKana12FlickPress(press) || press.snapshot.railPosition >= 0,
+        ownsSidewaysGesture = press.tracker != null || isKana12FlickPress(press) || press.key in railIndices,
         isSpace = press.snapshot.isSpace,
         isDelete = press.snapshot.isBackspace,
         dxDp = (x - press.startX) / density,
@@ -461,24 +469,50 @@ internal fun KeyboardView.startsCursorSwipe(
 }
 
 /**
- * A vertical drag on the nine-key rail scrolls its choices one slot per slot-height of travel (the
- * finger moving up reveals later choices); a press that scrolled never selects on release.
+ * A vertical drag on the nine-key rail scrolls its readings with the finger, as a scroll view does
+ * (the finger moving up reveals later readings); a press that scrolled never selects on release.
  */
 internal fun KeyboardView.dragRail(
     press: Press,
     y: Float,
 ) {
-    val box = bounds.getOrNull(press.key) ?: return
     val rise = press.startY - y
     if (!press.railDragged && abs(rise) <= TOUCH_SLOP_DP * density) return
-    press.railDragged = true
-    press.moved = true
-    val steps = (rise / (box.bottom - box.top).coerceAtLeast(1f)).toInt()
-    if (steps != press.railSteps) {
-        onRailScroll(steps - press.railSteps)
-        press.railSteps = steps
+    if (!press.railDragged) {
+        press.railDragged = true
+        press.moved = true
+        railPressedItem = -1
+        // The list follows the travel past the slop, so it does not jump by the slop itself.
+        val slop = TOUCH_SLOP_DP * density
+        press.railStartOffset = railOffset - (if (rise > 0) slop else -slop)
     }
+    val now = SystemClock.uptimeMillis()
+    val elapsed = now - press.railSampleAt
+    if (elapsed > 0) {
+        val speed = (y - press.railSampleY) * 1000f / elapsed
+        // Smoothed, so one late touch sample does not decide the fling.
+        press.railVelocity = press.railVelocity * RAIL_VELOCITY_KEEP + speed * (1f - RAIL_VELOCITY_KEEP)
+        press.railSampleY = y
+        press.railSampleAt = now
+    }
+    setRailOffset(press.railStartOffset + rise)
 }
+
+/** Ends a rail press: a drag flings the list on; a tap leaves the selection to [activate]. */
+internal fun KeyboardView.releaseRail(press: Press) {
+    railPressedItem = -1
+    if (!press.railDragged) return
+    // The slots name what the drag left in view now; a fling renames them again where it rests.
+    relabelRail()
+    // A finger that rested before lifting throws nothing.
+    val stale = SystemClock.uptimeMillis() - press.railSampleAt > RAIL_REST_MS
+    if (!stale && abs(press.railVelocity) >= RAIL_MIN_FLING_DP_S * density) flingRail(press.railVelocity)
+    invalidate()
+}
+
+private const val RAIL_VELOCITY_KEEP = 0.4f
+private const val RAIL_REST_MS = 80L
+private const val RAIL_MIN_FLING_DP_S = 300f
 
 /** The digit a nine-key digit key shows in its corner and types on a flick (its long press types it too), else null. */
 internal fun KeyboardView.flickDigit(snapshot: KeyPressSnapshot): String? {
@@ -738,6 +772,7 @@ internal fun KeyboardView.handleUp(
         if (press.held || !press.moved || press.tracker?.choice != null || isKana12FlickPress(press)) {
             onReleaseFeedback()
         }
+        if (press.key in railIndices) releaseRail(press)
         pointers.remove(pointerId)
         popupLayer?.hidePreview(KeyMotion.PREVIEW_HOLD_MS)
         invalidateKey(press.key)
@@ -811,6 +846,7 @@ internal fun KeyboardView.cancelTouches() {
         if (press.snapshot.isBackspace) BackspaceTrace.record(BackspaceTrace.Event.TOUCH_CANCELLED)
     }
     pointers.clear()
+    railPressedItem = -1
     clearPopup()
     flickMorph.clear()
     popupLayer?.hidePreview(0)

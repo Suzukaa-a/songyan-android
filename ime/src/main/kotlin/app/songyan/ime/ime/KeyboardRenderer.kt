@@ -147,10 +147,13 @@ internal fun KeyboardController.render() {
             } else {
                 emptyList()
             }
-        // The window is all the view draws; the full count and the first shown index let assistive
-        // technology scroll the choices the three slots do not show.
-        val railFirst = T9RailPolicy.clampScroll(items.size, railScroll)
-        val railWindow = T9RailPolicy.window(items, railScroll)
+        // A key that changed the typed input starts the column over at once, before the refreshed
+        // readings land; that refresh, a page read or a highlight move keeps the finger's scroll.
+        val input = snapshot.rawInput.takeIf { snapshot.isComposing }
+        if (input != railEpochInput) {
+            railEpochInput = input
+            railEpoch += 1
+        }
         // The shell draws no digit row of a password field, so it keeps its own height.
         keyboard.extraRows = 0
         keyboard.syllableHints = emptyMap()
@@ -184,10 +187,10 @@ internal fun KeyboardController.render() {
             enterLabel = enterLabel(),
             locked = locked,
             faces = faces,
-            railChoices = railWindow.map { it.label },
-            railSelected = railWindow.count { it.selected },
-            railChoiceCount = items.size,
-            railChoiceFirst = railFirst,
+            // The whole list: the view scrolls it, so a drag never waits on the engine.
+            railChoices = items.map { it.label },
+            railSelected = items.count { it.selected },
+            railEpoch = railEpoch,
         )
         if (phoneDefinition != null) scheduleReadingRail(active, snapshot) else clearRail()
         return

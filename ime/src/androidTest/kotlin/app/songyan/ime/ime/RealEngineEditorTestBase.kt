@@ -604,6 +604,15 @@ abstract class RealEngineEditorTestBase {
          * the rail shows only a window, and a longer spelling can sit just below it.
          */
         fun scrollReadingRailUp() {
+            // The column scrolls at once under the finger, so wait for the readings past the
+            // window to have landed; until then there is nothing to scroll to.
+            val ready = SystemClock.uptimeMillis() + TIMEOUT_MS
+            var scrollable = false
+            while (!scrollable && SystemClock.uptimeMillis() < ready) {
+                main { scrollable = find(KeyboardView::class.java).railCanScroll(forward = true) }
+                if (!scrollable) SystemClock.sleep(POLL_MS)
+            }
+            assertTrue("the reading column has nothing below its window", scrollable)
             var start = 0f to 0f
             var slot = 0f
             main {
@@ -612,7 +621,7 @@ abstract class RealEngineEditorTestBase {
                 assertTrue("no visible reading on ${view.labels}", reading >= 0)
                 val hit = Rect()
                 view.accessibilityNodeProvider.createAccessibilityNodeInfo(reading)!!.getBoundsInParent(hit)
-                // dragRail divides the travel by the drawn key's height, so one height scrolls one slot.
+                // The column follows the finger by pixels; a little over one slot reveals the next reading.
                 val drawn = view.bounds[reading]
                 start = hit.exactCenterX() to hit.exactCenterY()
                 slot = drawn.bottom - drawn.top
@@ -620,8 +629,8 @@ abstract class RealEngineEditorTestBase {
             val down = SystemClock.uptimeMillis()
             main {
                 touch(down, MotionEvent.ACTION_DOWN, start)
-                // The first move arms the drag; the second travels a little over one slot so the
-                // integer step count cannot truncate to zero, and the release selects nothing.
+                // The first move arms the drag; the second travels a little over one slot, and the
+                // release selects nothing.
                 touch(down + 16, MotionEvent.ACTION_MOVE, start.first to start.second - slot * 0.5f, downTime = down)
                 touch(down + 32, MotionEvent.ACTION_MOVE, start.first to start.second - slot * 1.2f, downTime = down)
                 touch(down + 48, MotionEvent.ACTION_UP, start.first to start.second - slot * 1.2f, downTime = down)

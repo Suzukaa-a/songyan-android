@@ -45,15 +45,4 @@ internal object T9RailPolicy {
             // The applied spelling is also a reading of the words it left; showing it twice adds nothing.
             choices.readings.filter { it != choices.lockedOption }.forEach { add(RailItem(it, RailKind.READING)) }
         }
-
-    fun clampScroll(
-        itemCount: Int,
-        scroll: Int,
-    ): Int = scroll.coerceIn(0, maxOf(0, itemCount - VISIBLE_SLOTS))
-
-    /** The items the three slots show at [scroll]. */
-    fun window(
-        items: List<RailItem>,
-        scroll: Int,
-    ): List<RailItem> = items.drop(clampScroll(items.size, scroll)).take(VISIBLE_SLOTS)
 }

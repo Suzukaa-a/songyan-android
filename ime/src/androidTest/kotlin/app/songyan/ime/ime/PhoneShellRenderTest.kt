@@ -252,7 +252,8 @@ class PhoneShellRenderTest {
                 shift = false,
                 enterLabel = "换行",
                 faces = KeyboardFaces(phone = true),
-                railChoices = listOf("ni", "mi", "ne"),
+                // More readings than the three slots show, so the column has somewhere to scroll.
+                railChoices = listOf("ni", "mi", "ne", "nie", "mie"),
                 railSelected = applied,
             )
             view.measure(
@@ -335,17 +336,13 @@ class PhoneShellRenderTest {
     fun draggingTheRailScrollsItAndNeverSelects() {
         val view = railView(applied = 0)
         val taps = mutableListOf<Pair<Int, String>>()
-        val scrolls = mutableListOf<Int>()
         view.onRailChoice = { position, label -> taps += position to label }
-        view.onRailScroll = { scrolls += it }
         val center = slotCenter(view, "mi")
         val slot = slotCenter(view, "ne").second - center.second
-        // Up by two and a half slots reveals later choices: two whole steps in all, and the release
-        // selects nothing. The half slot keeps the count independent of how the slot height rounds
-        // to pixels, which differs from screen to screen; the travel may leave a short view, as a
-        // finger on a real screen may.
+        // Up by two and a half slots moves the list with the finger, by pixels rather than whole
+        // slots (a quick release may carry it further), and the release selects nothing.
         gesture(view, center, center.second - 2.5f * slot)
-        assertEquals(2, scrolls.sum())
+        assertTrue("the list followed the finger: ${view.railOffset}", view.railOffset >= 2f * slot)
         assertTrue("a scroll is not a tap: $taps", taps.isEmpty())
     }
 }

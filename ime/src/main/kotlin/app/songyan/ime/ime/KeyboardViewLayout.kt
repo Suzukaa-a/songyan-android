@@ -620,15 +620,24 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
 }
 
 /**
- * Puts the current [KeyboardView.railChoices] on the rail keys [rebuildPhone] placed, top to
- * bottom, as it would: a slot the choices do not reach is an empty, inert key.
+ * Names each rail slot after the reading drawn at its centre at the current scroll, so assistive
+ * technology reads the column it sees: a slot past the last reading is an empty, inert key.
  */
 internal fun KeyboardView.relabelRail() {
     val updated = keys.toMutableList()
+    val column = railColumn()
     var slot = 0
     for (index in updated.indices) {
         if (index !in railIndices) continue
-        val choice = railChoices.getOrNull(slot).orEmpty()
+        val item =
+            if (column ==
+                null
+            ) {
+                slot
+            } else {
+                RailColumn.itemAtSlot(slot, railOffset, railChoices.size, column.height())
+            }
+        val choice = railChoices.getOrNull(item).orEmpty()
         slot += 1
         updated[index] = LayoutKey(choice, action = LayoutAction.literal(choice))
     }
@@ -651,7 +660,7 @@ internal fun KeyboardView.applyKeyFaces() {
         // An applied rail choice reads as chosen: Delete undoes it, a tap does nothing.
         spokenLabels =
             spokenLabels.mapIndexed { index, label ->
-                if (index in railIndices && railPosition(index) < railSelectedCount) {
+                if (index in railIndices && railItemOfSlot(index) in 0 until railSelectedCount) {
                     context.getString(R.string.ime_rail_chosen, label)
                 } else {
                     label
@@ -682,6 +691,7 @@ private fun KeyboardView.applyTextLanguage() {
  * press only redraws the keycaps. Runs whenever the labels or the key rectangles change.
  */
 internal fun KeyboardView.fitLabels() {
+    fitRailLabels()
     if (labelSizes.size != keys.size) {
         labelSizes = FloatArray(keys.size)
         hintSizes = FloatArray(keys.size)
@@ -916,8 +926,57 @@ internal fun KeyboardView.phoneKeySetSignature(
 /** The slot of rail key [index] among the rail's keys, top to bottom. */
 internal fun KeyboardView.railPosition(index: Int): Int = railIndices.count { it < index }
 
-internal fun KeyboardView.keySnapshot(index: Int): KeyPressSnapshot =
-    KeyPressSnapshot(
+/** The reading rail key [index] shows at the current scroll, or -1. */
+internal fun KeyboardView.railItemOfSlot(index: Int): Int {
+    val column = railColumn() ?: return railPosition(index)
+    return RailColumn.itemAtSlot(railPosition(index), railOffset, railChoices.size, column.height())
+}
+
+/**
+ * A press on the reading column, captured as the reading under [y] at the current scroll: the
+ * release selects that reading even if the list moved or relabelled meanwhile.
+ */
+internal fun KeyboardView.railSnapshot(
+    index: Int,
+    y: Float,
+): KeyPressSnapshot {
+    val column = railColumn()
+    val item =
+        if (column ==
+            null
+        ) {
+            -1
+        } else {
+            RailColumn.itemAt(y, railOffset, railChoices.size, column.top, column.height())
+        }
+    val label = railChoices.getOrNull(item)
+    return KeyPressSnapshot(
+        identity = identities.getOrNull(index).orEmpty(),
+        action = LayoutAction.literal(label.orEmpty()),
+        railLabel = label,
+        railPosition = if (label == null) -1 else item,
+        railApplied = label != null && item < railSelectedCount,
+        longPress = emptyList(),
+        swipeCodes = null,
+        hint = null,
+    )
+}
+
+internal fun KeyboardView.keySnapshot(index: Int): KeyPressSnapshot {
+    // A rail slot stands for the reading drawn at its centre: assistive technology clicks the
+    // slot, and the choice must be that reading's place in the whole list.
+    if (index in railIndices) {
+        val column = railColumn()
+        if (column !=
+            null
+        ) {
+            return railSnapshot(
+                index,
+                column.top + (railPosition(index) + 0.5f) * RailColumn.pitch(column.height()),
+            )
+        }
+    }
+    return KeyPressSnapshot(
         identity = identities.getOrNull(index).orEmpty(),
         action = keys[index].action,
         t9FirstKey = index == t9FirstKeyIndex,
@@ -928,6 +987,7 @@ internal fun KeyboardView.keySnapshot(index: Int): KeyPressSnapshot =
         swipeCodes = swipeCodes.getOrNull(index),
         hint = keys[index].secondaryLabel,
     )
+}
 
 /** Solves [KeyboardView.labelInkX]/[KeyboardView.labelInkY] for key [i] at its fitted size. */
 private fun KeyboardView.inkCentre(i: Int) {

@@ -399,8 +399,14 @@ class KeyboardController(
     /** What the 9-key composing rail offers right now (engine-backed, never guessed). */
     internal var railChoices = SpellingRailChoices()
 
-    /** First visible rail item when the choices outnumber the rail's slots. */
-    internal var railScroll = 0
+    /**
+     * Bumped where the reading column must start again from its first reading: a new input, a
+     * chosen or undone reading, a cleared rail. A refresh of the same list keeps the scroll.
+     */
+    internal var railEpoch = 0
+
+    /** The typed input [railEpoch] last started over for. */
+    internal var railEpochInput: String? = null
 
     /** The composition revision the rail's engine queries last ran for; -1 forces the next one. */
     internal var railRevision = -1

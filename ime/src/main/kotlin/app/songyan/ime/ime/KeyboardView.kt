@@ -16,6 +16,7 @@ import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.OverScroller
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import app.songyan.ime.candidate.KeyboardContentDock
@@ -412,11 +413,8 @@ class KeyboardView(
     var onSymbolPanel: () -> Unit = {}
     var onReleaseFeedback: () -> Unit = {}
 
-    /** A nine-key rail choice: the slot it sits in and its label, as drawn. */
+    /** A nine-key rail choice: its place in the whole reading list and its label, as drawn. */
     var onRailChoice: (position: Int, label: String) -> Unit = { _, _ -> }
-
-    /** The rail was dragged vertically by whole slots (positive reveals later choices). */
-    var onRailScroll: (steps: Int) -> Unit = {}
 
     /** The alternates popup opened or closed: Back must close it before hiding the keyboard. */
     var onPopupChanged: () -> Unit = {}
@@ -453,13 +451,22 @@ class KeyboardView(
     )
 
     internal var railIndices: Set<Int> = emptySet()
+
+    /** Every engine-backed rail choice, top to bottom; the column scrolls through them. */
     internal var railChoices: List<String> = emptyList()
 
-    /** Every engine-backed rail choice, including the ones the three-slot window does not show. */
-    internal var railChoiceCount: Int = 0
+    /** The column's scroll in pixels: 0 shows the first reading at the top. */
+    internal var railOffset: Float = 0f
+    internal val railScroller = OverScroller(context)
 
-    /** The first choice the window shows; assistive technology scrolls this by whole slots. */
-    internal var railChoiceFirst: Int = 0
+    /** Each reading's fitted text size; see [fitRailLabels]. */
+    internal var railLabelSizes: FloatArray = FloatArray(0)
+
+    /** The controller's [KeyboardController.railEpoch] this scroll belongs to. */
+    private var railEpochSeen: Int = 0
+
+    /** The reading under a finger that has not started scrolling, drawn pressed; -1 for none. */
+    internal var railPressedItem: Int = -1
 
     /** How many leading rail choices are already applied: drawn as chosen, not tappable. */
     internal var railSelectedCount: Int = 0
@@ -494,7 +501,12 @@ class KeyboardView(
         var flickVoid: Boolean = false,
         /** A rail press that turned into a vertical scroll: it never selects on release. */
         var railDragged: Boolean = false,
-        var railSteps: Int = 0,
+        /** The column's scroll when this press landed; the drag moves it by the finger's travel. */
+        var railStartOffset: Float = 0f,
+        /** The last drag sample and the speed it gave, in pixels per second (positive moving down). */
+        var railSampleY: Float = 0f,
+        var railSampleAt: Long = 0L,
+        var railVelocity: Float = 0f,
         var task: Runnable? = null,
         var tracker: LetterSwipeTracker? = null,
         /** A Delete press deleted at its DOWN while a composition was in progress (see [handleDown]). */
@@ -554,8 +566,8 @@ class KeyboardView(
         railIndices = emptySet()
         railChoices = emptyList()
         railSelectedCount = 0
-        railChoiceCount = 0
-        railChoiceFirst = 0
+        railOffset = 0f
+        railScroller.forceFinished(true)
         layout = definition
         this.faces = faces
         // A twelve-key kana board is placed slot by slot from its authored grid and rails; every
@@ -588,15 +600,13 @@ class KeyboardView(
         faces: KeyboardFaces = KeyboardFaces(),
         railChoices: List<String> = emptyList(),
         railSelected: Int = 0,
-        railChoiceCount: Int = railChoices.size,
-        railChoiceFirst: Int = 0,
+        railEpoch: Int = 0,
     ) {
         if (shell?.key == config &&
             layout == null &&
             this.railChoices == railChoices &&
             railSelectedCount == railSelected &&
-            this.railChoiceCount == railChoiceCount &&
-            this.railChoiceFirst == railChoiceFirst &&
+            railEpochSeen == railEpoch &&
             shifted == shift &&
             capsLocked == locked &&
             actionLabel == enterLabel &&
@@ -617,10 +627,13 @@ class KeyboardView(
             actionLabel == enterLabel &&
             this.faces == faces
         ) {
+            if (railEpochSeen != railEpoch) resetRailScroll()
+            railEpochSeen = railEpoch
             this.railChoices = railChoices
             railSelectedCount = railSelected
-            this.railChoiceCount = railChoiceCount
-            this.railChoiceFirst = railChoiceFirst
+            fitRailLabels()
+            // A longer or shorter list of the same input keeps its place, within the new end.
+            setRailOffset(railOffset)
             relabelRail()
             invalidate()
             announceItemsChanged()
@@ -633,10 +646,10 @@ class KeyboardView(
             ShellModel(config, config.numeric) { width, height ->
                 PhoneKeypadLayout.build(config.copy(width = width, height = height))
             }
+        if (railEpochSeen != railEpoch) resetRailScroll()
+        railEpochSeen = railEpoch
         this.railChoices = railChoices
         railSelectedCount = railSelected
-        this.railChoiceCount = railChoiceCount
-        this.railChoiceFirst = railChoiceFirst
         shifted = shift
         capsLocked = locked
         actionLabel = enterLabel
@@ -661,8 +674,8 @@ class KeyboardView(
         shell = ShellModel(pad, numeric = true) { width, height -> EditorDigitLayouts.build(pad, width, height) }
         railChoices = emptyList()
         railSelectedCount = 0
-        railChoiceCount = 0
-        railChoiceFirst = 0
+        railOffset = 0f
+        railScroller.forceFinished(true)
         shifted = false
         capsLocked = false
         actionLabel = enterLabel
@@ -794,6 +807,8 @@ class KeyboardView(
             ) {
                 continue
             }
+            // The rail slots only mark the reading column; drawRailColumn draws the readings.
+            if (i in railIndices) continue
             val key = keys[i]
             val pressed = pressedFlags[i]
             val isLetter =
@@ -938,24 +953,24 @@ class KeyboardView(
      * it: readings rarely fill all three slots, and separate caps would leave empty keys below.
      */
     private fun drawRailColumn(canvas: Canvas) {
-        if (railIndices.isEmpty()) return
-        var left = Float.MAX_VALUE
-        var top = Float.MAX_VALUE
-        var right = -Float.MAX_VALUE
-        var bottom = -Float.MAX_VALUE
-        for (i in railIndices) {
-            val box = bounds.getOrNull(i) ?: continue
-            left = minOf(left, box.left)
-            top = minOf(top, box.top)
-            right = maxOf(right, box.right)
-            bottom = maxOf(bottom, box.bottom)
-        }
-        if (left >= right || top >= bottom) return
-        drawBounds.set(left + insetX, top + insetY, right - insetX, bottom - insetY)
+        val column = railColumn() ?: return
+        drawBounds.set(column.left + insetX, column.top + insetY, column.right - insetX, column.bottom - insetY)
         val radius = keyRadiusPx()
         paint.style = Paint.Style.FILL
         paint.color = palette.control
         canvas.drawRoundRect(drawBounds, radius, radius, paint)
+        drawRailItems(canvas, column, railPressedItem, paint, drawBounds)
+    }
+
+    override fun computeScroll() {
+        stepRailFling()
+    }
+
+    /** A new list starts at its first reading; a fling of the old list stops. */
+    private fun resetRailScroll() {
+        railOffset = 0f
+        railScroller.forceFinished(true)
+        railPressedItem = -1
     }
 
     /** The union of the keys that still animate this frame: the next frame redraws only that. */
@@ -1131,29 +1146,24 @@ class KeyboardView(
     override fun hostScrollActions(): List<AccessibilityNodeInfo.AccessibilityAction> {
         if (railChoices.isEmpty()) return emptyList()
         return buildList {
-            if (railChoiceFirst > 0) add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD)
-            if (railChoiceFirst < railChoiceCount - T9RailPolicy.VISIBLE_SLOTS) {
-                add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD)
-            }
+            if (railCanScroll(forward = false)) add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD)
+            if (railCanScroll(forward = true)) add(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD)
         }
     }
 
     /**
-     * Scrolls the rail one slot through the same route a drag takes, then re-reads the labels the
-     * slots were given. A step the rail does not take reports failure instead of a scroll.
+     * Scrolls the reading column by one column of readings, then re-reads the labels the slots
+     * were given. A scroll the column cannot take reports failure.
      */
     override fun performHostAction(action: Int): Boolean {
-        val steps =
+        val forward =
             when (action) {
-                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> 1
-                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> -1
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> true
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> false
                 else -> return false
             }
-        if (hostScrollActions().none { it.id == action }) return false
-        val first = railChoiceFirst
-        onRailScroll(steps)
-        if (railChoiceFirst == first) return false
-        // Every slot swapped the choice it draws; clients must not reuse the labels they cached.
+        if (!pageRail(forward)) return false
+        // Every slot swapped the reading it names; clients must not reuse the labels they cached.
         announceItemsChanged()
         invalidate()
         return true

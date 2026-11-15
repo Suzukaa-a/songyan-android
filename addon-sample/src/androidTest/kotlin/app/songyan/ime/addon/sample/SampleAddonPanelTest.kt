@@ -109,18 +109,23 @@ class SampleAddonPanelTest {
             // Give the embedded surface a moment to render and register its input channel.
             Thread.sleep(700)
 
-            val location =
+            // Read where the panel is at each tap: under load the window can still move after the
+            // panel appears, and a stale position sends every tap past the buttons.
+            fun surfaceLocation(): IntArray =
                 IntArray(2).also { position ->
                     scenario.onActivity { it.surfaceView.getLocationOnScreen(position) }
                 }
-            val tapX = location[0] + width / 2
+
+            var lastTap = Pair(0, 0)
 
             fun tapButton(index: Int) {
+                val location = surfaceLocation()
                 val centerDp =
                     SamplePanelView.FIRST_BUTTON_TOP_DP +
                         index * SamplePanelView.BUTTON_HEIGHT_DP +
                         SamplePanelView.BUTTON_HEIGHT_DP / 2
-                tap(tapX, location[1] + (centerDp * density).toInt())
+                lastTap = Pair(location[0] + width / 2, location[1] + (centerDp * density).toInt())
+                tap(lastTap.first, lastTap.second)
             }
 
             // On a slow emulator the embedded surface can still be without its input channel after
@@ -130,6 +135,11 @@ class SampleAddonPanelTest {
                     tapButton(0)
                     waitFor(FIRST_TAP_WAIT_MS) { panelHost.writes.isNotEmpty() }
                 }
+            if (!firstLanded) {
+                // Leave the system's own view of the windows and their touch regions in the test's
+                // logcat, which the CI keeps, so a touch that went nowhere can be traced.
+                logDiagnosis("tap at $lastTap; panel at ${surfaceLocation().toList()} size ${width}x$height")
+            }
             assertTrue("the insert button of the panel did not reach the host", firstLanded)
             // A late first tap may still arrive; count from whatever has landed by now.
             Thread.sleep(FIRST_TAP_WAIT_MS)
@@ -275,3 +285,17 @@ class SampleAddonPanelTest {
 
 private const val FIRST_TAP_ATTEMPTS = 4
 private const val FIRST_TAP_WAIT_MS = 1_500L
+
+private fun logDiagnosis(summary: String) {
+    val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+    android.util.Log.e(DIAGNOSIS_TAG, summary)
+    for (command in listOf("dumpsys input", "dumpsys window windows")) {
+        val output =
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use {
+                it.bufferedReader().readText()
+            }
+        output.lineSequence().forEach { line -> android.util.Log.e(DIAGNOSIS_TAG, line) }
+    }
+}
+
+private const val DIAGNOSIS_TAG = "SampleAddonPanelTest"

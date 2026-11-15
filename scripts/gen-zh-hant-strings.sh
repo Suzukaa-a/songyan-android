@@ -122,8 +122,13 @@ for key in (
     "options_split_on",
     "layout_editor_split_section",
     "layout_editor_split_automatic",
+    "options_side_margin_title",
 ):
     key_replacements[key] = [("大屏", "大螢幕")]
+
+key_replacements["options_middle_gap_title"] = [("寬屏", "寬螢幕")]
+key_replacements["appearance_key_gap_scaling_title"] = [("大屏", "大螢幕")]
+key_replacements["appearance_key_gap_scaling_body"] = [("橫屏", "橫向"), ("摺疊屏", "摺疊螢幕")]
 
 key_replacements["options_wide_note"] = [
     ("摺疊屏", "摺疊螢幕"),

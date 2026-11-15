@@ -131,7 +131,7 @@ class KeyboardSplitTest {
             .map { row ->
                 cut[row]
                     .take(breaks[row])
-                    .filter { it.action.type == LayoutActionKind.CODE }
+                    .filter { it.action.type == LayoutActionKind.CODE && !KeyboardPages.isMergedSeparator(it) }
                     .joinToString("") { it.label.lowercase() }
             }
     }

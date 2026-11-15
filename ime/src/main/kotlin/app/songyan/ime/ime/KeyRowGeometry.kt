@@ -20,6 +20,9 @@ internal object KeyRowSolver {
     /** Columns of a standard character row; the shared unit is solved against them. */
     private const val COLUMNS_LETTERS = 10f
 
+    /** Letters in the 26-key third row, between Shift and Delete. */
+    private const val THIRD_ROW_LETTERS = 7
+
     /** A Shift/Delete width at or above this is a side control, not a grid cell. */
     private const val OUTLYING_CONTROL_MIN_WEIGHT = 1.3
 
@@ -57,6 +60,7 @@ internal object KeyRowSolver {
         row: List<LayoutKey>,
     ): Boolean {
         if (key.widthWeight < OUTLYING_CONTROL_MIN_WEIGHT) return false
+        if (KeyboardPages.isMergedSeparator(key)) return true
         return when (key.action.type) {
             LayoutActionKind.SHIFT, LayoutActionKind.BACKSPACE -> true
             LayoutActionKind.PAGE_SWITCH -> row.any { it.action.type == LayoutActionKind.BACKSPACE }
@@ -85,6 +89,18 @@ internal object KeyRowSolver {
             unit = min(unit, (inner - (keys.size - 1) * gap) / weight)
         }
         return if (unit == Float.MAX_VALUE) inner / COLUMNS_LETTERS else max(unit, 1f)
+    }
+
+    /**
+     * The 26-key third row's Shift and Delete width: ten letter columns, with the seven letters of
+     * the third row and the two side keys filling the row.
+     */
+    fun standardSideWidth(
+        inner: Float,
+        gap: Float,
+    ): Float {
+        val column = (inner - (COLUMNS_LETTERS - 1) * gap) / COLUMNS_LETTERS
+        return max(0f, (inner - THIRD_ROW_LETTERS * column - (THIRD_ROW_LETTERS + 1) * gap) / 2f)
     }
 
     /** A split keyboard: the gutter between the halves and the key index each row is cut at. */
@@ -188,9 +204,15 @@ internal object KeyRowSolver {
             }
             outlying > 0 -> {
                 val letters = keys.filterNot { isOutlyingControl(it, keys) }.sumOf { it.widthWeight }.toFloat()
-                val side = (inner - letters * unit - (keys.size - 1) * gap) / outlying
+                val fill = inner - (keys.size - 1) * gap
+                // Side controls are never narrower than the 26-key Shift and Delete at this width: a
+                // pad whose letters are wider units (14 and 18 keys) narrows its letters instead,
+                // so every layout's Shift slot and Delete read the same.
+                val side = max((fill - letters * unit) / outlying, standardSideWidth(inner, gap))
+                val letterUnit = if (letters > 0f) max(0f, fill - side * outlying) / letters else unit
+                val keyUnit = min(unit, letterUnit)
                 keys.forEachIndexed { i, key ->
-                    widths[i] = if (isOutlyingControl(key, keys)) max(side, 1f) else key.widthWeight.toFloat() * unit
+                    widths[i] = if (isOutlyingControl(key, keys)) max(side, 1f) else key.widthWeight.toFloat() * keyUnit
                 }
             }
             else -> {

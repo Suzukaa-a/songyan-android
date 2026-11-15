@@ -564,7 +564,7 @@ internal object KeyboardPages {
         val hasDelete = last.keys.any { it.action.type == LayoutActionKind.BACKSPACE }
         letters[letters.lastIndex] =
             LayoutSplitRow(
-                (if (hasShift) emptyList() else listOf(SHIFT)) + last.left,
+                (if (hasShift) emptyList() else listOf(leadingControl(layout))) + last.left,
                 last.right + if (hasDelete) emptyList() else listOf(DELETE),
             )
         return letters
@@ -651,7 +651,8 @@ internal object KeyboardPages {
         val hasDelete = last.any { it.action.type == LayoutActionKind.BACKSPACE }
         rows[rows.lastIndex] =
             LayoutRow(
-                (if (hasShift) emptyList() else listOf(SHIFT)) + last + if (hasDelete) emptyList() else listOf(DELETE),
+                (if (hasShift) emptyList() else listOf(leadingControl(layout))) + last +
+                    if (hasDelete) emptyList() else listOf(DELETE),
             )
         return rows
     }
@@ -1035,6 +1036,19 @@ internal object KeyboardPages {
     private val englishPage: KeyboardPageDefinition by lazy { KeyboardPagePresets.englishQwerty.materialized() }
 
     private val SHIFT: LayoutKey = LayoutKey("⇧", width = 1.4, action = LayoutAction(LayoutActionKind.SHIFT))
+
+    /**
+     * The merged pads' Shift slot holds a syllable separator, as on iOS: a pad of two-letter keys
+     * has no capitals to shift, and a separator settles which letters of an ambiguous run start the
+     * next syllable. It only acts on a composition; the label is the key face's own string.
+     */
+    private val MERGED_SEPARATOR: LayoutKey = LayoutKey("分词", width = 1.4, action = LayoutAction.code("'"))
+
+    /** Whether [key] is the separator this object puts in a merged pad's Shift slot. */
+    fun isMergedSeparator(key: LayoutKey): Boolean = key == MERGED_SEPARATOR
+
+    private fun leadingControl(layout: KeyboardLayoutKind): LayoutKey =
+        if (layout == KeyboardLayoutKind.MERGED14 || layout == KeyboardLayoutKind.MERGED18) MERGED_SEPARATOR else SHIFT
 
     private val DELETE: LayoutKey = LayoutKey("⌫", width = 1.4, action = LayoutAction(LayoutActionKind.BACKSPACE))
 }

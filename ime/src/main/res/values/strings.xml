@@ -2,6 +2,7 @@
     <string name="ime_space">Space</string>
     <string name="ime_delete">Delete</string>
     <string name="ime_shift">Shift</string>
+    <string name="ime_separator">Split</string>
     <string name="ime_shift_locked">Caps lock</string>
     <string name="ime_enter">Return</string>
     <string name="ime_go">Go</string>

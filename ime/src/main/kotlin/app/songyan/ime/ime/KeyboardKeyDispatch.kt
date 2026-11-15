@@ -211,6 +211,14 @@ internal suspend fun KeyboardController.dispatch(
                 }
             LayoutActionKind.CODE -> {
                 val text = action.value ?: return
+                // The merged pads' separator only splits a composition; idle, it types nothing.
+                if (page == null &&
+                    (layoutKind == KeyboardLayoutKind.MERGED14 || layoutKind == KeyboardLayoutKind.MERGED18) &&
+                    text == "'" &&
+                    active?.snapshot?.isComposing != true
+                ) {
+                    return
+                }
                 if (active != null) {
                     // A lock in force is restored before the next code, or the key would land after
                     // an alias; a restore that fails drops the key rather than mix the two.

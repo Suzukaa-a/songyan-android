@@ -2,6 +2,7 @@
     <string name="ime_space">スペース</string>
     <string name="ime_delete">削除</string>
     <string name="ime_shift">シフト</string>
+    <string name="ime_separator">区切り</string>
     <string name="ime_shift_locked">Caps Lock</string>
     <string name="ime_enter">改行</string>
     <string name="ime_go">開く</string>

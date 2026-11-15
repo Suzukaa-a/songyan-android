@@ -91,7 +91,7 @@ internal fun KeyboardView.labelTextSizeSp(
     label: String,
 ): Float =
     KeyGapScale.label(boardColumnScale).toFloat() *
-        when (key.action.type) {
+        when (if (KeyboardPages.isMergedSeparator(key)) LayoutActionKind.SHIFT else key.action.type) {
             LayoutActionKind.SPACE -> metrics.spaceKeyTextSizeSp
             LayoutActionKind.LANGUAGE_SWITCH -> metrics.languageKeyTextSizeSp
             LayoutActionKind.PAGE_SWITCH, LayoutActionKind.LAYOUT_PAGE_SWITCH -> metrics.pageKeyTextSizeSp

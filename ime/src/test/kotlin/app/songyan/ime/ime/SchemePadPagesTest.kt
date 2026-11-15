@@ -154,9 +154,15 @@ class SchemePadPagesTest {
                 )
             assertEquals(layout.name, 4, definition.rows.size)
             val lastLetterRow = definition.rows[2].keys
-            assertEquals(layout.name, LayoutActionKind.SHIFT, lastLetterRow.first().action.type)
+            // The merged pads carry the syllable separator in the Shift slot.
+            val merged = layout != KeyboardLayoutKind.QWERTY26
+            if (merged) {
+                assertTrue(layout.name, KeyboardPages.isMergedSeparator(lastLetterRow.first()))
+            } else {
+                assertEquals(layout.name, LayoutActionKind.SHIFT, lastLetterRow.first().action.type)
+            }
             assertEquals(layout.name, LayoutActionKind.BACKSPACE, lastLetterRow.last().action.type)
-            assertEquals(layout.name, 1, editingCount(definition, LayoutActionKind.SHIFT))
+            assertEquals(layout.name, if (merged) 0 else 1, editingCount(definition, LayoutActionKind.SHIFT))
             assertEquals(layout.name, 1, editingCount(definition, LayoutActionKind.BACKSPACE))
         }
     }

@@ -34,6 +34,7 @@ internal fun KeyboardView.face(
     spoken: Boolean,
 ): String {
     val names = keyNames.chinese()
+    if (KeyboardPages.isMergedSeparator(key)) return (if (spoken) context else names).getString(R.string.ime_separator)
     if (key.titleMode == LayoutKeyTitleMode.CUSTOM) return key.label
     return when (key.action.type) {
         LayoutActionKind.SPACE ->

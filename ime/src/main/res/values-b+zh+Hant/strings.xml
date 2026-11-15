@@ -2,6 +2,7 @@
     <string name="ime_space">空格</string>
     <string name="ime_delete">刪除</string>
     <string name="ime_shift">Shift 鍵</string>
+    <string name="ime_separator">分詞</string>
     <string name="ime_shift_locked">大寫鎖定</string>
     <string name="ime_enter">換行</string>
     <string name="ime_go">前往</string>

@@ -797,7 +797,7 @@ class KeyboardView(
             val key = keys[i]
             val pressed = pressedFlags[i]
             val isLetter =
-                key.action.type == LayoutActionKind.CODE ||
+                (key.action.type == LayoutActionKind.CODE && !KeyboardPages.isMergedSeparator(key)) ||
                     key.action.type == LayoutActionKind.LITERAL ||
                     isKana12KeyFace(key.action)
             val isSpace = key.action.type == LayoutActionKind.SPACE

@@ -30,6 +30,22 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class RealEngineReadingsAndLayoutTest : RealEngineEditorTestBase() {
+    /** The merged pads' Shift slot is the syllable separator: it splits a run, and types nothing idle. */
+    @Test
+    fun theMergedSeparatorSplitsAComposingRunAndTypesNothingWhenIdle() =
+        withHost(layout = "merged14", schema = "songyan_quanpin") { host ->
+            host.start()
+            val separator = instrumentation.targetContext.getString(R.string.ime_separator)
+            host.tap(separator)
+            host.awaitIdle()
+            assertEquals("idle, the separator types nothing", "", host.text())
+            for (key in listOf("zx", "ui")) host.tap(key)
+            host.tap(separator)
+            for (key in listOf("as", "bn")) host.tap(key)
+            host.awaitComposing()
+            assertTrue("the split run reads xi'an: ${host.barLabels()}", host.barLabels().first().startsWith("西安"))
+        }
+
     @Test
     fun aMergedKeySwipeTypesItsExactLetterThroughTheCompanionToken() =
         withHost(layout = "merged14", schema = "songyan_quanpin") { host ->

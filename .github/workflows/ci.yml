@@ -38,15 +38,21 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
       - uses: gradle/actions/setup-gradle@v4
-      # Same inputs as the engine cache key in native/android/CMakeLists.txt; a stale entry
-      # inside the restored directory is simply never picked.
-      - uses: actions/cache@v4
+      # The engine key also covers the compiler and flags, which no file hash sees, so the cache
+      # restores the latest entry and is saved under the names of the engines a build used.
+      - name: Restore engine cache
+        id: native
         if: matrix.part == 'assemble'
+        uses: actions/cache/restore@v4
         with:
           path: |
             .local/native-cache
             .local/cmake-deps
-          key: native-check-${{ runner.os }}-ndk30.0.16248370-${{ hashFiles('native/*.env', 'native/patches/**', 'native/scripts/**', 'native/src/*.h', 'native/levers/include/**', 'native/android/engine/**') }}
+          key: native-check-${{ runner.os }}-latest
+          restore-keys: native-check-${{ runner.os }}-
+      - name: Mark the build start
+        if: matrix.part == 'assemble'
+        run: mkdir -p .local && touch .local/native-build-start
       - name: ktlint, lint and unit tests
         if: matrix.part == 'lint-test'
         run: ./gradlew --console=plain ktlintCheck lint test
@@ -59,6 +65,18 @@ jobs:
           for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
             scripts/check-native-engine.sh "$apk"
           done
+      - name: Key the engine cache on the engines this build used
+        id: engines
+        if: matrix.part == 'assemble'
+        run: scripts/ci-native-cache-key.sh native-check-${{ runner.os }} >>"$GITHUB_OUTPUT"
+      - name: Save engine cache
+        if: matrix.part == 'assemble' && steps.engines.outputs.key != steps.native.outputs.cache-matched-key
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .local/native-cache
+            .local/cmake-deps
+          key: ${{ steps.engines.outputs.key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -113,14 +131,18 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
       - uses: gradle/actions/setup-gradle@v4
-      # Same inputs as the engine cache key in native/android/CMakeLists.txt; a stale entry
-      # inside the restored directory is simply never picked.
-      - uses: actions/cache@v4
+      # Keyed on the engines a build used, as in the check job.
+      - name: Restore engine cache
+        id: native
+        uses: actions/cache/restore@v4
         with:
           path: |
             .local/native-cache
             .local/cmake-deps
-          key: native-emulator-${{ runner.os }}-ndk30.0.16248370-${{ hashFiles('native/*.env', 'native/patches/**', 'native/scripts/**', 'native/src/*.h', 'native/levers/include/**', 'native/android/engine/**') }}
+          key: native-emulator-${{ runner.os }}-latest
+          restore-keys: native-emulator-${{ runner.os }}-
+      - name: Mark the build start
+        run: mkdir -p .local && touch .local/native-build-start
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -139,6 +161,18 @@ jobs:
           script: |
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :core:rime:connectedDebugAndroidTest
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :ime:connectedDebugAndroidTest
+      - name: Key the engine cache on the engines this build used
+        id: engines
+        run: scripts/ci-native-cache-key.sh native-emulator-${{ runner.os }} >>"$GITHUB_OUTPUT"
+      # Only the first shard saves; the others build the same x86_64 engine.
+      - name: Save engine cache
+        if: matrix.shard == 0 && matrix.api.level == 30 && steps.engines.outputs.key != steps.native.outputs.cache-matched-key
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .local/native-cache
+            .local/cmake-deps
+          key: ${{ steps.engines.outputs.key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

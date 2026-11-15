@@ -171,6 +171,8 @@ if(NOT EXISTS "${ENGINE_DIR}/.songyan-complete")
   file(RENAME "${engine_work}" "${ENGINE_DIR}")
   file(REMOVE_RECURSE "${engine_build}")
 endif()
+# CI keeps only the entries a build touched, so its saved cache does not accumulate old engines.
+file(TOUCH "${ENGINE_DIR}/.songyan-used")
 file(LOCK "${NATIVE_CACHE}/${ENGINE_NAME}.lock" RELEASE)
 
 set(RIME_SOURCE "${ENGINE_DIR}/librime")

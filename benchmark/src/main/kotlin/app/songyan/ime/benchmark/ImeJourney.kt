@@ -40,6 +40,13 @@ object ImeJourney {
     /** "ni hao": every prefix is a valid pinyin spelling, so each tap updates the candidates. */
     val LETTERS = listOf("n", "i", "h", "a", "o")
 
+    /** "ni hao" on the 9-key: 6 4 4 2 6, each prefix a valid key sequence with its own rail. */
+    val NINE_KEY_DIGITS = listOf("6", "4", "4", "2", "6")
+
+    /** The settings rows that pick the keyboard shape the journeys type on. */
+    const val LAYOUT_26 = "26 键"
+    const val LAYOUT_9 = "9 键"
+
     /** Device state the journeys need; idempotent, so every setup block may call it. */
     fun MacrobenchmarkScope.prepareDevice() {
         // The journeys find the settings rows by their Chinese labels.
@@ -73,6 +80,29 @@ object ImeJourney {
                 .also { device.dumpWindowHierarchy(it) }
                 .toString()
         error("the 试打 text field did not appear; on screen: " + hierarchy.take(4000))
+    }
+
+    /**
+     * Picks the keyboard shape on the settings 我的键盘 screen; the choice is stored, so every
+     * journey sets the one it measures.
+     */
+    fun MacrobenchmarkScope.useLayout(name: String) {
+        repeat(OPEN_TRIES) {
+            startActivityAndWait()
+            // A first launch opens on the setup guide; Back leads to the settings home.
+            val row = device.wait(Until.findObject(By.text("我的键盘")), UI_TIMEOUT_MS / 3)
+            if (row == null) {
+                device.pressBack()
+                return@repeat
+            }
+            row.click()
+            checkNotNull(device.wait(Until.findObject(By.text(name)), UI_TIMEOUT_MS)) { "no $name row" }.click()
+            device.waitForIdle()
+            device.pressBack()
+            device.waitForIdle()
+            return
+        }
+        error("the 我的键盘 row did not appear")
     }
 
     /** Taps the text field and waits until the keyboard is drawn and accepts taps. */
@@ -160,31 +190,40 @@ object ImeJourney {
      * attempts run until a deadline; each failed attempt flips the language, so once the engine
      * answers one of two consecutive attempts is in pinyin.
      */
-    fun MacrobenchmarkScope.ensureChinese(keyboard: Keyboard) {
+    fun MacrobenchmarkScope.ensureChinese(
+        shown: Keyboard,
+        probe: List<String> = LETTERS.take(2),
+    ) {
+        var keyboard = shown
         val deadline = SystemClock.uptimeMillis() + KEYBOARD_TIMEOUT_MS
         var attempts = 0
         val trail = ArrayList<String>()
         while (SystemClock.uptimeMillis() < deadline) {
             attempts++
-            val ok = runCatching { type(keyboard, listOf("n", "i")) }.isSuccess
+            val ok = runCatching { type(keyboard, probe) }.isSuccess
             if (!ok && attempts <= 2) saveScreenshot("compose-attempt$attempts")
             if (!ok) {
                 val text = device.findObject(By.clazz("android.widget.EditText"))?.text
                 trail +=
-                    "#$attempts text=$text cand=${candidateLines().size} n=${keyboard.keys["n"]} lang=${keyboard.languageSwitch}"
+                    "#$attempts text=$text cand=${candidateLines().size} ${probe[0]}=${keyboard.keys[probe[0]]} lang=${keyboard.languageSwitch}"
             }
             repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
             if (ok) return
             val switch = checkNotNull(currentKeys(keyboard)[LANGUAGE_SWITCH]) { "no language key to switch to pinyin" }
             tap(switch)
             SystemClock.sleep(500)
+            // Key boxes are logged once per show; a language that changes the board (the 9-key
+            // shell and its English letters) needs a new show for the new boxes.
+            hideKeyboard()
+            keyboard = showKeyboard()
         }
         saveScreenshot("compose-failure")
         error(
             "the keyboard does not compose pinyin after $attempts attempts $trail; perf log: " +
                 perfLines().filter { "key_bound" !in it }.takeLast(15) +
                 "; ime: " + shell("settings get secure default_input_method").trim() +
-                "; n lines: " + perfLines().filter { " value=n " in it }.map { it.substringAfter("value=") } +
+                "; ${probe[0]} lines: " +
+                perfLines().filter { " value=${probe[0]} " in it }.map { it.substringAfter("value=") } +
                 "; window: " +
                 shell("dumpsys window windows").lines().filter { "InputMethod" in it || "mFrame" in it }.take(12) +
                 "; imm: " +

@@ -8,7 +8,10 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.benchmark.ImeJourney.COMMIT_SECTION
 import app.songyan.ime.benchmark.ImeJourney.KEY_SECTION
+import app.songyan.ime.benchmark.ImeJourney.LAYOUT_26
+import app.songyan.ime.benchmark.ImeJourney.LAYOUT_9
 import app.songyan.ime.benchmark.ImeJourney.LETTERS
+import app.songyan.ime.benchmark.ImeJourney.NINE_KEY_DIGITS
 import app.songyan.ime.benchmark.ImeJourney.PACKAGE
 import app.songyan.ime.benchmark.ImeJourney.SHOW_SECTION
 import app.songyan.ime.benchmark.ImeJourney.ensureChinese
@@ -18,14 +21,15 @@ import app.songyan.ime.benchmark.ImeJourney.pickCandidate
 import app.songyan.ime.benchmark.ImeJourney.prepareDevice
 import app.songyan.ime.benchmark.ImeJourney.showKeyboard
 import app.songyan.ime.benchmark.ImeJourney.type
+import app.songyan.ime.benchmark.ImeJourney.useLayout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
  * The input latencies, read from the ImePerf trace sections of a
- * benchmarkRelease build: keyboard show to first frame, key down to preedit applied, candidate up
- * to commit applied. Each iteration starts with a warm IME process and a hidden keyboard.
+ * benchmarkRelease build: keyboard show to first frame, key down to the last render the key caused
+ * (preedit, candidates and the 9-key reading rail applied), candidate up to commit applied. Each iteration starts with a warm IME process and a hidden keyboard.
  * Frame timings capture rendering costs outside those intervals, including the tryout host that
  * shares the IME process; use the accompanying trace to distinguish their work.
  */
@@ -48,6 +52,7 @@ class KeyboardBenchmarks {
             iterations = ITERATIONS,
             setupBlock = {
                 prepareDevice()
+                useLayout(LAYOUT_26)
                 openTryout()
                 // Warm the IME process and the engine, then start from a hidden keyboard.
                 showKeyboard()
@@ -59,30 +64,39 @@ class KeyboardBenchmarks {
         }
 
     @Test
-    fun typingAndCommit() =
-        rule.measureRepeated(
-            packageName = PACKAGE,
-            metrics =
-                listOf(
-                    TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Average),
-                    TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Max),
-                    TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Count),
-                    TraceSectionMetric(COMMIT_SECTION, TraceSectionMetric.Mode.First),
-                    FrameTimingMetric(),
-                ),
-            compilationMode = CompilationMode.Partial(),
-            iterations = ITERATIONS,
-            setupBlock = {
-                prepareDevice()
-                openTryout()
-                ensureChinese(showKeyboard())
-                hideKeyboard()
-            },
-        ) {
-            val keyboard = showKeyboard()
-            pickCandidate(type(keyboard, LETTERS))
+    fun typingAndCommit() = typing(LAYOUT_26, LETTERS)
+
+    /** The same pinyin on the 9-key, whose every key also refreshes the reading rail. */
+    @Test
+    fun nineKeyTypingAndCommit() = typing(LAYOUT_9, NINE_KEY_DIGITS)
+
+    private fun typing(
+        layout: String,
+        keys: List<String>,
+    ) = rule.measureRepeated(
+        packageName = PACKAGE,
+        metrics =
+            listOf(
+                TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Average),
+                TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Max),
+                TraceSectionMetric(KEY_SECTION, TraceSectionMetric.Mode.Count),
+                TraceSectionMetric(COMMIT_SECTION, TraceSectionMetric.Mode.First),
+                FrameTimingMetric(),
+            ),
+        compilationMode = CompilationMode.Partial(),
+        iterations = ITERATIONS,
+        setupBlock = {
+            prepareDevice()
+            useLayout(layout)
+            openTryout()
+            ensureChinese(showKeyboard(), keys.take(2))
             hideKeyboard()
-        }
+        },
+    ) {
+        val keyboard = showKeyboard()
+        pickCandidate(type(keyboard, keys))
+        hideKeyboard()
+    }
 
     private companion object {
         const val ITERATIONS = 15

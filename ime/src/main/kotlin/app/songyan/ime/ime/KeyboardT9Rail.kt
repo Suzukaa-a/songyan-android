@@ -113,7 +113,15 @@ internal fun KeyboardController.scheduleReadingRail(
     }
     if (!railEligible(active)) return
     if (railRevision == active.compositionRevision) return
-    enqueue { refreshReadingRail(active) }
+    // The rail renders again for the key that changed the composition; the key's latency ends there.
+    val perfToken = ImePerf.keyFollowUpQueued()
+    enqueue {
+        try {
+            refreshReadingRail(active)
+        } finally {
+            ImePerf.keyFollowUpDone(perfToken)
+        }
+    }
 }
 
 /** How many readings the first read takes, and the bounded step each engine hop reads. */

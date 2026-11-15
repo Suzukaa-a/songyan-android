@@ -2,6 +2,7 @@ package app.songyan.ime.baselineprofile
 
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.songyan.ime.benchmark.ImeJourney.LAYOUT_26
 import app.songyan.ime.benchmark.ImeJourney.LETTERS
 import app.songyan.ime.benchmark.ImeJourney.PACKAGE
 import app.songyan.ime.benchmark.ImeJourney.ensureChinese
@@ -11,6 +12,7 @@ import app.songyan.ime.benchmark.ImeJourney.pickCandidate
 import app.songyan.ime.benchmark.ImeJourney.prepareDevice
 import app.songyan.ime.benchmark.ImeJourney.showKeyboard
 import app.songyan.ime.benchmark.ImeJourney.type
+import app.songyan.ime.benchmark.ImeJourney.useLayout
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,6 +31,7 @@ class BaselineProfileGenerator {
     fun generate() =
         rule.collect(packageName = PACKAGE, includeInStartupProfile = true) {
             prepareDevice()
+            useLayout(LAYOUT_26)
             openTryout()
             val keyboard = showKeyboard()
             ensureChinese(keyboard)

@@ -238,9 +238,9 @@ class InputOptionsScreenTest {
     }
 
     @Test
-    fun theSideMarginRowReadsTwoPointFivePercentByDefault() {
+    fun theSideMarginRowReadsFivePercentByDefault() {
         show()
-        compose.onNodeWithText(str(R.string.options_side_margin_value, "2.5")).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.options_side_margin_value, "5")).performScrollTo().assertExists()
     }
 
     @Test

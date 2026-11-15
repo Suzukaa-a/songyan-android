@@ -161,10 +161,14 @@ class LayoutCatalogOnDeviceTest {
         layoutKeyboard(1080)
         var bounds = emptyList<KeyBounds>()
         instrumentation.runOnMainSync { bounds = controller.keyboard.bounds }
-        // Last letter row: Shift, z, x, c, v, b | n, m, Delete after the 10 + 9 keys above it.
+        // Last letter row: Shift, z, x, c, v, b | n, m, Delete after the 10 + 9 keys above it. On a
+        // phone the middle gap scales down with the width, so the hand cut is the row's widest gap
+        // rather than a fixed multiple of the key gap.
+        val rowGaps = (19 until 27).map { bounds[it + 1].left - bounds[it].right }
         val gutter = bounds[25].left - bounds[24].right
         val ordinaryGap = bounds[1].left - bounds[0].right
-        assertTrue("gutter $gutter must follow b, not v", gutter > ordinaryGap * 5)
+        assertEquals("the gutter must follow b, not v: $rowGaps", 24 - 19, rowGaps.indexOf(rowGaps.max()))
+        assertTrue("gutter $gutter must be wider than the key gap $ordinaryGap", gutter > ordinaryGap * 2)
         val box = bounds[24]
         tap((box.left + box.right) / 2, (box.top + box.bottom) / 2)
         assertEquals(listOf("b"), backend.keys)

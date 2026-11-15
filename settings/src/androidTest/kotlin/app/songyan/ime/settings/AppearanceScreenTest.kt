@@ -109,12 +109,14 @@ class AppearanceScreenTest {
     fun theWallpaperEntryIsInTheColourListAndThereIsNoSeparateSwitch() {
         show(Source(state(dynamic = false)))
         compose.onNodeWithText(str(R.string.appearance_dynamic_title)).assertExists()
-        // The old explanation of how the switch and the list interact is gone.
+        // The wallpaper colours are a list entry, not a switch of their own (the page's other
+        // switches are unrelated settings).
         assertEquals(
             0,
             compose
                 .onAllNodes(
-                    SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch),
+                    SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch) and
+                        hasText(str(R.string.appearance_dynamic_title)),
                 ).fetchSemanticsNodes()
                 .size,
         )

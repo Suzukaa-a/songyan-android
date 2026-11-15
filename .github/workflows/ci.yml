@@ -48,22 +48,67 @@ jobs:
           path: |
             .local/native-cache
             .local/cmake-deps
+            .local/script-vendor
           key: native-check-${{ runner.os }}-latest
           restore-keys: native-check-${{ runner.os }}-
       - name: Mark the build start
         if: matrix.part == 'assemble'
         run: mkdir -p .local && touch .local/native-build-start
+      - name: Dependency boundaries
+        if: matrix.part == 'lint-test'
+        run: ./gradlew --console=plain checkDependencyBoundaries --no-configuration-cache
+      - name: Script helper tests
+        if: matrix.part == 'lint-test'
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -v
+      - name: Generated Traditional Chinese resources
+        if: matrix.part == 'lint-test'
+        run: |
+          # The generator pins OpenCC 1.1.9; a distro package converts differently and would
+          # fail the comparison for the wrong reason, so build the pinned version here. Its sources
+          # predate GCC 13, which no longer pulls <cstdint> in transitively.
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake g++ make
+          git clone --depth 1 --branch ver.1.1.9 --recurse-submodules --shallow-submodules \
+            https://github.com/BYVoid/OpenCC.git "$RUNNER_TEMP/opencc-src"
+          cmake -S "$RUNNER_TEMP/opencc-src" -B "$RUNNER_TEMP/opencc-build" \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/opencc" \
+            -DBUILD_PYTHON=OFF -DBUILD_TESTING=OFF -DBUILD_DOCUMENTATION=OFF \
+            -DCMAKE_CXX_FLAGS="-include cstdint"
+          cmake --build "$RUNNER_TEMP/opencc-build" --parallel 2
+          cmake --install "$RUNNER_TEMP/opencc-build"
+          export PATH="$RUNNER_TEMP/opencc/bin:$PATH"
+          export LD_LIBRARY_PATH="$RUNNER_TEMP/opencc/lib:$RUNNER_TEMP/opencc/lib64:${LD_LIBRARY_PATH:-}"
+          opencc --version
+          scripts/gen-zh-hant-strings.sh --check
       - name: ktlint, lint and unit tests
         if: matrix.part == 'lint-test'
         run: ./gradlew --console=plain ktlintCheck lint test
-      - name: Assemble debug and release APKs and the benchmark module
+      - name: Assemble debug and release APKs, the benchmark module and the script library
         if: matrix.part == 'assemble'
-        run: ./gradlew --console=plain assembleDebug assembleRelease :benchmark:assemble
+        run: ./gradlew --console=plain assembleDebug assembleRelease :benchmark:assemble :script:assembleDebug
+      # The script library must exist for every ABI the engine builds; QuickJS is fetched from
+      # the pinned archive and digest-checked during the CMake configure above.
+      - name: Check the script library exists for every ABI
+        if: matrix.part == 'assemble'
+        run: |
+          for abi in arm64-v8a x86_64 armeabi-v7a; do
+            found=$(find "script/build/intermediates/cxx" -path "*$abi*" -name libsongyan-script.so | head -1)
+            [ -n "$found" ] || { echo "missing libsongyan-script.so for $abi"; exit 1; }
+          done
       - name: Check the packaged native engine
         if: matrix.part == 'assemble'
         run: |
           for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
             scripts/check-native-engine.sh "$apk"
+          done
+      - name: Check the shrunk release keeps the script JNI entry points
+        if: matrix.part == 'assemble'
+        run: scripts/check-release-mapping.sh app/build/outputs/mapping/release/mapping.txt
+      - name: Check the script library is packaged for every ABI
+        if: matrix.part == 'assemble'
+        run: |
+          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
+            scripts/check-apk-script-library.sh "$apk"
           done
       - name: Key the engine cache on the engines this build used
         id: engines
@@ -76,6 +121,7 @@ jobs:
           path: |
             .local/native-cache
             .local/cmake-deps
+            .local/script-vendor
           key: ${{ steps.engines.outputs.key }}
       - uses: actions/upload-artifact@v4
         if: always()
@@ -139,6 +185,7 @@ jobs:
           path: |
             .local/native-cache
             .local/cmake-deps
+            .local/script-vendor
           key: native-emulator-${{ runner.os }}-latest
           restore-keys: native-emulator-${{ runner.os }}-
       - name: Mark the build start
@@ -163,7 +210,12 @@ jobs:
           script: |
             adb shell settings put global hide_error_dialogs 1
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :core:rime:connectedDebugAndroidTest
+            python3 scripts/check-instrumented-results.py 5 core/rime/build/outputs/androidTest-results/connected
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :ime:connectedDebugAndroidTest
+            python3 scripts/check-instrumented-results.py 100 ime/build/outputs/androidTest-results/connected
+            # Script cases run the shared engine inside an isolated process on the emulator.
+            ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :script:connectedDebugAndroidTest
+            python3 scripts/check-instrumented-results.py 5 script/build/outputs/androidTest-results/connected
       - name: Key the engine cache on the engines this build used
         id: engines
         run: scripts/ci-native-cache-key.sh native-emulator-${{ runner.os }} >>"$GITHUB_OUTPUT"
@@ -175,11 +227,73 @@ jobs:
           path: |
             .local/native-cache
             .local/cmake-deps
+            .local/script-vendor
           key: ${{ steps.engines.outputs.key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: instrumented-reports-api${{ matrix.api.level }}-shard${{ matrix.shard }}
+          path: |
+            **/build/reports/androidTests/**
+            **/build/outputs/androidTest-results/**
+          retention-days: 7
+
+  # The host-side addon integration tests bind a real second APK (addon-sample). Installing it is a
+  # separate step from building it, and the tests skip themselves when it is missing, so a plain
+  # ./gradlew :app:connectedDebugAndroidTest on another machine stays green without the sample.
+  addon-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.31.6"
+      - uses: gradle/actions/setup-gradle@v4
+      # Reads the emulator jobs' x86_64 engine cache; this job never saves it.
+      - name: Restore engine cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .local/native-cache
+            .local/cmake-deps
+            .local/script-vendor
+          key: native-emulator-${{ runner.os }}-latest
+          restore-keys: native-emulator-${{ runner.os }}-
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          # The host tests bind the sample as a real APK; its own suite uninstalls it when done, so it
+          # is installed again before the app suite. Error dialogs stay hidden as in the emulator job.
+          script: |
+            adb shell settings put global hide_error_dialogs 1
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :addon-sample:assembleDebug
+            adb install -r addon-sample/build/outputs/apk/debug/addon-sample-debug.apk
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :addon-sample:connectedDebugAndroidTest
+            python3 scripts/check-instrumented-results.py --no-skips 12 addon-sample/build/outputs/androidTest-results/connected
+            adb install -r addon-sample/build/outputs/apk/debug/addon-sample-debug.apk
+            ./gradlew --console=plain -Psongyan.abis=x86_64 :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=app.songyan.ime.addons
+            python3 scripts/check-instrumented-results.py --no-skips 24 app/build/outputs/androidTest-results/connected
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: addon-host-reports
           path: |
             **/build/reports/androidTests/**
             **/build/outputs/androidTest-results/**

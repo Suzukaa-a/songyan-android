@@ -148,7 +148,7 @@ class ScriptsScreenTest {
         compose.onNodeWithText(str(R.string.scripts_confirm_section_connects)).assertExists()
         DECLARED_SITES.forEach { compose.onNodeWithText(it).assertExists() }
         // The url setting is a site too: the user's own address is disclosed with the declared ones.
-        compose.onNodeWithText(str(R.string.scripts_connects_typed)).assertExists()
+        compose.onNodeWithText(str(R.string.scripts_connects_typed_below)).assertExists()
         compose.onNodeWithText(str(R.string.scripts_confirm_section_settings)).assertExists()
         // The pinned confirm bar leaves less list height, and a LazyColumn only composes what is
         // near the viewport: scroll to each field before asserting it.
@@ -158,7 +158,6 @@ class ScriptsScreenTest {
             .performScrollToNode(hasText(DECLARED_SETTINGS[0].label + str(R.string.scripts_secret_suffix)))
         compose.onNodeWithContentDescription(str(R.string.scripts_secret_show)).assertExists()
         compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[1].label))
-        compose.onNodeWithText(str(R.string.scripts_setting_kind_url)).assertExists()
         compose.onNode(form).performScrollToNode(hasText(DECLARED_SETTINGS[2].label))
         compose.onNodeWithText(DECLARED_SETTINGS[1].label).assertExists()
         compose.onNodeWithText(DECLARED_SETTINGS[2].label).assertExists()
@@ -239,9 +238,12 @@ class ScriptsScreenTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(isToggleable()).fetchSemanticsNodes().isNotEmpty()
         }
-        // Only the typed field travels; the blank non-secret settings keep whatever was stored
-        // (nothing, on a first confirmation) and the secret is the one value the user typed.
-        assertEquals(mapOf(DECLARED_SETTINGS[0].key to SECRET), registry.confirms.single().second)
+        // The typed secret travels, and so does the choice the form showed on its first option; the
+        // blank address keeps whatever was stored (nothing, on a first confirmation).
+        assertEquals(
+            mapOf(DECLARED_SETTINGS[0].key to SECRET, DECLARED_SETTINGS[2].key to "正式"),
+            registry.confirms.single().second,
+        )
         assertEquals(listOf(emptySet<String>()), registry.clearedSecrets.map { it.second })
         compose.onNodeWithText(str(R.string.scripts_empty_title)).assertDoesNotExist()
         compose.onNode(isToggleable()).assertIsOn()

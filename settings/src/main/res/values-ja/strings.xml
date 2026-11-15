@@ -365,6 +365,7 @@
     <string name="voice_permission_title">マイクの使用</string>
     <string name="voice_permission_granted">許可されています</string>
     <string name="voice_permission_denied">許可されていません</string>
+    <string name="voice_permission_request">マイクを許可</string>
     <string name="voice_permission_open_settings">システム設定で許可する</string>
     <string name="voice_addon_origin">拡張アプリ</string>
 
@@ -379,13 +380,11 @@
     <string name="extensions_not_available">このバージョンでは拡張機能を利用できません。</string>
     <string name="extensions_rescan">再スキャン</string>
     <string name="extensions_scan_failed">インストール済みの拡張機能を読み取れませんでした。</string>
-    <string name="extensions_compatible">互換</string>
     <string name="extensions_incompatible">非互換</string>
     <string name="extensions_unknown">未確認</string>
     <string name="extensions_version">バージョン %1$s</string>
     <string name="extensions_signer">署名フィンガープリント %1$s</string>
     <string name="extensions_permissions">権限：%1$s</string>
-    <string name="extensions_no_permissions">権限：追加の権限なし</string>
     <string name="extensions_tools">テキストツール：%1$s</string>
     <string name="extensions_panel">独自パネルを提供</string>
     <string name="extensions_voice">音声入力を提供</string>

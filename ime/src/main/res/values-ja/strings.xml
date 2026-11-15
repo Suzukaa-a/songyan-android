@@ -51,6 +51,9 @@
     <string name="ime_toolbar_tools">スクリプト</string>
     <string name="ime_tool_panel_title">スクリプト</string>
     <string name="ime_tool_panel_unavailable">この入力欄ではツールを使えません。</string>
+    <string name="ime_tool_panel_input_selection">選択したテキストを処理します。</string>
+    <string name="ime_tool_panel_input_before_cursor">カーソルの前のテキストを処理します。</string>
+    <string name="ime_tool_panel_input_none">処理するテキストがまだありません。</string>
     <string name="ime_tool_panel_select_hint">下から選んでください。</string>
     <string name="ime_tool_panel_running">実行中…</string>
     <string name="ime_tool_panel_running_elapsed">実行中… %1$s</string>

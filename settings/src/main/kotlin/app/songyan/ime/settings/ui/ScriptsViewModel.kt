@@ -73,6 +73,9 @@ sealed interface ScriptsNotice {
     /** An edit was saved and its declarations did not change. */
     data object Saved : ScriptsNotice
 
+    /** The imported file is a script that is already there. */
+    data object AlreadyAdded : ScriptsNotice
+
     data class ActionFailed(
         val failure: ScriptFailure,
     ) : ScriptsNotice
@@ -200,6 +203,7 @@ class ScriptsViewModel(
     ) {
         viewModelScope.launch {
             mutable.update { it.copy(busy = true, importFailure = null) }
+            val known = registry.entries.map { it.id }.toSet()
             val entry =
                 try {
                     val bytes = withContext(ioDispatcher) { read() }
@@ -209,7 +213,13 @@ class ScriptsViewModel(
                     return@launch
                 }
             mutable.update {
-                it.copy(busy = false, pendingConfirmation = entry, entries = registry.entries)
+                // The same file again opens the existing script's confirmation if it still needs one,
+                // and otherwise just says it is already there.
+                if (entry.id in known && !entry.confirmationPending) {
+                    it.copy(busy = false, entries = registry.entries, notice = ScriptsNotice.AlreadyAdded)
+                } else {
+                    it.copy(busy = false, pendingConfirmation = entry, entries = registry.entries)
+                }
             }
         }
     }

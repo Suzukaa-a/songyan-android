@@ -116,6 +116,7 @@ class StringResourceParityTest {
             }
             for ((name, items) in chinese.plurals) {
                 val translations = japanese.plurals[name] ?: continue
+                if ("$module/$name" in JAPANESE_LEFT_UNTRANSLATED) continue
                 for ((quantity, value) in items) {
                     // A language may leave a quantity out; only shared quantities are compared.
                     val translation = translations[quantity] ?: continue
@@ -170,6 +171,8 @@ class StringResourceParityTest {
                 "settings/candidate_bar_value",
                 "settings/features_list_separator",
                 "settings/voice_script_summary",
+                "settings/scripts_setting_value",
+                "settings/scripts_run_limit_seconds",
                 "settings/keyboard_title",
                 "settings/layout_jump_target",
                 "settings/learning_backup_detail",

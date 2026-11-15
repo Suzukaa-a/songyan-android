@@ -139,7 +139,7 @@ class RealEngineEditorTest {
             host.start()
             val toolbar = host.toolbarLabelsNow()
             assertEquals(
-                listOf(R.string.ime_panel_clipboard, R.string.ime_toolbar_input_methods, R.string.ime_toolbar_emoji)
+                listOf(R.string.ime_panel_clipboard, R.string.ime_toolbar_emoji, R.string.ime_toolbar_edit)
                     .map(host::string),
                 toolbar.take(3),
             )

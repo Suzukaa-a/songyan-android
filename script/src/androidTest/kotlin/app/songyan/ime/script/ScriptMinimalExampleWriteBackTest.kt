@@ -51,7 +51,7 @@ class ScriptMinimalExampleWriteBackTest {
             undoWindowMillis = null,
             maxResults = 3,
         )
-    private val tool = ToolDescriptor("minimal", "加书名号", setOf(ToolCapability.TEXT))
+    private val tool = ToolDescriptor("minimal", "加引号", setOf(ToolCapability.TEXT))
 
     private class Field(
         val edit: EditText,

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -14,21 +15,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.TravelExplore
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,9 +109,39 @@ fun ScriptConfirmScreen(
         }
     }
 
+    // A script the user decides against is removed from here: a pending script has no detail page.
+    var deleting by remember { mutableStateOf(false) }
+    if (deleting && entry != null) {
+        AlertDialog(
+            onDismissRequest = { deleting = false },
+            title = { Text(stringResource(R.string.scripts_delete_title)) },
+            text = { Text(stringResource(R.string.scripts_delete_body, entry.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.delete(entry.id)
+                        deleting = false
+                        onDone()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text(stringResource(R.string.scripts_delete_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.scripts_cancel)) }
+            },
+        )
+    }
+
     SettingsScaffold(
         title = stringResource(R.string.scripts_confirm_title),
         onBack = onDone,
+        actions = {
+            if (entry != null) {
+                IconButton(onClick = { deleting = true }) {
+                    Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.scripts_delete))
+                }
+            }
+        },
     ) { innerPadding ->
         if (entry == null) {
             // The entry vanished (deleted elsewhere); nothing to confirm anymore.
@@ -116,11 +154,20 @@ fun ScriptConfirmScreen(
             return@SettingsScaffold
         }
         // A url setting is a site too: the script reaches whatever address the user fills in.
-        val sites = connectRows(entry)
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        val sites = connectRows(entry, typedRes = R.string.scripts_connects_typed_below)
+        // The form and the action bar sit one above the other, and the keyboard shrinks both: the
+        // list's viewport ends at the bar, so a focused field scrolls into view instead of under it.
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
+                    .imePadding(),
+        ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 112.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 item { SectionHeader(stringResource(R.string.scripts_confirm_section_what)) }
@@ -128,14 +175,14 @@ fun ScriptConfirmScreen(
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.scripts_confirm_name)) },
                         supportingContent = { Text(entry.name) },
-                        leadingContent = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                        leadingContent = { Icon(Icons.Outlined.Description, contentDescription = null) },
                     )
                 }
                 item {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.scripts_confirm_reads)) },
                         supportingContent = { Text(stringResource(readsBodyRes(entry.needsAudio))) },
-                        leadingContent = { Icon(Icons.Outlined.Save, contentDescription = null) },
+                        leadingContent = { Icon(Icons.Outlined.Visibility, contentDescription = null) },
                     )
                 }
                 // The section header is always present, like "What it is": an empty list is a
@@ -171,6 +218,7 @@ fun ScriptConfirmScreen(
                         ListItem(
                             headlineContent = { Text(stringResource(R.string.scripts_confirm_timeout)) },
                             supportingContent = { Text(runLimitText(seconds)) },
+                            leadingContent = { Icon(Icons.Outlined.Timer, contentDescription = null) },
                         )
                     }
                 }
@@ -195,26 +243,34 @@ fun ScriptConfirmScreen(
                         )
                     }
                 }
-                item {
-                    Text(
-                        text = stringResource(R.string.scripts_confirm_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                // Only a script that asks for a secret needs to be told where secrets live.
+                if (entry.settings.any { it.secret }) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.scripts_confirm_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
-            // Pinned action bar: the confirm button stays visible under a long form and rises with
-            // the keyboard (imePadding) instead of being pushed off screen.
+            // The confirm button stays visible under a long form and rises with the keyboard.
             Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 3.dp,
                 shadowElevation = 3.dp,
             ) {
-                Column(modifier = Modifier.fillMaxWidth().imePadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Button(
-                        onClick = { viewModel.confirm(entry.id, values, clearSecrets.toSet()) },
+                        onClick = {
+                            viewModel.confirm(
+                                entry.id,
+                                withChoiceDefaults(entry.settings, values),
+                                clearSecrets.toSet(),
+                            )
+                        },
                         enabled = !state.busy && !hasUnreachableAddress(entry.settings, values),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -237,10 +293,13 @@ fun ScriptConfirmScreen(
 /** The sites a script may reach, as the confirmation and detail pages list them: its declared
  *  hosts, then one row for the addresses typed into its url settings. */
 @Composable
-internal fun connectRows(entry: ScriptEntry): List<String> {
+internal fun connectRows(
+    entry: ScriptEntry,
+    typedRes: Int = R.string.scripts_connects_typed,
+): List<String> {
     val typed =
         if (entry.settings.any { it.kind == ScriptSettingKind.URL }) {
-            listOf(stringResource(R.string.scripts_connects_typed))
+            listOf(stringResource(typedRes))
         } else {
             emptyList()
         }

@@ -18,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import app.songyan.ime.ime.KeyboardPalette
 import app.songyan.ime.ime.R
+import app.songyan.ime.tools.TextScope
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolFailure
 import app.songyan.ime.tools.ToolPhase
@@ -53,6 +54,11 @@ class ToolPanelView(
     private val density = resources.displayMetrics.density
     private var palette = initialPalette
     private val title = TextView(context)
+
+    /** Close sits beside the title, not in the action row: that row scrolls sideways, and a long
+     *  row or a large font would push it off screen. */
+    private val close = ImageView(context)
+    private val header = LinearLayout(context)
     private val status = TextView(context)
     private val progress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal)
     private val scroll = ScrollView(context)
@@ -81,7 +87,19 @@ class ToolPanelView(
         title.setTextColor(palette.text)
         title.setTextSize(16f)
         title.setTypeface(title.typeface, Typeface.BOLD)
-        addView(title, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        close.setImageResource(R.drawable.ic_close)
+        close.scaleType = ImageView.ScaleType.CENTER
+        close.contentDescription = context.getString(R.string.ime_tool_panel_close)
+        close.isClickable = true
+        close.isFocusable = true
+        close.setPadding(padding(10), padding(10), padding(10), padding(10))
+        close.setOnClickListener { onCloseRequested() }
+        header.orientation = HORIZONTAL
+        header.gravity = Gravity.CENTER_VERTICAL
+        header.addView(title, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        // 48 dp keeps the touch target the platform asks for.
+        header.addView(close, LayoutParams(padding(48), padding(48)))
+        addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         status.setTextSize(14f)
         status.setTextColor(palette.muted)
         status.setPadding(0, padding(6), 0, padding(6))
@@ -134,17 +152,22 @@ class ToolPanelView(
         } else {
             when (state.phase) {
                 ToolPhase.RUNNING -> {
-                    // A few seconds in, the elapsed time shows the run is waiting, not stuck.
-                    if (state.elapsedSeconds >= ELAPSED_SHOWN_AFTER_SECONDS) {
-                        val seconds = state.elapsedSeconds
-                        status.text =
+                    // The run is named, so a slow one is not mistaken for another script; a few
+                    // seconds in, the elapsed time shows it is waiting, not stuck.
+                    val running =
+                        if (state.elapsedSeconds >= ELAPSED_SHOWN_AFTER_SECONDS) {
+                            val seconds = state.elapsedSeconds
                             context.getString(
                                 R.string.ime_tool_panel_running_elapsed,
                                 String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60),
                             )
-                    } else {
-                        status.setText(R.string.ime_tool_panel_running)
-                    }
+                        } else {
+                            context.getString(R.string.ime_tool_panel_running)
+                        }
+                    status.text =
+                        state.tool?.title?.takeIf { it.isNotBlank() }?.let { name ->
+                            context.getString(R.string.ime_tool_panel_error_with_tool, name, running)
+                        } ?: running
                     progress.visibility = VISIBLE
                     addAction(R.string.ime_tool_panel_cancel, ActionStyle.TEXT) { onCancel() }
                 }
@@ -157,8 +180,10 @@ class ToolPanelView(
                         preview.results.size > 1 -> status.setText(R.string.ime_tool_panel_select_hint)
                         else -> status.text = ""
                     }
+                    // A lone result is not a choice: no check mark, no selected fill.
+                    val choosing = (preview?.results?.size ?: 0) > 1
                     preview?.results?.forEachIndexed { index, result ->
-                        addResult(index, result, index == preview.selectedIndex)
+                        addResult(index, result, choosing && index == preview.selectedIndex)
                     }
                     // The write actions read in the order of their weight: the one that replaces
                     // the selection is primary, inserting after it is tonal, copying is text.
@@ -174,6 +199,8 @@ class ToolPanelView(
                 ToolPhase.WROTE -> {
                     status.setText(R.string.ime_tool_panel_written)
                     if (state.canUndo) addAction(R.string.ime_tool_panel_undo, ActionStyle.TONAL) { onUndo() }
+                    // The text is in the field; the next thing is usually to keep typing.
+                    addAction(R.string.ime_done, ActionStyle.PRIMARY) { onCloseRequested() }
                 }
                 ToolPhase.FAILED -> {
                     status.setText(failureText(state))
@@ -185,13 +212,21 @@ class ToolPanelView(
                     state.tools.forEach { tool -> addTool(tool) }
                 }
                 else -> {
-                    status.setText(R.string.ime_tool_panel_select_hint)
+                    // Say what a tool will work on before the user picks one.
+                    status.setText(
+                        when (state.inputScope) {
+                            TextScope.SELECTION -> R.string.ime_tool_panel_input_selection
+                            TextScope.BEFORE_CURSOR -> R.string.ime_tool_panel_input_before_cursor
+                            null -> R.string.ime_tool_panel_input_none
+                        },
+                    )
                     state.tools.forEach { tool -> addTool(tool) }
                 }
             }
         }
         if (notice != null) status.setText(notice)
-        addClose()
+        // An empty status line would leave a blank row above the results.
+        status.visibility = if (status.text.isNullOrEmpty()) GONE else VISIBLE
     }
 
     /** One tool the user can run; a row, not a chip, because it starts something rather than toggling. */
@@ -276,25 +311,6 @@ class ToolPanelView(
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = padding(2)
                 bottomMargin = padding(2)
-            },
-        )
-    }
-
-    /** The close affordance is an icon at the end of the action row, as elsewhere in the keyboard. */
-    private fun addClose() {
-        actions.addView(
-            ImageView(context).apply {
-                setImageResource(R.drawable.ic_close)
-                scaleType = ImageView.ScaleType.CENTER
-                imageTintList = ColorStateList.valueOf(palette.muted)
-                contentDescription = context.getString(R.string.ime_tool_panel_close)
-                isClickable = true
-                isFocusable = true
-                setPadding(padding(10), padding(10), padding(10), padding(10))
-                setOnClickListener { onCloseRequested() }
-            },
-            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginStart = padding(4)
             },
         )
     }
@@ -388,6 +404,7 @@ class ToolPanelView(
         actionDivider.setBackgroundColor(palette.divider)
         actionScroll.setBackgroundColor(palette.background)
         title.setTextColor(palette.text)
+        close.imageTintList = ColorStateList.valueOf(palette.muted)
         // The muted role is designed for the surface in the default palettes, but a custom
         // appearance can pair it with a background only just readable: fall back to the body
         // colour rather than leave the status line dimmer than WCAG AA.

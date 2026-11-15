@@ -48,7 +48,8 @@ class EditEmojiPanelDeviceTest {
             assertTrue(host.await { emoji !in host.toolbarLabels() })
             val labels = host.toolbarLabels()
             assertEquals(host.string(R.string.ime_toolbar_hide), labels.last())
-            assertEquals(labels.indexOf(clipboard) + 2, labels.indexOf(host.string(R.string.ime_toolbar_edit)))
+            // The keyboard-menu button is off by default, so Edit lands right after Clipboard.
+            assertEquals(labels.indexOf(clipboard) + 1, labels.indexOf(host.string(R.string.ime_toolbar_edit)))
             host.toolbarLayoutFlow.value = ""
             assertTrue(host.await { emoji in host.toolbarLabels() })
             assertEquals(ToolbarView.DEFAULT_ACTIONS.size, host.toolbarLabels().size)

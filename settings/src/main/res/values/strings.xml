@@ -366,6 +366,7 @@
     <string name="voice_permission_title">Microphone access</string>
     <string name="voice_permission_granted">Granted</string>
     <string name="voice_permission_denied">Not granted</string>
+    <string name="voice_permission_request">Allow microphone</string>
     <string name="voice_permission_open_settings">Open system settings</string>
     <string name="voice_addon_origin">Extension app</string>
 
@@ -380,13 +381,11 @@
     <string name="extensions_not_available">This version does not support extensions.</string>
     <string name="extensions_rescan">Scan again</string>
     <string name="extensions_scan_failed">Could not read the installed extensions.</string>
-    <string name="extensions_compatible">Compatible</string>
     <string name="extensions_incompatible">Incompatible</string>
     <string name="extensions_unknown">Not checked yet</string>
     <string name="extensions_version">Version %1$s</string>
     <string name="extensions_signer">Signer fingerprint %1$s</string>
     <string name="extensions_permissions">Permissions: %1$s</string>
-    <string name="extensions_no_permissions">Permissions: none extra</string>
     <string name="extensions_tools">Text tools: %1$s</string>
     <string name="extensions_panel">Provides its own panel</string>
     <string name="extensions_voice">Provides voice input</string>

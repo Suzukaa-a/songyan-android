@@ -49,6 +49,9 @@
     <string name="ime_toolbar_tools">脚本</string>
     <string name="ime_tool_panel_title">脚本</string>
     <string name="ime_tool_panel_unavailable">此输入框无法使用工具。</string>
+    <string name="ime_tool_panel_input_selection">处理选中的文字。</string>
+    <string name="ime_tool_panel_input_before_cursor">处理光标前的文字。</string>
+    <string name="ime_tool_panel_input_none">输入框里还没有文字。</string>
     <string name="ime_tool_panel_select_hint">请从下面选择。</string>
     <string name="ime_tool_panel_running">正在运行…</string>
     <string name="ime_tool_panel_running_elapsed">正在运行… %1$s</string>

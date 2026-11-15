@@ -81,6 +81,9 @@
     <string name="ime_toolbar_tools">Scripts</string>
     <string name="ime_tool_panel_title">Scripts</string>
     <string name="ime_tool_panel_unavailable">Tools are unavailable in this field.</string>
+    <string name="ime_tool_panel_input_selection">Works on the selected text.</string>
+    <string name="ime_tool_panel_input_before_cursor">Works on the text before the cursor.</string>
+    <string name="ime_tool_panel_input_none">There is no text to work on yet.</string>
     <string name="ime_tool_panel_select_hint">Choose one below.</string>
     <string name="ime_tool_panel_running">Running…</string>
     <string name="ime_tool_panel_running_elapsed">Running… %1$s</string>

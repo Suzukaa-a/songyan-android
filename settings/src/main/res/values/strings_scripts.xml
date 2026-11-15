@@ -6,7 +6,6 @@
 
     <!-- Scripts list -->
     <string name="scripts_title">Scripts</string>
-    <string name="scripts_refresh">Refresh</string>
     <string name="scripts_add">Add script</string>
     <string name="scripts_cancel">Cancel</string>
     <string name="scripts_ok">OK</string>
@@ -36,12 +35,13 @@
 
     <!-- Empty state -->
     <string name="scripts_empty_title">No scripts yet</string>
-    <string name="scripts_empty_body">A script is a single file: it receives the text you select and returns text. Ask an AI to write one, or start from the example below.</string>
+    <string name="scripts_empty_body">Copy the guide to an AI and ask for the script you want.</string>
     <string name="scripts_copy_guide">Copy guide for AI</string>
     <string name="scripts_guide_copied">Guide copied. Paste it into a chat with an AI.</string>
     <string name="scripts_guide_failed">Unable to read the guide. Please try again.</string>
     <string name="scripts_guide_clipboard_label">Guide for AI</string>
     <string name="scripts_example_title">Example (no network)</string>
+    <string name="scripts_example_add">Add this example</string>
 
     <string name="scripts_pending_badge">Needs confirmation</string>
     <string name="scripts_enable_script">Enable %1$s</string>
@@ -57,6 +57,7 @@
     <string name="scripts_secret_hide">Hide secret</string>
     <string name="scripts_notice_settings_saved">Settings saved.</string>
     <string name="scripts_notice_saved">Saved.</string>
+    <string name="scripts_notice_already_added">This script is already added.</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">Confirm script</string>
@@ -68,15 +69,16 @@
     <string name="scripts_confirm_section_connects">Sites it may connect to</string>
     <string name="scripts_confirm_connects_none">No sites declared</string>
     <string name="scripts_connects_typed">Addresses you enter in its settings</string>
+    <string name="scripts_connects_typed_below">Addresses you enter below</string>
     <string name="scripts_connects_none">Does not go online</string>
     <string name="scripts_confirm_timeout">Longest run</string>
     <plurals name="scripts_run_limit_seconds">
-        <item quantity="one">Up to %d second</item>
-        <item quantity="other">Up to %d seconds</item>
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
     </plurals>
     <plurals name="scripts_run_limit_minutes">
-        <item quantity="one">Up to %d minute</item>
-        <item quantity="other">Up to %d minutes</item>
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
     </plurals>
     <string name="scripts_confirm_connects_none_body">It does not go online.</string>
     <string name="scripts_confirm_section_settings">Settings it needs</string>
@@ -88,9 +90,9 @@
     <string name="scripts_unavailable_body">Not available on this device.</string>
 
     <!-- Settings fields -->
-    <string name="scripts_setting_kind_text">Text</string>
-    <string name="scripts_setting_kind_url">Address</string>
     <string name="scripts_secret_suffix"> (secret)</string>
+    <string name="scripts_setting_not_filled">not filled in</string>
+    <string name="scripts_setting_value">%1$s: %2$s</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">Trial run</string>
@@ -118,7 +120,7 @@
     <string name="scripts_editor_save">Save</string>
     <string name="scripts_editor_body">The script is stored as edited. New declarations need confirming before it runs again.</string>
     <string name="scripts_delete_title">Delete this script?</string>
-    <string name="scripts_delete_body">%1$s will be removed from this device, along with its saved settings and secrets. This cannot be undone.</string>
+    <string name="scripts_delete_body">“%1$s” and its saved settings and secrets will be deleted.</string>
     <string name="scripts_delete_confirm">Delete</string>
 
     <!-- Notices -->

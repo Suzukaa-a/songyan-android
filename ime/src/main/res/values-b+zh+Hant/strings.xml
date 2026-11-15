@@ -49,6 +49,9 @@
     <string name="ime_toolbar_tools">指令碼</string>
     <string name="ime_tool_panel_title">指令碼</string>
     <string name="ime_tool_panel_unavailable">此輸入框無法使用工具。</string>
+    <string name="ime_tool_panel_input_selection">處理選中的文字。</string>
+    <string name="ime_tool_panel_input_before_cursor">處理游標前的文字。</string>
+    <string name="ime_tool_panel_input_none">輸入框裡還沒有文字。</string>
     <string name="ime_tool_panel_select_hint">請從下面選擇。</string>
     <string name="ime_tool_panel_running">正在執行…</string>
     <string name="ime_tool_panel_running_elapsed">正在執行… %1$s</string>

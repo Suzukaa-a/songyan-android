@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -21,10 +20,8 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -109,6 +106,7 @@ fun ScriptsScreen(
     val exportFailedText = stringResource(R.string.scripts_notice_export_failed)
     val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
     val savedText = stringResource(R.string.scripts_notice_saved)
+    val alreadyAddedText = stringResource(R.string.scripts_notice_already_added)
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
     // notice it belongs to is the current one.
     val actionFailureText =
@@ -138,6 +136,7 @@ fun ScriptsScreen(
                 ScriptsNotice.Exported -> null
                 ScriptsNotice.SettingsSaved -> settingsSavedText
                 ScriptsNotice.Saved -> savedText
+                ScriptsNotice.AlreadyAdded -> alreadyAddedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
             }
         when (text) {
@@ -166,17 +165,6 @@ fun ScriptsScreen(
             IconButton(onClick = { addOpen = true }, enabled = !state.busy) {
                 Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.scripts_add))
             }
-            if (state.refreshing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(end = 16.dp).size(18.dp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                IconButton(onClick = viewModel::refresh) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.scripts_refresh))
-                }
-            }
         },
     ) { innerPadding ->
         if (state.loading) {
@@ -188,6 +176,7 @@ fun ScriptsScreen(
                 context,
                 onCopyGuide = { viewModel.copyAiGuide(context, guideLabel) },
                 onAdd = { addOpen = true },
+                onAddExample = viewModel::addFromPaste,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
             )
         } else {
@@ -429,11 +418,15 @@ private fun ScriptListRow(
                 } else {
                     stringResource(R.string.scripts_enable_script, entry.name)
                 }
-            Switch(
-                checked = entry.enabled,
-                onCheckedChange = onEnabled,
-                modifier = Modifier.semantics { contentDescription = switchLabel },
-            )
+            // A script waiting for confirmation cannot run yet: the row opens the confirmation
+            // page, and a switch here would only suggest it can be turned on as it is.
+            if (!entry.confirmationPending) {
+                Switch(
+                    checked = entry.enabled,
+                    onCheckedChange = onEnabled,
+                    modifier = Modifier.semantics { contentDescription = switchLabel },
+                )
+            }
         },
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     )
@@ -485,6 +478,7 @@ private fun ScriptsEmpty(
     context: Context,
     onCopyGuide: () -> Unit,
     onAdd: () -> Unit,
+    onAddExample: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp)) {
@@ -519,6 +513,7 @@ private fun ScriptsEmpty(
         item {
             MinimalExamplePreview(
                 context,
+                onAdd = onAddExample,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -529,6 +524,7 @@ private fun ScriptsEmpty(
 @Composable
 private fun MinimalExamplePreview(
     context: Context,
+    onAdd: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val example by produceState<String?>(initialValue = null, context) {
@@ -560,6 +556,10 @@ private fun MinimalExamplePreview(
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 modifier = Modifier.padding(12.dp),
             )
+        }
+        // Seeing the whole flow once is the point of the example, so it adds in one tap.
+        example?.let { source ->
+            TextButton(onClick = { onAdd(source) }) { Text(stringResource(R.string.scripts_example_add)) }
         }
     }
 }

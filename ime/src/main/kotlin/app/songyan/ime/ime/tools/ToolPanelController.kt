@@ -1,5 +1,6 @@
 package app.songyan.ime.ime.tools
 
+import app.songyan.ime.tools.TextScope
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolFailure
 import app.songyan.ime.tools.ToolPhase
@@ -35,6 +36,8 @@ class ToolPanelController(
         val undo: ToolUndoResult? = null,
         /** How long the run in progress has been going, so a slow model reads as waiting. */
         val elapsedSeconds: Long = 0,
+        /** Which text a tool would get, read when the panel opens; null when there is none. */
+        val inputScope: TextScope? = null,
     )
 
     var onChanged: (State) -> Unit = {}
@@ -46,6 +49,7 @@ class ToolPanelController(
     private var ticker: Job? = null
     private var writeOutcome: ToolWriteResult? = null
     private var undoOutcome: ToolUndoResult? = null
+    private var inputScope: TextScope? = null
 
     fun isAvailable(): Boolean = bridge.catalog.tools().isNotEmpty() && bridge.toolsAvailable()
 
@@ -63,10 +67,22 @@ class ToolPanelController(
             undo = undoOutcome,
             elapsedSeconds =
                 if (current?.phase == ToolPhase.RUNNING) current.elapsedMillis(clock()) / 1000 else 0,
+            inputScope = inputScope,
         )
     }
 
-    fun open() = publish()
+    /** Shows the panel; the editor is read once here so the list can say what a tool will get. */
+    fun open() {
+        val snapshot = bridge.snapshot()
+        inputScope =
+            when {
+                snapshot == null -> null
+                !snapshot.selection.isNullOrEmpty() -> TextScope.SELECTION
+                !snapshot.beforeCursor.isNullOrEmpty() -> TextScope.BEFORE_CURSOR
+                else -> null
+            }
+        publish()
+    }
 
     /** Starts [tool] on the current editor; its result arrives asynchronously. */
     fun start(tool: ToolDescriptor) {

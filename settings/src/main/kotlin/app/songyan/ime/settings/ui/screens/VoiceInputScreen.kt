@@ -1,11 +1,15 @@
 package app.songyan.ime.settings.ui.screens
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -55,7 +61,8 @@ import app.songyan.ime.settings.ui.components.SwitchRow
  * never appears.
  *
  * The page states plainly what is wrong and what to do about it: a missing microphone permission
- * links to the system page that grants it, an empty catalog points at the Scripts page, and a catalog
+ * is asked for with the system dialog, and only once Android stops showing that dialog does the
+ * button open the app's system settings instead, an empty catalog points at the Scripts page, and a catalog
  * that cannot be read offers a retry instead of an empty list.
  */
 @Composable
@@ -69,6 +76,18 @@ fun VoiceInputScreen(
     var microphoneGranted by remember { mutableStateOf(microphoneGranted(context)) }
     // The user may grant it in the system page and come back: read it again on every return.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { microphoneGranted = microphoneGranted(context) }
+    // Android stops showing the dialog after the user denies it twice; the request then returns
+    // false at once with no rationale, and only the app's settings page can grant it.
+    var dialogBlocked by rememberSaveable { mutableStateOf(false) }
+    val request =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            microphoneGranted = granted
+            if (!granted) {
+                val activity = context.findActivity()
+                dialogBlocked = activity == null ||
+                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)
+            }
+        }
 
     VoiceInputPage(
         state = state,
@@ -76,6 +95,8 @@ fun VoiceInputScreen(
         onEnabledChange = model::setEnabled,
         onSelect = model::selectScript,
         onOpenScripts = onOpenScripts,
+        permissionDialogBlocked = dialogBlocked,
+        onRequestPermission = { request.launch(Manifest.permission.RECORD_AUDIO) },
         onOpenSystemSettings = { openMicrophoneSettings(context) },
         onRetry = model::refresh,
         onBack = onBack,
@@ -93,6 +114,8 @@ internal fun VoiceInputPage(
     onOpenSystemSettings: () -> Unit,
     onRetry: () -> Unit,
     onBack: (() -> Unit)?,
+    permissionDialogBlocked: Boolean,
+    onRequestPermission: () -> Unit,
 ) {
     if (state.loading) {
         LoadingScreen(stringResource(R.string.voice_title), onBack)
@@ -139,7 +162,11 @@ internal fun VoiceInputPage(
                     ),
             )
             if (!microphoneGranted) {
-                PermissionAction(onOpenSystemSettings)
+                if (permissionDialogBlocked) {
+                    PermissionAction(R.string.voice_permission_open_settings, onOpenSystemSettings)
+                } else {
+                    PermissionAction(R.string.voice_permission_request, onRequestPermission)
+                }
             }
             SectionHeader(stringResource(R.string.voice_scripts_section))
             when {
@@ -180,13 +207,16 @@ internal fun VoiceInputPage(
 }
 
 @Composable
-private fun PermissionAction(onOpenSystemSettings: () -> Unit) {
+private fun PermissionAction(
+    label: Int,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.Start,
     ) {
-        Button(onClick = onOpenSystemSettings) {
-            Text(stringResource(R.string.voice_permission_open_settings))
+        Button(onClick = onClick) {
+            Text(stringResource(label))
         }
     }
 }
@@ -233,6 +263,13 @@ private fun VoiceSourceRow(
 private fun microphoneGranted(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
         PackageManager.PERMISSION_GRANTED
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
 
 /** App details, where the microphone permission lives; there is no per-permission system page. */
 private fun openMicrophoneSettings(context: Context) {

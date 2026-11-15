@@ -60,9 +60,9 @@ class ExtensionsViewModel(
         }
     }
 
-    /** Re-scans after the user installed or removed an extension. */
-    fun rescan() {
-        mutable.update { it.copy(refreshing = true) }
+    /** Re-scans after the user installed or removed an extension; quietly when the page comes back. */
+    fun rescan(showProgress: Boolean = true) {
+        if (showProgress) mutable.update { it.copy(refreshing = true) }
         viewModelScope.launch {
             val previous = mutable.value.extensions
             val list = runCatching { gateway.rescan() }

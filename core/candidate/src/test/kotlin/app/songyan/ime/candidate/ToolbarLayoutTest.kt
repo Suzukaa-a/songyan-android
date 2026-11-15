@@ -8,10 +8,10 @@ class ToolbarLayoutTest {
 
     @Test
     fun theDefaultIsTodaysOrder() {
+        // Holding 中/英 opens the keyboard menu, so its button starts off but keeps its place.
         assertEquals(
             listOf(
                 ToolbarItem.CLIPBOARD,
-                ToolbarItem.INPUT_METHODS,
                 ToolbarItem.EMOJI,
                 ToolbarItem.EDIT,
                 ToolbarItem.ONE_HAND,
@@ -19,6 +19,7 @@ class ToolbarLayoutTest {
             ),
             ToolbarLayout.DEFAULT.shown,
         )
+        assertEquals(ToolbarItem.INPUT_METHODS, ToolbarLayout.DEFAULT.entries[1].item)
         assertTrue(ToolbarLayout.DEFAULT.isDefault)
     }
 

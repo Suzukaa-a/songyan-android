@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import app.songyan.ime.settings.state.AddonCallInfo
 import app.songyan.ime.settings.state.AddonCallKind
 import app.songyan.ime.settings.state.AddonCompatibility
@@ -114,7 +115,7 @@ class ExtensionsScreenTest {
                 AddonCallInfo(
                     kind = AddonCallKind.TEXT,
                     atEpochMs = 1_700_000_000_000,
-                    durationMs = 12,
+                    durationMs = 1_200,
                     error = "boom",
                 ),
         )
@@ -144,9 +145,10 @@ class ExtensionsScreenTest {
     fun aCardShowsIdentityBadgeCapabilitiesPermissionsAndLastCall() {
         show(FakeGateway(listOf(sampleAddon())))
         waitForCard()
-        compose.onNodeWithText("app.songyan.ime.addon.sample").assertIsDisplayed()
-        // Badge
-        compose.onNodeWithText(str(R.string.extensions_compatible)).assertIsDisplayed()
+        // A working extension carries no badge; the package name waits in the details.
+        compose.onNodeWithText(str(R.string.extensions_unknown)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.extensions_incompatible)).assertDoesNotExist()
+        compose.onNodeWithText("app.songyan.ime.addon.sample").assertDoesNotExist()
         // Capability and tool chips
         compose.onNodeWithText("Uppercase").assertIsDisplayed()
         compose.onNodeWithText(str(R.string.extensions_panel)).assertIsDisplayed()
@@ -157,13 +159,17 @@ class ExtensionsScreenTest {
         // Last call is secondary information, not a body line per identity field
         compose
             .onNodeWithText(
-                str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), 12L, "boom"),
-            ).assertIsDisplayed()
+                str(R.string.extensions_last_call_error, str(R.string.extensions_call_kind_text), "1.2", "boom"),
+            ).performScrollTo()
+            .assertIsDisplayed()
         // Version/signature stay folded until asked for
         compose.onNodeWithText(str(R.string.extensions_details)).assertIsDisplayed()
         compose
             .onNodeWithText(str(R.string.extensions_version, "0.1.0"))
             .assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.extensions_details)).performClick()
+        compose.onNodeWithText("app.songyan.ime.addon.sample").assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.extensions_version, "0.1.0")).assertIsDisplayed()
         compose
             .onNodeWithContentDescription(str(R.string.extensions_switch, "Sample Addon"))
             .assertIsOff()

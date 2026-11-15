@@ -119,8 +119,9 @@ class ScriptsPolishTest {
         show(registry)
         waitFor(SCRIPT_NAME)
 
-        // One control per row, and it is the switch.
-        compose.onAllNodes(isToggleable()).assertCountEquals(2)
+        // One control per row, and it is the switch; a script still waiting for confirmation has
+        // none, because it cannot be turned on before it is confirmed.
+        compose.onAllNodes(isToggleable()).assertCountEquals(1)
         compose.onNodeWithText(str(R.string.scripts_pending_badge)).assertExists()
         compose.onNodeWithContentDescription(str(R.string.scripts_enable_script, SCRIPT_NAME)).assertExists()
         compose.onNodeWithContentDescription(str(R.string.scripts_delete)).assertDoesNotExist()
@@ -252,8 +253,8 @@ class ScriptsPolishTest {
         waitFor(SCRIPT_NAME)
         compose.onNodeWithText(SCRIPT_NAME).performClick()
 
-        waitFor(str(R.string.scripts_settings_edit))
-        compose.onNodeWithText(str(R.string.scripts_settings_edit)).performClick()
+        waitFor(str(R.string.scripts_settings_fields))
+        compose.onNodeWithContentDescription(str(R.string.scripts_settings_edit)).performClick()
         waitFor(str(R.string.scripts_settings_title))
         compose.waitUntil(timeoutMillis = 5_000) {
             runCatching {
@@ -303,7 +304,7 @@ class ScriptsPolishTest {
         compose.onNodeWithText(SCRIPT_NAME).performClick()
 
         // It sends text to whatever address the user types, so it must not claim to stay offline.
-        waitFor(str(R.string.scripts_connects_typed))
+        waitFor(str(R.string.scripts_connects_typed_below))
         compose.onNodeWithText(str(R.string.scripts_confirm_connects_none)).assertDoesNotExist()
     }
 

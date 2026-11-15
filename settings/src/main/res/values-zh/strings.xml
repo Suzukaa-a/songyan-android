@@ -366,6 +366,7 @@
     <string name="voice_permission_title">麦克风权限</string>
     <string name="voice_permission_granted">已授予</string>
     <string name="voice_permission_denied">未授予</string>
+    <string name="voice_permission_request">允许使用麦克风</string>
     <string name="voice_permission_open_settings">去系统设置授权</string>
     <string name="voice_addon_origin">扩展应用</string>
 
@@ -380,13 +381,11 @@
     <string name="extensions_not_available">此版本不支持扩展。</string>
     <string name="extensions_rescan">重新扫描</string>
     <string name="extensions_scan_failed">无法读取已安装的扩展。</string>
-    <string name="extensions_compatible">兼容</string>
     <string name="extensions_incompatible">不兼容</string>
     <string name="extensions_unknown">尚未检查</string>
     <string name="extensions_version">版本 %1$s</string>
     <string name="extensions_signer">签名指纹 %1$s</string>
     <string name="extensions_permissions">权限：%1$s</string>
-    <string name="extensions_no_permissions">权限：无额外权限</string>
     <string name="extensions_tools">文字工具：%1$s</string>
     <string name="extensions_panel">提供自带面板</string>
     <string name="extensions_voice">提供语音输入</string>

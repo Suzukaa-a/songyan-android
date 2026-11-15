@@ -41,11 +41,13 @@ class ToolbarScreenTest {
 
     private fun stored() = ToolbarLayout.parse(runBlocking { preferences.toolbarLayout.first() })
 
-    @Test fun theDefaultShowsEverythingOnAndTheLimitOfThisWidth() {
+    @Test fun theDefaultShowsAllButTheKeyboardMenuAndTheLimitOfThisWidth() {
         show(360f)
         compose.onNodeWithTag("toolbar-limit").assertTextEquals(str(R.string.toolbar_limit, 7))
         for (item in ToolbarItem.entries) {
-            compose.onNodeWithTag(toolbarSwitchTag(item)).performScrollTo().assertIsOn()
+            val switch = compose.onNodeWithTag(toolbarSwitchTag(item)).performScrollTo()
+            // The keyboard menu is one long press on 中/英 away, so its button starts off.
+            if (item == ToolbarItem.INPUT_METHODS) switch.assertIsOff() else switch.assertIsOn()
         }
         compose.onNodeWithTag(TOOLBAR_RESET_TAG).performScrollTo().assertIsNotEnabled()
     }
@@ -63,7 +65,7 @@ class ToolbarScreenTest {
 
     @Test fun everyItemCanBeTurnedOff() {
         show()
-        for (item in ToolbarItem.entries) {
+        for (item in ToolbarItem.entries - ToolbarItem.INPUT_METHODS) {
             compose.onNodeWithTag(toolbarSwitchTag(item)).performScrollTo().performClick()
             compose.waitForIdle()
         }
@@ -106,12 +108,13 @@ class ToolbarScreenTest {
         compose.onNodeWithTag("toolbar-limit").assertTextEquals(str(R.string.toolbar_limit, 2))
         val marked = hasText(str(R.string.toolbar_over_width))
         compose.onNodeWithTag(toolbarRowTag(ToolbarItem.CLIPBOARD)).assert(!marked)
+        // An item that is off (the keyboard menu, by default) takes no room and is not marked.
         compose.onNodeWithTag(toolbarRowTag(ToolbarItem.INPUT_METHODS)).assert(!marked)
-        compose.onNodeWithTag(toolbarRowTag(ToolbarItem.EMOJI)).performScrollTo().assert(marked)
-        // An item that is off takes no room and is not marked.
+        compose.onNodeWithTag(toolbarRowTag(ToolbarItem.EMOJI)).assert(!marked)
+        compose.onNodeWithTag(toolbarRowTag(ToolbarItem.EDIT)).performScrollTo().assert(marked)
         compose.onNodeWithTag(toolbarSwitchTag(ToolbarItem.CLIPBOARD)).performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(toolbarRowTag(ToolbarItem.EMOJI)).assert(!marked)
+        compose.onNodeWithTag(toolbarRowTag(ToolbarItem.EDIT)).assert(!marked)
         compose.onNodeWithTag(toolbarRowTag(ToolbarItem.CLIPBOARD)).assert(!marked)
     }
 }

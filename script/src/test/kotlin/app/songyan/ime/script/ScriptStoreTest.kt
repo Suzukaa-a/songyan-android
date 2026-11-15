@@ -51,6 +51,15 @@ class ScriptStoreTest {
     )
 
     @Test
+    fun aNewScriptShowsTheSettingsItDeclaresBeforeItIsConfirmed() {
+        val entry = store.add("source".toByteArray(), header(), ScriptSourceOrigin.Pasted)
+
+        // The confirmation page asks for these; an unconfirmed script has no confirmed list yet.
+        assertEquals(header().settings, entry.settings)
+        assertTrue(entry.confirmationPending)
+    }
+
+    @Test
     fun addKeepsSourceVerbatimAndStartsUnconfirmed() {
         val source = ("// @api 1\n// @name run\nexport default async () => 1;").toByteArray(Charsets.UTF_8)
         val entry = store.add(source, header(), ScriptSourceOrigin.Pasted)

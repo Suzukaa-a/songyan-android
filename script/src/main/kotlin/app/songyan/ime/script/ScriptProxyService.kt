@@ -109,6 +109,9 @@ class ScriptProxyService : Service() {
                         } else {
                             source
                         }
+                    store.idWithSource(bytes)?.let { existing ->
+                        return@reply ScriptProxyProto.entry(store.entry(existing, hostCapabilities)!!)
+                    }
                     val header =
                         HeaderParser.parse(this@ScriptProxyService, bytes) as? ScriptHeader.Parsed
                             ?: return@reply ScriptProxyProto.error("the header is refused")

@@ -78,6 +78,11 @@ class ScriptStore(
         return catalog.mapIndexed { index, id -> readEntry(id, index, hostCapabilities) }.filterNotNull()
     }
 
+    /** The script already stored with exactly these bytes, so importing the same file twice does
+     *  not leave two identical rows. */
+    fun idWithSource(source: ByteArray): String? =
+        readCatalog().firstOrNull { id -> source(id)?.contentEquals(source) == true }
+
     fun source(id: String): ByteArray? {
         val file = File(root, "scripts/" + id + "/source.js")
         return if (file.isFile) file.readBytes() else null
@@ -235,6 +240,7 @@ class ScriptStore(
         state["connects"] = buildJsonArray { header.connects.forEach { add(JsonPrimitive(it)) } }
         state["needsAudio"] = JsonPrimitive(header.needsAudio)
         header.timeoutSeconds?.let { state["timeoutSeconds"] = JsonPrimitive(it) } ?: state.remove("timeoutSeconds")
+        state["declaredSettings"] = header.settings.toJsonArray()
         state["declarationsChanged"] = JsonPrimitive(declarationsChanged(id, header))
         writeState(dir, JsonObject(state))
     }
@@ -256,6 +262,7 @@ class ScriptStore(
             put("connects", JsonArray(header.connects.map { JsonPrimitive(it) }))
             put("needsAudio", header.needsAudio)
             header.timeoutSeconds?.let { put("timeoutSeconds", it) }
+            put("declaredSettings", header.settings.toJsonArray())
             put("confirmedApi", 0)
             put("confirmedConnects", JsonArray(emptyList()))
             put("declarationsChanged", false)
@@ -392,8 +399,11 @@ class ScriptStore(
         val dir = File(root, "scripts/" + id)
         if (!dir.isDirectory) return null
         val state = readState(dir)
+        // What the stored source declares now: the confirmation page asks for these, and a script
+        // that was never confirmed has no confirmed list yet. Older state files only have the
+        // confirmed list.
         val fields =
-            (state["confirmedSettings"]?.jsonArray ?: JsonArray(emptyList()))
+            (state["declaredSettings"]?.jsonArray ?: state["confirmedSettings"]?.jsonArray ?: JsonArray(emptyList()))
                 .map { node -> node.jsonObject.toField() }
         val index = if (order >= 0) order else readCatalog().indexOf(id)
         val needsAudio = state["needsAudio"]?.jsonPrimitive?.contentOrNull == "true"

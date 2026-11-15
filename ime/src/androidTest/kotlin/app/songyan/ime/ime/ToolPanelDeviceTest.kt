@@ -247,6 +247,30 @@ class ToolPanelDeviceTest {
     }
 
     @Test
+    fun theOpenPanelSaysWhichTextAToolWillGet() {
+        fun openOn(target: Field): String? {
+            val controller = controller(target)
+            controller.open()
+            lateinit var view: ToolPanelView
+            instrumentation.runOnMainSync {
+                view = ToolPanelView(context)
+                view.render(controller.state())
+            }
+            return statusText(view)
+        }
+        assertEquals(context.getString(R.string.ime_tool_panel_input_before_cursor), openOn(field("hello")))
+        assertEquals(context.getString(R.string.ime_tool_panel_input_none), openOn(field("")))
+
+        val selected = field("hello world")
+        instrumentation.runOnMainSync {
+            selected.edit.setSelection(6, 11)
+            selected.info.initialSelStart = 6
+            selected.info.initialSelEnd = 11
+        }
+        assertEquals(context.getString(R.string.ime_tool_panel_input_selection), openOn(selected))
+    }
+
+    @Test
     fun anInsertAfterASelectionKeepsTheSelectedText() {
         val target = field("hello world")
         val bridge = bridge(target)
@@ -433,7 +457,15 @@ class ToolPanelDeviceTest {
                 ),
             )
         }
-        assertEquals(context.getString(R.string.ime_tool_panel_failed), statusText(view))
+        // The panel names the tool that failed, then falls back to the generic words.
+        assertEquals(
+            context.getString(
+                R.string.ime_tool_panel_error_with_tool,
+                tool.title,
+                context.getString(R.string.ime_tool_panel_failed),
+            ),
+            statusText(view),
+        )
     }
 
     @Test
@@ -488,6 +520,33 @@ class ToolPanelDeviceTest {
     }
 
     @Test
+    fun afterAWriteDoneReturnsToTheKeyboard() {
+        var closed = false
+        lateinit var view: ToolPanelView
+        instrumentation.runOnMainSync {
+            view = ToolPanelView(context)
+            view.onCloseRequested = { closed = true }
+            view.render(
+                ToolPanelController.State(
+                    available = true,
+                    tools = listOf(tool),
+                    tool = tool,
+                    phase = ToolPhase.WROTE,
+                    preview = null,
+                    failure = null,
+                    canUndo = true,
+                ),
+            )
+        }
+        assertEquals(context.getString(R.string.ime_tool_panel_written), statusText(view))
+        assertNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_undo)))
+        instrumentation.runOnMainSync {
+            requireNotNull(buttonWithText(view, context.getString(R.string.ime_done))).performClick()
+        }
+        assertTrue("Done closes the panel", closed)
+    }
+
+    @Test
     fun thePanelViewRendersTheModelStateAndStrings() {
         lateinit var view: ToolPanelView
         val target = field("hello")
@@ -507,7 +566,7 @@ class ToolPanelDeviceTest {
         }
         instrumentation.waitForIdleSync()
         assertTrue(view.childCount > 0)
-        assertEquals(context.getString(R.string.ime_tool_panel_title), (view.getChildAt(0) as? TextView)?.text)
+        assertEquals(context.getString(R.string.ime_tool_panel_title), titleView(view).text)
     }
 
     // --- the visual/UX guarantees of the panel ---
@@ -560,7 +619,7 @@ class ToolPanelDeviceTest {
             controller.onChanged = view::render
             view.render(controller.state())
         }
-        assertEquals(context.getString(R.string.ime_tool_panel_select_hint), statusText(view))
+        assertEquals(context.getString(R.string.ime_tool_panel_input_before_cursor), statusText(view))
 
         // Every tool went away while the panel stayed open (scripts disabled, extension removed).
         tools = emptyList()
@@ -612,6 +671,9 @@ class ToolPanelDeviceTest {
         val view = showPreview(listOf("x"), selected = 0)
         assertEquals("", statusText(view))
         assertNotNull(buttonWithText(view, context.getString(R.string.ime_tool_panel_retry)))
+        val only = resultBodies(view).single()
+        assertFalse("a lone result is not shown as a choice", only.isSelected)
+        assertEquals("x", only.text.toString())
     }
 
     @Test
@@ -758,11 +820,11 @@ class ToolPanelDeviceTest {
     @Test
     fun darkPaletteKeepsThePanelTextReadable() {
         val palette = KeyboardPalette.resolve(context, dark = true)
-        val view = showPreview(listOf("暗色下的结果"), selected = 0, palette = palette)
+        val view = showPreview(listOf("暗色下的结果", "第二个结果"), selected = 0, palette = palette)
         layout(view, width = 720, height = 900)
 
         assertEquals(palette.background, (view.background as ColorDrawable).color)
-        val title = view.getChildAt(0) as TextView
+        val title = titleView(view)
         val status = view.getChildAt(1) as TextView
         assertEquals(palette.text, title.currentTextColor)
         assertTrue(
@@ -983,6 +1045,9 @@ class ToolPanelDeviceTest {
                 }
             }
         }
+
+    /** The title sits at the start of the header row, beside the close button. */
+    private fun titleView(view: ToolPanelView): TextView = (view.getChildAt(0) as ViewGroup).getChildAt(0) as TextView
 
     private fun statusText(view: ToolPanelView): String? = (view.getChildAt(1) as? TextView)?.text?.toString()
 

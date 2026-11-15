@@ -17,7 +17,7 @@ class ToolbarActionsTest {
     @Test
     fun theDefaultIsTodaysToolbar() {
         assertEquals(
-            listOf(a.CLIPBOARD, a.INPUT_METHODS, a.EMOJI, a.EDIT, a.ONE_HAND, a.SETTINGS, a.HIDE),
+            listOf(a.CLIPBOARD, a.EMOJI, a.EDIT, a.ONE_HAND, a.SETTINGS, a.HIDE),
             assemble(),
         )
         assertEquals(ToolbarView.DEFAULT_ACTIONS, assemble())
@@ -27,6 +27,7 @@ class ToolbarActionsTest {
     fun theUsersOrderIsRespectedAndHideIsAlwaysLast() {
         val layout =
             ToolbarLayout.DEFAULT
+                .withShown(ToolbarItem.INPUT_METHODS, true)
                 .withShown(ToolbarItem.CLIPBOARD, false)
                 .moveEarlier(ToolbarItem.SETTINGS)
         assertEquals(
@@ -39,7 +40,7 @@ class ToolbarActionsTest {
     @Test
     fun unavailableItemsAreLeftOutAndNeverForced() {
         assertEquals(
-            listOf(a.CLIPBOARD, a.INPUT_METHODS, a.EMOJI, a.EDIT, a.SETTINGS, a.HIDE),
+            listOf(a.CLIPBOARD, a.EMOJI, a.EDIT, a.SETTINGS, a.HIDE),
             assemble(oneHand = false),
         )
     }

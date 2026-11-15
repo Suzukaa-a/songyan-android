@@ -366,6 +366,7 @@
     <string name="voice_permission_title">麥克風權限</string>
     <string name="voice_permission_granted">已授予</string>
     <string name="voice_permission_denied">未授予</string>
+    <string name="voice_permission_request">允許使用麥克風</string>
     <string name="voice_permission_open_settings">去系統設定授權</string>
     <string name="voice_addon_origin">擴充功能應用</string>
 
@@ -380,13 +381,11 @@
     <string name="extensions_not_available">此版本不支援擴充功能。</string>
     <string name="extensions_rescan">重新掃描</string>
     <string name="extensions_scan_failed">無法讀取已安裝的擴充功能。</string>
-    <string name="extensions_compatible">相容</string>
     <string name="extensions_incompatible">不相容</string>
     <string name="extensions_unknown">尚未檢查</string>
     <string name="extensions_version">版本 %1$s</string>
     <string name="extensions_signer">簽名指紋 %1$s</string>
     <string name="extensions_permissions">權限：%1$s</string>
-    <string name="extensions_no_permissions">權限：無額外權限</string>
     <string name="extensions_tools">文字工具：%1$s</string>
     <string name="extensions_panel">提供自帶面板</string>
     <string name="extensions_voice">提供語音輸入</string>

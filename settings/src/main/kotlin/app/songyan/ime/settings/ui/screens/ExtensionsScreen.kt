@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -31,7 +30,6 @@ import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.Card
@@ -59,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -67,6 +66,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.settings.R
@@ -84,8 +85,8 @@ import kotlinx.coroutines.launch
 /**
  * Settings → Extensions: the addon APKs installed on this device. Songyan has no store; the user installs
  * an addon themselves and turns it on here. Each addon is one card: identity and switch in the main
- * row, a compatibility badge under it, capability/tool/permission chips, an expandable
- * version/signature block and the last call as secondary information. The extension's own settings
+ * row, a badge only when something is wrong, capability/tool chips, permissions only when it has
+ * any, an expandable package/version/signature block and the last call as secondary information. The extension's own settings
  * page is a plain button that only launches a component the handshake declared.
  */
 @Composable
@@ -133,6 +134,13 @@ fun ExtensionsScreen(
             }
         }
     }
+    // Extensions are installed and removed outside Songyan; read the list again on every return
+    // instead of asking the user to refresh. The first resume is the scan the model already runs.
+    var resumedBefore by remember { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (resumedBefore) model.rescan(showProgress = false)
+        resumedBefore = true
+    }
     if (state.loading) {
         LoadingScreen(title = title, onBack = onBack)
         return
@@ -141,14 +149,6 @@ fun ExtensionsScreen(
         title = title,
         onBack = onBack,
         snackbarHost = { SnackbarHost(snackbar) },
-        actions = {
-            IconButton(onClick = model::rescan, enabled = !state.refreshing) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = stringResource(R.string.extensions_rescan),
-                )
-            }
-        },
     ) { padding ->
         Column(
             modifier =
@@ -180,7 +180,7 @@ fun ExtensionsScreen(
                         body = stringResource(R.string.extensions_empty_body),
                         icon = Icons.Outlined.Extension,
                         actionLabel = stringResource(R.string.extensions_rescan),
-                        onAction = model::rescan,
+                        onAction = { model.rescan() },
                     )
                 else ->
                     for (extension in state.extensions) {
@@ -242,13 +242,6 @@ private fun ExtensionCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = addon.packageName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
                 Switch(
                     checked = addon.enabled,
@@ -260,8 +253,10 @@ private fun ExtensionCard(
                         },
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            CompatibilityBadge(addon)
+            if (addon.compatibility != AddonCompatibility.COMPATIBLE) {
+                Spacer(modifier = Modifier.height(10.dp))
+                CompatibilityBadge(addon)
+            }
             addon.incompatibleReason?.takeIf { it.isNotBlank() }?.let { reason ->
                 Text(
                     text = reason,
@@ -272,7 +267,10 @@ private fun ExtensionCard(
             }
             if (visibleTools.isNotEmpty() || addon.supportsPanel || addon.supportsVoice) {
                 Spacer(modifier = Modifier.height(10.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     for (tool in visibleTools) {
                         CapabilityChip(
                             icon = Icons.Outlined.TextFields,
@@ -293,14 +291,8 @@ private fun ExtensionCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            if (addon.permissions.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.extensions_no_permissions),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
+            if (addon.permissions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = stringResource(R.string.extensions_permissions_section),
                     style = MaterialTheme.typography.labelMedium,
@@ -308,6 +300,7 @@ private fun ExtensionCard(
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(top = 4.dp),
                 ) {
                     for (permission in addon.permissions) {
@@ -327,6 +320,7 @@ private fun ExtensionCard(
                 )
             }
             if (expanded) {
+                IdentityRow(value = addon.packageName)
                 IdentityRow(
                     value = stringResource(R.string.extensions_version, addon.versionName.ifBlank { "-" }),
                 )
@@ -385,14 +379,7 @@ private fun ExtensionCard(
 private fun CompatibilityBadge(addon: AddonInfo) {
     val (icon, text, container, content) =
         when (addon.compatibility) {
-            AddonCompatibility.COMPATIBLE ->
-                BadgeSpec(
-                    Icons.Outlined.CheckCircle,
-                    R.string.extensions_compatible,
-                    MaterialTheme.colorScheme.primaryContainer,
-                    MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            AddonCompatibility.INCOMPATIBLE ->
+            AddonCompatibility.COMPATIBLE, AddonCompatibility.INCOMPATIBLE ->
                 BadgeSpec(
                     Icons.Outlined.ErrorOutline,
                     R.string.extensions_incompatible,
@@ -491,7 +478,8 @@ private fun lastCallText(call: AddonCallInfo): String {
                 AddonCallKind.PANEL -> R.string.extensions_call_kind_panel
             },
         )
-    val seconds = String.format(java.util.Locale.getDefault(), "%.1f", call.durationMs / 1000.0)
+    val locale = LocalConfiguration.current.locales[0]
+    val seconds = String.format(locale, "%.1f", call.durationMs / 1000.0)
     return if (call.error.isNullOrBlank()) {
         stringResource(R.string.extensions_last_call, kind, seconds)
     } else {

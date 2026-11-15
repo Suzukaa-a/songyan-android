@@ -6,7 +6,6 @@
 
     <!-- Scripts list -->
     <string name="scripts_title">脚本</string>
-    <string name="scripts_refresh">刷新</string>
     <string name="scripts_add">添加脚本</string>
     <string name="scripts_cancel">取消</string>
     <string name="scripts_ok">好</string>
@@ -36,12 +35,13 @@
 
     <!-- Empty state -->
     <string name="scripts_empty_title">还没有脚本</string>
-    <string name="scripts_empty_body">脚本是一个单文件：收到你选中的文字，返回处理后的文字。把说明复制给 AI 让它写一个，或从下面的例子开始。</string>
+    <string name="scripts_empty_body">把说明复制给 AI，让它按你的需要写一个脚本。</string>
     <string name="scripts_copy_guide">复制给 AI 的说明</string>
     <string name="scripts_guide_copied">说明已复制。粘贴到与 AI 的对话中即可。</string>
     <string name="scripts_guide_failed">读取说明失败，请重试。</string>
     <string name="scripts_guide_clipboard_label">给 AI 的说明</string>
     <string name="scripts_example_title">例子（不联网）</string>
+    <string name="scripts_example_add">添加这个例子</string>
 
     <string name="scripts_pending_badge">待确认</string>
     <string name="scripts_enable_script">启用 %1$s</string>
@@ -57,6 +57,7 @@
     <string name="scripts_secret_hide">隐藏密钥</string>
     <string name="scripts_notice_settings_saved">设置已保存。</string>
     <string name="scripts_notice_saved">已保存。</string>
+    <string name="scripts_notice_already_added">这个脚本已经添加过了。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">确认脚本</string>
@@ -68,13 +69,14 @@
     <string name="scripts_confirm_section_connects">会连的网站</string>
     <string name="scripts_confirm_connects_none">没有声明任何网站</string>
     <string name="scripts_connects_typed">你在设置里填的地址</string>
+    <string name="scripts_connects_typed_below">你在下面填的地址</string>
     <string name="scripts_connects_none">不联网</string>
     <string name="scripts_confirm_timeout">最长运行</string>
     <plurals name="scripts_run_limit_seconds">
-        <item quantity="other">最长 %d 秒</item>
+        <item quantity="other">%d 秒</item>
     </plurals>
     <plurals name="scripts_run_limit_minutes">
-        <item quantity="other">最长 %d 分钟</item>
+        <item quantity="other">%d 分钟</item>
     </plurals>
     <string name="scripts_confirm_connects_none_body">它不会联网。</string>
     <string name="scripts_confirm_section_settings">要填的设置</string>
@@ -86,9 +88,9 @@
     <string name="scripts_unavailable_body">这台设备上不可用。</string>
 
     <!-- Settings fields -->
-    <string name="scripts_setting_kind_text">文字</string>
-    <string name="scripts_setting_kind_url">地址</string>
     <string name="scripts_secret_suffix">（密钥）</string>
+    <string name="scripts_setting_not_filled">未填</string>
+    <string name="scripts_setting_value">%1$s：%2$s</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">试运行</string>
@@ -116,7 +118,7 @@
     <string name="scripts_editor_save">保存</string>
     <string name="scripts_editor_body">脚本按编辑后的内容保存。新的声明需要再次确认才会运行。</string>
     <string name="scripts_delete_title">删除这个脚本？</string>
-    <string name="scripts_delete_body">%1$s 将从这台设备移除，保存的设置和密钥也会一起删除，且无法撤销。</string>
+    <string name="scripts_delete_body">「%1$s」和它保存的设置、密钥会一起删除。</string>
     <string name="scripts_delete_confirm">删除</string>
 
     <!-- Notices -->

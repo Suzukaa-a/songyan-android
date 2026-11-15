@@ -6,7 +6,6 @@
 
     <!-- Scripts list -->
     <string name="scripts_title">指令碼</string>
-    <string name="scripts_refresh">重新整理</string>
     <string name="scripts_add">新增指令碼</string>
     <string name="scripts_cancel">取消</string>
     <string name="scripts_ok">好</string>
@@ -36,12 +35,13 @@
 
     <!-- Empty state -->
     <string name="scripts_empty_title">還沒有指令碼</string>
-    <string name="scripts_empty_body">指令碼是一個單檔案：收到你選中的文字，返回處理後的文字。把說明複製給 AI 讓它寫一個，或從下面的例子開始。</string>
+    <string name="scripts_empty_body">把說明複製給 AI，讓它按你的需要寫一個指令碼。</string>
     <string name="scripts_copy_guide">複製給 AI 的說明</string>
     <string name="scripts_guide_copied">說明已複製。貼上到與 AI 的對話中即可。</string>
     <string name="scripts_guide_failed">讀取說明失敗，請重試。</string>
     <string name="scripts_guide_clipboard_label">給 AI 的說明</string>
     <string name="scripts_example_title">例子（不連網）</string>
+    <string name="scripts_example_add">新增這個例子</string>
 
     <string name="scripts_pending_badge">待確認</string>
     <string name="scripts_enable_script">啟用 %1$s</string>
@@ -57,6 +57,7 @@
     <string name="scripts_secret_hide">隱藏金鑰</string>
     <string name="scripts_notice_settings_saved">設定已儲存。</string>
     <string name="scripts_notice_saved">已儲存。</string>
+    <string name="scripts_notice_already_added">這個指令碼已經新增過了。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">確認指令碼</string>
@@ -68,13 +69,14 @@
     <string name="scripts_confirm_section_connects">會連的網站</string>
     <string name="scripts_confirm_connects_none">沒有宣告任何網站</string>
     <string name="scripts_connects_typed">你在設定裡填的地址</string>
+    <string name="scripts_connects_typed_below">你在下面填的地址</string>
     <string name="scripts_connects_none">不連網</string>
     <string name="scripts_confirm_timeout">最長執行</string>
     <plurals name="scripts_run_limit_seconds">
-        <item quantity="other">最長 %d 秒</item>
+        <item quantity="other">%d 秒</item>
     </plurals>
     <plurals name="scripts_run_limit_minutes">
-        <item quantity="other">最長 %d 分鐘</item>
+        <item quantity="other">%d 分鐘</item>
     </plurals>
     <string name="scripts_confirm_connects_none_body">它不會連網。</string>
     <string name="scripts_confirm_section_settings">要填的設定</string>
@@ -86,9 +88,9 @@
     <string name="scripts_unavailable_body">這臺裝置上不可用。</string>
 
     <!-- Settings fields -->
-    <string name="scripts_setting_kind_text">文字</string>
-    <string name="scripts_setting_kind_url">地址</string>
     <string name="scripts_secret_suffix">（金鑰）</string>
+    <string name="scripts_setting_not_filled">未填</string>
+    <string name="scripts_setting_value">%1$s：%2$s</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">試執行</string>
@@ -116,7 +118,7 @@
     <string name="scripts_editor_save">儲存</string>
     <string name="scripts_editor_body">指令碼按編輯後的內容儲存。新的宣告需要再次確認才會執行。</string>
     <string name="scripts_delete_title">刪除這個指令碼？</string>
-    <string name="scripts_delete_body">%1$s 將從這臺裝置移除，儲存的設定和金鑰也會一起刪除，且無法撤銷。</string>
+    <string name="scripts_delete_body">「%1$s」和它儲存的設定、金鑰會一起刪除。</string>
     <string name="scripts_delete_confirm">刪除</string>
 
     <!-- Notices -->

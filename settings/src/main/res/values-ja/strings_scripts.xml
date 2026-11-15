@@ -6,7 +6,6 @@
 
     <!-- Scripts list -->
     <string name="scripts_title">スクリプト</string>
-    <string name="scripts_refresh">更新</string>
     <string name="scripts_add">スクリプトを追加</string>
     <string name="scripts_cancel">キャンセル</string>
     <string name="scripts_ok">OK</string>
@@ -36,12 +35,13 @@
 
     <!-- Empty state -->
     <string name="scripts_empty_title">スクリプトはまだありません</string>
-    <string name="scripts_empty_body">スクリプトは 1 つのファイルです。選択した文字を受け取り、処理した文字を返します。AI に説明を渡して書いてもらうか、下の例から始めましょう。</string>
+    <string name="scripts_empty_body">説明を AI にコピーして、必要なスクリプトを書いてもらいましょう。</string>
     <string name="scripts_copy_guide">AI 用の説明をコピー</string>
     <string name="scripts_guide_copied">説明をコピーしました。AI とのチャットに貼り付けてください。</string>
     <string name="scripts_guide_failed">説明を読み込めませんでした。もう一度お試しください。</string>
     <string name="scripts_guide_clipboard_label">AI 用の説明</string>
     <string name="scripts_example_title">例（ネットワーク接続なし）</string>
+    <string name="scripts_example_add">この例を追加</string>
 
     <string name="scripts_pending_badge">確認待ち</string>
     <string name="scripts_enable_script">「%1$s」を有効にする</string>
@@ -57,6 +57,7 @@
     <string name="scripts_secret_hide">シークレットを隠す</string>
     <string name="scripts_notice_settings_saved">設定を保存しました。</string>
     <string name="scripts_notice_saved">保存しました。</string>
+    <string name="scripts_notice_already_added">このスクリプトは追加済みです。</string>
 
     <!-- Confirmation page -->
     <string name="scripts_confirm_title">スクリプトを確認</string>
@@ -68,13 +69,14 @@
     <string name="scripts_confirm_section_connects">接続できるサイト</string>
     <string name="scripts_confirm_connects_none">宣言されたサイトはありません</string>
     <string name="scripts_connects_typed">設定で入力したアドレス</string>
+    <string name="scripts_connects_typed_below">下で入力するアドレス</string>
     <string name="scripts_connects_none">オンラインに接続しません</string>
     <string name="scripts_confirm_timeout">最長実行時間</string>
     <plurals name="scripts_run_limit_seconds">
-        <item quantity="other">最長 %d 秒</item>
+        <item quantity="other">%d 秒</item>
     </plurals>
     <plurals name="scripts_run_limit_minutes">
-        <item quantity="other">最長 %d 分</item>
+        <item quantity="other">%d 分</item>
     </plurals>
     <string name="scripts_confirm_connects_none_body">オンラインに接続しません。</string>
     <string name="scripts_confirm_section_settings">入力を求める設定</string>
@@ -86,9 +88,9 @@
     <string name="scripts_unavailable_body">この端末では使えません。</string>
 
     <!-- Settings fields -->
-    <string name="scripts_setting_kind_text">テキスト</string>
-    <string name="scripts_setting_kind_url">アドレス</string>
     <string name="scripts_secret_suffix">（シークレット）</string>
+    <string name="scripts_setting_not_filled">未入力</string>
+    <string name="scripts_setting_value">%1$s：%2$s</string>
 
     <!-- Trial run -->
     <string name="scripts_test_section">試し実行</string>
@@ -116,7 +118,7 @@
     <string name="scripts_editor_save">保存する</string>
     <string name="scripts_editor_body">スクリプトは編集内容で保存されます。新しい宣言は、再確認しないと実行されません。</string>
     <string name="scripts_delete_title">このスクリプトを削除しますか？</string>
-    <string name="scripts_delete_body">%1$s はこの端末から削除され、保存した設定とシークレットも一緒に削除されます。元に戻せません。</string>
+    <string name="scripts_delete_body">「%1$s」と、保存した設定とシークレットが削除されます。</string>
     <string name="scripts_delete_confirm">削除</string>
 
     <!-- Notices -->

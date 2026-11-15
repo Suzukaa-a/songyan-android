@@ -78,7 +78,9 @@ data class ToolbarLayout(
                     ToolbarItem.EDIT,
                     ToolbarItem.ONE_HAND,
                     ToolbarItem.SETTINGS,
-                ).map { Entry(it, shown = true) },
+                    // Holding 中/英 opens the same keyboard menu, so its button starts off and its
+                    // room goes to the buttons nothing else reaches; a stored layout keeps it.
+                ).map { Entry(it, shown = it != ToolbarItem.INPUT_METHODS) },
             )
 
         /**

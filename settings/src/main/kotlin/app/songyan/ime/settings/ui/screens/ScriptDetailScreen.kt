@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -95,6 +97,7 @@ fun ScriptDetailScreen(
     val deletedText = stringResource(R.string.scripts_notice_deleted)
     val settingsSavedText = stringResource(R.string.scripts_notice_settings_saved)
     val savedText = stringResource(R.string.scripts_notice_saved)
+    val alreadyAddedText = stringResource(R.string.scripts_notice_already_added)
     val copiedText = stringResource(R.string.scripts_test_copied)
     val scope = rememberCoroutineScope()
     // Snackbar effects cannot call composables, so a failure's wording is resolved here, when the
@@ -113,6 +116,7 @@ fun ScriptDetailScreen(
                 ScriptsNotice.Deleted -> deletedText
                 ScriptsNotice.SettingsSaved -> settingsSavedText
                 ScriptsNotice.Saved -> savedText
+                ScriptsNotice.AlreadyAdded -> alreadyAddedText
                 is ScriptsNotice.ActionFailed -> actionFailureText
                 null -> null
             }
@@ -268,6 +272,14 @@ fun ScriptDetailScreen(
                 )
             }
             item { SectionHeader(stringResource(R.string.scripts_about_section)) }
+            entry.description?.let { description ->
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.scripts_description)) },
+                        supportingContent = { Text(description) },
+                    )
+                }
+            }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.scripts_origin)) },
@@ -291,14 +303,6 @@ fun ScriptDetailScreen(
                     headlineContent = { Text(stringResource(R.string.scripts_confirm_reads)) },
                     supportingContent = { Text(stringResource(readsBodyRes(entry.needsAudio))) },
                 )
-            }
-            entry.description?.let { description ->
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.scripts_description)) },
-                        supportingContent = { Text(description) },
-                    )
-                }
             }
             item {
                 val sites = connectRows(entry)
@@ -328,20 +332,40 @@ fun ScriptDetailScreen(
             if (entry.settings.isNotEmpty()) {
                 item {
                     val secretSuffix = stringResource(R.string.scripts_secret_suffix)
+                    val notFilled = stringResource(R.string.scripts_setting_not_filled)
+                    val valueFormat = stringResource(R.string.scripts_setting_value)
+                    // What is filled in, not just the names: secrets never leave the proxy, so they
+                    // are named only. Re-read whenever the catalog changes (a save refreshes it).
+                    val saved by
+                        produceState<Map<String, String>>(emptyMap(), scriptId, state.entries) {
+                            value = runCatching { viewModel.savedSettings(scriptId) }.getOrDefault(emptyMap())
+                        }
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.scripts_settings_fields)) },
                         supportingContent = {
                             Text(
                                 entry.settings.joinToString("\n") { field ->
-                                    field.label + if (field.secret) secretSuffix else ""
+                                    if (field.secret) {
+                                        field.label + secretSuffix
+                                    } else {
+                                        String.format(
+                                            valueFormat,
+                                            field.label,
+                                            saved[field.key]?.takeIf { it.isNotBlank() } ?: notFilled,
+                                        )
+                                    }
                                 },
                             )
                         },
+                        // The whole row opens the form; a small icon leaves the width to the values,
+                        // which matters at large font sizes.
                         trailingContent = {
-                            TextButton(onClick = { settingsOpen = true }) {
-                                Text(stringResource(R.string.scripts_settings_edit))
-                            }
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = stringResource(R.string.scripts_settings_edit),
+                            )
                         },
+                        modifier = Modifier.clickable { settingsOpen = true },
                     )
                 }
             }
@@ -626,7 +650,7 @@ private fun ScriptSettingsDialog(
             TextButton(
                 onClick = {
                     saving = true
-                    viewModel.updateSettings(scriptId, values, clearSecrets.toSet())
+                    viewModel.updateSettings(scriptId, withChoiceDefaults(entry.settings, values), clearSecrets.toSet())
                 },
                 enabled = !state.busy && !hasUnreachableAddress(entry.settings, values),
             ) {

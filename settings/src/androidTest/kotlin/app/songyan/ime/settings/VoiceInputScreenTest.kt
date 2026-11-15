@@ -51,6 +51,7 @@ class VoiceInputScreenTest {
     private fun show(
         state: VoiceInputUiState,
         granted: Boolean = true,
+        dialogBlocked: Boolean = false,
         dark: Boolean = false,
         fontScale: Float = 1f,
     ): MutableList<String> {
@@ -67,6 +68,8 @@ class VoiceInputScreenTest {
                         onOpenSystemSettings = { calls += "settings" },
                         onRetry = { calls += "retry" },
                         onBack = null,
+                        permissionDialogBlocked = dialogBlocked,
+                        onRequestPermission = { calls += "request" },
                     )
                 }
             }
@@ -93,10 +96,20 @@ class VoiceInputScreenTest {
     }
 
     @Test
-    fun theMicrophonePermissionRowStatesItAndLinksToTheSystemPage() {
+    fun aMissingPermissionIsAskedForWithTheSystemDialogFirst() {
         val calls = show(VoiceInputUiState(loading = false), granted = false)
 
         compose.onNodeWithText(string(R.string.voice_permission_denied)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertDoesNotExist()
+        compose.onNodeWithText(string(R.string.voice_permission_request)).assertIsDisplayed().performClick()
+        assertEquals(listOf("request"), calls)
+    }
+
+    @Test
+    fun onceAndroidStopsShowingTheDialogTheButtonOpensTheSystemPage() {
+        val calls = show(VoiceInputUiState(loading = false), granted = false, dialogBlocked = true)
+
+        compose.onNodeWithText(string(R.string.voice_permission_request)).assertDoesNotExist()
         compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertIsDisplayed().performClick()
         assertEquals(listOf("settings"), calls)
     }
@@ -107,6 +120,7 @@ class VoiceInputScreenTest {
 
         compose.onNodeWithText(string(R.string.voice_permission_granted)).assertIsDisplayed()
         compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertDoesNotExist()
+        compose.onNodeWithText(string(R.string.voice_permission_request)).assertDoesNotExist()
     }
 
     @Test

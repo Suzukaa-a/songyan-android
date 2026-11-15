@@ -197,4 +197,32 @@ class WideSurfaceTest {
         assertEquals(SplitMode.LAYOUT, SplitMode.resolve("nonsense"))
         assertEquals(SplitMode.ON, SplitMode.resolve("on"))
     }
+
+    /** At 640 dp the default margin leaves under 600 dp; the keys must still make room for the candidates. */
+    @Test
+    fun nineKeySideKeypadLeavesTheCandidatesOnScreenOnASmallTablet() {
+        for (side in listOf(
+            app.songyan.ime.candidate.NineKeyCandidateSide.LEFT,
+            app.songyan.ime.candidate.NineKeyCandidateSide.RIGHT,
+        )) {
+            for (surface in listOf(640.0, 660.0, 720.0, 1024.0)) {
+                val margin = WideSurface.sideMargin(surface, KeyboardGeometry.SIDE_MARGIN_DEFAULT_PER_MILLE, 600.0)
+                val plan =
+                    app.songyan.ime.candidate.NineKeySideCandidatePolicy
+                        .plan(surface - 2 * margin, 444.0, side)
+                        .also { assertNotNull(it) }!!
+                val (leading, keys) =
+                    WideSurface.nineKeySideKeypad(surface, plan, KeyboardGeometry.SIDE_MARGIN_DEFAULT_PER_MILLE, 600.0)
+                assertEquals(plan.keypadWidth, keys, 1e-9)
+                val candidatesLeft =
+                    if (side == app.songyan.ime.candidate.NineKeyCandidateSide.LEFT) {
+                        leading - plan.stripWidth - plan.candidateWidth
+                    } else {
+                        leading + keys + plan.stripWidth
+                    }
+                assertEquals("$side at $surface", margin, minOf(candidatesLeft, leading), 1e-9)
+                assertEquals(surface - margin, maxOf(candidatesLeft + plan.candidateWidth, leading + keys), 1e-9)
+            }
+        }
+    }
 }

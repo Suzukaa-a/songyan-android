@@ -529,17 +529,9 @@ internal fun KeyboardView.nineKeySidePlan(): NineKeySideCandidatePlan? {
 
 /** The narrowed 9-key keyboard docked away from its side candidates. */
 private fun KeyboardView.sideFrame(plan: NineKeySideCandidatePlan): ContentFrame {
-    val wide =
-        WideSurface.plan(
-            width / density.toDouble(),
-            null,
-            plan.keypadDock,
-            capDp = plan.keypadWidth,
-            automaticAboveDp = splitWidthDp.toDouble(),
-            sideMarginPerMille = sideMarginPerMille,
-            marginAboveDp = marginWidthDp.toDouble(),
-        )
-    return ContentFrame(wide.leadingInset.toFloat() * density, wide.contentWidth.toFloat() * density)
+    val (leading, keys) =
+        WideSurface.nineKeySideKeypad(width / density.toDouble(), plan, sideMarginPerMille, marginWidthDp.toDouble())
+    return ContentFrame(leading.toFloat() * density, keys.toFloat() * density)
 }
 
 /** Positions the phone shell's keys; the shell model owns every rectangle. */

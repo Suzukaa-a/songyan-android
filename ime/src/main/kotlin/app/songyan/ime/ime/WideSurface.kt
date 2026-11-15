@@ -68,6 +68,24 @@ internal object WideSurface {
         return (surfaceDp * perMille / 1000).coerceAtMost((surfaceDp - MINIMUM_KEY_AREA_DP) / 2).coerceAtLeast(0.0)
     }
 
+    /**
+     * Where the 9-key keyboard sits beside its candidates on a [surfaceDp] wide surface: its leading
+     * inset and width (dp). The side plan already split the width inside the side margin, so the keys
+     * are placed straight from it; going through the phone-size threshold again would hand them the
+     * full width once the margin leaves less than a tablet's, and push the candidates off screen.
+     */
+    fun nineKeySideKeypad(
+        surfaceDp: Double,
+        plan: app.songyan.ime.candidate.NineKeySideCandidatePlan,
+        sideMarginPerMille: Int,
+        marginAboveDp: Double,
+    ): Pair<Double, Double> {
+        val margin = sideMargin(surfaceDp, sideMarginPerMille, marginAboveDp)
+        val beforeKeys =
+            if (plan.keypadDock == KeyboardContentDock.LEFT) 0.0 else plan.candidateWidth + plan.stripWidth
+        return (margin + beforeKeys) to plan.keypadWidth
+    }
+
     /** The split that applies to a layout's own [split] under [mode], or null for an unsplit keyboard. */
     fun effectiveSplit(
         split: LayoutSplitConfiguration?,

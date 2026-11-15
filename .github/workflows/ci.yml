@@ -14,9 +14,16 @@ permissions:
   contents: read
 
 jobs:
+  # Two halves on separate runners so the wall time is the slower one, not the sum: static checks
+  # and JVM tests never build the native engine, the APK builds need it.
   check:
+    name: check (${{ matrix.part }})
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [lint-test, assemble]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -34,18 +41,20 @@ jobs:
       # Same inputs as the engine cache key in native/android/CMakeLists.txt; a stale entry
       # inside the restored directory is simply never picked.
       - uses: actions/cache@v4
+        if: matrix.part == 'assemble'
         with:
           path: |
             .local/native-cache
             .local/cmake-deps
           key: native-check-${{ runner.os }}-ndk30.0.16248370-${{ hashFiles('native/*.env', 'native/patches/**', 'native/scripts/**', 'native/src/*.h', 'native/levers/include/**', 'native/android/engine/**') }}
-      - name: ktlint
-        run: ./gradlew --console=plain ktlintCheck
-      - name: Lint and unit tests
-        run: ./gradlew --console=plain lint test
+      - name: ktlint, lint and unit tests
+        if: matrix.part == 'lint-test'
+        run: ./gradlew --console=plain ktlintCheck lint test
       - name: Assemble debug and release APKs and the benchmark module
+        if: matrix.part == 'assemble'
         run: ./gradlew --console=plain assembleDebug assembleRelease :benchmark:assemble
       - name: Check the packaged native engine
+        if: matrix.part == 'assemble'
         run: |
           for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
             scripts/check-native-engine.sh "$apk"
@@ -53,7 +62,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reports
+          name: reports-${{ matrix.part }}
           path: |
             **/build/reports/**
           retention-days: 7
@@ -85,12 +94,11 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      # The instrumented suites take most of the job, so each API level splits them over two
+      # emulators with AndroidJUnitRunner's numShards/shardIndex.
       matrix:
-        include:
-          - api-level: 30
-            target: default
-          - api-level: 34
-            target: google_apis
+        api: [{ level: 30, target: default }, { level: 34, target: google_apis }]
+        shard: [0, 1]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -120,21 +128,21 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: ${{ matrix.api-level }}
+          api-level: ${{ matrix.api.level }}
           arch: x86_64
-          target: ${{ matrix.target }}
+          target: ${{ matrix.api.target }}
           # Without a profile the emulator is 320 dp wide, narrower than the phones the suite is
           # written for; a Pixel 6 is a common 411 dp phone.
           profile: pixel_6
           disable-animations: true
           # One module per call: modules listed together run in parallel on the same device and disturb each other.
           script: |
-            ./gradlew --console=plain -Psongyan.abis=x86_64 :core:rime:connectedDebugAndroidTest
-            ./gradlew --console=plain -Psongyan.abis=x86_64 :ime:connectedDebugAndroidTest
+            ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :core:rime:connectedDebugAndroidTest
+            ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :ime:connectedDebugAndroidTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: instrumented-reports-api${{ matrix.api-level }}
+          name: instrumented-reports-api${{ matrix.api.level }}-shard${{ matrix.shard }}
           path: |
             **/build/reports/androidTests/**
             **/build/outputs/androidTest-results/**

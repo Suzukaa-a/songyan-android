@@ -22,7 +22,12 @@ internal fun ApplicationExtension.configureCommon() {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    lint { abortOnError = true }
+    lint {
+        abortOnError = true
+        // The full `lint` task gates every commit and CI run; the release build's own
+        // lintVital pass repeats it and was the single slowest task in CI.
+        checkReleaseBuilds = false
+    }
     packaging { resources { excludes.add("META-INF/{AL2.0,LGPL2.1}") } }
 }
 

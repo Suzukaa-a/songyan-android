@@ -10,6 +10,8 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+ASSUMPTION = "AssumptionViolatedException"
+
 
 def main() -> int:
     arguments = sys.argv[1:]
@@ -35,6 +37,13 @@ def main() -> int:
                 total += int(suite.get("tests", "0"))
                 failures += int(suite.get("failures", "0")) + int(suite.get("errors", "0"))
                 skipped += int(suite.get("skipped", "0"))
+                # The instrumentation runner reports a JUnit assumption that did not hold (a
+                # fixture the device lacks) as a failure; it is a skip.
+                for case in suite.iter("testcase"):
+                    for problem in case.findall("failure") + case.findall("error"):
+                        if ASSUMPTION in (problem.text or "") + (problem.get("message") or ""):
+                            failures -= 1
+                            skipped += 1
     if files == 0:
         print(f"no connected-test results under: {' '.join(arguments[1:])}", file=sys.stderr)
         return 1
@@ -47,7 +56,7 @@ def main() -> int:
     if strict_skips and skipped:
         print(f"connected tests skipped {skipped}; this suite must run them all", file=sys.stderr)
         return 1
-    print(f"connected tests: {total} passed, {skipped} skipped (minimum {minimum})")
+    print(f"connected tests: {total - skipped} passed, {skipped} skipped (minimum {minimum})")
     return 0
 
 

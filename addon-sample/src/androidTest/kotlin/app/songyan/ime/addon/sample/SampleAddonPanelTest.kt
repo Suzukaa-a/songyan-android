@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package app.songyan.ime.addon.sample
 
+import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.view.Display
@@ -158,7 +159,11 @@ class SampleAddonPanelTest {
             client.runTextTool("panel#crash", "crash", "x")
             assertTrue("the addon process did not die", recorder.awaitDisconnected(5_000))
             assertFalse(client.isConnected)
-            scenario.onActivity { it.surfaceView.clearChildSurfacePackage() }
+            // Before API 36 there is no call to detach the dead addon's surface; the view keeps the
+            // last frame, which is fine for checking that the host survives.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                scenario.onActivity { it.surfaceView.clearChildSurfacePackage() }
+            }
             assertFalse(activityRef.isFinishing)
 
             val reconnect =

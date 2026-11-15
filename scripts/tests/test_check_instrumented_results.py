@@ -55,6 +55,20 @@ class InstrumentedResultsCheckTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("1 failure", result.stderr)
 
+    def test_an_unmet_assumption_is_a_skip(self):
+        content = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<testsuites><testsuite name="suite" tests="3" failures="1" errors="0" skipped="0">'
+            '<testcase name="ok"/><testcase name="ok2"/>'
+            '<testcase name="needsFixture"><failure>org.junit.AssumptionViolatedException: '
+            "fixture not provisioned</failure></testcase>"
+            "</testsuite></testsuites>"
+        )
+        result = self.run_check(1, content)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("2 passed, 1 skipped", result.stdout)
+        self.assertEqual(self.run_check(1, content, "--no-skips").returncode, 1)
+
     def test_skipped_tests_pass_unless_asked(self):
         result = self.run_check(1, suite_xml(3, skipped=2))
         self.assertEqual(result.returncode, 0, result.stderr)

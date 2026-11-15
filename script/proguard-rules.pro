@@ -3,7 +3,7 @@
 # up in a release build: debug builds are not shrunk.
 -keep class app.songyan.ime.script.ScriptRunHost {
     static app.songyan.ime.script.ScriptRunHost use();
-    void fetch(java.lang.String, java.lang.String, java.lang.String, byte[]);
+    void fetch(java.lang.String, java.lang.String, java.lang.String, byte[], long);
     boolean authorize(java.lang.String, int);
     void log(byte[]);
 }

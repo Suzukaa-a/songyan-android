@@ -51,7 +51,7 @@ expect_class app.songyan.ime.script.ScriptProxyService
 # Signatures match ScriptRunHost.kt and the GetMethodID/GetStaticMethodID descriptors in
 # script_jni.c; a changed parameter list breaks JNI lookup even when the name survives.
 expect_member 'app.songyan.ime.script.ScriptRunHost use()' use
-expect_member 'void fetch(java.lang.String,java.lang.String,java.lang.String,byte[])' fetch
+expect_member 'void fetch(java.lang.String,java.lang.String,java.lang.String,byte[],long)' fetch
 expect_member 'boolean authorize(java.lang.String,int)' authorize
 expect_member 'void log(byte[])' log
 

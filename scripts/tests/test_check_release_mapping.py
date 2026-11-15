@@ -22,7 +22,7 @@ app.songyan.ime.script.ScriptRunHost -> app.songyan.ime.script.ScriptRunHost:
 # {"id":"sourceFile","fileName":"ScriptRunHost.kt"}
     java.util.List declaredHosts -> a
     1:2:app.songyan.ime.script.ScriptRunHost use():0 -> use
-    89:89:void fetch(java.lang.String,java.lang.String,java.lang.String,byte[]):39:39 -> fetch
+    89:89:void fetch(java.lang.String,java.lang.String,java.lang.String,byte[],long):39:39 -> fetch
     4:9:boolean authorize(java.lang.String,int):28:28 -> authorize
     4:16:void log(byte[]):53:53 -> log
 app.songyan.ime.script.ScriptNative -> app.songyan.ime.script.ScriptNative:

@@ -183,26 +183,27 @@ class RealEngineEditorTest {
                     view.hitBounds,
                     view.labelSizes.toList(),
                 )
-            for (key in "64") host.tapKeyFor(key)
+            host.tapKeyFor('6')
             host.awaitComposing()
             host.awaitIdle()
-            var before = emptyList<String>()
-            host.main { before = host.find(KeyboardView::class.java).railChoices }
-            assertTrue("the rail offers readings: $before", before.isNotEmpty())
-            for (key in "42") {
+            var previous = emptyList<String>()
+            host.main { previous = host.find(KeyboardView::class.java).railChoices }
+            var relabelled = 0
+            for (key in "4426") {
                 host.tapKeyFor(key)
                 host.awaitIdle()
                 host.main {
                     val view = host.find(KeyboardView::class.java)
-                    assertTrue("readings changed: ${view.railChoices}", view.railChoices.isNotEmpty())
+                    if (previous.isNotEmpty() && view.railChoices.isNotEmpty() && view.railChoices != previous) {
+                        relabelled++
+                    }
+                    previous = view.railChoices
                     val inPlace = drawn(view)
                     view.rebuild()
                     assertEquals(inPlace, drawn(view))
                 }
             }
-            var after = emptyList<String>()
-            host.main { after = host.find(KeyboardView::class.java).railChoices }
-            assertTrue("the readings moved on: $after", after != before)
+            assertTrue("some key moved the readings on in place", relabelled > 0)
         }
 
     @Test

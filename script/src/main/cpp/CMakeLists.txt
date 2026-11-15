@@ -203,5 +203,8 @@ target_link_libraries(songyan-script PRIVATE quickjs-engine songyan-bridge log)
 target_compile_options(songyan-script PRIVATE -fvisibility=hidden)
 set_target_properties(songyan-script PROPERTIES
   LINK_FLAGS "-Wl,--gc-sections -Wl,--exclude-libs,ALL")
-target_link_options(songyan-script PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/android/exports.map)
+# 16 KB pages: the NDK only defaults to it on 64-bit ABIs, and the engine library sets it the
+# same way, so every ABI's libraries load on 16 KB devices.
+target_link_options(songyan-script PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/android/exports.map
+  -Wl,-z,max-page-size=16384)
 

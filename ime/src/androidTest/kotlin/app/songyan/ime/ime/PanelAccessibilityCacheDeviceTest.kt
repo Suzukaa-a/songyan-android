@@ -66,7 +66,7 @@ class PanelAccessibilityCacheDeviceTest {
             SystemClock.sleep(SETTLE_MS)
             assertTrue(
                 "letter keys never appeared; windows: " + windowSummary(automation),
-                awaitWindow { "q" in windowLabels(automation) },
+                awaitWindow(automation) { "q" in windowLabels(automation) },
             )
 
             host.tapNumbersPage()
@@ -126,7 +126,7 @@ class PanelAccessibilityCacheDeviceTest {
                 // tree itself, still on the phrases section the client will be seeded with.
                 assertTrue(
                     "the panel never appeared in the window's tree; windows: " + windowSummary(automation),
-                    awaitWindow {
+                    awaitWindow(automation) {
                         val labels = panelLabels(automation, rail)
                         labels != null && returnToLetters in labels && PHRASE in labels
                     },
@@ -220,7 +220,9 @@ class PanelAccessibilityCacheDeviceTest {
         val original = automation.serviceInfo.flags
         automation.serviceInfo =
             automation.serviceInfo.apply {
-                flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                // View ids find a system dialog's button (see [dismissForeignNotResponding]).
+                flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                    AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
             }
         return {
             automation.serviceInfo = automation.serviceInfo.apply { flags = original }
@@ -231,13 +233,33 @@ class PanelAccessibilityCacheDeviceTest {
      * The first query of a freshly shown window crosses into the accessibility service, which on a
      * slow emulator can take far longer than an in-process view check.
      */
-    private fun awaitWindow(condition: () -> Boolean): Boolean {
+    private fun awaitWindow(
+        automation: UiAutomation,
+        condition: () -> Boolean,
+    ): Boolean {
         val deadline = SystemClock.uptimeMillis() + WINDOW_TIMEOUT_MS
         while (SystemClock.uptimeMillis() < deadline) {
             if (condition()) return true
+            dismissForeignNotResponding(automation)
             SystemClock.sleep(WINDOW_POLL_MS)
         }
         return condition()
+    }
+
+    /**
+     * On a slow emulator the launcher sometimes stalls while it relaunches behind the test window,
+     * and the system's "isn't responding" dialog then takes the focus the test window needs.
+     * Choosing "Wait" closes the dialog and leaves the launcher alone. The button is found by its
+     * framework id, so the system language does not matter.
+     */
+    private fun dismissForeignNotResponding(automation: UiAutomation) {
+        for (window in automation.windows) {
+            val root = window.root ?: continue
+            if (root.packageName != "android") continue
+            root.findAccessibilityNodeInfosByViewId(ANR_WAIT_BUTTON).firstOrNull()?.performAction(
+                AccessibilityNodeInfo.ACTION_CLICK,
+            )
+        }
     }
 
     private fun windowSummary(automation: UiAutomation): String =
@@ -314,6 +336,7 @@ class PanelAccessibilityCacheDeviceTest {
         private const val MAX_DEPTH = 24
         private const val WINDOW_TIMEOUT_MS = 30_000L
         private const val WINDOW_POLL_MS = 100L
+        private const val ANR_WAIT_BUTTON = "android:id/aerr_wait"
 
         /** The five date formats the app offers, with previews a fixed instant would produce. */
         private val QUICK_DATE_ROWS =

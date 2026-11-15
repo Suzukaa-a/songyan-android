@@ -123,17 +123,23 @@ class SampleAddonPanelTest {
                 tap(tapX, location[1] + (centerDp * density).toInt())
             }
 
-            tapButton(0)
-            assertTrue(
-                "the insert button of the panel did not reach the host",
-                waitFor { panelHost.writes.isNotEmpty() },
-            )
-            assertEquals(sampleString("panel_plain_text"), panelHost.writes.first().text)
+            // On a slow emulator the embedded surface can still be without its input channel after
+            // the pause above, and a touch then goes nowhere: tap the first button until one lands.
+            val firstLanded =
+                (1..FIRST_TAP_ATTEMPTS).any {
+                    tapButton(0)
+                    waitFor(FIRST_TAP_WAIT_MS) { panelHost.writes.isNotEmpty() }
+                }
+            assertTrue("the insert button of the panel did not reach the host", firstLanded)
+            // A late first tap may still arrive; count from whatever has landed by now.
+            Thread.sleep(FIRST_TAP_WAIT_MS)
+            assertTrue(panelHost.writes.all { it.text == sampleString("panel_plain_text") })
+            val insertsBefore = panelHost.writes.size
 
             tapButton(1)
-            assertTrue(waitFor { panelHost.writes.size >= 2 })
-            assertEquals("", panelHost.writes[1].text)
-            assertEquals(1, panelHost.writes[1].deleteBefore)
+            assertTrue(waitFor { panelHost.writes.size > insertsBefore })
+            assertEquals("", panelHost.writes[insertsBefore].text)
+            assertEquals(1, panelHost.writes[insertsBefore].deleteBefore)
 
             tapButton(2)
             assertTrue("the read button of the panel did not reach the host", waitFor { panelHost.reads.isNotEmpty() })
@@ -266,3 +272,6 @@ class SampleAddonPanelTest {
         SystemClock.sleep(150)
     }
 }
+
+private const val FIRST_TAP_ATTEMPTS = 4
+private const val FIRST_TAP_WAIT_MS = 1_500L

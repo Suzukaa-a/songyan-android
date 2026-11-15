@@ -47,6 +47,35 @@ class CandidateBarLayoutTest {
         assertEquals(listOf(1), reads)
     }
 
+    /** Among single characters an emoji takes one character's width, in the strip and in the table. */
+    @Test
+    fun anEmojiIsAsWideAsOneCharacter() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val bar = CandidateBarView(context)
+            val texts = listOf("旁", "品", "派", "\uD83E\uDD67", "排", "\u2764\uFE0F", "\uD83D\uDC4D\uD83C\uDFFB")
+            bar.update(
+                EngineSnapshot(
+                    schemaID = "s",
+                    rawInput = "pai",
+                    isComposing = true,
+                    candidates = texts.mapIndexed { index, text -> Candidate(index, text) },
+                    pageSize = texts.size,
+                    isLastPage = true,
+                ),
+            )
+            bar.measure(
+                View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(300, View.MeasureSpec.EXACTLY),
+            )
+            bar.layout(0, 0, 1080, 300)
+            val widths = bar.entries.map { bar.chipWidth(it) }
+            for (index in 3 until texts.size) {
+                if (index == 4) continue
+                assertTrue("${texts[index]}: ${widths[index]} > ${widths[0]}", widths[index] <= widths[0] + 0.5f)
+            }
+        }
+    }
+
     /**
      * A held Delete's step must run only for the touch that queued it: pressing the same control
      * again (the release displayed nothing yet) must not let the finished touch's step delete.

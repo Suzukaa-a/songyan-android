@@ -33,7 +33,7 @@ internal fun CandidateBarView.measureEntries() {
     for (entry in entries) {
         if (entry.measuredFor == generation) continue
         textPaint.textSize = textSize
-        entry.textWidth = textPaint.measureText(entry.text)
+        entry.textWidth = EmojiWidth.measure(textPaint, entry.text, textSize)
         if (entry.comment.isNotEmpty()) {
             textPaint.textSize = commentSize
             entry.commentWidth = textPaint.measureText(entry.comment)
@@ -51,6 +51,50 @@ internal fun CandidateBarView.chipWidth(entry: Entry): Float =
 /** Whether [entry]'s comment is drawn and counted: always when expanded, by the user's choice in the row. */
 internal fun CandidateBarView.showsComment(entry: Entry): Boolean =
     entry.comment.isNotEmpty() && (expanded || collapsedComments)
+
+/**
+ * Candidate text width with each emoji counted at most one em, a Chinese character's width. An
+ * emoji font's advance is about a quarter wider; counted as is, an emoji spanned two table columns
+ * among single characters and its strip cell stood out wider. The cell padding takes the
+ * difference. The iOS keyboard budgets an emoji the same.
+ */
+internal object EmojiWidth {
+    fun measure(
+        paint: android.graphics.Paint,
+        text: String,
+        em: Float,
+    ): Float {
+        val measured = paint.measureText(text)
+        if (text.none { it.isSurrogate() || it.code in 0x2000..0x32FF || it.code == 0xFE0F }) return measured
+        val graphemes =
+            android.icu.text.BreakIterator
+                .getCharacterInstance()
+        graphemes.setText(text)
+        var excess = 0f
+        var start = graphemes.first()
+        var end = graphemes.next()
+        while (end != android.icu.text.BreakIterator.DONE) {
+            val grapheme = text.substring(start, end)
+            if (isEmoji(grapheme)) excess += (paint.measureText(grapheme) - em).coerceAtLeast(0f)
+            start = end
+            end = graphemes.next()
+        }
+        return measured - excess
+    }
+
+    /** A text-default symbol (©, ❤, a digit) is an emoji only with a selector or in a sequence. */
+    private fun isEmoji(grapheme: String): Boolean {
+        val first = grapheme.codePointAt(0)
+        if (first in 0x2E81..0x1EFFF) return false
+        return android.icu.lang.UCharacter
+            .hasBinaryProperty(first, android.icu.lang.UProperty.EMOJI_PRESENTATION) ||
+            (
+                android.icu.lang.UCharacter
+                    .hasBinaryProperty(first, android.icu.lang.UProperty.EMOJI) &&
+                    grapheme.codePointCount(0, grapheme.length) > 1
+            )
+    }
+}
 
 /** The cell width rule, apart from the view so it can be tested without one. */
 internal object ChipWidth {

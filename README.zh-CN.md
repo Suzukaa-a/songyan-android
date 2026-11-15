@@ -33,7 +33,7 @@
 
 <p align="center">
   <img src=".github/screenshots/keyboard-9.png" width="300" alt="雾凇拼音在九键上输入你好世界">
-  <img src=".github/screenshots/keyboard-14.png" width="300" alt="雾凇拼音在 14 键上输入中文输入法">
+  <img src=".github/screenshots/keyboard-18.png" width="300" alt="雾凇拼音在 18 键上输入中文输入法">
 </p>
 
 松烟按你正在用的输入方案自动生成九键、14 键和 18 键，不用另装方案。雾凇拼音、万象拼音或你自己导入的方案，换个布局就能接着打，词库和学到的词还是同一份。

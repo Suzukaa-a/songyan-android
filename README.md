@@ -36,7 +36,7 @@ An Android keyboard built on the [RIME](https://rime.im) input method engine. De
 
 <p align="center">
   <img src=".github/screenshots/keyboard-9.png" width="300" alt="rime-ice on 9 keys typing 你好世界">
-  <img src=".github/screenshots/keyboard-14.png" width="300" alt="rime-ice on 14 keys typing 中文输入法">
+  <img src=".github/screenshots/keyboard-18.png" width="300" alt="rime-ice on 18 keys typing 中文输入法">
 </p>
 
 Songyan automatically generates 9, 14, and 18-key layouts from the input scheme you are already using, without needing extra schemes. Whether you use rime-ice, wanxiang, or a custom imported scheme, simply switch the keyboard layout and keep typing—with the same dictionary and learned words.

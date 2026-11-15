@@ -17,7 +17,7 @@ class ExternalFixtureFilter : Filter() {
         buildSet {
             if (InstrumentationRegistry.getArguments().getString("kagiroiFixture") == null) {
                 add(
-                    RealEngineEditorTest::class.java.name +
+                    RealEngineTouchTest::class.java.name +
                         "#withTheChoiceOnAKana12SidewaysFlickStillTypesKanaAtTheCaret",
                 )
             }

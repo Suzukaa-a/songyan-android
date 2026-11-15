@@ -3,8 +3,8 @@ package app.songyan.ime.deploy
 import app.songyan.ime.rime.FakeAssetTree
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.BuildStamp
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
 import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -216,14 +216,28 @@ internal object DeployFixtures {
         files: Map<String, String>,
     ): File {
         target.parentFile?.mkdirs()
-        ZipOutputStream(FileOutputStream(target)).use { zip ->
+        target.writeBytes(zipBytes(files))
+        return target
+    }
+
+    /**
+     * An archive of [files] (path to UTF-8 text), each under `[wrapper]/` when given; a path
+     * ending in `/` is a directory entry. Entry times are fixed, so the same files always give
+     * the same bytes (a pinned digest and the served archive are built separately).
+     */
+    fun zipBytes(
+        files: Map<String, String>,
+        wrapper: String? = null,
+    ): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
             for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray(Charsets.UTF_8))
+                zip.putNextEntry(ZipEntry(if (wrapper == null) path else "$wrapper/$path").apply { time = 0 })
+                if (!path.endsWith("/")) zip.write(text.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
         }
-        return target
+        return out.toByteArray()
     }
 
     fun pickSchemePackage(

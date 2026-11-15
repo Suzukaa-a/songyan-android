@@ -13,13 +13,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.net.URI
 import java.security.MessageDigest
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * A recommended entry is assembled from several pinned archives. Every archive is downloaded and
@@ -263,18 +260,7 @@ class MultiArchiveDeployTest {
     private fun zip(
         wrapper: String,
         files: Map<String, String>,
-    ): ByteArray {
-        val out = ByteArrayOutputStream()
-        ZipOutputStream(out).use { zip ->
-            for ((path, text) in files) {
-                // The pinned request and served archive are built separately and must have identical bytes.
-                zip.putNextEntry(ZipEntry(wrapper + "/" + path).apply { time = 0 })
-                zip.write(text.toByteArray())
-                zip.closeEntry()
-            }
-        }
-        return out.toByteArray()
-    }
+    ): ByteArray = DeployFixtures.zipBytes(files, wrapper)
 
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).toHexString()
 

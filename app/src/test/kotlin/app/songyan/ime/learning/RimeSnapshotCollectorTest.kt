@@ -1,15 +1,13 @@
 package app.songyan.ime.learning
 
+import app.songyan.ime.deploy.DeployFixtures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Files
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /** Finding and staging `.userdb.txt` snapshots in picked files, ZIPs and folders. */
 class RimeSnapshotCollectorTest {
@@ -29,15 +27,8 @@ class RimeSnapshotCollectorTest {
     ) = PickedFile(name) { bytes.inputStream() }
 
     private fun zip(vararg entries: Pair<String, String>): ByteArray {
-        val out = ByteArrayOutputStream()
-        ZipOutputStream(out).use { zip ->
-            for ((name, text) in entries) {
-                zip.putNextEntry(ZipEntry(name))
-                if (!name.endsWith("/")) zip.write(text.toByteArray())
-                zip.closeEntry()
-            }
-        }
-        return out.toByteArray()
+        check(entries.map { it.first }.toSet().size == entries.size) { "duplicate entry names" }
+        return DeployFixtures.zipBytes(entries.toMap())
     }
 
     private class DirectoryNode(

@@ -16,12 +16,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.net.URI
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * Scheme packages from a link (P4-2) and their updates (P4-1): the download is rewritten for
@@ -64,17 +61,7 @@ class SchemeLinkUpdateTest {
             fetcher = DictionaryLinkFetcher(transport),
         )
 
-    private fun zipOf(files: Map<String, String>): ByteArray {
-        val out = ByteArrayOutputStream()
-        ZipOutputStream(out).use { zip ->
-            for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray())
-                zip.closeEntry()
-            }
-        }
-        return out.toByteArray()
-    }
+    private fun zipOf(files: Map<String, String>): ByteArray = DeployFixtures.zipBytes(files)
 
     private fun version(rows: String) = DeployFixtures.stackablePackageFiles(rows)
 

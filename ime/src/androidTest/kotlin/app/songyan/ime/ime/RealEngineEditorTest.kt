@@ -168,6 +168,44 @@ class RealEngineEditorTest {
         }
 
     @Test
+    fun aNineKeyRailRelabelledInPlaceIsTheKeypadAFullRebuildDraws() =
+        withHost(layout = "phone9") { host ->
+            host.start()
+
+            fun drawn(view: KeyboardView): List<Any> =
+                listOf(
+                    view.keys,
+                    view.labels,
+                    view.spokenLabels,
+                    view.identities,
+                    view.railIndices,
+                    view.bounds,
+                    view.hitBounds,
+                    view.labelSizes.toList(),
+                )
+            for (key in "64") host.tapKeyFor(key)
+            host.awaitComposing()
+            host.awaitIdle()
+            var before = emptyList<String>()
+            host.main { before = host.find(KeyboardView::class.java).railChoices }
+            assertTrue("the rail offers readings: $before", before.isNotEmpty())
+            for (key in "42") {
+                host.tapKeyFor(key)
+                host.awaitIdle()
+                host.main {
+                    val view = host.find(KeyboardView::class.java)
+                    assertTrue("readings changed: ${view.railChoices}", view.railChoices.isNotEmpty())
+                    val inPlace = drawn(view)
+                    view.rebuild()
+                    assertEquals(inPlace, drawn(view))
+                }
+            }
+            var after = emptyList<String>()
+            host.main { after = host.find(KeyboardView::class.java).railChoices }
+            assertTrue("the readings moved on: $after", after != before)
+        }
+
+    @Test
     fun anIdleKeyboardShowsTheToolbarAndCompositionSwapsItForCandidates() =
         withHost { host ->
             host.start()

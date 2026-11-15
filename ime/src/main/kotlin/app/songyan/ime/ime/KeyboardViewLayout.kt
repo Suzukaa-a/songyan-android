@@ -618,6 +618,24 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
     settleKeySet(phoneKeySetSignature(model.numeric, physical))
 }
 
+/**
+ * Puts the current [KeyboardView.railChoices] on the rail keys [rebuildPhone] placed, top to
+ * bottom, as it would: a slot the choices do not reach is an empty, inert key.
+ */
+internal fun KeyboardView.relabelRail() {
+    val updated = keys.toMutableList()
+    var slot = 0
+    for (index in updated.indices) {
+        if (index !in railIndices) continue
+        val choice = railChoices.getOrNull(slot).orEmpty()
+        slot += 1
+        updated[index] = LayoutKey(choice, action = LayoutAction.literal(choice))
+    }
+    keys = updated
+    applyKeyFaces()
+    rebasePresses()
+}
+
 /** Layouts and labels are pure functions of the current keys and faces. */
 internal fun KeyboardView.applyKeyFaces() {
     applyTextLanguage()

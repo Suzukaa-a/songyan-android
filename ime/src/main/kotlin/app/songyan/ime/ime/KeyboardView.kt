@@ -604,6 +604,28 @@ class KeyboardView(
         ) {
             return
         }
+        // Only the reading column changed: the shell, its slots and every other key stay, so the
+        // rail keys are relabelled in place instead of solving the whole keypad again.
+        if (shell?.key == config &&
+            layout == null &&
+            this.railChoices.isNotEmpty() &&
+            railChoices.isNotEmpty() &&
+            railIndices.isNotEmpty() &&
+            bounds.size == keys.size &&
+            shifted == shift &&
+            capsLocked == locked &&
+            actionLabel == enterLabel &&
+            this.faces == faces
+        ) {
+            this.railChoices = railChoices
+            railSelectedCount = railSelected
+            this.railChoiceCount = railChoiceCount
+            this.railChoiceFirst = railChoiceFirst
+            relabelRail()
+            invalidate()
+            announceItemsChanged()
+            return
+        }
         layout = null
         kana12 = null
         rails = null

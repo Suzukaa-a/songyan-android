@@ -260,12 +260,15 @@ private suspend fun KeyboardController.loadReadings(
     }
 }
 
-/** Resolves the rail against the same evidence taps are validated against, and repaints on a change. */
+/**
+ * Resolves the rail against the same evidence taps are validated against, and repaints on a change.
+ * True when it rendered.
+ */
 internal fun KeyboardController.publishRail(
     active: InputSession,
     revision: Int,
     repaint: Boolean = true,
-) {
+): Boolean {
     val snapshot = active.snapshot
     val resolved =
         SpellingRailChoices.resolve(
@@ -282,8 +285,12 @@ internal fun KeyboardController.publishRail(
     if (resolved != railChoices || marked != lastMarked || candidatesFiltered != readingFilterShowing(active)) {
         railChoices = resolved
         railScroll = T9RailPolicy.clampScroll(T9RailPolicy.items(resolved).size, railScroll)
-        if (repaint) render()
+        if (repaint) {
+            render()
+            return true
+        }
     }
+    return false
 }
 
 /** The candidates the reading filter leaves, while a reading is chosen for the live composition. */
@@ -313,8 +320,7 @@ internal suspend fun KeyboardController.applyRailChoice(
             readingFilter.select(item.label)
             railScroll = 0
             loadReadings(active, revision)
-            publishRail(active, revision)
-            render()
+            if (!publishRail(active, revision)) render()
         }
         else -> Unit
     }
@@ -397,8 +403,7 @@ internal suspend fun KeyboardController.undoRailChoice(active: InputSession): Bo
     if (readingFilter.isFiltering && readingFilter.revision == active.compositionRevision) {
         readingFilter.undoSelection()
         railScroll = 0
-        publishRail(active, active.compositionRevision)
-        render()
+        if (!publishRail(active, active.compositionRevision)) render()
         return true
     }
     if (ambiguityPicker.phase == AmbiguitySpellingPicker.Phase.LOCKED) {

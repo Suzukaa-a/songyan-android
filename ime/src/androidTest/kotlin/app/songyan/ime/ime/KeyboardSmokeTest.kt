@@ -7,11 +7,6 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.songyan.ime.keyboard.engine.Candidate
-import app.songyan.ime.keyboard.engine.EngineBackend
-import app.songyan.ime.keyboard.engine.EngineBackendKind
-import app.songyan.ime.keyboard.engine.EngineSnapshot
-import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +20,7 @@ import org.junit.runner.RunWith
 class KeyboardSmokeTest {
     @Test fun canvasKeyReachesEngineAndPrivateEditorUsesDirectInput() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val backend = RecordingBackend()
+        val backend = RecordingEngineBackend()
         val commits = mutableListOf<String>()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         lateinit var controller: KeyboardController
@@ -103,7 +98,7 @@ class KeyboardSmokeTest {
                         error = { throw AssertionError(it) },
                     ),
                 )
-            controller.bind(RecordingBackend())
+            controller.bind(RecordingEngineBackend())
             controller.configure(EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE))
             controller.startInput(EditorPolicy(false, false, false, EditorInfo.IME_ACTION_NONE))
             val bound = 4000
@@ -140,53 +135,5 @@ class KeyboardSmokeTest {
         keyArea.dispatchTouchEvent(up)
         down.recycle()
         up.recycle()
-    }
-
-    private class RecordingBackend : EngineBackend {
-        val keys = mutableListOf<String>()
-        private var snapshot = EngineSnapshot()
-        override val kind = EngineBackendKind.DEMO_SIMULATOR
-        override val inputUnavailableReason: String? = null
-        override val availableSchemas = emptyList<KeyboardSchemaDescriptor>()
-        override val statusSummary = "test"
-        override var spellingDemand: (() -> Boolean)? = null
-
-        override suspend fun setup(
-            sharedDirectory: String,
-            userDirectory: String,
-        ) = Unit
-
-        override suspend fun selectSchema(schemaID: String) = Unit
-
-        override suspend fun processKey(keyValue: String): EngineSnapshot {
-            keys += keyValue
-            snapshot =
-                EngineSnapshot(
-                    rawInput = keyValue,
-                    preedit = keyValue,
-                    isComposing = true,
-                    candidates = listOf(Candidate(0, "去")),
-                    highlightedIndex = 0,
-                )
-            return snapshot
-        }
-
-        override suspend fun cancelComposition(): EngineSnapshot {
-            snapshot = EngineSnapshot()
-            return snapshot
-        }
-
-        override suspend fun selectCandidate(index: Int): EngineSnapshot {
-            snapshot = EngineSnapshot()
-            return snapshot.copy(committed = "去")
-        }
-
-        override suspend fun nextPage() = snapshot
-
-        override suspend fun previousPage() = snapshot
-
-        override fun currentSnapshot() = snapshot
-
-        override suspend fun shutdown() = Unit
     }
 }

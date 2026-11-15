@@ -6,10 +6,6 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import app.songyan.ime.keyboard.engine.EngineBackend
-import app.songyan.ime.keyboard.engine.EngineBackendKind
-import app.songyan.ime.keyboard.engine.EngineSnapshot
-import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.LayoutAction
@@ -31,7 +27,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LayoutCatalogOnDeviceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
-    private val backend = RecordingBackend()
+    private val backend = RecordingEngineBackend(composes = false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var controller: KeyboardController
 
@@ -182,38 +178,5 @@ class LayoutCatalogOnDeviceTest {
         instrumentation.runOnMainSync { bounds = controller.keyboard.bounds }
         val ordinaryGap = bounds[1].left - bounds[0].right
         assertEquals(ordinaryGap, bounds[5].left - bounds[4].right, 0.5f)
-    }
-
-    private class RecordingBackend : EngineBackend {
-        val keys = mutableListOf<String>()
-        override val kind = EngineBackendKind.DEMO_SIMULATOR
-        override val inputUnavailableReason: String? = null
-        override val availableSchemas = emptyList<KeyboardSchemaDescriptor>()
-        override val statusSummary = "test"
-        override var spellingDemand: (() -> Boolean)? = null
-
-        override suspend fun setup(
-            sharedDirectory: String,
-            userDirectory: String,
-        ) = Unit
-
-        override suspend fun selectSchema(schemaID: String) = Unit
-
-        override suspend fun processKey(keyValue: String): EngineSnapshot {
-            keys += keyValue
-            return EngineSnapshot()
-        }
-
-        override suspend fun cancelComposition() = EngineSnapshot()
-
-        override suspend fun selectCandidate(index: Int) = EngineSnapshot()
-
-        override suspend fun nextPage() = EngineSnapshot()
-
-        override suspend fun previousPage() = EngineSnapshot()
-
-        override fun currentSnapshot() = EngineSnapshot()
-
-        override suspend fun shutdown() = Unit
     }
 }

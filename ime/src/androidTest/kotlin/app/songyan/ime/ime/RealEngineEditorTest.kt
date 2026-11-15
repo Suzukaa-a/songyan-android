@@ -33,6 +33,8 @@ import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.ime.panels.QuickContentPanelView
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.EngineSnapshot
+import app.songyan.ime.keyboard.engine.ReadingRailRead
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
@@ -131,6 +133,38 @@ class RealEngineEditorTest {
             val snapshot = host.backend.currentSnapshot()
             assertEquals("一林", snapshot.candidates[snapshot.highlightedIndex].text)
             host.awaitField("yi'lin")
+        }
+
+    @Test
+    fun aNineKeyPressMadeWhileTheRailIsReadEndsOnTheRailOfTheWholeInput() =
+        withHost(layout = "phone9", pauseDismiss = true) { host ->
+            host.start()
+
+            fun shown(): String {
+                var keys = emptyList<String>()
+                host.main { keys = host.labelsOf(host.find(KeyboardView::class.java)) }
+                return host.text() + " | " + host.barLabels() + " | " + keys
+            }
+            for (key in "6442") host.tapKeyFor(key)
+            host.awaitComposing()
+            host.awaitIdle()
+            val reference = shown()
+            host.tapClearControl()
+            host.awaitIdle()
+
+            val backend = host.backend as PausedDismissBackend
+            for (key in "64") host.tapKeyFor(key)
+            host.awaitIdle()
+            val gate = CompletableDeferred<Unit>()
+            backend.railGate = gate
+            host.main { host.controller.enqueueKey(LayoutAction.code("4")) }
+            runBlocking { kotlinx.coroutines.withTimeout(TIMEOUT_MS) { backend.railHeld.await() } }
+            // The next key arrives while the rail of 644 is still being read.
+            host.main { host.controller.enqueueKey(LayoutAction.code("2")) }
+            gate.complete(Unit)
+            host.awaitComposing()
+            host.awaitIdle()
+            assertEquals(reference, shown())
         }
 
     @Test
@@ -3054,12 +3088,27 @@ class RealEngineEditorTest {
     }
 
     /**
-     * The real backend with one test seam: a prediction dismissal can be held before the engine
-     * answers it. Snapshots are always the engine's own; nothing is fabricated.
+     * The real backend with two test seams: a prediction dismissal or a reading rail read can be
+     * held before the engine answers it. Snapshots and reads are always the engine's own; nothing
+     * is fabricated.
      */
     private class PausedDismissBackend(
         private val inner: EngineBackend,
     ) : EngineBackend by inner {
+        /** Set to hold the next rail read; [railHeld] completes once a read waits on it. */
+        @Volatile
+        var railGate: CompletableDeferred<Unit>? = null
+        val railHeld = CompletableDeferred<Unit>()
+
+        override suspend fun readReadingRail(request: ReadingRailRequest): ReadingRailRead {
+            railGate?.let {
+                railHeld.complete(Unit)
+                it.await()
+                railGate = null
+            }
+            return inner.readReadingRail(request)
+        }
+
         /** Set to hold the next dismissal; cleared once it has been awaited. */
         @Volatile
         var gate: CompletableDeferred<Unit>? = null

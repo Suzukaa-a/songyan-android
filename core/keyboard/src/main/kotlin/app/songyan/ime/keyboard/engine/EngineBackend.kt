@@ -207,6 +207,28 @@ interface EngineBackend {
     /** Read-only spelling report reachable for the last `abc` segment; null when unprovable. */
     suspend fun ambiguitySpellings(): AmbiguitySpellingsReport? = null
 
+    /**
+     * The reading rail's reads for the current state. A backend whose calls each cross to an engine
+     * thread answers them all in one crossing; the parts are the same reads as
+     * [ambiguitySpellings] and [readCandidatesWithReadings].
+     */
+    suspend fun readReadingRail(request: ReadingRailRequest): ReadingRailRead =
+        ReadingRailRead(
+            spellings = if (request.spellings) readPart { ambiguitySpellings() } else null,
+            readings =
+                if (request.readCount > 0) {
+                    readPart { readCandidatesWithReadings(request.readFrom, request.readCount) }
+                } else {
+                    null
+                },
+            page =
+                if (request.pageCount > 0) {
+                    readPart { readCandidatesWithReadings(request.pageFrom, request.pageCount) }
+                } else {
+                    null
+                },
+        )
+
     /** Rewrites the tail segment to a proven spelling (compare-and-swap; revalidated engine-side). */
     suspend fun applyAmbiguitySpelling(
         expectedInput: String,
@@ -233,3 +255,12 @@ interface EngineBackend {
         const val HOME_KEY = "Home"
     }
 }
+
+private inline fun <T> readPart(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (error: kotlinx.coroutines.CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        Result.failure(error)
+    }

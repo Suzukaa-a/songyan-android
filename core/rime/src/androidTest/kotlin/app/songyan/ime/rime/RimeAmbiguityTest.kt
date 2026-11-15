@@ -209,6 +209,34 @@ class RimeAmbiguityTest {
             }
         }
 
+    @Test
+    fun theReadingRailReadAnswersAsTheSeparateReadsInOneTurn() =
+        withBuiltin { engine, adapters ->
+            val t9 = requireNotNull(adapters["songyan_quanpin" to 9]) { "no 9-key adapter in $adapters" }
+            assertTrue(engine.selectSchema(t9))
+            for (input in listOf("6", "64", "64426", "986")) {
+                engine.clearComposition()
+                type(engine, input)
+                val before = engine.readSnapshot()
+                val rail =
+                    engine.readingRail(
+                        spellings = true,
+                        readFrom = 0,
+                        readCount = 16,
+                        pageFrom = 16,
+                        pageCount = 5,
+                    )
+                assertEquals("$input: read-only", before, engine.readSnapshot())
+                assertEquals(input, engine.ambiguitySpellings(), rail.spellings?.getOrThrow())
+                assertEquals(input, engine.readCandidates(0, 16, includeReadings = true), rail.readings?.getOrThrow())
+                assertEquals(input, engine.readCandidates(16, 5, includeReadings = true), rail.page?.getOrThrow())
+                assertTrue("$input: readings proven", rail.readings!!.getOrThrow()!!.any { it.readingsComplete })
+            }
+            val parts = engine.readingRail(spellings = false, readFrom = 0, readCount = 0, pageFrom = 0, pageCount = 0)
+            assertNull("parts not asked for are left out", parts.spellings ?: parts.readings ?: parts.page)
+            engine.clearComposition()
+        }
+
     /** Applies [canonical] to [merged], checks the guards, and restores the typed code. */
     private suspend fun lockAndRestore(
         engine: RimeEngine,

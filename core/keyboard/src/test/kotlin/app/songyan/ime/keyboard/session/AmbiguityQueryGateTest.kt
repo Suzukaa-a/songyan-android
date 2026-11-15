@@ -3,6 +3,7 @@ package app.songyan.ime.keyboard.session
 import app.songyan.ime.keyboard.engine.AmbiguityApplyOutcome
 import app.songyan.ime.keyboard.engine.AmbiguityLockMode
 import app.songyan.ime.keyboard.engine.AmbiguitySpellingsReport
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -71,6 +72,31 @@ class AmbiguityQueryGateTest {
             assertNotNull(session.readCandidatesWithReadings(4, 32))
             assertEquals(1, engine.ambiguityCalls)
             assertEquals(1, engine.readingCalls)
+        }
+
+    @Test
+    fun theRailReadIsGatedAndAnsweredLikeTheSeparateQueries() =
+        runTest {
+            val (session, engine) = makeSession(KeyboardLayoutKind.MERGED14)
+            val request =
+                ReadingRailRequest(spellings = true, readFrom = 0, readCount = 16, pageFrom = 16, pageCount = 5)
+            val closed = session.readReadingRail(request)
+            assertNull(closed.spellings?.getOrThrow())
+            assertNull(closed.readings?.getOrThrow())
+            assertNull(closed.page?.getOrThrow())
+            assertEquals("fails closed without the capability", 0, engine.ambiguityCalls + engine.readingCalls)
+
+            session.compactSpellingLayout = true
+            engine.report = report()
+            val read = session.readReadingRail(request)
+            assertEquals(listOf("chang", "shang"), read.spellings?.getOrThrow()?.options)
+            assertEquals(session.readCandidatesWithReadings(0, 16), read.readings?.getOrThrow())
+            assertEquals(session.readCandidatesWithReadings(16, 5), read.page?.getOrThrow())
+            assertEquals(1, engine.ambiguityCalls)
+
+            val readingsOnly = session.readReadingRail(request.copy(spellings = false, pageCount = 0))
+            assertNull("parts not asked for are left out", readingsOnly.spellings ?: readingsOnly.page)
+            assertEquals("no spelling query when not asked", 1, engine.ambiguityCalls)
         }
 
     @Test

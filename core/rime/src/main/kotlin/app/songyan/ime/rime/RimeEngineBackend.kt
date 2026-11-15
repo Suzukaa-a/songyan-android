@@ -19,6 +19,8 @@ import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.engine.ReadingCandidate
+import app.songyan.ime.keyboard.engine.ReadingRailRead
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.engine.TextSelection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -308,7 +310,37 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: return null
-        return read.map {
+        return read.asReadingCandidates()
+    }
+
+    override suspend fun readReadingRail(request: ReadingRailRequest): ReadingRailRead {
+        val read =
+            try {
+                engine.readingRail(
+                    spellings = request.spellings,
+                    readFrom = request.readFrom,
+                    readCount = request.readCount,
+                    pageFrom = request.pageFrom,
+                    pageCount = request.pageCount,
+                )
+            } catch (e: RimeException) {
+                throw e.asBackendError()
+            }
+        return ReadingRailRead(
+            spellings = read.spellings?.asBackend { it?.asSpellingsReport() },
+            readings = read.readings?.asBackend { it?.asReadingCandidates() },
+            page = read.page?.asBackend { it?.asReadingCandidates() },
+        )
+    }
+
+    private inline fun <T, R> Result<T>.asBackend(map: (T) -> R): Result<R> =
+        fold(
+            onSuccess = { Result.success(map(it)) },
+            onFailure = { Result.failure(if (it is RimeException) it.asBackendError() else it) },
+        )
+
+    private fun List<RimeReadCandidate>.asReadingCandidates(): List<ReadingCandidate> =
+        map {
             ReadingCandidate(
                 index = it.absoluteIndex,
                 text = it.text,
@@ -319,7 +351,6 @@ class RimeEngineBackend(
                 selectLabel = it.selectLabel,
             )
         }
-    }
 
     /** A read candidate numbered like a snapshot candidate: its position inside its own page. */
     private fun RimeReadCandidate.asCandidate(pageSize: Int): Candidate =
@@ -506,6 +537,11 @@ class RimeEngineBackend(
             } catch (e: RimeException) {
                 throw e.asBackendError()
             } ?: return null
+        return report.asSpellingsReport()
+    }
+
+    private fun RimeAmbiguitySpellings.asSpellingsReport(): AmbiguitySpellingsReport {
+        val report = this
         val lockMode =
             when (report.lockMode) {
                 RimeLockMode.NONE -> AmbiguityLockMode.NONE

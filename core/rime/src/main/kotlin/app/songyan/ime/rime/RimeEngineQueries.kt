@@ -3,6 +3,13 @@ package app.songyan.ime.rime
 // Read-only engine queries whose bodies need only the session handle. They run on the engine
 // thread (the caller wraps them in RimeDispatcher.onEngine).
 
+/** The reading rail's reads from one engine turn; see [RimeEngine.readingRail]. */
+class RimeReadingRail(
+    val spellings: Result<RimeAmbiguitySpellings?>?,
+    val readings: Result<List<RimeReadCandidate>?>?,
+    val page: Result<List<RimeReadCandidate>?>?,
+)
+
 internal fun readCandidatesOnEngine(
     session: Long,
     fromIndex: Int,

@@ -4,6 +4,8 @@ import app.songyan.ime.keyboard.engine.AmbiguityApplyOutcome
 import app.songyan.ime.keyboard.engine.AmbiguitySpellingsReport
 import app.songyan.ime.keyboard.engine.Candidate
 import app.songyan.ime.keyboard.engine.ReadingCandidate
+import app.songyan.ime.keyboard.engine.ReadingRailRead
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import kotlinx.coroutines.CancellationException
 
 // Read-only candidate browsing and compact-spelling ambiguity operations for [InputSession], split out to
@@ -33,6 +35,32 @@ internal suspend fun InputSession.readCandidatesWithReadingsImpl(
 ): List<ReadingCandidate>? {
     if (!compactSpellingLayout) return null
     return engine.readCandidatesWithReadings(fromIndex, count)
+}
+
+/**
+ * [ambiguitySpellingsImpl] and [readCandidatesWithReadingsImpl] in one engine read, with their
+ * gates: a spelling failure is reported and read as unprovable, a reading failure stays a failure.
+ */
+internal suspend fun InputSession.readReadingRailImpl(request: ReadingRailRequest): ReadingRailRead {
+    if (!compactSpellingLayout) {
+        return ReadingRailRead(
+            spellings = if (request.spellings) Result.success(null) else null,
+            readings = if (request.readCount > 0) Result.success(null) else null,
+            page = if (request.pageCount > 0) Result.success(null) else null,
+        )
+    }
+    val spellings = request.spellings && inputAvailable()
+    val read = engine.readReadingRail(request.copy(spellings = spellings))
+    val report =
+        read.spellings?.getOrElse { error ->
+            onError?.invoke(error as? Exception ?: throw error)
+            null
+        }
+    return ReadingRailRead(
+        spellings = if (request.spellings) Result.success(report) else null,
+        readings = read.readings,
+        page = read.page,
+    )
 }
 
 internal suspend fun InputSession.applyAmbiguityOptionImpl(

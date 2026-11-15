@@ -573,6 +573,10 @@ class KeyboardController(
      */
     private var keyEpoch = 0
 
+    /** Presses queued but not yet started; follow-up work for an older state yields to them. */
+    internal var queuedPresses = 0
+        private set
+
     private val worker =
         scope.launch {
             for ((token, operation) in operations) {
@@ -763,7 +767,13 @@ class KeyboardController(
     ) {
         if (retired || engineNotice != null || announceWhenReady) return
         val epoch = keyEpoch
-        operations.trySend(ANY_GENERATION to { runOrHold(backspace, epoch, press) })
+        queuedPresses++
+        operations.trySend(
+            ANY_GENERATION to {
+                queuedPresses--
+                runOrHold(backspace, epoch, press)
+            },
+        )
     }
 
     /**

@@ -428,6 +428,45 @@ class RimeEngine private constructor(
             RimeAmbiguityBridge.report(session, maxItems)
         }
 
+    /**
+     * [ambiguitySpellings] and two [readCandidates] runs with readings in one engine turn: a key
+     * typed meanwhile waits for one crossing instead of one per read. Each part fails on its own;
+     * null for a part not asked for (a count of zero, or [spellings] false).
+     */
+    suspend fun readingRail(
+        spellings: Boolean,
+        readFrom: Int,
+        readCount: Int,
+        pageFrom: Int,
+        pageCount: Int,
+    ): RimeReadingRail =
+        dispatcher.onEngine {
+            RimeReadingRail(
+                spellings =
+                    if (!spellings) {
+                        null
+                    } else {
+                        runCatching {
+                            if (engine == 0L || session == 0L) {
+                                null
+                            } else {
+                                RimeAmbiguityBridge.report(session, RimeAmbiguitySpellings.DEFAULT_LIMIT)
+                            }
+                        }
+                    },
+                readings = if (readCount > 0) runCatching { readingsOnEngine(readFrom, readCount) } else null,
+                page = if (pageCount > 0) runCatching { readingsOnEngine(pageFrom, pageCount) } else null,
+            )
+        }
+
+    private fun readingsOnEngine(
+        fromIndex: Int,
+        count: Int,
+    ): List<RimeReadCandidate>? {
+        if (!canAct() || fromIndex < 0) return null
+        return readCandidatesOnEngine(session, fromIndex, count, includeReadings = true)
+    }
+
     /** Capability-gated rewrite of the tail segment; never commits and never selects. */
     suspend fun applyAmbiguitySpelling(
         expectedInput: String,

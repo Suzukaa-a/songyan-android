@@ -14,6 +14,8 @@ import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.ReadingCandidate
+import app.songyan.ime.keyboard.engine.ReadingRailRead
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyAction
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -705,6 +707,9 @@ class InputSession(
         fromIndex: Int,
         count: Int,
     ): List<ReadingCandidate>? = readCandidatesWithReadingsImpl(fromIndex, count)
+
+    /** The reading rail's spelling report and reading browses in one engine read. */
+    suspend fun readReadingRail(request: ReadingRailRequest): ReadingRailRead = readReadingRailImpl(request)
 
     /** Compare-and-swap spelling rewrite; refreshes from the engine's real post-state on success. */
     suspend fun applyAmbiguityOption(

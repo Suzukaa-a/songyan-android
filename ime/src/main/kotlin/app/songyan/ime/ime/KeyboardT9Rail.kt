@@ -4,6 +4,7 @@ import app.songyan.ime.candidate.AmbiguitySpellingPicker
 import app.songyan.ime.keyboard.display.ReadingInputCoverage
 import app.songyan.ime.keyboard.engine.EngineSnapshot
 import app.songyan.ime.keyboard.engine.ReadingCandidate
+import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.engine.SpellingRailChoices
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
@@ -136,6 +137,12 @@ internal suspend fun KeyboardController.refreshReadingRail(active: InputSession)
     if (!railEligible(active)) return
     val revision = active.compositionRevision
     if (railRevision == revision) return
+    // A press already waiting changes the composition again: reading for this one would only delay
+    // it. The refresh goes behind the press, which then finds the rail current or schedules anew.
+    if (queuedPresses > 0) {
+        enqueue { refreshReadingRail(active) }
+        return
+    }
     railRevision = revision
     val snapshot = active.snapshot
     if (readingFilter.revision != revision) {
@@ -143,37 +150,78 @@ internal suspend fun KeyboardController.refreshReadingRail(active: InputSession)
         railScroll = 0
     }
     readingFilter.setCoverage(readingCoverage(snapshot.rawInput))
-    refreshAmbiguity(active, snapshot, revision)
-    loadReadings(active, revision)
+    val lock = ambiguityPicker.lock
+    // A lock in force keeps its restore token until the input moves on.
+    val locked = ambiguityPicker.phase == AmbiguitySpellingPicker.Phase.LOCKED && lock != null
+    if (locked && lock.rewrittenInput != snapshot.rawInput) ambiguityPicker.clear()
+    // The unfiltered prefetch and the highlighted candidate's own page are known before reading, so
+    // they share the spelling report's engine turn.
+    val from = readingFilter.nextIndex
+    val prefetch =
+        if (!readingFilter.isFiltering &&
+            readingFilter.hasMore &&
+            !readingFilter.readFailed &&
+            from < READING_PREFETCH
+        ) {
+            READING_PREFETCH - from
+        } else {
+            0
+        }
     // The highlighted candidate may sit past the loaded readings: read its own page too, so its
     // reading (not the commonest syllable of its keys) spells the field.
     val pageStart = if (snapshot.pageSize > 0) snapshot.pageIndex * snapshot.pageSize else 0
+    val pageAhead = snapshot.pageSize > 0 && pageStart >= from + prefetch
+    val read =
+        active.readReadingRail(
+            ReadingRailRequest(
+                spellings = !locked,
+                readFrom = from,
+                readCount = prefetch,
+                pageFrom = pageStart,
+                pageCount = if (pageAhead) snapshot.pageSize else 0,
+            ),
+        )
+    if (active.compositionRevision != revision) return
+    if (!locked) ambiguityPicker.update(read.spellings?.getOrThrow(), revision, isEligible = true)
+    read.readings?.let { appendReadings(it, revision, prefetch) }
+    loadReadings(active, revision)
     val pageReads =
-        if (pageStart >= readingFilter.nextIndex && snapshot.pageSize > 0) {
-            active.readCandidatesWithReadings(pageStart, snapshot.pageSize).orEmpty()
-        } else {
-            emptyList()
+        when {
+            pageAhead -> read.page?.getOrThrow().orEmpty()
+            // A short prefetch ended the list before the page; it is read as before (past the end).
+            snapshot.pageSize > 0 && pageStart >= readingFilter.nextIndex ->
+                active.readCandidatesWithReadings(pageStart, snapshot.pageSize).orEmpty()
+            else -> emptyList()
         }
     if (active.compositionRevision != revision) return
     rememberReadings(readingFilter.entries + pageReads)
     pageReadings = readingFilter.entries + pageReads
-    publishRail(active, revision)
+    // A press that arrived during the read renders next and draws this rail anyway.
+    publishRail(active, revision, repaint = queuedPresses == 0)
 }
 
-/** The spelling report of the tail segment; a lock in force keeps its restore token until the input moves on. */
-private suspend fun KeyboardController.refreshAmbiguity(
-    active: InputSession,
-    snapshot: EngineSnapshot,
+/** Appends a prefetch in [READING_QUANTUM] steps, so a short step still marks the real end. */
+private fun KeyboardController.appendReadings(
+    result: Result<List<ReadingCandidate>?>,
     revision: Int,
+    requested: Int,
 ) {
-    val lock = ambiguityPicker.lock
-    if (ambiguityPicker.phase == AmbiguitySpellingPicker.Phase.LOCKED && lock != null) {
-        if (lock.rewrittenInput != snapshot.rawInput) ambiguityPicker.clear()
-        return
+    val entries =
+        result.getOrElse {
+            readingFilter.failed()
+            return
+        } ?: run {
+            // The engine cannot prove readings: there is nothing more to ask for.
+            readingFilter.append(emptyList(), READING_QUANTUM, revision)
+            return
+        }
+    var offset = 0
+    while (offset < requested) {
+        val step = entries.subList(minOf(offset, entries.size), minOf(offset + READING_QUANTUM, entries.size))
+        readingFilter.append(step, READING_QUANTUM, revision)
+        if (!readingFilter.hasMore) return
+        offset += READING_QUANTUM
     }
-    val report = active.ambiguitySpellings()
-    if (active.compositionRevision != revision) return
-    ambiguityPicker.update(report, revision, isEligible = true)
 }
 
 /**
@@ -216,6 +264,7 @@ private suspend fun KeyboardController.loadReadings(
 internal fun KeyboardController.publishRail(
     active: InputSession,
     revision: Int,
+    repaint: Boolean = true,
 ) {
     val snapshot = active.snapshot
     val resolved =
@@ -233,7 +282,7 @@ internal fun KeyboardController.publishRail(
     if (resolved != railChoices || marked != lastMarked || candidatesFiltered != readingFilterShowing(active)) {
         railChoices = resolved
         railScroll = T9RailPolicy.clampScroll(T9RailPolicy.items(resolved).size, railScroll)
-        render()
+        if (repaint) render()
     }
 }
 

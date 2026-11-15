@@ -14,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.R
 import app.songyan.ime.SongyanSettingsActivity
+import app.songyan.ime.TestZips
 import app.songyan.ime.deploy.DeployContract
 import app.songyan.ime.deploy.DeployMode
 import app.songyan.ime.deploy.DeployPipeline
@@ -46,9 +47,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * Runs the real dictionary import on a device: the settings gateway stages a source, the :deploy
@@ -344,13 +342,7 @@ class DictionaryImportDeviceTest {
                 "__MACOSX/demo-main/._README.md" to "junk",
             )
         val target = File(context.cacheDir, "demo-scheme.zip")
-        ZipOutputStream(FileOutputStream(target)).use { zip ->
-            for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-            }
-        }
+        TestZips.write(target, files)
         return target
     }
 

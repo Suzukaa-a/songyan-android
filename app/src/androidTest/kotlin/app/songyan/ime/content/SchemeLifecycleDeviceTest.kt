@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.TestZips
 import app.songyan.ime.deploy.DeployState
 import app.songyan.ime.deploy.DeployStatusStore
 import app.songyan.ime.deploy.DeploymentStarter
@@ -328,13 +329,7 @@ class SchemeLifecycleDeviceTest {
 
     private fun schemePackage(files: Map<String, String>): File {
         val target = File(context.cacheDir, "lifecycle-scheme.zip")
-        ZipOutputStream(FileOutputStream(target)).use { zip ->
-            for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-            }
-        }
+        TestZips.write(target, files)
         return target
     }
 }

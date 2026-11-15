@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.TestZips
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeKey
 import app.songyan.ime.settings.state.DictionaryImportHolder
@@ -24,9 +25,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * On a device: a dictionary imported for a scheme package is deployed by the real :deploy
@@ -118,13 +116,7 @@ class DictionaryStackDeviceTest {
                     "---\nname: demo_stack\nversion: \"1\"\nsort: by_weight\n...\n演示\tyan shi\t1\n言\tyan\t1\n",
             )
         val target = File(context.cacheDir, "demo-stack.zip")
-        ZipOutputStream(FileOutputStream(target)).use { zip ->
-            for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-            }
-        }
+        TestZips.write(target, files)
         return target
     }
 

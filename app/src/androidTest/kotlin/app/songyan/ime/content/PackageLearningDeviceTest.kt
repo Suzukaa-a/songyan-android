@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.SongyanApplication
+import app.songyan.ime.TestZips
 import app.songyan.ime.learning.LearningTransferException
 import app.songyan.ime.rime.RimeBindings
 import app.songyan.ime.rime.RimeEngine
@@ -27,10 +28,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.FileOutputStream
 import java.util.UUID
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * A scheme package that ships learned words (`*.userdb.txt`): the import installs it either way,
@@ -90,13 +88,7 @@ class PackageLearningDeviceTest {
 
     private suspend fun import(files: Map<String, String>): SchemeImportResult.Success {
         val archive = File(context.cacheDir, ARCHIVE)
-        ZipOutputStream(FileOutputStream(archive)).use { zip ->
-            for ((path, text) in files) {
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-            }
-        }
+        TestZips.write(archive, files)
         val result = gateway.importFromUri(Uri.fromFile(archive))
         assertTrue("scheme import failed: $result", result is SchemeImportResult.Success)
         val success = result as SchemeImportResult.Success

@@ -129,9 +129,11 @@ class SampleAddonPanelTest {
             }
 
             // On a slow emulator the embedded surface can still be without its input channel after
-            // the pause above, and a touch then goes nowhere: tap the first button until one lands.
+            // the pause above, or a stalled launcher's dialog can cover it: clear such a dialog and
+            // tap the first button until one lands.
             val firstLanded =
                 (1..FIRST_TAP_ATTEMPTS).any {
+                    dismissSystemNotResponding()
                     tapButton(0)
                     waitFor(FIRST_TAP_WAIT_MS) { panelHost.writes.isNotEmpty() }
                 }

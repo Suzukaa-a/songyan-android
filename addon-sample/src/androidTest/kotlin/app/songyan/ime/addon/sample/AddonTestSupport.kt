@@ -210,3 +210,36 @@ internal fun sampleString(name: String): String {
 }
 
 internal fun sampleDp(value: Int): Int = (value * targetContext().resources.displayMetrics.density).toInt()
+
+/**
+ * On a slow emulator the system launcher can stall behind the test, and its "isn't responding"
+ * dialog then sits over the screen and takes every touch the test injects. Choosing "Wait" closes
+ * it and leaves the launcher alone; the button is found by its framework id, so the system
+ * language does not matter. Does nothing when no such dialog is showing.
+ */
+internal fun dismissSystemNotResponding() {
+    val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+    val original = automation.serviceInfo.flags
+    automation.serviceInfo =
+        automation.serviceInfo.apply {
+            flags = flags or
+                android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+        }
+    try {
+        // The window list fills in shortly after the connection asks for it.
+        Thread.sleep(WINDOW_LIST_SETTLE_MS)
+        for (window in automation.windows) {
+            val root = window.root ?: continue
+            if (root.packageName != "android") continue
+            root
+                .findAccessibilityNodeInfosByViewId("android:id/aerr_wait")
+                .firstOrNull()
+                ?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+        }
+    } finally {
+        automation.serviceInfo = automation.serviceInfo.apply { flags = original }
+    }
+}
+
+private const val WINDOW_LIST_SETTLE_MS = 200L

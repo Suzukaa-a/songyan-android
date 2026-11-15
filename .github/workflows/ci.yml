@@ -158,7 +158,10 @@ jobs:
           profile: pixel_6
           disable-animations: true
           # One module per call: modules listed together run in parallel on the same device and disturb each other.
+          # A freshly booted Google APIs image can show "Pixel Launcher isn't responding" over the
+          # keyboard; the suite tests the keyboard, not the launcher, so error dialogs stay hidden.
           script: |
+            adb shell settings put global hide_error_dialogs 1
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :core:rime:connectedDebugAndroidTest
             ./gradlew --console=plain -Psongyan.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.numShards=2 -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ matrix.shard }} :ime:connectedDebugAndroidTest
       - name: Key the engine cache on the engines this build used

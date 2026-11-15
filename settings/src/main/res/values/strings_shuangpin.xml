@@ -2,8 +2,6 @@
 <resources>
     <!-- Shuangpin hints -->
     <string name="shuangpin_title">Shuangpin hints</string>
-    <string name="shuangpin_entry_on">In use: %1$s</string>
-    <string name="shuangpin_entry_off">Off</string>
     <string name="shuangpin_switch">Show shuangpin hints on letter keys</string>
     <string name="shuangpin_current">Current hints: %1$s</string>
     <string name="shuangpin_footer">Choose the hints that match the shuangpin input method you use.</string>

@@ -21,7 +21,6 @@
     <string name="home_summary_schemes_in_use">%1$d 個輸入方案 · %2$s</string>
     <string name="home_summary_schemes_none">尚未安裝輸入方案。</string>
     <string name="home_summary_keyboard">使用中：%1$s</string>
-    <string name="home_summary_keyboard_none">還沒有新增鍵盤。</string>
 
     <string name="section_keyboard">鍵盤</string>
     <string name="section_content">內容</string>
@@ -131,7 +130,6 @@
     <string name="about_licenses_subtitle">開源元件與許可文字</string>
     <string name="licenses_title">第三方許可</string>
     <string name="licenses_loading">正在讀取…</string>
-    <string name="licenses_failed">許可文字讀取失敗，請重試。</string>
     <string name="licenses_empty">未找到許可文字。</string>
     <string name="licenses_intro">松煙使用 GPL-3.0 許可。下面列出隨應用分發的第三方元件，輕觸可以看它的許可全文。</string>
     <string name="licenses_section_components">第三方元件</string>

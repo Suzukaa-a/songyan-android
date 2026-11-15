@@ -1,6 +1,5 @@
 <resources>
     <!-- 定型文・クリップボード・記号 -->
-    <string name="quick_content_loading">読み込み中…</string>
     <string name="quick_content_save">保存する</string>
     <string name="quick_content_cancel">キャンセル</string>
     <string name="quick_content_delete">削除</string>

@@ -61,44 +61,6 @@ object CandidateCollapsedFlow {
         return max(MINIMUM_CELL_WIDTH, textWidth + badgeWidth + pad * 2 + TEXT_SLACK)
     }
 
-    /** Automatic layout box height: never above the budget the fixed header surface grants. */
-    fun fittedBlockHeight(
-        blockHeight: Double,
-        budget: Double,
-    ): Double {
-        if (!blockHeight.isFinite() || !budget.isFinite() || blockHeight <= 0.0 || budget <= 0.0) {
-            return blockHeight
-        }
-        return min(blockHeight, budget)
-    }
-
-    /** Effective lift: non-negative, finite, and never more than the slack above the centred position. */
-    fun clampedLift(
-        lift: Double,
-        blockHeight: Double,
-        budget: Double,
-    ): Double {
-        if (!lift.isFinite() || lift <= 0.0 || !blockHeight.isFinite() || !budget.isFinite()) return 0.0
-        return min(lift, max(0.0, (budget - blockHeight) / 2))
-    }
-
-    /** Estimated height of a collapsed cell: text line + underline + optional comment line. */
-    fun estimatedBlockHeight(
-        typography: CandidateTypography,
-        hasComment: Boolean,
-    ): Double {
-        val text = if (typography.candidateSize.isFinite()) max(0.0, typography.candidateSize) * 1.25 else 0.0
-        val underline = 2.0
-        val spacing = 1.0
-        val comment =
-            if (hasComment && typography.secondarySize.isFinite()) {
-                max(0.0, typography.secondarySize) * 1.25
-            } else {
-                0.0
-            }
-        return text + underline + spacing + comment
-    }
-
     /**
      * Per-cell finite guard rail: available width x factor, never below the minimum touch width.
      * An unconstrained width (the layout's sentinel) stays unbounded: clamping it to a finite value

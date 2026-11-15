@@ -130,10 +130,6 @@ class PhoneKeypadMetrics private constructor(
     /** The bottom control row, spanning exactly the grid content width. */
     fun controlRowRect(): Slot = Slot(0.0, controlRowY, contentWidth, rowHeight)
 
-    /** The control row when the trailing column runs down beside it (bundled T9). */
-    fun controlRowRectBesideTrailingRail(): Slot =
-        Slot(0.0, controlRowY, maxOf(0.0, contentWidth - railWidth - spacing), rowHeight)
-
     /** Deterministic rail slots laid out top-to-bottom, one entry per requested row span. */
     fun railSlots(
         rail: Rail,

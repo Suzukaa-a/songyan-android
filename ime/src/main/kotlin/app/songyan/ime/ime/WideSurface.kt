@@ -4,6 +4,7 @@ import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardWideContentPlan
 import app.songyan.ime.candidate.KeyboardWideContentPolicy
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.KeyboardSurfaceWidth
 import app.songyan.ime.layout.LayoutSplitConfiguration
 
 /**
@@ -35,7 +36,7 @@ enum class SplitMode(
  */
 internal object WideSurface {
     /** A surface at most this wide (dp) is phone-sized: full width, never split by the automatic rule. */
-    const val PHONE_MAXIMUM_DP = 600
+    const val PHONE_MAXIMUM_DP = KeyboardSurfaceWidth.PHONE_MAXIMUM_DP.toInt()
 
     /**
      * The widest an unsplit key area of [kind] grows (dp): the nine-key shell and the merged pads read

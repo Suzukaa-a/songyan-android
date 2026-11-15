@@ -202,7 +202,7 @@ data class LayoutSplitConfiguration(
 
     companion object {
         /** Widths at or below this stay unsplit under [Activation.AUTOMATIC]. */
-        const val AUTOMATIC_MAXIMUM_WIDTH: Double = 600.0
+        const val AUTOMATIC_MAXIMUM_WIDTH: Double = KeyboardSurfaceWidth.PHONE_MAXIMUM_DP
 
         const val DEFAULT_GAP_FRACTION: Double = 0.32
 
@@ -237,4 +237,12 @@ data class LayoutSplitConfiguration(
             return inherited.copy(rowBreaks = emptyList(), halves = null)
         }
     }
+}
+
+/**
+ * The one phone/wide boundary. A surface at most this wide (dp) is phone-sized: full-width keys,
+ * no automatic split, no wide-screen docking. Every phone-sized rule derives from this value.
+ */
+object KeyboardSurfaceWidth {
+    const val PHONE_MAXIMUM_DP: Double = 600.0
 }

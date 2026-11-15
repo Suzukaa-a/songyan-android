@@ -284,7 +284,7 @@ internal class EngineFeaturesGatewayImpl(
                         Log.i(TAG, "rejected feature file: " + e.message)
                         return@withContext refused(kind.invalidMessage)
                     }
-                    val sha = digest.digest().joinToString("") { "%02x".format(it) }
+                    val sha = digest.digest().toHexString()
                     val stored = EngineFeatureSettings.StoredFile(name(sha), size, sha, displayName)
                     // Under the feature lock: a deployment never sees a half-moved file.
                     store.lock {

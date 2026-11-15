@@ -367,6 +367,6 @@ object UserConfigFiles {
             }
         }
         if (!hasEdits) return null
-        return digest.digest().joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+        return digest.digest().toHexString()
     }
 }

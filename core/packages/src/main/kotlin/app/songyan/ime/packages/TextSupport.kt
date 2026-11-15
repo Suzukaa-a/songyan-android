@@ -52,7 +52,7 @@ internal fun sha256Hex(data: ByteArray): String =
     MessageDigest
         .getInstance("SHA-256")
         .digest(data)
-        .joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+        .toHexString()
 
 /**
  * `trimmingCharacters(in: .whitespaces)`: spaces, tabs and the Unicode space separators, but not

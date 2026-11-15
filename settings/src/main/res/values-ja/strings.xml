@@ -20,7 +20,6 @@
     <string name="home_summary_schemes_in_use">入力パック：%1$d · %2$s</string>
     <string name="home_summary_schemes_none">入力パックはまだインストールされていません。</string>
     <string name="home_summary_keyboard">使用中：%1$s</string>
-    <string name="home_summary_keyboard_none">追加したキーボードはまだありません。</string>
 
     <string name="section_keyboard">キーボード</string>
     <string name="section_content">コンテンツ</string>
@@ -130,7 +129,6 @@
     <string name="about_licenses_subtitle">オープンソースコンポーネントとライセンス</string>
     <string name="licenses_title">オープンソースライセンス</string>
     <string name="licenses_loading">読み込み中…</string>
-    <string name="licenses_failed">ライセンスを読み込めませんでした。もう一度お試しください。</string>
     <string name="licenses_empty">ライセンス条文が見つかりません。</string>
     <string name="licenses_intro">松煙は GPL-3.0 で公開されています。アプリに同梱しているサードパーティのコンポーネントを次に示します。タップするとライセンス全文を表示します。</string>
     <string name="licenses_section_components">サードパーティのコンポーネント</string>

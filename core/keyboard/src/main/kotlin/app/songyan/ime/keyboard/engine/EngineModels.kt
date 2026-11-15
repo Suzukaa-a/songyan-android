@@ -101,9 +101,6 @@ data class EngineSnapshot(
 
     val canPageBackward: Boolean get() = pageSize > 0 && pageIndex > 0
     val canPageForward: Boolean get() = pageSize > 0 && !isLastPage
-
-    fun statusFlags(): EngineStatusFlags =
-        EngineStatusFlags(isAsciiMode = isAsciiMode, isFullShape = isFullShape, isAsciiPunct = isAsciiPunct)
 }
 
 /** Composition display mode declared by a schema's `keyboard_adapter` block. */

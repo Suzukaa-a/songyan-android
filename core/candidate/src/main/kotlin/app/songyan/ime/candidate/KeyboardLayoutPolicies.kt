@@ -1,5 +1,7 @@
 package app.songyan.ime.candidate
 
+import app.songyan.ime.layout.KeyboardSurfaceWidth
+
 /** One-handed keyboard choice: which side the key content hugs, if any. */
 enum class KeyboardOneHandMode(
     val wire: String,
@@ -67,7 +69,7 @@ object KeyboardOneHandLayoutPolicy {
     const val MINIMUM_PANEL_WIDTH: Double = MINIMUM_CONTENT_WIDTH + MINIMUM_GUTTER_WIDTH
 
     /** Keep narrowing within phone-sized surfaces, even before the size classes update. */
-    const val MAXIMUM_PANEL_WIDTH: Double = 600.0
+    const val MAXIMUM_PANEL_WIDTH: Double = KeyboardSurfaceWidth.PHONE_MAXIMUM_DP
 
     fun isAvailable(
         panelWidth: Double,
@@ -167,7 +169,7 @@ data class KeyboardWideContentPlan(
  */
 object KeyboardWideContentPolicy {
     /** Phone-sized surfaces keep their full-width geometry. */
-    const val MINIMUM_ACTIVE_PANEL_WIDTH: Double = 600.0
+    const val MINIMUM_ACTIVE_PANEL_WIDTH: Double = KeyboardSurfaceWidth.PHONE_MAXIMUM_DP
 
     /**
      * The 9-key outer frame keeps the inner 436 dp phone shell intact with a 4 dp gutter per side

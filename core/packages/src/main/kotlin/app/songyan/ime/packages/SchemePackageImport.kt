@@ -504,7 +504,7 @@ object SchemePackageImportBuilder {
             )
         }
         if (model && written == 0L) fail(SchemePackageImportError.Reason.INVALID_MODEL, "$logical is empty")
-        return hex(digest.digest())
+        return digest.digest().toHexString()
     }
 
     /**
@@ -729,7 +729,7 @@ object SchemePackageImportBuilder {
                 digest.update(buffer, 0, read)
             }
         }
-        return hex(digest.digest())
+        return digest.digest().toHexString()
     }
 
     /**
@@ -786,11 +786,6 @@ object SchemePackageImportBuilder {
         if (name.any { Character.isISOControl(it) }) return fallback
         return name
     }
-
-    private fun hex(bytes: ByteArray): String =
-        bytes.joinToString("") {
-            (it.toInt() and 0xFF).toString(16).padStart(2, '0')
-        }
 
     private fun fail(
         reason: SchemePackageImportError.Reason,

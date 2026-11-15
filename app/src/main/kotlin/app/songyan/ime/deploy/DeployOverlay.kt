@@ -39,16 +39,19 @@ internal class DeployOverlay(
         config: File? = null,
     ): String {
         val parts = ArrayList<String>()
-        parts += "features:" + hex(MessageDigest.getInstance("SHA-256").digest(features.encode().toByteArray()))
+        parts +=
+            "features:" + MessageDigest.getInstance("SHA-256").digest(features.encode().toByteArray()).toHexString()
         parts += "companions:" + CompactSchemaAdapter.DISPLAY_GENERATOR_VERSION
         config?.let { UserConfigFiles.digest(it, excluded(manifest, it)) }?.let { parts += "config:$it" }
         stackOf(manifest)?.let { stack ->
             val revision = ImportedDictionaryMetadataReader.read(stack)?.revision ?: sha256(File(stack, STACKED_FILE))
             parts += "stack:$revision"
         }
-        return hex(
-            MessageDigest.getInstance("SHA-256").digest(parts.joinToString("\n").toByteArray()),
-        ).take(DIGEST_LENGTH)
+        return MessageDigest
+            .getInstance("SHA-256")
+            .digest(parts.joinToString("\n").toByteArray())
+            .toHexString()
+            .take(DIGEST_LENGTH)
     }
 
     /**
@@ -152,13 +155,8 @@ internal class DeployOverlay(
                 digest.update(buffer, 0, read)
             }
         }
-        return hex(digest.digest())
+        return digest.digest().toHexString()
     }
-
-    private fun hex(bytes: ByteArray): String =
-        bytes.joinToString("") {
-            (it.toInt() and 0xFF).toString(16).padStart(2, '0')
-        }
 
     companion object {
         /** The stacked dictionary's file in its directory and in the work directory. */

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 快捷内容 -->
-    <string name="quick_content_loading">正在读取…</string>
     <string name="quick_content_save">保存</string>
     <string name="quick_content_cancel">取消</string>
     <string name="quick_content_delete">删除</string>

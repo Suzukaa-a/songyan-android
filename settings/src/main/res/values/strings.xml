@@ -21,7 +21,6 @@
     <string name="home_summary_schemes_in_use">Input schemes: %1$d · %2$s</string>
     <string name="home_summary_schemes_none">No input schemes installed yet.</string>
     <string name="home_summary_keyboard">In use: %1$s</string>
-    <string name="home_summary_keyboard_none">No keyboards added yet.</string>
 
     <string name="section_keyboard">Keyboard</string>
     <string name="section_content">Content</string>
@@ -131,7 +130,6 @@
     <string name="about_licenses_subtitle">Open-source components and licenses</string>
     <string name="licenses_title">Open Source Licenses</string>
     <string name="licenses_loading">Loading…</string>
-    <string name="licenses_failed">Failed to load licenses. Please try again.</string>
     <string name="licenses_empty">No license text found.</string>
     <string name="licenses_intro">Songyan is released under GPL-3.0. The third-party components distributed with the app are listed below; tap one for its full licence text.</string>
     <string name="licenses_section_components">Third-Party Components</string>

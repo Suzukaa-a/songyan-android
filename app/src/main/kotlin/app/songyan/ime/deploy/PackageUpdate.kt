@@ -88,7 +88,7 @@ internal object PackageUpdate {
         if (carried.isEmpty()) return revision
         val text = revision + "\n" + carried.joinToString("\n") { it + ":" + File(staged, it).length() }
         val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
-        return digest.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }.take(REVISION_LENGTH)
+        return digest.toHexString().take(REVISION_LENGTH)
     }
 
     private const val GRAMMAR_SUFFIX = ".gram"

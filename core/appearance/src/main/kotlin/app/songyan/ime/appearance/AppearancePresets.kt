@@ -196,16 +196,6 @@ object AppearancePresets {
     /** Whether [document] is shipped with the app and therefore read-only. */
     fun isBuiltIn(document: AppearanceDocument): Boolean = document.isSystemDefault || document.id in BUILT_IN_IDS
 
-    /** The localized display name of a built-in id, or null for a user document. */
-    fun builtInNameResID(id: String): String? =
-        if (id == AppearanceDocument.SYSTEM_DEFAULT_ID ||
-            id in BUILT_IN_IDS
-        ) {
-            id
-        } else {
-            null
-        }
-
     /** The Android-default appearance: the design-token palette, for P5 to select as the initial value. */
     val androidDefault: AppearanceDocument get() = BUILT_IN.first { it.id == SONGYAN_ID }
 

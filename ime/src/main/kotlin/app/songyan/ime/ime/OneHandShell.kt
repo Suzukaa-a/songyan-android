@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.LinearLayout
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.layout.KeyboardSurfaceWidth
 
 /**
  * The keyboard's outer frame: the content column plus, in one-handed mode, a gutter on the free
@@ -208,7 +209,7 @@ internal class OneHandShell(
     }
 
     private companion object {
-        const val TABLET_DP = 600
+        const val TABLET_DP = KeyboardSurfaceWidth.PHONE_MAXIMUM_DP.toInt()
         const val TARGET_DP = 48f
     }
 }

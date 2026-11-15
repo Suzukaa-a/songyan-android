@@ -172,9 +172,6 @@ data class CandidateAreaContext(
     fun selectAction(entry: BrowserCandidate): CandidateAreaAction =
         CandidateAreaAction.SelectOnPage(page = entry.pageIndex, index = entry.pageLocalIndex)
 
-    fun isHighlighted(entry: BrowserCandidate): Boolean =
-        entry.pageIndex == state.pageIndex && entry.pageLocalIndex == state.highlightedIndex
-
     /**
      * Position in [displayEntries] whose cell starts the next read-only page load, or null when
      * nothing is left. Prefetching this far ahead means a fling finds the pages in place.

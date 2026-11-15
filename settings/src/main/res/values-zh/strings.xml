@@ -21,7 +21,6 @@
     <string name="home_summary_schemes_in_use">%1$d 个输入方案 · %2$s</string>
     <string name="home_summary_schemes_none">尚未安装输入方案。</string>
     <string name="home_summary_keyboard">正在使用：%1$s</string>
-    <string name="home_summary_keyboard_none">还没有添加键盘。</string>
 
     <string name="section_keyboard">键盘</string>
     <string name="section_content">内容</string>
@@ -131,7 +130,6 @@
     <string name="about_licenses_subtitle">开源组件与许可文本</string>
     <string name="licenses_title">第三方许可</string>
     <string name="licenses_loading">正在读取…</string>
-    <string name="licenses_failed">许可文本读取失败，请重试。</string>
     <string name="licenses_empty">未找到许可文本。</string>
     <string name="licenses_intro">松烟使用 GPL-3.0 许可。下面列出随应用分发的第三方组件，点按可以看它的许可全文。</string>
     <string name="licenses_section_components">第三方组件</string>

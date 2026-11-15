@@ -250,23 +250,6 @@ data class KeyboardPanelGeometry(
                 readingRowHeight = reading + readingExtra,
             )
         }
-
-        /** Base height without header; only a mathematical difference, never the production idle budget. */
-        fun idlePanelHeight(
-            candidateHeight: Double,
-            keyHeight: Double,
-            selectedMainRows: Int = STANDARD_MAIN_ROW_COUNT,
-            maximumVisibleRows: Int = 3,
-            candidateSize: Double = 17.0,
-        ): Double =
-            panelHeight(
-                candidateHeight = candidateHeight,
-                keyHeight = keyHeight,
-                selectedMainRows = selectedMainRows,
-                showsHeader = false,
-                maximumVisibleRows = maximumVisibleRows,
-                candidateSize = candidateSize,
-            )
     }
 }
 

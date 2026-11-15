@@ -279,18 +279,11 @@
     <string name="keyboard_menu_layouts_of">「%1$s」的键盘布局</string>
     <string name="keyboard_menu_in_use">正在使用</string>
     <string name="t9_symbols_title">九键快捷符号</string>
-    <string name="t9_symbols_entry_body">九键侧键与首键上的符号和顺序</string>
-    <string name="t9_symbols_order_section">符号顺序</string>
     <string name="t9_symbols_field">符号</string>
-    <string name="t9_symbols_count">字符 %1$d / %2$d</string>
     <string name="t9_symbols_error_invalid">请输入 1 至 %1$d 个字符，不能包含空格或控制字符。</string>
     <string name="t9_symbols_error_duplicate">输入的符号不能重复。</string>
-    <string name="t9_symbols_keyboard_section">键盘</string>
     <string name="t9_symbols_rail">侧键</string>
     <string name="t9_symbols_cycle">首键连续点按</string>
-    <string name="t9_symbols_note">首键可在未输入状态下连续点按轮换符号，每次间隔不超过 0.8 秒；长按可输入「1」。</string>
-    <string name="t9_symbols_save">保存</string>
     <string name="t9_symbols_restore">恢复默认</string>
     <string name="t9_symbols_saved">已保存。</string>
-    <string name="t9_symbols_restored">已恢复默认。</string>
 </resources>

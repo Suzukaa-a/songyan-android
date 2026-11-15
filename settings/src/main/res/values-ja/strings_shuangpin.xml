@@ -1,8 +1,6 @@
 <resources>
     <!-- 双拼のヒント -->
     <string name="shuangpin_title">双拼のヒント</string>
-    <string name="shuangpin_entry_on">使用中：%1$s</string>
-    <string name="shuangpin_entry_off">オフ</string>
     <string name="shuangpin_switch">文字キーに双拼のヒントを表示する</string>
     <string name="shuangpin_current">現在のヒント：%1$s</string>
     <string name="shuangpin_footer">使っている双拼の入力方式に合ったヒントを選んでください。</string>

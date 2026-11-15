@@ -11,7 +11,6 @@
     <string name="ime_done">Done</string>
     <string name="ime_previous">Previous</string>
     <string name="ime_numbers">123</string>
-    <string name="ime_symbols">Symbols</string>
     <string name="ime_symbol_key">Symbols</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">Clear</string>
@@ -70,10 +69,8 @@
     <string name="ime_layout_zhuyin41">Zhuyin 41 keys</string>
     <string name="ime_layout_cangjie26">Cangjie 26 keys</string>
     <string name="ime_layout_romaji26">Romaji 26 keys</string>
-    <string name="ime_preparing">Preparing input schemes</string>
     <string name="ime_unavailable">Input schemes are not ready</string>
     <string name="ime_expand">Expand candidates</string>
-    <string name="ime_collapse">Collapse candidates</string>
     <string name="ime_menu_quick_content">Phrases and clipboard</string>
     <string name="ime_menu_keyboard_settings">Keyboard settings</string>
     <string name="ime_menu_title">Keyboard</string>
@@ -120,7 +117,6 @@
     <string name="ime_symbol_locked">Locked</string>
     <string name="ime_panel_recent_empty">No recent symbols yet.</string>
     <string name="ime_back_chinese" translatable="false">返回</string>
-    <string name="ime_language_key" translatable="false">中/英</string>
     <string name="ime_panel_clipboard_enable">Turn on</string>
     <string name="ime_cursor_left">Move cursor left</string>
     <string name="ime_cursor_right">Move cursor right</string>

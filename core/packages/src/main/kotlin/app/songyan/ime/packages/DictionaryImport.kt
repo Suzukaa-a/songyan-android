@@ -280,7 +280,7 @@ object DictionaryImportBuilder {
                     val header = readHeader(reader, source)
                     entryCount += readRows(reader, source.path, header, rows, limits.entryCap - entryCount, cancelled)
                 }
-                val sha = hex(digest.digest())
+                val sha = digest.digest().toHexString()
                 shas[path] = sha
                 signatures += path + "\t" + sha
                 val original = File(target, "$ORIGINALS_DIRECTORY/$path")
@@ -712,11 +712,6 @@ object DictionaryImportBuilder {
         file.parentFile?.mkdirs()
         file.writeBytes(data)
     }
-
-    private fun hex(bytes: ByteArray): String =
-        bytes.joinToString("") {
-            (it.toInt() and 0xFF).toString(16).padStart(2, '0')
-        }
 
     private fun rowDetail(
         path: String,

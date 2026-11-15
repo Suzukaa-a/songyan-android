@@ -157,9 +157,6 @@ class DictionaryLinkFetcher(
         return size
     }
 
-    private fun hex(bytes: ByteArray): String =
-        bytes.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
-
     private fun startsWithZipSignature(file: File): Boolean =
         try {
             file.inputStream().use { it.read() == 'P'.code && it.read() == 'K'.code }
@@ -230,7 +227,7 @@ class DictionaryLinkFetcher(
                         cancelled,
                         digest,
                     ) { bytes -> progress.update(bytes, expected) }
-                if (digest != null && hex(digest.digest()) != expectedSha256) {
+                if (digest != null && digest.digest().toHexString() != expectedSha256) {
                     throw problem(DictionaryImportProblemKind.CHECKSUM_MISMATCH)
                 }
                 return size

@@ -66,5 +66,5 @@ class EngineOptionPreferences(
         )
 
     // Ids are arbitrary scheme-author text; hex keeps them out of the path syntax.
-    private fun hex(text: String): String = text.toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) }
+    private fun hex(text: String): String = text.toByteArray(Charsets.UTF_8).toHexString()
 }

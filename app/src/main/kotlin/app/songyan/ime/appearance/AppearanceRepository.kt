@@ -161,9 +161,6 @@ class AppearanceRepository internal constructor(
     /** Reads the stored appearance list; blocking, used by the settings bridge on its own scope. */
     suspend fun loadAppearances(): List<AppearanceDocument> = withContext(io) { controller.list() }
 
-    /** The palette the keyboard paints with for [dark], resolved exactly as the keyboard resolves it. */
-    fun keyboardPalette(dark: Boolean): KeyboardPalette = KeyboardPalette.resolve(context, dark)
-
     private suspend fun publish(next: AppearanceState) {
         mutex.withLock {
             mutableState.value = next

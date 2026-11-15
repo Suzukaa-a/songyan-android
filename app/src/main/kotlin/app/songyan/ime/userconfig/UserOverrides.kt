@@ -254,7 +254,7 @@ class UserOverrides(
                         digest.update(buffer, 0, read)
                     }
                 }
-                digest.digest().joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+                digest.digest().toHexString()
             } catch (_: IOException) {
                 null
             }

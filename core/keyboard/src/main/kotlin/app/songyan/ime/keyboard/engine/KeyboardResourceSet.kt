@@ -53,12 +53,6 @@ data class PublishedKeyboard(
             return forRequested.filter { it.needsGeneratedAdapter && seen.add(it) }
         }
 
-        /** Display projection (keeps input order); names come from the current descriptors. */
-        fun displays(
-            keyboards: List<PublishedKeyboard>,
-            descriptors: List<KeyboardSchemaDescriptor>,
-        ): List<PublishedKeyboardDisplay> = keyboards.map { display(it, descriptors) }
-
         fun display(
             keyboard: PublishedKeyboard,
             descriptors: List<KeyboardSchemaDescriptor>,
@@ -270,9 +264,6 @@ data class KeyboardResourceSet(
                     englishCandidateRoutes.map { it.candidateSchemaID }
             return schemas.filter { it.id !in companionIDs }
         }
-
-    fun keyboardChoices(forSchemaID: String): List<Combination> =
-        availableCombinations.filter { it.schemaID == sourceSchemaID(forSchemaID) }
 
     /**
      * The engine schema a source scheme runs as on [layout]; null when the layout cannot run it. A

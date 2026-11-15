@@ -2,8 +2,6 @@
 <resources>
     <!-- 双拼提示 -->
     <string name="shuangpin_title">双拼提示</string>
-    <string name="shuangpin_entry_on">正在使用：%1$s</string>
-    <string name="shuangpin_entry_off">未开启</string>
     <string name="shuangpin_switch">在字母键上显示双拼提示</string>
     <string name="shuangpin_current">当前提示：%1$s</string>
     <string name="shuangpin_footer">请选择与你使用的双拼输入方式相符的提示。</string>

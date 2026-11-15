@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Quick content -->
-    <string name="quick_content_loading">Loading…</string>
     <string name="quick_content_save">Save</string>
     <string name="quick_content_cancel">Cancel</string>
     <string name="quick_content_delete">Delete</string>

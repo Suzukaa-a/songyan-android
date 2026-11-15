@@ -760,9 +760,6 @@ private fun withCut(
     return split.copy(rowBreaks = breaks)
 }
 
-/** Whether the selected key is one the editor can describe; a key of an unknown kind keeps its raw fields. */
-internal fun LayoutKey.isEditableKind(): Boolean = KeyActionChoice.of(action) != null
-
 /**
  * The side columns of a nine-key layout. While the layout still declares the preset's columns the
  * keyboard draws its own and this says so; declaring them makes every key editable here.

@@ -279,18 +279,11 @@
     <string name="keyboard_menu_layouts_of">Keyboard layouts for %1$s</string>
     <string name="keyboard_menu_in_use">In use</string>
     <string name="t9_symbols_title">9-key quick symbols</string>
-    <string name="t9_symbols_entry_body">The symbols and their order on the 9-key side keys and first key</string>
-    <string name="t9_symbols_order_section">Symbol order</string>
     <string name="t9_symbols_field">Symbols</string>
-    <string name="t9_symbols_count">Characters %1$d / %2$d</string>
     <string name="t9_symbols_error_invalid">Enter 1 to %1$d characters, without spaces or control characters.</string>
     <string name="t9_symbols_error_duplicate">Symbols can\'t repeat.</string>
-    <string name="t9_symbols_keyboard_section">Keyboard</string>
     <string name="t9_symbols_rail">Side keys</string>
     <string name="t9_symbols_cycle">First key, tapped repeatedly</string>
-    <string name="t9_symbols_note">While nothing is being typed, tap the first key again within 0.8 seconds to switch to the next symbol. Press and hold it to type \"1\".</string>
-    <string name="t9_symbols_save">Save</string>
     <string name="t9_symbols_restore">Restore default</string>
     <string name="t9_symbols_saved">Saved.</string>
-    <string name="t9_symbols_restored">Default restored.</string>
 </resources>

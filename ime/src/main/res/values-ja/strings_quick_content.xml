@@ -12,7 +12,6 @@
     <string name="ime_panel_clipboard_empty">まだ何も記録されていません。</string>
     <string name="ime_panel_add_phrase">定型文を追加</string>
     <string name="ime_panel_symbols_empty">記号ライブラリが空です。</string>
-    <string name="ime_panel_clipboard_delete">削除</string>
     <string name="ime_panel_quick_content">定型文とクリップボード</string>
     <string name="ime_panel_quick_insert">挿入</string>
     <string name="ime_panel_repeat">前回の入力を繰り返す</string>

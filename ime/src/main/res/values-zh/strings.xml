@@ -11,7 +11,6 @@
     <string name="ime_done">完成</string>
     <string name="ime_previous">上一项</string>
     <string name="ime_numbers">123</string>
-    <string name="ime_symbols">符号</string>
     <string name="ime_symbol_key">符</string>
     <string name="ime_back">ABC</string>
     <string name="ime_clear">重输</string>
@@ -43,10 +42,8 @@
     <string name="ime_layout_zhuyin41">注音 41 键</string>
     <string name="ime_layout_cangjie26">仓颉 26 键</string>
     <string name="ime_layout_romaji26">罗马字 26 键</string>
-    <string name="ime_preparing">正在准备输入方案</string>
     <string name="ime_unavailable">输入方案尚未就绪</string>
     <string name="ime_expand">展开候选</string>
-    <string name="ime_collapse">收起候选</string>
     <string name="ime_toolbar_input_methods">键盘布局与输入方式</string>
     <string name="ime_toolbar_hide">收起键盘</string>
     <string name="ime_toolbar_switch_input_method">切换输入法</string>

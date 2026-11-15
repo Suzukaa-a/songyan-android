@@ -147,9 +147,6 @@ class CandidateReadingFilter {
         return bound.takeIf { first.readingPaths.orEmpty().any { path -> it.fits(path, consumingAll = true) } }
     }
 
-    /** How many of [page] would match the current reading prefix. */
-    fun matchCount(page: List<ReadingCandidate>): Int = if (isFiltering) page.count(::matchesPrefix) else page.size
-
     /**
      * A candidate matches when its reading continues the chosen syllables, or spells their first
      * 1..n syllables (课程 and 可 for a chosen `ke cheng xing`): choosing a reading narrows the

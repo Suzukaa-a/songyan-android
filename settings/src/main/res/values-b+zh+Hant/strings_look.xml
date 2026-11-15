@@ -279,18 +279,11 @@
     <string name="keyboard_menu_layouts_of">「%1$s」的鍵盤配置</string>
     <string name="keyboard_menu_in_use">使用中</string>
     <string name="t9_symbols_title">九鍵快捷符號</string>
-    <string name="t9_symbols_entry_body">九鍵側鍵與首鍵上的符號和順序</string>
-    <string name="t9_symbols_order_section">符號順序</string>
     <string name="t9_symbols_field">符號</string>
-    <string name="t9_symbols_count">字元 %1$d / %2$d</string>
     <string name="t9_symbols_error_invalid">請輸入 1 至 %1$d 個字元，不能包含空格或控制字元。</string>
     <string name="t9_symbols_error_duplicate">輸入的符號不能重複。</string>
-    <string name="t9_symbols_keyboard_section">鍵盤</string>
     <string name="t9_symbols_rail">側鍵</string>
     <string name="t9_symbols_cycle">首鍵連續輕觸</string>
-    <string name="t9_symbols_note">首鍵可在未輸入狀態下連續輕觸輪換符號，每次間隔不超過 0.8 秒；長按可輸入「1」。</string>
-    <string name="t9_symbols_save">儲存</string>
     <string name="t9_symbols_restore">恢復預設</string>
     <string name="t9_symbols_saved">已儲存。</string>
-    <string name="t9_symbols_restored">已恢復預設。</string>
 </resources>

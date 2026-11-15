@@ -154,10 +154,7 @@ class UserScripts(
         }
     }
 
-    private fun sha256(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") {
-            (it.toInt() and 0xFF).toString(16).padStart(2, '0')
-        }
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).toHexString()
 
     private companion object {
         val LOCK = Any()

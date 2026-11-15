@@ -288,7 +288,7 @@ class LearningBackupArchive(
             Normalizer.normalize(name, Normalizer.Form.NFC).lowercase(Locale.ROOT)
 
         internal fun sha256Hex(data: ByteArray): String =
-            MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) }
+            MessageDigest.getInstance("SHA-256").digest(data).toHexString()
 
         private fun fail(
             error: LearningBackupError,

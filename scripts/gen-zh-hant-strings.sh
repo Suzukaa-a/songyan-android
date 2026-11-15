@@ -94,7 +94,6 @@ for key in (
     "layout_editor_action_jump_hint",
     "keyboard_menu_body",
     "keyboard_menu_in_use",
-    "shuangpin_entry_on",
     "shuangpin_error_missing_selection",
 ):
     key_replacements[key] = [("正在使用", "使用中")]

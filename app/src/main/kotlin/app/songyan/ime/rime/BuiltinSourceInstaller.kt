@@ -54,13 +54,6 @@ class BuiltinSourceInstaller(
         mergeStarterDictionary(target)
     }
 
-    /** The stamp written by [install], or null when the source was never materialised here. */
-    fun installedStamp(target: File): String? =
-        File(target, STAMP_NAME)
-            .takeIf { it.isFile }
-            ?.readText()
-            ?.trim()
-
     /**
      * The package ships a deliberately small starter dictionary; the Android build bundles a
      * broader starter table separately so a fresh install can type common words before the user

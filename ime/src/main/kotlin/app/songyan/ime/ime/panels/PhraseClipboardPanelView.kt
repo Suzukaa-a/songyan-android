@@ -138,12 +138,6 @@ class PhraseClipboardPanelView(
         applyWantedSection()
     }
 
-    /** Opens the panel on the quick-insert section. */
-    fun openQuickInsert() {
-        wantedSection = Section.QUICK
-        applyWantedSection()
-    }
-
     private fun applyWantedSection() {
         val wanted = wantedSection ?: return
         val index = sections.indexOf(wanted)

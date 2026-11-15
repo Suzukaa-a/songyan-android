@@ -13,7 +13,6 @@
     <string name="ime_panel_clipboard_empty">还没有记录。</string>
     <string name="ime_panel_add_phrase">添加常用语</string>
     <string name="ime_panel_symbols_empty">符号库是空的。</string>
-    <string name="ime_panel_clipboard_delete">删除</string>
     <string name="ime_panel_quick_content">常用语与剪贴板</string>
     <string name="ime_panel_quick_insert">快捷输入</string>
     <string name="ime_panel_repeat">重复上次输入</string>

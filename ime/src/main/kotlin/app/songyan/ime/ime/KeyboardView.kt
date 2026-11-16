@@ -463,6 +463,9 @@ class KeyboardView(
 
     internal var railIndices: Set<Int> = emptySet()
 
+    /** The shell region of each of [keys] while the phone shell is drawn, index for index. */
+    internal var shellRegions: List<PhoneKeypadLayout.Region> = emptyList()
+
     /** Every engine-backed rail choice, top to bottom; the column scrolls through them. */
     internal var railChoices: List<String> = emptyList()
 

@@ -1,6 +1,12 @@
-package app.songyan.ime.layout
+package app.songyan.ime.ime
 
 import app.songyan.ime.keyboard.engine.InputLanguage
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutBottomRow
+import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -10,6 +16,16 @@ import org.junit.Test
 class LetterPageKeysTest {
     private val main = BuiltinLayouts.qwerty26
 
+    /** The key as the Chinese letters page draws it. */
+    private fun presented(
+        key: LayoutKey,
+        layout: LayoutDefinition,
+    ) = LetterPageKeys.chineseLetterKey(
+        LetterPageKeys.mergedFace(key),
+        InputLanguage.ZH_HANS,
+        LetterPageKeys.nativeLetterDefaults(layout),
+    )
+
     private fun key(label: String) =
         main.rows
             .flatMap { it.keys }
@@ -17,7 +33,7 @@ class LetterPageKeysTest {
 
     @Test
     fun aBundledLetterKeyCarriesItsCornerMarkAsTheKeyboardDraws() {
-        val a = LetterPageKeys.presented(key("a"), main, InputLanguage.ZH_HANS)
+        val a = presented(key("a"), main)
         assertEquals("a", a.label)
         assertNotNull(a.secondaryLabel)
         assertTrue(a.longPress.orEmpty().isNotEmpty())
@@ -25,7 +41,7 @@ class LetterPageKeysTest {
 
     @Test
     fun theTopRowShowsItsDigitInTheCorner() {
-        assertEquals("1", LetterPageKeys.presented(key("q"), main, InputLanguage.ZH_HANS).secondaryLabel)
+        assertEquals("1", presented(key("q"), main).secondaryLabel)
     }
 
     @Test
@@ -43,7 +59,7 @@ class LetterPageKeysTest {
                     ) + main.rows.drop(1),
             )
         val w = edited.rows.flatMap { it.keys }.first { it.label == "w" }
-        assertEquals(w, LetterPageKeys.presented(w, edited, InputLanguage.ZH_HANS))
+        assertEquals(w, presented(w, edited))
     }
 
     @Test

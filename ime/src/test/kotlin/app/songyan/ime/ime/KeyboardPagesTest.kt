@@ -2,9 +2,12 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.FooterKeys
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRow
@@ -40,6 +43,29 @@ class KeyboardPagesTest {
     }
 
     @Test
+    fun theEditorPreviewOfALayoutIsTheLettersPageTheKeyboardDraws() {
+        val shipped =
+            listOf(
+                KeyboardLayoutKind.QWERTY26 to BuiltinLayouts.qwerty26,
+                KeyboardLayoutKind.MERGED14 to BuiltinLayouts.merged14,
+                KeyboardLayoutKind.MERGED18 to BuiltinLayouts.merged18,
+            )
+        for ((kind, layout) in shipped) {
+            val drawn = KeyboardPages.definition(null, letters.copy(layout = kind))
+            assertEquals(kind.name, drawn.rows, KeyboardPages.previewLetters(layout).rows)
+        }
+        // The editor's bottom row of a layout without one of its own is the row the keyboard draws.
+        assertEquals(
+            KeyboardPages
+                .definition(null, letters)
+                .rows
+                .last()
+                .keys,
+            LayoutBottomRow.preview(BuiltinLayouts.qwerty26),
+        )
+    }
+
+    @Test
     fun lettersFooterFollowsTheEditor() {
         val footer =
             KeyboardPages
@@ -64,7 +90,7 @@ class KeyboardPagesTest {
         assertEquals(listOf("、", "：", "；"), footer[2].longPress?.map { it.label })
         assertEquals(listOf("？", "！", "…"), footer[4].longPress?.map { it.label })
         // The space bar keeps one share on every page, so every bottom row lines up.
-        assertEquals(KeyboardPages.FooterWeight.SPACE, footer[3].widthWeight, 0.001)
+        assertEquals(FooterKeys.Weight.SPACE, footer[3].widthWeight, 0.001)
         // The marks either side of the space bar match; Return takes the rest of the right side.
         assertEquals(footer[2].widthWeight, footer[4].widthWeight, 0.001)
         assertTrue(footer[5].widthWeight > footer[4].widthWeight)

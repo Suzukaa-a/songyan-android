@@ -18,6 +18,10 @@ object LayoutBottomRow {
         return keys.takeUnless { it == bundled?.rows?.lastOrNull()?.keys }
     }
 
+    /**
+     * The bottom row the keyboard draws for [layout] in a text field, which the editor shows and
+     * edits: the layout's own row, the nine-key shell's row, or the generated letters footer.
+     */
     fun preview(layout: LayoutDefinition): List<LayoutKey> {
         authored(layout)?.let { return it }
         if (PhoneKeypadStructure.matches(layout) && PhoneKeypadRailPolicy.usesBundledRails(layout)) {
@@ -28,22 +32,6 @@ object LayoutBottomRow {
                 LayoutKey("0", action = LayoutAction.literal("0")),
             )
         }
-        return KeyboardPagePresets.englishQwerty
-            .materialized()
-            .chrome!!
-            .bottom
-            .filter { it.action.type != LayoutActionKind.GLOBE }
-            .map { key ->
-                key.copy(
-                    width =
-                        when (key.action.type) {
-                            LayoutActionKind.PAGE_SWITCH -> 1.4
-                            LayoutActionKind.LANGUAGE_SWITCH -> 1.2
-                            LayoutActionKind.SPACE -> 4.8
-                            LayoutActionKind.ENTER -> 1.6
-                            else -> 1.0
-                        },
-                )
-            }
+        return FooterKeys.letters()
     }
 }

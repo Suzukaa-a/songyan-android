@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +15,7 @@ import app.songyan.ime.settings.SongyanSettingsScreen
 import app.songyan.ime.settings.state.ImeId
 import app.songyan.ime.settings.state.IncomingPackageHolder
 import app.songyan.ime.settings.state.SettingsAppStateHolder
+import app.songyan.ime.settings.ui.LocalLayoutPreview
 
 /** Hosts the Compose settings UI; the IME service class is the input method this app ships. */
 class SongyanSettingsActivity : ComponentActivity() {
@@ -37,12 +39,14 @@ class SongyanSettingsActivity : ComponentActivity() {
                 className = SongyanInputMethodService::class.java.name,
             )
         setContent {
-            SongyanSettingsScreen(
-                imeComponent = imeComponent,
-                versionName = BuildConfig.VERSION_NAME,
-                target = pendingTarget,
-                onTargetHandled = { pendingTarget = null },
-            )
+            CompositionLocalProvider(LocalLayoutPreview provides KeyboardLayoutPreview) {
+                SongyanSettingsScreen(
+                    imeComponent = imeComponent,
+                    versionName = BuildConfig.VERSION_NAME,
+                    target = pendingTarget,
+                    onTargetHandled = { pendingTarget = null },
+                )
+            }
         }
     }
 

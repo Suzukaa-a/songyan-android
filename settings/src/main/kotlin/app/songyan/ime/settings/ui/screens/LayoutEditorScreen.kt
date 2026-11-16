@@ -35,18 +35,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
-import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
-import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutResourceBudget
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
-import app.songyan.ime.layout.LetterPageKeys
 import app.songyan.ime.layout.T9FirstKeyBehavior
 import app.songyan.ime.layout.T9QuickSymbolStore
 import app.songyan.ime.settings.R
@@ -57,8 +53,10 @@ import app.songyan.ime.settings.ui.GridEdit
 import app.songyan.ime.settings.ui.KeyGridEditing
 import app.songyan.ime.settings.ui.KeySelection
 import app.songyan.ime.settings.ui.LayoutEditorViewModel
+import app.songyan.ime.settings.ui.LayoutPreviewRequest
 import app.songyan.ime.settings.ui.LocalEditorNavigationGuard
 import app.songyan.ime.settings.ui.PageEditorViewModel
+import app.songyan.ime.settings.ui.PreviewTarget
 import app.songyan.ime.settings.ui.SaveOutcome
 import app.songyan.ime.settings.ui.T9QuickSymbolsDraft
 import app.songyan.ime.settings.ui.T9QuickSymbolsProblem
@@ -105,91 +103,51 @@ fun LayoutEditorScreen(
         val inSplit = current.splitView && !current.isNineKey
         val liveFirst = BuiltinLayouts.usesT9QuickFirstKey(current.layout)
         val selectingFirst = current.isNineKey && current.rail == null && current.selection == KeySelection(0, 0)
-        val previewRows =
-            if (liveFirst) {
-                val first = current.editRows[0].keys[0]
-                val live =
-                    BuiltinLayouts.t9CycleKey(
-                        BuiltinLayouts.t9QuickCycleValues(
-                            current.layout.effectiveT9QuickSymbols(inheritedSymbols.orEmpty()),
-                            false,
-                        ),
-                    )
-                if (first.label ==
-                    BuiltinLayouts.phone9.rows[0]
-                        .keys[0]
-                        .label &&
-                    live != null
-                ) {
-                    current.editRows.toMutableList().also { rows ->
-                        rows[0] =
-                            LayoutRow(rows[0].keys.toMutableList().also { it[0] = first.copy(label = live.label) })
-                    }
-                } else {
-                    current.editRows
-                }
-            } else {
-                current.editRows
-            }
-        // What the keyboard draws on each key comes from the same resolution the keyboard uses; the
-        // editing fields and structural edits below keep working on the layout's own keys.
-        val drawnRows =
-            if (current.isNineKey) {
-                previewRows
-            } else {
-                previewRows.map { row ->
-                    LayoutRow(row.keys.map { LetterPageKeys.presented(it, current.layout, InputLanguage.ZH_HANS) })
-                }
-            }
-        // The keyboard adds the Shift slot and Delete around a shipped-shape pad's last letter row.
-        val separator = stringResource(R.string.layout_editor_shell_separator)
-        val bottomKeys = current.bottomKeys
-        val shell =
-            if (current.isNineKey ||
-                !LetterPageKeys.shellEditsLastLetterRow(current.layout, bottomKeys, kanaBoard = false)
-            ) {
-                null
-            } else {
-                val last = previewRows.lastOrNull()?.keys.orEmpty()
-                val merged =
-                    current.layout.input.builtinLayout.let {
-                        it == LayoutInput.Builtin.MERGED14 || it == LayoutInput.Builtin.MERGED18
-                    }
-                KeyGridShell(
-                    leading =
-                        if (last.any { it.action.type == LayoutActionKind.SHIFT }) {
-                            null
-                        } else if (merged) {
-                            separator
-                        } else {
-                            "⇧"
-                        },
-                    trailing = if (last.any { it.action.type == LayoutActionKind.BACKSPACE }) null else "⌫",
-                )
-            }
+        // The gap follows its slider while it moves, before it is saved.
+        val shown =
+            current.layout.split
+                ?.takeIf { !it.automaticGap }
+                ?.let { split -> liveGap?.let { current.layout.copy(split = split.copy(gapFraction = it.toDouble())) } }
+                ?: current.layout
+        val request =
+            LayoutPreviewRequest(
+                layout = shown,
+                split = inSplit,
+                rows = current.editRows,
+                bottom = current.bottomKeys,
+                quickSymbols = inheritedSymbols.orEmpty(),
+            )
+        val selectedTarget =
+            current.rail?.let { PreviewTarget.Rail(it) }
+                ?: current.bottom?.let { PreviewTarget.Bottom(it) }
+                ?: current.selection?.let { PreviewTarget.Grid(it) }
         GridSections(
-            shell = shell,
-            displayRows = drawnRows,
-            footer = if (current.isNineKey) null else bottomKeys,
+            preview = {
+                KeyboardPreview(
+                    request = request,
+                    selected = selectedTarget,
+                    onSelect = { target ->
+                        viewModel.update {
+                            when (target) {
+                                is PreviewTarget.Grid -> it.select(target.at)
+                                is PreviewTarget.Bottom -> it.selectBottom(target.index)
+                                is PreviewTarget.Rail -> it.selectRail(target.at)
+                            }
+                        }
+                    },
+                )
+            },
+            footer = current.bottomKeys,
             footerSelected = current.bottom,
-            onSelectFooter = { index -> viewModel.update { it.selectBottom(index) } },
             onFooterKeys = { keys, selected -> viewModel.update { it.withBottomKeys(keys, selected) } },
             editPrimaryAction = !selectingFirst || !liveFirst,
-            rows = previewRows,
+            rows = current.editRows,
             selection = current.selection,
             selectedKey = current.selectedKey,
             allowCode = true,
             split = current.layout.split,
             activationOnly = true,
             cuts = if (inSplit) current.splitCuts else null,
-            gapFraction =
-                current.layout.split.let { split ->
-                    if (split == null || split.automaticGap) {
-                        LayoutSplitConfiguration.DEFAULT_GAP_FRACTION.toFloat()
-                    } else {
-                        liveGap ?: split.gapFraction.toFloat()
-                    }
-                },
             beforeGrid = {
                 if (current.isNineKey && (current.usesBundledRails || liveFirst)) {
                     NineKeySymbolsSection(
@@ -291,11 +249,6 @@ fun LayoutEditorScreen(
                 }
             },
         )
-        if (current.isNineKey) {
-            BottomRowEditor(current.bottomKeys, allowEmpty = false) { keys ->
-                viewModel.update { it.withBottomKeys(keys) }
-            }
-        }
     }
 }
 
@@ -676,8 +629,6 @@ private fun GridSections(
     onSplit: (LayoutSplitConfiguration?) -> Unit,
     /** Set while the grid shows the split arrangement: the keys of each row left of the gap. */
     cuts: List<Int>? = null,
-    /** The gap the split arrangement is drawn with, as a share of the width. */
-    gapFraction: Float = 0f,
     /** Shown above the grid (the whole / split choice of a main layout). */
     beforeGrid: @Composable () -> Unit = {},
     /** What the split arrangement adds under its grid; the activation choice alone is shown otherwise. */
@@ -697,29 +648,21 @@ private fun GridSections(
     /** The gap and the cuts are edited elsewhere (a main layout's split view); only the activation shows here. */
     activationOnly: Boolean = false,
     editPrimaryAction: Boolean = true,
-    /** The keys the keyboard adds around the last letter row; null for none. */
-    shell: KeyGridShell? = null,
-    /** What the grid draws for [rows], resolved as the keyboard draws them; null draws [rows] as they are. */
-    displayRows: List<LayoutRow>? = null,
-    /** The bottom row, drawn under the rows and selected there; null when the grid has none. */
+    /** The keyboard's own drawing of the keys, which selects them; null draws [rows] as a grid of their own. */
+    preview: (@Composable () -> Unit)? = null,
+    /** The bottom row, selected in [preview]; null when the grid has none. */
     footer: List<LayoutKey>? = null,
     footerSelected: Int? = null,
-    onSelectFooter: (Int) -> Unit = {},
     onFooterKeys: (List<LayoutKey>, Int?) -> Unit = { _, _ -> },
 ) {
     val template = LayoutKey("·", action = LayoutAction.literal("·"))
     beforeGrid()
     SectionHeader(stringResource(R.string.layout_editor_keys_section))
-    KeyGrid(
-        rows = displayRows ?: rows,
-        selection = footerSelected?.let { KeySelection(rows.size, it) } ?: selection,
-        onSelect = { at -> if (footer != null && at.row == rows.size) onSelectFooter(at.key) else onSelect(at) },
-        asciiPreview = asciiPreview,
-        cuts = cuts,
-        gapFraction = gapFraction,
-        shell = shell,
-        footer = footer,
-    )
+    if (preview != null) {
+        preview()
+    } else {
+        KeyGrid(rows = rows, selection = selection, onSelect = onSelect, asciiPreview = asciiPreview)
+    }
     val inSplit = cuts != null
     if (footer != null && footerSelected != null) {
         FooterToolbar(footer, footerSelected, template, onFooterKeys)
@@ -900,6 +843,3 @@ private fun BottomRowEditor(
         }
     }
 }
-
-/** Letter rows of the shipped pad shapes, the ones the keyboard folds Shift and Delete into. */
-private const val SHELL_LETTER_ROWS = 3

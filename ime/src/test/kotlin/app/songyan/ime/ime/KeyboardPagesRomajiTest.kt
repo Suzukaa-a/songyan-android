@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.FooterKeys
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutAction
@@ -206,7 +207,7 @@ class KeyboardPagesRomajiTest {
         assertTrue(footer.none { it.action.type == LayoutActionKind.MODE_SWITCH })
         assertTrue(footer.none { it.action.type == LayoutActionKind.BACKSPACE })
         assertEquals(
-            KeyboardPages.FooterWeight.SPACE,
+            FooterKeys.Weight.SPACE,
             footer.first { it.action.type == LayoutActionKind.SPACE }.widthWeight,
             0.001,
         )

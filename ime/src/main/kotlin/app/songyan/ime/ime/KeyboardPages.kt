@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.FooterKeys
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.KeyboardPageCategory
@@ -20,14 +21,12 @@ import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutKeyTitleMode
-import app.songyan.ime.layout.LayoutOption
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
 import app.songyan.ime.layout.LayoutSplitRow
 import app.songyan.ime.layout.LetterGroupLayout
-import app.songyan.ime.layout.LetterPageKeys
 import app.songyan.ime.layout.PhoneKeypadRailPolicy
 
 /**
@@ -117,6 +116,23 @@ internal object KeyboardPages {
         page: KeyboardPageKind?,
         config: Config,
     ): LayoutDefinition = builtPage(page, config).definition
+
+    /**
+     * The letters page the keyboard would draw for [main] in a plain text field, built from [main]
+     * itself instead of the catalog: the layout editor previews a draft that is not saved yet.
+     */
+    fun previewLetters(main: LayoutDefinition): LayoutDefinition {
+        val kind = main.input.builtinLayout?.let { KeyboardLayoutKind.fromWire(it.wire) } ?: KeyboardLayoutKind.QWERTY26
+        val config =
+            Config(
+                layout = kind,
+                englishDirectInput = false,
+                symbolMarksAscii = false,
+                languageSwitch = true,
+                lettersReachable = true,
+            )
+        return letters(config, main).definition
+    }
 
     /** The authored rails of the page drawn for ([page], [config]), or null for a page without any. */
     fun rails(
@@ -450,8 +466,10 @@ internal object KeyboardPages {
      * folded into the last letter row where the shape carries them, then the footer row (see
      * [lettersFooter]).
      */
-    private fun letters(config: Config): BuiltPage {
-        val main = mainLayout(config)
+    private fun letters(
+        config: Config,
+        main: LayoutDefinition = mainLayout(config),
+    ): BuiltPage {
         val kanaBoard = !config.englishDirectInput && config.field == FieldKind.TEXT && isKanaBoard(main)
         val authoredEnglish =
             if (config.englishDirectInput) {
@@ -484,7 +502,7 @@ internal object KeyboardPages {
                         LayoutRow(row.keys.map { englishKey(it) })
                     }
                 config.englishDirectInput -> englishRows()
-                else -> drawnRows(chineseRows(config, footer), config)
+                else -> drawnRows(chineseRows(config, main, footer), config)
             }
         // A password field has no candidates to peek at, so its digits get a row of their own.
         val digitRows = if (config.field == FieldKind.PASSWORD) listOf(digitRow()) else emptyList()
@@ -548,7 +566,7 @@ internal object KeyboardPages {
             val control = PhoneKeypadRailPolicy.controlRowKeys(base) != null
             return (if (control) halves.dropLast(1) else halves).map(::face)
         }
-        val nativeDefaults = LetterPageKeys.nativeLetterDefaults(mainLayout(config))
+        val nativeDefaults = LetterPageKeys.nativeLetterDefaults(base)
         val letters =
             halves
                 .filterIndexed { index, _ -> index != LayoutBottomRow.index(base) }
@@ -628,16 +646,16 @@ internal object KeyboardPages {
 
     private fun chineseRows(
         config: Config,
+        base: LayoutDefinition,
         footer: List<LayoutKey>,
     ): List<LayoutRow> {
         val layout = config.layout
-        val base = mainLayout(config)
         // A nine-key definition the phone shell cannot draw falls back to the row renderer.
         if (layout == KeyboardLayoutKind.PHONE9) {
             val declared = if (PhoneKeypadRailPolicy.controlRowKeys(base) != null) base.rows.dropLast(1) else base.rows
             return declared.map { row -> LayoutRow(row.keys.map { LetterPageKeys.mergedFace(it) }) }
         }
-        val nativeDefaults = LetterPageKeys.nativeLetterDefaults(mainLayout(config))
+        val nativeDefaults = LetterPageKeys.nativeLetterDefaults(base)
         val rows =
             // Footer keys are added separately so removing Space never turns them into letter keys.
             base.rows
@@ -681,71 +699,6 @@ internal object KeyboardPages {
     }
 
     /**
-     * The width shares of every footer key. The two keys left of the space bar and the two right of
-     * it add up to the same share, so the space bar sits on the keyboard's centre line on every
-     * page and layout.
-     */
-    internal object FooterWeight {
-        const val PAGE = 1.4
-        const val LANGUAGE = 1.2
-        const val MARK = 1.0
-        const val ENTER = 1.6
-        const val SPACE = 4.8
-        const val GLOBE = 1.0
-
-        /** The second key alone on the left (letters unreachable, so no page key) keeps the left side's share. */
-        const val PAGE_ALONE = PAGE + LANGUAGE
-    }
-
-    /**
-     * A generated footer key. Control keys carry the automatic title mode: their face is the host's
-     * to name from the input language, and the label is only the fallback the editor shows. A key
-     * whose label is the text it types (the marks) leaves the mode unset.
-     */
-    private fun footerKey(
-        label: String,
-        action: LayoutAction,
-        weight: Double,
-        longPress: List<LayoutOption>? = null,
-        titleMode: LayoutKeyTitleMode? = null,
-    ) = LayoutKey(label, width = weight, action = action, longPress = longPress, titleMode = titleMode)
-
-    private val SPACE_KEY =
-        footerKey(
-            "空格",
-            LayoutAction(LayoutActionKind.SPACE),
-            FooterWeight.SPACE,
-            titleMode = LayoutKeyTitleMode.AUTOMATIC,
-        )
-    private val GLOBE_KEY =
-        footerKey(
-            "🌐",
-            LayoutAction(LayoutActionKind.GLOBE),
-            FooterWeight.GLOBE,
-            titleMode = LayoutKeyTitleMode.AUTOMATIC,
-        )
-    private val ENTER_KEY =
-        footerKey(
-            "⏎",
-            LayoutAction(LayoutActionKind.ENTER),
-            FooterWeight.ENTER,
-            titleMode = LayoutKeyTitleMode.AUTOMATIC,
-        )
-
-    private fun option(text: String) = LayoutOption(text, LayoutAction.literal(text))
-
-    /** The mark beside the space bar: a literal that long-presses into its sibling marks. */
-    private fun markKey(
-        text: String,
-        alternates: List<String> = emptyList(),
-    ) = footerKey(
-        text,
-        LayoutAction.literal(text),
-        FooterWeight.MARK,
-        alternates.map { option(it) }.ifEmpty { null },
-    )
-
-    /**
      * The letters footer: `123 | 中/英 | ，| 空格 | 。| 回车` in every field, so a field type never moves
      * a key. The marks follow the field: the language's comma and full stop in a text field (`, .`
      * in English), `: /` in a URL field, `_ .` in an email field. An editor without 中/英 (email,
@@ -753,14 +706,8 @@ internal object KeyboardPages {
      */
     internal fun lettersFooter(config: Config): List<LayoutKey> {
         val side = spaceSideMarks(config, config.englishDirectInput)
-        return footer(
-            page =
-                footerKey(
-                    "123",
-                    LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC),
-                    FooterWeight.PAGE,
-                    titleMode = LayoutKeyTitleMode.AUTOMATIC,
-                ),
+        return FooterKeys.row(
+            page = FooterKeys.PAGE,
             pageReachable = config.lettersReachable,
             beside = besideMark(config),
             languageSwitch = config.languageSwitch,
@@ -776,55 +723,16 @@ internal object KeyboardPages {
      */
     private fun besideMark(config: Config): LayoutKey =
         when (config.field) {
-            FieldKind.URL -> markKey(".", listOf("-", "_"))
-            else -> markKey("@", listOf("#", "&", "*"))
-        }.copy(width = FooterWeight.LANGUAGE)
-
-    /**
-     * One footer shape for every row page: `page | 中/英 | mark | 空格 | mark | 回车`. [beside] stands in
-     * for 中/英 when the editor has no language switch; only an editor whose letters are unreachable
-     * lets the page key take both shares.
-     */
-    private fun footer(
-        page: LayoutKey,
-        pageReachable: Boolean,
-        beside: LayoutKey,
-        languageSwitch: Boolean,
-        right: LayoutKey,
-        globe: Boolean,
-        spaceLeft: LayoutKey,
-    ): List<LayoutKey> =
-        buildList {
-            // The switch key sits after the page key, as on the system keyboard (in the corner it
-            // took the thumb's aim for the page key), and takes its share from the space bar.
-            val second =
-                if (languageSwitch) {
-                    footerKey(
-                        "中/英",
-                        LayoutAction.languageSwitch(),
-                        FooterWeight.LANGUAGE,
-                        titleMode = LayoutKeyTitleMode.AUTOMATIC,
-                    )
-                } else {
-                    beside
-                }
-            if (pageReachable) add(page)
-            if (globe) add(GLOBE_KEY)
-            add(if (pageReachable) second else second.copy(width = FooterWeight.PAGE_ALONE))
-            add(spaceLeft)
-            add(if (globe) SPACE_KEY.copy(width = FooterWeight.SPACE - FooterWeight.GLOBE) else SPACE_KEY)
-            add(right)
-            // The mark left of the space bar is balanced by a wider Return, so the space bar stays
-            // centred and the marks either side of it are the same size.
-            add(ENTER_KEY.copy(width = FooterWeight.ENTER + FooterWeight.MARK))
+            FieldKind.URL -> FooterKeys.mark(".", listOf("-", "_")).copy(width = FooterKeys.Weight.LANGUAGE)
+            else -> FooterKeys.atMark()
         }
 
     /** The comma key right of the space bar: the full stop first in its long press, so it is the corner hint. */
     internal fun commaKey(ascii: Boolean) =
         if (ascii) {
-            markKey(",", listOf(".", "?", "!", "'", ":", ";")).copy(secondaryLabel = ".")
+            FooterKeys.mark(",", listOf(".", "?", "!", "'", ":", ";")).copy(secondaryLabel = ".")
         } else {
-            markKey("，", listOf("。", "？", "！", "、", "：", "；")).copy(secondaryLabel = "。")
+            FooterKeys.mark("，", listOf("。", "？", "！", "、", "：", "；")).copy(secondaryLabel = "。")
         }
 
     /**
@@ -835,34 +743,25 @@ internal object KeyboardPages {
     private fun spaceSideMarks(
         config: Config,
         ascii: Boolean,
-    ): Pair<LayoutKey, LayoutKey> {
+    ): Pair<LayoutKey, LayoutKey> =
         when (config.field) {
-            FieldKind.URL -> return markKey(":", listOf(".", "-", "_", "@")) to
-                markKey("/", listOf(".", "?", "=", "&", "#"))
-            FieldKind.EMAIL -> return markKey("_", listOf("-", "+")) to markKey(".", listOf("-", "_"))
-            FieldKind.TEXT, FieldKind.PASSWORD -> Unit
+            FieldKind.URL ->
+                FooterKeys.mark(":", listOf(".", "-", "_", "@")) to
+                    FooterKeys.mark("/", listOf(".", "?", "=", "&", "#"))
+            FieldKind.EMAIL -> FooterKeys.mark("_", listOf("-", "+")) to FooterKeys.mark(".", listOf("-", "_"))
+            FieldKind.PASSWORD -> FooterKeys.textMarks(config.inputLanguage, ascii = true)
+            FieldKind.TEXT -> FooterKeys.textMarks(config.inputLanguage, ascii)
         }
-        if (ascii || config.field == FieldKind.PASSWORD) {
-            return markKey(",", listOf("'", ";", ":")) to markKey(".", listOf("?", "!", "…"))
-        }
-        val japanese = config.inputLanguage == InputLanguage.JA
-        val comma = if (japanese) "、" else "，"
-        // The full stop has its own key, so each long press holds the marks of its kind: the pauses
-        // under the comma, the sentence ends under the full stop.
-        val pauses = if (japanese) listOf("・", "：", "；") else listOf("、", "：", "；")
-        val ends = listOf("？", "！", "…")
-        return markKey(comma, pauses) to markKey("。", ends)
-    }
 
     /** The 123 page footer: `返回 | 中/英 | ，| 空格 | 。| 回车`; the symbol switch opens the third row. */
     private fun numericFooter(config: Config): List<LayoutKey> {
         val side = spaceSideMarks(config, config.symbolMarksAscii)
-        return footer(
+        return FooterKeys.row(
             page =
-                footerKey(
+                FooterKeys.key(
                     "返回",
                     LayoutAction.pageSwitch(LayoutPageTarget.LETTERS),
-                    FooterWeight.PAGE,
+                    FooterKeys.Weight.PAGE,
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             pageReachable = true,
@@ -884,22 +783,22 @@ internal object KeyboardPages {
      */
     private fun symbolsFooter(config: Config): List<LayoutKey> {
         val side = spaceSideMarks(config, config.symbolMarksAscii)
-        return footer(
+        return FooterKeys.row(
             page =
-                footerKey(
+                FooterKeys.key(
                     "返回",
                     LayoutAction.pageSwitch(LayoutPageTarget.LETTERS),
-                    FooterWeight.PAGE,
+                    FooterKeys.Weight.PAGE,
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             pageReachable = true,
             beside = besideMark(config),
             languageSwitch = config.languageSwitch,
             right =
-                footerKey(
+                FooterKeys.key(
                     "更多",
                     LayoutAction(LayoutActionKind.MODE_SWITCH, SYMBOL_PANEL_MODE),
-                    FooterWeight.MARK,
+                    FooterKeys.Weight.MARK,
                     titleMode = LayoutKeyTitleMode.AUTOMATIC,
                 ),
             globe = config.showsGlobe,

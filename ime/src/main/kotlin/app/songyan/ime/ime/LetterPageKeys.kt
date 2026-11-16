@@ -1,14 +1,22 @@
-package app.songyan.ime.layout
+package app.songyan.ime.ime
 
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.AlternateKeyPolicy
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutBottomRow
+import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutOption
 
 /**
- * What the keyboard draws on the keys of a Chinese letters page, resolved from the layout data.
- * The keyboard and the layout editor's preview both call this, so a key shows the same face and
- * corner hint in both and the two cannot drift apart.
+ * What the keyboard draws on the keys of a Chinese letters page, resolved from the layout data,
+ * and the keys the page adds around the last letter row.
  */
-object LetterPageKeys {
+internal object LetterPageKeys {
     val SHIFT: LayoutKey = LayoutKey("⇧", width = 1.4, action = LayoutAction(LayoutActionKind.SHIFT))
 
     /**
@@ -34,13 +42,6 @@ object LetterPageKeys {
         val face = if (key.action.type == LayoutActionKind.CODE) key.label.lowercase() else key.label
         return key.copy(label = face, secondaryLabel = hint)
     }
-
-    /** [mergedFace] then [chineseLetterKey]: the key as the Chinese letters page draws it. */
-    fun presented(
-        key: LayoutKey,
-        main: LayoutDefinition,
-        language: InputLanguage,
-    ): LayoutKey = chineseLetterKey(mergedFace(key), language, nativeLetterDefaults(main))
 
     /**
      * Whether the 26-key shell folds its own Shift and Delete into the last letter row. The shipped

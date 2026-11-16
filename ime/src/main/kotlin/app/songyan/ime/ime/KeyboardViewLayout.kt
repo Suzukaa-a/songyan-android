@@ -578,6 +578,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
             )
         }
     val keys = mutableListOf<LayoutKey>()
+    val regions = mutableListOf<PhoneKeypadLayout.Region>()
     val boxes = mutableListOf<KeyBounds>()
     val rails = mutableSetOf<Int>()
     var railIndex = 0
@@ -598,6 +599,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
         } else {
             keys += placed.key
         }
+        regions += placed.region
         if (placed.t9FirstKey) firstKeyIndex = keys.lastIndex
         boxes +=
             KeyBounds(
@@ -608,6 +610,7 @@ internal fun KeyboardView.rebuildPhone(model: ShellModel) {
             )
     }
     this.keys = keys
+    shellRegions = regions
     t9FirstKeyIndex = firstKeyIndex
     bounds = boxes
     railIndices = rails

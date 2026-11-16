@@ -1,9 +1,9 @@
 package app.songyan.ime.settings
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -28,6 +28,7 @@ import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.PhoneKeypadRailPolicy
 import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.ui.LayoutEditorViewModel
+import app.songyan.ime.settings.ui.LocalLayoutPreview
 import app.songyan.ime.settings.ui.screens.LayoutEditorScreen
 import app.songyan.ime.settings.ui.theme.SongyanTheme
 import org.junit.Assert.assertEquals
@@ -46,22 +47,24 @@ class LayoutEditorScreenTest {
     private fun show(layoutId: String = "qwerty26") {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
-                LayoutEditorScreen(
-                    layoutId = layoutId,
-                    onClose = { closed = true },
-                    onUse = { used = true },
-                    viewModel =
-                        viewModel(
-                            factory =
-                                object : ViewModelProvider.Factory {
-                                    @Suppress("UNCHECKED_CAST")
-                                    override fun <T : ViewModel> create(
-                                        modelClass: Class<T>,
-                                        extras: CreationExtras,
-                                    ): T = LayoutEditorViewModel(source, layoutId, newId = { "copy-id" }) as T
-                                },
-                        ),
-                )
+                CompositionLocalProvider(LocalLayoutPreview provides FakeLayoutPreview) {
+                    LayoutEditorScreen(
+                        layoutId = layoutId,
+                        onClose = { closed = true },
+                        onUse = { used = true },
+                        viewModel =
+                            viewModel(
+                                factory =
+                                    object : ViewModelProvider.Factory {
+                                        @Suppress("UNCHECKED_CAST")
+                                        override fun <T : ViewModel> create(
+                                            modelClass: Class<T>,
+                                            extras: CreationExtras,
+                                        ): T = LayoutEditorViewModel(source, layoutId, newId = { "copy-id" }) as T
+                                    },
+                            ),
+                    )
+                }
             }
         }
     }
@@ -77,27 +80,23 @@ class LayoutEditorScreenTest {
         show()
         keyNode(1, 1, "q").assertIsDisplayed()
         keyNode(1, 2, "w").assertIsDisplayed()
-        // The bottom row is the fourth row of the grid, not a section further down.
-        keyNode(4, 3, "空格").assertIsDisplayed()
+        // The bottom row is the fourth row of the grid, not a section further down: the row the
+        // keyboard draws, `123 中/英 ， 空格 。 回车`.
+        keyNode(4, 4, "空格").assertIsDisplayed()
         compose.onAllNodesWithText(str(R.string.layout_editor_bottom_section)).assertCountEquals(0)
-        // The digit the keyboard draws in the corner of q.
-        compose
-            .onNode(
-                hasContentDescription(str(R.string.layout_editor_key_description, 1, 1, "q")) and hasText("1"),
-            ).assertIsDisplayed()
     }
 
     @Test
     fun aBottomRowKeyIsSelectedInTheGridAndEditedByTheSelectedKeyFields() {
         show()
-        keyNode(4, 3, "空格").performClick()
+        keyNode(4, 4, "空格").performClick()
         compose.onNodeWithText(str(R.string.layout_editor_selected_section, "空格")).assertIsDisplayed()
     }
 
     @Test
     fun anEditedBottomKeyIsSavedAndTheEditorStaysOpen() {
         show()
-        keyNode(4, 3, "空格").performScrollTo().performClick()
+        keyNode(4, 4, "空格").performScrollTo().performClick()
         compose
             .onAllNodes(
                 hasSetTextAction() and
@@ -113,7 +112,7 @@ class LayoutEditorScreenTest {
                 .layout("qwerty26")!!
                 .rows
                 .last()
-                .keys[2]
+                .keys[3]
                 .label,
         )
         assertEquals(false, closed)
@@ -237,8 +236,9 @@ class LayoutEditorScreenTest {
             .onAllNodesWithContentDescription(
                 str(R.string.layout_editor_key_description, 4, 1, "布局"),
             ).assertCountEquals(0)
-        compose.onNodeWithText(str(R.string.layout_editor_bottom_section)).performScrollTo().assertIsDisplayed()
-        // Only the bottom row offers key insertion; the 3x3 grid cannot gain rows or split.
+        // The 3x3 grid cannot gain keys or rows or split; the bottom row, selected in the grid, can.
+        compose.onAllNodesWithContentDescription(str(R.string.layout_editor_add_key)).assertCountEquals(0)
+        keyNode(4, 1, "123").performClick()
         compose.onAllNodesWithContentDescription(str(R.string.layout_editor_add_key)).assertCountEquals(1)
         compose.onAllNodesWithText(str(R.string.layout_editor_add_row)).assertCountEquals(0)
         compose.onAllNodesWithText(str(R.string.layout_editor_split_section)).assertCountEquals(0)

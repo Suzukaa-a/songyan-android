@@ -140,8 +140,16 @@ class AddonPanelDeviceTest {
             assertTrue("the panel surface has no size", size[0] > 0 && size[1] > 0)
             val centerX = location[0] + size[0] / 2
             val insertY = location[1] + ((8 + 32 + 32 + 22) * density).toInt()
-            tap(centerX, insertY)
-            assertTrue("the panel's insert button never reached the host", waitFor { editor.inserted.isNotEmpty() })
+            // The embedded window registers its input channel a moment after its first frame; a tap
+            // that lands before then is dropped by the system, not by the panel. Tap again until it
+            // takes, a few times at most: the panel must still deliver the insert itself.
+            var delivered = false
+            repeat(TAP_ATTEMPTS) {
+                if (delivered) return@repeat
+                tap(centerX, insertY)
+                delivered = waitFor(timeoutMillis = 2_000) { editor.inserted.isNotEmpty() }
+            }
+            assertTrue("the panel's insert button never reached the host", delivered)
             assertEquals("Hello from the panel", editor.inserted.first())
 
             // Kill the addon while its panel is on screen: the host must close the panel, show the
@@ -274,6 +282,10 @@ class AddonPanelDeviceTest {
             }
         }
         return false
+    }
+
+    private companion object {
+        const val TAP_ATTEMPTS = 4
     }
 
     private fun waitFor(

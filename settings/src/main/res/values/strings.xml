@@ -372,7 +372,7 @@
 
     <!-- Settings → Extensions: external addons installed as separate APKs. -->
     <string name="row_extensions_title">Extensions</string>
-    <string name="row_extensions_subtitle">Extensions installed on this device</string>
+    <string name="row_extensions_subtitle">Features other apps add to the keyboard</string>
     <string name="extensions_title">Extensions</string>
     <string name="extensions_body">Extensions are separate apps; turn one on to use it.</string>
     <string name="extensions_loading">Looking for installed extensions…</string>

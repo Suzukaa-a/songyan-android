@@ -372,7 +372,7 @@
 
     <!-- Settings -> Extensions: external extensions installed as separate APKs. -->
     <string name="row_extensions_title">扩展</string>
-    <string name="row_extensions_subtitle">这台设备上安装的扩展</string>
+    <string name="row_extensions_subtitle">另外安装的 App 给键盘加的功能</string>
     <string name="extensions_title">扩展</string>
     <string name="extensions_body">扩展是另外安装的 App，打开后才可用。</string>
     <string name="extensions_loading">正在查找已安装的扩展…</string>

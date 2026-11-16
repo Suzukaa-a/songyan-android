@@ -371,7 +371,7 @@
 
     <!-- Settings -> Extensions: external extensions installed as separate APKs. -->
     <string name="row_extensions_title">拡張機能</string>
-    <string name="row_extensions_subtitle">この端末にインストールされた拡張機能</string>
+    <string name="row_extensions_subtitle">ほかのアプリがキーボードに追加する機能</string>
     <string name="extensions_title">拡張機能</string>
     <string name="extensions_body">拡張機能は別にインストールするアプリです。オンにすると使えます。</string>
     <string name="extensions_loading">インストール済みの拡張機能を探しています…</string>

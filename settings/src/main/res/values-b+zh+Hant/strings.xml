@@ -372,7 +372,7 @@
 
     <!-- Settings -> Extensions: external extensions installed as separate APKs. -->
     <string name="row_extensions_title">擴充功能</string>
-    <string name="row_extensions_subtitle">這臺裝置上安裝的擴充功能</string>
+    <string name="row_extensions_subtitle">另外安裝的 App 給鍵盤加的功能</string>
     <string name="extensions_title">擴充功能</string>
     <string name="extensions_body">擴充功能是另外安裝的 App，開啟後才可用。</string>
     <string name="extensions_loading">正在查詢已安裝的擴充功能…</string>

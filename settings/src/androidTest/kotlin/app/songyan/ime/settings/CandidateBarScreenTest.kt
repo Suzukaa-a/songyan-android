@@ -112,14 +112,14 @@ class CandidateBarScreenTest {
     @Test
     fun cellPaddingAndSpacingAreShownTheWayTheKeyboardDrawsThem() {
         show(Source())
-        // The iOS default padding (7) is the keyboard's 10 dp token; the default spacing is none.
+        // The iOS default padding (7) is the keyboard's 10 dp token; the default spacing is 5 dp.
         compose
             .onNodeWithText(
                 str(R.string.candidate_bar_value, str(R.string.candidate_bar_cell_padding), 10),
             ).assertExists()
         compose
             .onNodeWithText(
-                str(R.string.candidate_bar_value, str(R.string.candidate_bar_cell_spacing), 0),
+                str(R.string.candidate_bar_value, str(R.string.candidate_bar_cell_spacing), 5),
             ).assertExists()
     }
 

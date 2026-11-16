@@ -45,7 +45,7 @@ class DeployChainDeviceTest {
         runBlocking {
             val storage = AppStorage(root)
             storage.ensureBaseDirectories()
-            val stamp = BuildStamps.current(context)
+            val stamp = BuildStamps.current()
             val coordinator =
                 DeploymentCoordinator(
                     storage = storage,
@@ -112,7 +112,7 @@ class DeployChainDeviceTest {
                     assets = AndroidAssetTree(context.assets, "rime"),
                     runner = RimeBindings.deployRunner(),
                     appName = RimeBindings.APP_NAME,
-                    stamp = BuildStamps.current(context),
+                    stamp = BuildStamps.current(),
                 ).deployBuiltin().getOrThrow()
             val generation = storage.generationDir(record.generation)
             val engine =

@@ -42,6 +42,22 @@ val engineSourceHash =
         parameters.roots.set(listOf(rootDir.resolve("native").path))
     }
 
+// The code that turns sources into what librime compiles: the deployment pipeline, the built-in
+// installer, user patches and the scheme presets. Generations are reused across app updates
+// unless one of these changes.
+val deploySourceHash =
+    providers.of(ContentHashValueSource::class.java) {
+        parameters.roots.set(
+            listOf(
+                projectDir.resolve("src/main/kotlin/app/songyan/ime/deploy").path,
+                projectDir.resolve("src/main/kotlin/app/songyan/ime/rime").path,
+                projectDir.resolve("src/main/kotlin/app/songyan/ime/userconfig").path,
+                rootDir.resolve("core/packages/src/main/kotlin").path,
+                rootDir.resolve("core/rime/src/main/kotlin").path,
+            ),
+        )
+    }
+
 android {
     namespace = "app.songyan.ime"
     // AGP strips packaged native libraries with the NDK of the module that packages them;
@@ -91,6 +107,7 @@ android {
         // when the version code does not.
         buildConfigField("String", "RIME_DATA_HASH", "\"${rimeDataHash.get()}\"")
         buildConfigField("String", "ENGINE_SOURCE_HASH", "\"${engineSourceHash.get()}\"")
+        buildConfigField("String", "DEPLOY_SOURCE_HASH", "\"${deploySourceHash.get()}\"")
     }
     testOptions {
         unitTests.isReturnDefaultValues = true

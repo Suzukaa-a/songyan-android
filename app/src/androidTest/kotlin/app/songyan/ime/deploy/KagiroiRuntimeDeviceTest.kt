@@ -79,7 +79,7 @@ class KagiroiRuntimeDeviceTest {
                         sourceId = SOURCE_ID,
                         schemaId = SCHEMA_ID,
                         revision = REVISION,
-                        stamp = BuildStamps.current(context),
+                        stamp = BuildStamps.current(),
                     )
                 }
             assertEquals(
@@ -90,7 +90,7 @@ class KagiroiRuntimeDeviceTest {
             assertTrue("the published kagiroi generation is incomplete", publisher.isComplete(record))
             assertTrue(
                 "its build stamp is stale, so the input method would rebuild it",
-                BuildStamps.isCurrent(record, BuildStamps.current(context)),
+                BuildStamps.isCurrent(record, BuildStamps.current()),
             )
             // The input method must accept the generation as current, or opening the keyboard would
             // start a deployment instead of loading it.
@@ -121,7 +121,7 @@ class KagiroiRuntimeDeviceTest {
                 assertTrue("the bundled generation is incomplete", publisher.isComplete(complete))
                 assertTrue(
                     "the bundled generation has a stale build stamp",
-                    BuildStamps.isCurrent(complete, BuildStamps.current(context)),
+                    BuildStamps.isCurrent(complete, BuildStamps.current()),
                 )
                 preferences.setLayoutId(LAYOUT_ID)
                 preferences.setActiveSchemaId(complete.schemaId)

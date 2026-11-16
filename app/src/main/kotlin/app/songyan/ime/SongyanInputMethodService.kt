@@ -424,7 +424,7 @@ class SongyanInputMethodService : InputMethodService() {
                     requestFirstDeploy = {
                         DeploymentStarter.requestEnsureDeployed(this@SongyanInputMethodService)
                     },
-                    currentStamp = { BuildStamps.current(app) },
+                    currentStamp = { BuildStamps.current() },
                     ownership = app.engineOwnership,
                     startGuard =
                         EngineStartGuard(

@@ -25,7 +25,7 @@ object DeploymentStarter {
         val app = context.applicationContext as? SongyanApplication ?: return false
         return try {
             val usable = GenerationPublisher(app.storage).usablePublication() ?: return false
-            BuildStamps.isCurrent(usable, BuildStamps.current(app))
+            BuildStamps.isCurrent(usable, BuildStamps.current())
         } catch (e: Exception) {
             Log.w(TAG, "cannot read publication state", e)
             false

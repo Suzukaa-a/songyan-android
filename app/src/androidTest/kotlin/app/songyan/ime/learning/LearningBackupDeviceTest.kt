@@ -59,7 +59,7 @@ class LearningBackupDeviceTest {
                     assets = AndroidAssetTree(context.assets, "rime"),
                     runner = RimeBindings.deployRunner(),
                     appName = RimeBindings.APP_NAME,
-                    stamp = BuildStamps.current(context),
+                    stamp = BuildStamps.current(),
                 ).deployBuiltin().getOrThrow()
             service =
                 LearningBackupService(

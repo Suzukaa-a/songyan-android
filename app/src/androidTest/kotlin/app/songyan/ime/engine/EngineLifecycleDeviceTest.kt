@@ -62,7 +62,7 @@ class EngineLifecycleDeviceTest {
             assets = AndroidAssetTree(context.assets, "rime"),
             runner = RimeBindings.deployRunner(),
             appName = RimeBindings.APP_NAME,
-            stamp = BuildStamps.current(context),
+            stamp = BuildStamps.current(),
         )
 
     private class Recorder : ImeEngineRuntime.Callbacks {
@@ -99,7 +99,7 @@ class EngineLifecycleDeviceTest {
         appVersion = "test",
         callbacks = callbacks,
         requestFirstDeploy = { },
-        currentStamp = { BuildStamps.current(context) },
+        currentStamp = { BuildStamps.current() },
         ownership = app.engineOwnership,
         startGuard = guard,
         // The deploy-finished broadcast and the keyboard callbacks arrive on the main thread.
@@ -207,8 +207,8 @@ class EngineLifecycleDeviceTest {
     @Test
     fun theStampFollowsTheLinkedEngineAndIsStableAcrossReads() =
         runBlocking {
-            val stamp = BuildStamps.current(context)
-            assertEquals(stamp, BuildStamps.current(context))
+            val stamp = BuildStamps.current()
+            assertEquals(stamp, BuildStamps.current())
             // The runtime refuses compiled data from another librime release, so that release must be
             // part of the stamp: a generation built by another engine is then rebuilt, not loaded.
             val record: PublicationRecord = coordinator().deployBuiltin().getOrThrow()

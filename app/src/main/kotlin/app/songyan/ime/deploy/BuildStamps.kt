@@ -1,8 +1,5 @@
 package app.songyan.ime.deploy
 
-import android.content.Context
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import app.songyan.ime.BuildConfig
 import app.songyan.ime.rime.BuiltinSourceInstaller
 import app.songyan.ime.rime.RimeBindings
@@ -10,19 +7,23 @@ import app.songyan.ime.storage.BuildStamp
 import app.songyan.ime.storage.PublicationRecord
 
 /**
- * The build stamp a generation must carry to be used as is (H1): an app update, a librime update
- * or new bundled data each make an older generation stale, whichever source it was built from.
+ * The build stamp a generation must carry to be used as is (H1): new deployment code, a librime
+ * update or new bundled data each make an older generation stale, whichever source it was built from.
  *
- * The engine part is the librime release plus a hash of the engine sources (pin, patches, plugins):
- * the runtime refuses compiled data whose `rime_version` differs, and a patched or re-pinned engine
- * may compile differently under the same release. The data part is [BuiltinSourceInstaller.DATA_VERSION]
- * plus a hash of the bundled Rime data, so new data is picked up even when nobody bumped the version.
+ * Every part is a content hash, never the app version: an update that changes none of them keeps
+ * every compiled generation, so switching input methods after an update needs no rebuild.
+ * - app: the deployment code (pipeline, installer, user patches, scheme presets), which decides
+ *   what files librime is given.
+ * - engine: the librime release plus a hash of the engine sources (pin, patches, plugins); the
+ *   runtime refuses compiled data whose `rime_version` differs, and a patched or re-pinned engine
+ *   may compile differently under the same release.
+ * - data: [BuiltinSourceInstaller.DATA_VERSION] plus a hash of the bundled Rime data, so new data
+ *   is picked up even when nobody bumped the version.
  */
 object BuildStamps {
-    /** Reads the package info; call off the main thread. */
-    fun current(context: Context): BuildStamp =
+    fun current(): BuildStamp =
         BuildStamp(
-            app = appVersion(context),
+            app = BuildConfig.DEPLOY_SOURCE_HASH,
             engine = RimeBindings.ENGINE_VERSION + "+" + BuildConfig.ENGINE_SOURCE_HASH,
             data = BuiltinSourceInstaller.DATA_VERSION + "+" + BuildConfig.RIME_DATA_HASH,
         )
@@ -31,27 +32,4 @@ object BuildStamps {
         record: PublicationRecord,
         current: BuildStamp,
     ): Boolean = record.stamp == current
-
-    /**
-     * Release builds use the version code only: reinstalling or restoring the same build keeps its
-     * generations, and engine or data changes are caught by the other two parts. Debug builds add
-     * the version name and the install time, so a developer never types on tables built by the
-     * previous install of changed deployment code.
-     */
-    fun appVersion(context: Context): String =
-        try {
-            val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            appVersion(info.versionName, versionCode(info), info.lastUpdateTime, BuildConfig.DEBUG)
-        } catch (_: PackageManager.NameNotFoundException) {
-            "0/0/0"
-        }
-
-    fun appVersion(
-        versionName: String?,
-        versionCode: Long,
-        lastUpdateTime: Long,
-        debug: Boolean,
-    ): String = if (debug) (versionName ?: "0") + "/" + versionCode + "/" + lastUpdateTime else versionCode.toString()
-
-    private fun versionCode(info: PackageInfo): Long = info.longVersionCode
 }

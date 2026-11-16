@@ -1066,7 +1066,7 @@ class DeploymentCoordinator(
                 assets = AndroidAssetTree(context.assets, "rime"),
                 runner = runner,
                 appName = RimeBindings.APP_NAME,
-                stamp = BuildStamps.current(context),
+                stamp = BuildStamps.current(),
                 localeTags = {
                     val wanted = ServiceLocale.wanted(context)
                     (0 until wanted.size()).map { wanted[it].toLanguageTag() }

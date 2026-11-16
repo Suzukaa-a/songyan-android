@@ -144,8 +144,10 @@ class CopiedChipDeviceTest {
     fun theChipExpires() =
         host { host ->
             host.chipTtlMs = EXPIRY_MS
-            host.copy("short lived")
+            // Copied while the keyboard shows: the lifetime starts then, not before a slow
+            // emulator has brought the keyboard up.
             host.start()
+            host.copy("short lived")
             assertTrue(host.await { host.hasChip() })
             assertTrue("the chip went after its lifetime", host.await { !host.hasChip() })
             host.showAgain()

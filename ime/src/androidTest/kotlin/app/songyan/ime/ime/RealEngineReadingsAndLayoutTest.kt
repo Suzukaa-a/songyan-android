@@ -497,4 +497,25 @@ class RealEngineReadingsAndLayoutTest : RealEngineEditorTestBase() {
             assertEquals(marginPx, keyAreaLeft(), 1.5f)
         }
     }
+
+    @Test
+    fun theNineKeySideColumnLeavesWithTheKeysWhenTheMenuCoversThem() {
+        withHost(layout = "phone9", smallestWidthDp = 800) { host ->
+            host.start(width = 2400)
+            host.awaitIdle()
+
+            fun shown(): Pair<Boolean, Boolean> =
+                host.main2 {
+                    (host.controller.sideCandidates.visibility == android.view.View.VISIBLE) to
+                        (host.controller.sideSwap.visibility == android.view.View.VISIBLE)
+                }
+            assertEquals(true to true, shown())
+            host.main { host.controller.openKeyboardMenu() }
+            host.awaitIdle()
+            assertEquals(false to false, shown())
+            host.main { host.controller.closeKeyboardMenu() }
+            host.awaitIdle()
+            assertEquals(true to true, shown())
+        }
+    }
 }

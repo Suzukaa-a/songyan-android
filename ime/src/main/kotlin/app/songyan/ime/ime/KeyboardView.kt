@@ -126,6 +126,17 @@ class KeyboardView(
     private var reportedSide: Pair<android.graphics.RectF?, app.songyan.ime.candidate.NineKeySideCandidatePlan?> =
         null to null
 
+    /** The key area was shown or hidden (a panel, the menu or the expanded list took its place). */
+    var onShownChanged: () -> Unit = {}
+
+    // Not onVisibilityChanged: the framework skips that callback in some window states, and the
+    // views that follow the key area must hear every change.
+    override fun setVisibility(visibility: Int) {
+        val changed = visibility != this.visibility
+        super.setVisibility(visibility)
+        if (changed) onShownChanged()
+    }
+
     internal fun reportSideCandidates(
         rect: android.graphics.RectF?,
         plan: app.songyan.ime.candidate.NineKeySideCandidatePlan?,

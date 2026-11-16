@@ -88,6 +88,9 @@ internal fun KeyboardController.wireViews() {
     frame.addView(sideCandidates, 1, FrameLayout.LayoutParams(0, 0))
     frame.addView(sideSwap, 2, FrameLayout.LayoutParams(0, 0))
     keyboard.onSideCandidates = { rect, plan -> placeSideCandidates(rect, plan) }
+    // The column and its swap button live above the whole keyboard, so they leave with the key
+    // area: a panel or the menu that covers it must not have them drawn on top.
+    keyboard.onShownChanged = { syncSideViews() }
     sideSwap.setOnClickListener {
         val next = keyboard.nineKeyCandidateSide.mirrored
         keyboard.nineKeyCandidateSide = next
@@ -380,8 +383,7 @@ internal fun KeyboardController.placeSideCandidates(
 ) {
     val shown = rect != null && plan != null
     sideCandidatesShown = shown
-    sideCandidates.visibility = if (shown) View.VISIBLE else View.GONE
-    sideSwap.visibility = if (shown) View.VISIBLE else View.GONE
+    syncSideViews()
     if (rect != null && plan != null) {
         val density = context.resources.displayMetrics.density
         val left = keyboard.left + rect.left
@@ -403,4 +405,11 @@ internal fun KeyboardController.placeSideCandidates(
             }
     }
     render()
+}
+
+/** Shows the 9-key side column and its swap button while the keyboard places them and its keys show. */
+internal fun KeyboardController.syncSideViews() {
+    val visible = if (sideCandidatesShown && keyboard.visibility == View.VISIBLE) View.VISIBLE else View.GONE
+    sideCandidates.visibility = visible
+    sideSwap.visibility = visible
 }

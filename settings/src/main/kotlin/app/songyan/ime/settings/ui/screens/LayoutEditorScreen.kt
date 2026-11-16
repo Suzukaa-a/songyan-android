@@ -38,7 +38,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
+import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
@@ -126,7 +128,25 @@ fun LayoutEditorScreen(
             } else {
                 current.editRows
             }
+        // The keyboard adds the Shift slot and Delete around a shipped-shape pad's last letter row.
+        val separator = stringResource(R.string.layout_editor_shell_separator)
+        val shell =
+            if (current.isNineKey ||
+                previewRows.size != SHELL_LETTER_ROWS ||
+                previewRows.last().keys.any {
+                    it.action.type == LayoutActionKind.SHIFT || it.action.type == LayoutActionKind.BACKSPACE
+                }
+            ) {
+                null
+            } else {
+                val merged =
+                    current.layout.input.builtinLayout.let {
+                        it == LayoutInput.Builtin.MERGED14 || it == LayoutInput.Builtin.MERGED18
+                    }
+                KeyGridShell(leading = if (merged) separator else "⇧", trailing = "⌫")
+            }
         GridSections(
+            shell = shell,
             editPrimaryAction = !selectingFirst || !liveFirst,
             rows = previewRows,
             selection = current.selection,
@@ -648,6 +668,8 @@ private fun GridSections(
     /** The gap and the cuts are edited elsewhere (a main layout's split view); only the activation shows here. */
     activationOnly: Boolean = false,
     editPrimaryAction: Boolean = true,
+    /** The keys the keyboard adds around the last letter row; null for none. */
+    shell: KeyGridShell? = null,
 ) {
     val template = LayoutKey("·", action = LayoutAction.literal("·"))
     beforeGrid()
@@ -659,6 +681,7 @@ private fun GridSections(
         asciiPreview = asciiPreview,
         cuts = cuts,
         gapFraction = gapFraction,
+        shell = shell,
     )
     val inSplit = cuts != null
     if (!fixedStructure) {
@@ -810,3 +833,6 @@ private fun BottomRowEditor(
         }
     }
 }
+
+/** Letter rows of the shipped pad shapes, the ones the keyboard folds Shift and Delete into. */
+private const val SHELL_LETTER_ROWS = 3

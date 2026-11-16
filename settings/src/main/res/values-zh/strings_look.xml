@@ -157,6 +157,7 @@
     <string name="layout_editor_long_press_remove">删除这个选项</string>
     <string name="layout_editor_bottom_section">底部一行</string>
     <string name="layout_editor_split_section">大屏拆分</string>
+    <string name="layout_editor_shell_separator">分词</string>
     <string name="layout_editor_split_off">不拆分</string>
     <string name="layout_editor_split_automatic">大屏上拆分</string>
     <string name="layout_editor_split_always">总是拆分</string>

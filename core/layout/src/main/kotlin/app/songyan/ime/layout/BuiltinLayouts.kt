@@ -268,6 +268,12 @@ object BuiltinLayouts {
     /** Long-press digit shared by the first key and 2-9. */
     const val T9_DIGIT_ONE: String = "1"
 
+    /**
+     * The corner hint the bundled merged pads declare on their two-letter keys. It is internal
+     * jargon, so neither the keyboard nor the editor's preview draws it; a real hint stays.
+     */
+    const val MERGED_KEY_HINT: String = "合并键"
+
     /** The ordered builtin layouts; the registry starts from these. */
     val all: List<LayoutDefinition>
         get() = listOf(qwerty26, merged14, merged18, phone9, zhuyin41, cangjie26, romaji26, kana12)
@@ -610,7 +616,7 @@ object BuiltinLayouts {
             secondaryLabel =
                 when {
                     group == "qw" -> "1 !"
-                    group.length > 1 -> "合并键"
+                    group.length > 1 -> MERGED_KEY_HINT
                     else -> null
                 },
             width = width,

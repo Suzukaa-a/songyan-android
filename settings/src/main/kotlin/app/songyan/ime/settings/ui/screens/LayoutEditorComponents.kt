@@ -3,6 +3,7 @@ package app.songyan.ime.settings.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,11 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
@@ -75,7 +79,20 @@ import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
 import kotlin.math.roundToInt
 
-/** The key area as the user will see it: rows of caps with relative widths; tap one to edit it. */
+/**
+ * The Shift slot and Delete the keyboard adds around a main layout's last letter row: shown so the
+ * preview reads as the keyboard does, but drawn as part of the board, not as keys to edit.
+ */
+data class KeyGridShell(
+    val leading: String,
+    val trailing: String,
+)
+
+/**
+ * The key area as the user will see it on the keyboard: caps on the keyboard surface, every row on
+ * one key width and centred, character keys light and control keys a shade darker, each key's
+ * corner hint in its corner. Tap a cap to edit it.
+ */
 @Composable
 fun KeyGrid(
     rows: List<LayoutRow>,
@@ -87,55 +104,171 @@ fun KeyGrid(
     /** The split arrangement: how many keys of each row are left of the gap, drawn as a gap of [gapFraction]. */
     cuts: List<Int>? = null,
     gapFraction: Float = 0f,
+    /** The keys the keyboard adds around the last letter row of a main layout; null for none. */
+    shell: KeyGridShell? = null,
 ) {
-    // One gap width for every row, as on the keyboard: the share of the widest row that [gapFraction] asks for.
+    // One key width for every row, as on the keyboard: rows are measured in the widest row's units.
     val widest = rows.maxOfOrNull { row -> row.keys.sumOf { it.widthWeight } } ?: 1.0
     val gapWeight = (gapFraction * widest / (1.0 - gapFraction)).toFloat()
-    Column(modifier = modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        rows.forEachIndexed { rowIndex, row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.keys.forEachIndexed { keyIndex, key ->
-                    if (cuts != null && keyIndex == cuts.getOrNull(rowIndex) && keyIndex > 0 && gapWeight > 0f) {
-                        Spacer(modifier = Modifier.weight(gapWeight).height(KEY_HEIGHT))
-                    }
-                    val at = KeySelection(rowIndex, keyIndex)
-                    val selected = at == selection
-                    val face = if (asciiPreview == null) key.label else key.face(asciiPreview)
-                    val description =
-                        stringResource(R.string.layout_editor_key_description, rowIndex + 1, keyIndex + 1, face)
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color =
-                            if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            },
-                        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-                        modifier =
-                            Modifier
-                                .weight(key.widthWeight.toFloat().coerceAtLeast(MIN_KEY_WEIGHT))
-                                .height(KEY_HEIGHT)
-                                .semantics { contentDescription = description }
-                                .selectable(selected = selected, onClick = { onSelect(at) }),
-                    ) {
-                        Text(
-                            text = face,
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip,
+    // The 26-key Shift and Delete are one and a half of its ten columns wide.
+    val sideWeight = (SHELL_SIDE_COLUMNS * widest / STANDARD_COLUMNS).toFloat()
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.padding(horizontal = 12.dp).fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            rows.forEachIndexed { rowIndex, row ->
+                val last = rowIndex == rows.lastIndex
+                val sides = if (last && shell != null) 2 * sideWeight else 0f
+                val rowWeight = row.keys.sumOf { it.widthWeight.coerceAtLeast(MIN_KEY_WEIGHT.toDouble()) }.toFloat()
+                // A last row too wide for the room the side keys leave narrows its keys, as the keyboard does.
+                val room = widest.toFloat() - sides
+                val scale = if (rowWeight > room && rowWeight > 0f) room / rowWeight else 1f
+                val margin = ((room - rowWeight * scale) / 2f).coerceAtLeast(0f)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (last && shell != null) ShellCap(shell.leading, Modifier.weight(sideWeight))
+                    if (margin > 0.01f) Spacer(Modifier.weight(margin).height(KEY_HEIGHT))
+                    row.keys.forEachIndexed { keyIndex, key ->
+                        if (cuts != null && keyIndex == cuts.getOrNull(rowIndex) && keyIndex > 0 && gapWeight > 0f) {
+                            Spacer(modifier = Modifier.weight(gapWeight).height(KEY_HEIGHT))
+                        }
+                        val at = KeySelection(rowIndex, keyIndex)
+                        KeyCap(
+                            key = key,
+                            face = previewFace(key, asciiPreview),
+                            description = "",
+                            at = at,
+                            selected = at == selection,
+                            onSelect = onSelect,
                             modifier =
-                                Modifier
-                                    .padding(horizontal = 2.dp)
-                                    .fillMaxSize()
-                                    .wrapContentSize(Alignment.Center),
+                                Modifier.weight(
+                                    key.widthWeight.toFloat().coerceAtLeast(MIN_KEY_WEIGHT) * scale,
+                                ),
                         )
                     }
+                    if (margin > 0.01f) Spacer(Modifier.weight(margin).height(KEY_HEIGHT))
+                    if (last && shell != null) ShellCap(shell.trailing, Modifier.weight(sideWeight))
                 }
             }
         }
     }
 }
+
+/** One editable cap: the keyboard's light key, or a darker control key; its corner hint top right. */
+@Composable
+private fun KeyCap(
+    key: LayoutKey,
+    face: String,
+    description: String,
+    at: KeySelection,
+    selected: Boolean,
+    onSelect: (KeySelection) -> Unit,
+    modifier: Modifier,
+) {
+    val spoken =
+        description.ifEmpty {
+            stringResource(R.string.layout_editor_key_description, at.row + 1, at.key + 1, face)
+        }
+    val control = key.action.type in CONTROL_KINDS
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color =
+            when {
+                selected -> MaterialTheme.colorScheme.primaryContainer
+                control -> MaterialTheme.colorScheme.surfaceContainerHighest
+                else -> MaterialTheme.colorScheme.surfaceBright
+            },
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        shadowElevation = if (selected) 0.dp else 1.dp,
+        modifier =
+            modifier
+                .height(KEY_HEIGHT)
+                .semantics { contentDescription = spoken }
+                .selectable(selected = selected, onClick = { onSelect(at) }),
+    ) {
+        Box {
+            Text(
+                text = face,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier =
+                    Modifier
+                        .padding(horizontal = 2.dp)
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center),
+            )
+            val hint = key.secondaryLabel?.takeIf { it != BuiltinLayouts.MERGED_KEY_HINT }
+            if (!hint.isNullOrEmpty()) {
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * What the keyboard draws on [key]: a letter key and a merged pair read in lowercase as typed; a
+ * nine-key group (ABC) keeps its capitals, as the keypad draws it.
+ */
+private fun previewFace(
+    key: LayoutKey,
+    asciiPreview: Boolean?,
+): String {
+    val face = if (asciiPreview == null) key.label else key.face(asciiPreview)
+    val letters =
+        key.action.type == LayoutActionKind.CODE &&
+            face.length in 1..MERGED_PAIR_LETTERS &&
+            face.all { it.isLetter() }
+    return if (letters) face.lowercase() else face
+}
+
+private const val MERGED_PAIR_LETTERS = 2
+
+/** A cap the keyboard adds itself: shown for the shape, not selectable. */
+@Composable
+private fun ShellCap(
+    label: String,
+    modifier: Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        shadowElevation = 1.dp,
+        modifier = modifier.height(KEY_HEIGHT).clearAndSetSemantics {},
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
+        )
+    }
+}
+
+private const val STANDARD_COLUMNS = 10.0
+private const val SHELL_SIDE_COLUMNS = 1.5
+
+private val CONTROL_KINDS =
+    setOf(
+        LayoutActionKind.SHIFT,
+        LayoutActionKind.BACKSPACE,
+        LayoutActionKind.ENTER,
+        LayoutActionKind.GLOBE,
+        LayoutActionKind.MODE_SWITCH,
+        LayoutActionKind.PAGE_SWITCH,
+        LayoutActionKind.LANGUAGE_SWITCH,
+        LayoutActionKind.LAYOUT_PAGE_SWITCH,
+        LayoutActionKind.SYMBOL_LOCK,
+        LayoutActionKind.CLEAR_INPUT,
+    )
 
 /** A title typed by hand wins over the automatic one, or the field would not change what the key shows. */
 internal fun keyWithTypedLabel(

@@ -683,7 +683,7 @@ internal object KeyboardPages {
      * of the QW key stays. The face is lowercase like the 26-key letters; Shift uppercases it.
      */
     private fun mergedFace(key: LayoutKey): LayoutKey {
-        val hint = if (key.secondaryLabel == MERGED_KEY_HINT) null else key.secondaryLabel
+        val hint = if (key.secondaryLabel == BuiltinLayouts.MERGED_KEY_HINT) null else key.secondaryLabel
         val face = if (key.action.type == LayoutActionKind.CODE) key.label.lowercase() else key.label
         return key.copy(label = face, secondaryLabel = hint)
     }
@@ -779,8 +779,6 @@ internal object KeyboardPages {
         val hint = key.secondaryLabel?.takeIf { hint -> options.any { it.label == hint } } ?: marks.first()
         return key.copy(secondaryLabel = hint, longPress = options)
     }
-
-    private const val MERGED_KEY_HINT = "合并键"
 
     private fun englishRows(): List<LayoutRow> =
         englishPage.rows.map { row -> LayoutRow(row.keys.map { englishKey(it) }) }

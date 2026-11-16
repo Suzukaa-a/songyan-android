@@ -157,6 +157,7 @@
     <string name="layout_editor_long_press_remove">Remove this choice</string>
     <string name="layout_editor_bottom_section">Bottom row</string>
     <string name="layout_editor_split_section">Split on large screens</string>
+    <string name="layout_editor_shell_separator">Split</string>
     <string name="layout_editor_split_off">Do not split</string>
     <string name="layout_editor_split_automatic">Split on large screens</string>
     <string name="layout_editor_split_always">Always split</string>

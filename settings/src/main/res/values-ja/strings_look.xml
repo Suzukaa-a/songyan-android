@@ -156,6 +156,7 @@
     <string name="layout_editor_long_press_remove">この選択肢を削除</string>
     <string name="layout_editor_bottom_section">最下段</string>
     <string name="layout_editor_split_section">大画面での分割</string>
+    <string name="layout_editor_shell_separator">区切り</string>
     <string name="layout_editor_split_off">分割しない</string>
     <string name="layout_editor_split_automatic">大画面で分割する</string>
     <string name="layout_editor_split_always">常に分割する</string>

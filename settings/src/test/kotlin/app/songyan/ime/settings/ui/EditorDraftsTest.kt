@@ -209,6 +209,21 @@ class EditorDraftsTest {
     }
 
     @Test
+    fun aBottomRowKeyIsSelectedAndEditedLikeAnyLetterKey() {
+        val draft = LayoutDraft(BuiltinLayouts.qwerty26)
+        val space = draft.bottomKeys.indexOfFirst { it.action.type == LayoutActionKind.SPACE }
+        val selected = draft.selectBottom(space)
+        assertEquals(draft.bottomKeys[space], selected.selectedKey)
+        assertEquals(null, selected.selection)
+        val edited = selected.replaceSelectedKey(draft.bottomKeys[space].copy(label = "空格键"))
+        assertEquals("空格键", edited.bottomKeys[space].label)
+        assertEquals(space, edited.bottom)
+        assertEquals(draft.letterRows, edited.letterRows)
+        // Picking a letter key leaves the bottom row.
+        assertEquals(null, edited.select(KeySelection(0, 0)).bottom)
+    }
+
+    @Test
     fun aPageFooterIsAuthoredDataAndCanBeReorderedOrCleared() {
         val page = KeyboardPagePresets.numericAutomatic.duplicated("mine", "我的")
         val draft = PageDraft(page)

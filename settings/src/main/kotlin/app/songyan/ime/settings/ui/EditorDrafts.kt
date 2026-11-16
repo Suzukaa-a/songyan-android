@@ -38,6 +38,8 @@ data class LayoutDraft(
     val rail: RailSelection? = null,
     /** The grid shows (and edits) the arrangement used while split instead of the whole rows. */
     val splitView: Boolean = false,
+    /** The selected key of the bottom row, which the grid shows under the letter rows; null when none. */
+    val bottom: Int? = null,
 ) {
     /** The layout is a telephone keypad the nine-key shell draws. */
     val isNineKey: Boolean get() = PhoneKeypadStructure.matches(original)
@@ -57,7 +59,10 @@ data class LayoutDraft(
 
     val bottomKeys: List<LayoutKey> get() = LayoutBottomRow.preview(layout)
 
-    fun withBottomKeys(keys: List<LayoutKey>): LayoutDraft {
+    fun withBottomKeys(
+        keys: List<LayoutKey>,
+        selected: Int? = bottom,
+    ): LayoutDraft {
         val index = LayoutBottomRow.index(layout)
         val rows =
             if (index == null) {
@@ -65,8 +70,11 @@ data class LayoutDraft(
             } else {
                 layout.rows.toMutableList().also { it[index] = LayoutRow(keys) }
             }
-        return copy(layout = layout.copy(rows = rows))
+        return copy(layout = layout.copy(rows = rows), bottom = selected?.takeIf { it in keys.indices })
     }
+
+    fun selectBottom(index: Int): LayoutDraft =
+        if (index in bottomKeys.indices) copy(bottom = index, selection = null, rail = null) else this
 
     val hasChanges: Boolean get() = layout != original
 
@@ -103,6 +111,7 @@ data class LayoutDraft(
     val selectedKey: LayoutKey?
         get() =
             rail?.let { RailEditing.keys(layout, it.position).getOrNull(it.index) }
+                ?: bottom?.let { bottomKeys.getOrNull(it) }
                 ?: selection?.let { LayoutRowsEditing.key(editRows, it.row, it.key) }
 
     /** The side columns are still the keyboard's own; declaring them turns them into editable keys. */
@@ -118,15 +127,17 @@ data class LayoutDraft(
                         null
                 },
             rail = null,
+            bottom = null,
         )
 
     fun selectRail(at: RailSelection): LayoutDraft =
-        if (at.index in railKeys(at.position).indices) copy(rail = at, selection = null) else this
+        if (at.index in railKeys(at.position).indices) copy(rail = at, selection = null, bottom = null) else this
 
     fun rename(name: String): LayoutDraft = copy(layout = layout.renamed(name))
 
     fun replaceSelectedKey(key: LayoutKey): LayoutDraft {
         rail?.let { return copy(layout = RailEditing.replace(layout, it, key)) }
+        bottom?.let { index -> return withBottomKeys(bottomKeys.toMutableList().also { it[index] = key }) }
         val at = selection ?: return this
         if (splitView) return withSplitRows(KeyGridEditing.replaceKey(splitLetterRows, at, key), splitCuts)
         return withRows(KeyGridEditing.replaceKey(letterRows, at, key))
@@ -136,7 +147,7 @@ data class LayoutDraft(
     fun apply(edit: GridEdit?): LayoutDraft {
         if (edit == null) return this
         if (splitView && !isNineKey) return applySplit(edit)
-        return withRows(edit.rows, edit.rowOrigin).copy(selection = edit.selection, rail = null)
+        return withRows(edit.rows, edit.rowOrigin).copy(selection = edit.selection, rail = null, bottom = null)
     }
 
     /**
@@ -167,11 +178,11 @@ data class LayoutDraft(
         ) {
             return this
         }
-        return withSplitRows(edit.rows, next).copy(selection = edit.selection, rail = null)
+        return withSplitRows(edit.rows, next).copy(selection = edit.selection, rail = null, bottom = null)
     }
 
     fun withSplitView(on: Boolean): LayoutDraft {
-        val switched = copy(splitView = on && !isNineKey, rail = null)
+        val switched = copy(splitView = on && !isNineKey, rail = null, bottom = null)
         return switched.copy(selection = firstKey(switched.editRows))
     }
 
@@ -203,7 +214,7 @@ data class LayoutDraft(
         val split = layout.split ?: return this
         val restored =
             copy(layout = layout.withSplit(LayoutRowsEditing.adjusted(split.copy(halves = null), layout.rows)))
-        return restored.copy(selection = firstKey(restored.editRows))
+        return restored.copy(selection = firstKey(restored.editRows), bottom = null)
     }
 
     /** Stores [rows] cut at [cuts] as the saved split arrangement (turning the derived one into data). */

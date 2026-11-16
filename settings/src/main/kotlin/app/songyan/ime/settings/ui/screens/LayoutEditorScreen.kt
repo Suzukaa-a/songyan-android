@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
@@ -42,8 +43,10 @@ import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
+import app.songyan.ime.layout.LayoutResourceBudget
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.LetterPageKeys
 import app.songyan.ime.layout.T9FirstKeyBehavior
 import app.songyan.ime.layout.T9QuickSymbolStore
 import app.songyan.ime.settings.R
@@ -128,25 +131,49 @@ fun LayoutEditorScreen(
             } else {
                 current.editRows
             }
+        // What the keyboard draws on each key comes from the same resolution the keyboard uses; the
+        // editing fields and structural edits below keep working on the layout's own keys.
+        val drawnRows =
+            if (current.isNineKey) {
+                previewRows
+            } else {
+                previewRows.map { row ->
+                    LayoutRow(row.keys.map { LetterPageKeys.presented(it, current.layout, InputLanguage.ZH_HANS) })
+                }
+            }
         // The keyboard adds the Shift slot and Delete around a shipped-shape pad's last letter row.
         val separator = stringResource(R.string.layout_editor_shell_separator)
+        val bottomKeys = current.bottomKeys
         val shell =
             if (current.isNineKey ||
-                previewRows.size != SHELL_LETTER_ROWS ||
-                previewRows.last().keys.any {
-                    it.action.type == LayoutActionKind.SHIFT || it.action.type == LayoutActionKind.BACKSPACE
-                }
+                !LetterPageKeys.shellEditsLastLetterRow(current.layout, bottomKeys, kanaBoard = false)
             ) {
                 null
             } else {
+                val last = previewRows.lastOrNull()?.keys.orEmpty()
                 val merged =
                     current.layout.input.builtinLayout.let {
                         it == LayoutInput.Builtin.MERGED14 || it == LayoutInput.Builtin.MERGED18
                     }
-                KeyGridShell(leading = if (merged) separator else "⇧", trailing = "⌫")
+                KeyGridShell(
+                    leading =
+                        if (last.any { it.action.type == LayoutActionKind.SHIFT }) {
+                            null
+                        } else if (merged) {
+                            separator
+                        } else {
+                            "⇧"
+                        },
+                    trailing = if (last.any { it.action.type == LayoutActionKind.BACKSPACE }) null else "⌫",
+                )
             }
         GridSections(
             shell = shell,
+            displayRows = drawnRows,
+            footer = if (current.isNineKey) null else bottomKeys,
+            footerSelected = current.bottom,
+            onSelectFooter = { index -> viewModel.update { it.selectBottom(index) } },
+            onFooterKeys = { keys, selected -> viewModel.update { it.withBottomKeys(keys, selected) } },
             editPrimaryAction = !selectingFirst || !liveFirst,
             rows = previewRows,
             selection = current.selection,
@@ -201,7 +228,7 @@ fun LayoutEditorScreen(
             onSplit = { split -> viewModel.update { it.withSplit(split) } },
             // A nine-key layout is a fixed 3x3 grid with side columns instead of rows to rearrange.
             fixedStructure = current.isNineKey,
-            selectionToken = current.rail ?: current.selection,
+            selectionToken = current.rail ?: current.bottom ?: current.selection,
             spanKey = current.rail != null,
             beforeFields = {
                 if (selectingFirst) {
@@ -264,8 +291,10 @@ fun LayoutEditorScreen(
                 }
             },
         )
-        BottomRowEditor(current.bottomKeys, allowEmpty = false) { keys ->
-            viewModel.update { it.withBottomKeys(keys) }
+        if (current.isNineKey) {
+            BottomRowEditor(current.bottomKeys, allowEmpty = false) { keys ->
+                viewModel.update { it.withBottomKeys(keys) }
+            }
         }
     }
 }
@@ -670,21 +699,31 @@ private fun GridSections(
     editPrimaryAction: Boolean = true,
     /** The keys the keyboard adds around the last letter row; null for none. */
     shell: KeyGridShell? = null,
+    /** What the grid draws for [rows], resolved as the keyboard draws them; null draws [rows] as they are. */
+    displayRows: List<LayoutRow>? = null,
+    /** The bottom row, drawn under the rows and selected there; null when the grid has none. */
+    footer: List<LayoutKey>? = null,
+    footerSelected: Int? = null,
+    onSelectFooter: (Int) -> Unit = {},
+    onFooterKeys: (List<LayoutKey>, Int?) -> Unit = { _, _ -> },
 ) {
     val template = LayoutKey("·", action = LayoutAction.literal("·"))
     beforeGrid()
     SectionHeader(stringResource(R.string.layout_editor_keys_section))
     KeyGrid(
-        rows = rows,
-        selection = selection,
-        onSelect = onSelect,
+        rows = displayRows ?: rows,
+        selection = footerSelected?.let { KeySelection(rows.size, it) } ?: selection,
+        onSelect = { at -> if (footer != null && at.row == rows.size) onSelectFooter(at.key) else onSelect(at) },
         asciiPreview = asciiPreview,
         cuts = cuts,
         gapFraction = gapFraction,
         shell = shell,
+        footer = footer,
     )
     val inSplit = cuts != null
-    if (!fixedStructure) {
+    if (footer != null && footerSelected != null) {
+        FooterToolbar(footer, footerSelected, template, onFooterKeys)
+    } else if (!fixedStructure) {
         GridToolbar(
             actions = if (cuts != null) GridActions.ofSplit(rows, cuts, selection) else GridActions.of(rows, selection),
             onMoveKey = { delta -> selection?.let { onEdit(KeyGridEditing.moveKey(rows, it, delta)) } },
@@ -707,10 +746,10 @@ private fun GridSections(
         androidx.compose.runtime.key(selectionToken) {
             KeyFields(
                 key = selectedKey,
-                allowCode = allowCode,
+                allowCode = allowCode && footerSelected == null,
                 onChange = onKey,
                 span = spanKey,
-                allowJump = allowJump,
+                allowJump = allowJump || footerSelected != null,
                 editPrimaryAction = editPrimaryAction,
             )
         }
@@ -775,6 +814,33 @@ private fun OpeningMarksSection(
     }
 }
 
+/** Moves, adds and removes the selected key of the bottom row; its fields are the selected-key ones below. */
+@Composable
+private fun FooterToolbar(
+    keys: List<LayoutKey>,
+    selected: Int,
+    template: LayoutKey,
+    onChange: (List<LayoutKey>, Int?) -> Unit,
+) {
+    val rows = listOf(LayoutRow(keys))
+    val at = KeySelection(0, selected)
+    GridToolbar(
+        actions =
+            GridActions.of(rows, at).copy(
+                canAddKey = keys.size < LayoutResourceBudget.KEYS_PER_REGION,
+                canRemoveKey = keys.size > 1,
+            ),
+        onMoveKey = { delta ->
+            KeyGridEditing.moveKey(rows, at, delta)?.let { onChange(it.rows.single().keys, it.selection?.key) }
+        },
+        onMoveRow = {},
+        onAddKey = {
+            KeyGridEditing.addKeyAfter(rows, at, template)?.let { onChange(it.rows.single().keys, it.selection?.key) }
+        },
+        onRemoveKey = { onChange(keys.filterIndexed { index, _ -> index != selected }, null) },
+    )
+}
+
 @Composable
 private fun BottomRowEditor(
     keys: List<LayoutKey>,
@@ -789,7 +855,8 @@ private fun BottomRowEditor(
     GridToolbar(
         actions =
             GridActions.of(rows, selected).copy(
-                canAddKey = keys.size < app.songyan.ime.layout.LayoutResourceBudget.KEYS_PER_REGION,
+                canAddKey =
+                    keys.size < LayoutResourceBudget.KEYS_PER_REGION,
                 canRemoveKey = selected != null && (allowEmpty || keys.size > 1),
             ),
         onMoveKey = { delta ->

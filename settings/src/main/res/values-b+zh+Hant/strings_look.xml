@@ -158,6 +158,7 @@
     <string name="layout_editor_bottom_section">底部一行</string>
     <string name="layout_editor_split_section">大螢幕拆分</string>
     <string name="layout_editor_shell_separator">分詞</string>
+    <string name="layout_editor_preview_scroll">左右滑動查看鍵盤的其餘部分</string>
     <string name="layout_editor_split_off">不拆分</string>
     <string name="layout_editor_split_automatic">大螢幕上拆分</string>
     <string name="layout_editor_split_always">總是拆分</string>

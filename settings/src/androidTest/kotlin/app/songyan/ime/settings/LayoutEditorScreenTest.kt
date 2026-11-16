@@ -3,6 +3,7 @@ package app.songyan.ime.settings
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -72,17 +73,31 @@ class LayoutEditorScreenTest {
     ) = compose.onNodeWithContentDescription(str(R.string.layout_editor_key_description, row, key, label))
 
     @Test
-    fun theGridShowsTheLetterRowsAndAnEditableBottomRow() {
+    fun theGridShowsTheWholeKeyboardWithItsBottomRowAndCornerMarks() {
         show()
         keyNode(1, 1, "q").assertIsDisplayed()
         keyNode(1, 2, "w").assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.layout_editor_bottom_section)).performScrollTo().assertIsDisplayed()
+        // The bottom row is the fourth row of the grid, not a section further down.
+        keyNode(4, 3, "空格").assertIsDisplayed()
+        compose.onAllNodesWithText(str(R.string.layout_editor_bottom_section)).assertCountEquals(0)
+        // The digit the keyboard draws in the corner of q.
+        compose
+            .onNode(
+                hasContentDescription(str(R.string.layout_editor_key_description, 1, 1, "q")) and hasText("1"),
+            ).assertIsDisplayed()
+    }
+
+    @Test
+    fun aBottomRowKeyIsSelectedInTheGridAndEditedByTheSelectedKeyFields() {
+        show()
+        keyNode(4, 3, "空格").performClick()
+        compose.onNodeWithText(str(R.string.layout_editor_selected_section, "空格")).assertIsDisplayed()
     }
 
     @Test
     fun anEditedBottomKeyIsSavedAndTheEditorStaysOpen() {
         show()
-        keyNode(1, 3, "空格").performScrollTo().performClick()
+        keyNode(4, 3, "空格").performScrollTo().performClick()
         compose
             .onAllNodes(
                 hasSetTextAction() and

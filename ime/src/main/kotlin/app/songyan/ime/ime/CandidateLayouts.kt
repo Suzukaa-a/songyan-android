@@ -106,7 +106,8 @@ internal object ExpandedFlowLayout {
      * their candidates. The column is as wide as three in four of the next [SAMPLE] candidates
      * need, a longer candidate spans as many whole columns as it needs, and the last cell of a full
      * row takes the columns left over, so every row reaches the edge and the dividers fall on the
-     * same lines from row to row. Rows touch: the keyboard draws hairlines between them.
+     * same lines from row to row. Cells are [gap] apart and rows [rowGap] apart (the appearance's
+     * expanded column and row spacing); the keyboard draws a hairline in the middle of each.
      */
     fun table(
         intrinsic: List<Float>,
@@ -117,8 +118,11 @@ internal object ExpandedFlowLayout {
         end: Float = 0f,
         firstRowGap: Float = 0f,
         stripRow: Boolean = true,
+        gap: Float = 0f,
+        rowGap: Float = 0f,
     ): Result {
         if (intrinsic.isEmpty() || available <= 0f || rowHeight <= 0f) return Result(emptyList(), 0f)
+        val pitch = rowHeight + rowGap
         val cells = ArrayList<Cell>(intrinsic.size)
         // Row 1: the collapsed row, unchanged (none in the 9-key side column: all of it is table).
         val cap = max(minWidth, available - start - end)
@@ -135,8 +139,8 @@ internal object ExpandedFlowLayout {
         val sample = intrinsic.subList(index, min(intrinsic.size, index + SAMPLE)).map { max(minWidth, it) }.sorted()
         val firstTableRow = if (stripRow) 1 else 0
         val target = sample[sample.size * 3 / 4]
-        val columns = (available / target).toInt().coerceAtLeast(1)
-        val unit = available / columns
+        val columns = ((available + gap) / (target + gap)).toInt().coerceAtLeast(1)
+        val unit = ((available - gap * (columns - 1)) / columns).coerceAtLeast(1f)
         var row = firstTableRow
         val rowCells = ArrayList<Pair<Int, Int>>()
 
@@ -145,21 +149,24 @@ internal object ExpandedFlowLayout {
             var column = 0
             for ((n, cell) in rowCells.withIndex()) {
                 val span = if (fill && n == rowCells.lastIndex) columns - column else cell.second
-                val top = row * rowHeight
-                cells += Cell(cell.first, column * unit, top, (column + span) * unit, top + rowHeight)
+                val top = row * pitch
+                val left = column * (unit + gap)
+                cells += Cell(cell.first, left, top, left + span * unit + (span - 1) * gap, top + rowHeight)
                 column += span
             }
             rowCells.clear()
             row++
         }
         while (index < intrinsic.size) {
-            val span = (max(minWidth, intrinsic[index]) / unit - 0.001f).toInt().plus(1).coerceIn(1, columns)
+            // A candidate spans as many columns as its width needs, counting the gaps it covers.
+            val needed = max(minWidth, intrinsic[index])
+            val span = (((needed + gap) / (unit + gap)) - 0.001f).toInt().plus(1).coerceIn(1, columns)
             if (rowCells.sumOf { it.second } + span > columns) flush(fill = true)
             rowCells += index to span
             index++
         }
         flush(fill = false)
-        return Result(cells, row * rowHeight)
+        return Result(cells, row * pitch - rowGap)
     }
 
     /** How many candidates after the collapsed row decide the table's column width. */

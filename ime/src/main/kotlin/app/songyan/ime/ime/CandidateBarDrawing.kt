@@ -65,10 +65,14 @@ internal fun CandidateBarView.drawTableRules(
     paint.color = palette.divider
     paint.strokeWidth = max(1f, density / 2)
     val right = viewport.width().toFloat()
-    var top = barPx
+    // Rules sit in the middle of the gaps the appearance asks for, so they part the same cells
+    // whatever the spacing.
+    val rowGap = style.rowGapDp * density
+    val pitch = barPx + rowGap
+    var top = pitch - rowGap / 2
     while (top < visibleEnd) {
         if (top >= visibleStart) canvas.drawLine(0f, top, right, top, paint)
-        top += barPx
+        top += pitch
     }
     val inset = 12 * density
     for (i in cells.indices) {
@@ -76,7 +80,8 @@ internal fun CandidateBarView.drawTableRules(
         if ((!sideMode && cell.top < barPx) || cell.bottom < visibleStart || cell.top > visibleEnd) continue
         val next = cells.getOrNull(i + 1)
         if (next == null || next.top != cell.top) continue
-        canvas.drawLine(cell.right, cell.top + inset, cell.right, cell.bottom - inset, paint)
+        val x = (cell.right + next.left) / 2
+        canvas.drawLine(x, cell.top + inset, x, cell.bottom - inset, paint)
     }
 }
 

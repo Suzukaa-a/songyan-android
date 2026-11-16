@@ -279,4 +279,45 @@ class CandidateLayoutsTest {
         for (row in rows.dropLast(1)) assertEquals(300f, row.maxOf { it.right }, 0.01f)
         assertEquals(widths.size, result.cells.size)
     }
+
+    @Test
+    fun theTableKeepsTheAppearancesGapsBelowTheStripToo() {
+        // Regression: only the strip row was spaced; the rows under it touched whatever the
+        // appearance's expanded spacing said.
+        val widths = listOf(60f, 60f, 60f) + List(12) { if (it % 4 == 3) 150f else 50f }
+        val result =
+            ExpandedFlowLayout.table(
+                widths,
+                300f,
+                48f,
+                44f,
+                start = 12f,
+                end = 12f,
+                firstRowGap = 5f,
+                gap = 5f,
+                rowGap = 4f,
+            )
+        val rows =
+            result.cells
+                .filter { it.top > 0f }
+                .groupBy { it.top }
+                .toSortedMap()
+                .values
+                .toList()
+        assertEquals("the first table row starts one row and one gap down", 52f, rows.first().first().top, 0.01f)
+        for ((upper, lower) in rows.zipWithNext()) {
+            assertEquals("rows are a row gap apart", 4f, lower.first().top - upper.first().bottom, 0.01f)
+        }
+        for (row in rows) {
+            for ((left, right) in row.sortedBy { it.left }.zipWithNext()) {
+                assertEquals("cells are a column gap apart", 5f, right.left - left.right, 0.01f)
+            }
+        }
+        for (row in rows.dropLast(
+            1,
+        )) {
+            assertEquals("full rows still reach the edge", 300f, row.maxOf { it.right }, 0.01f)
+        }
+        assertEquals(widths.size, result.cells.size)
+    }
 }

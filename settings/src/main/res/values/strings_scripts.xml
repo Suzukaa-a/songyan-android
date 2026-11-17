@@ -90,7 +90,7 @@
     <string name="scripts_unavailable_body">Not available on this device.</string>
 
     <!-- Settings fields -->
-    <string name="scripts_secret_suffix"> (secret)</string>
+    <string name="scripts_secret_suffix">" (secret)"</string>
     <string name="scripts_setting_not_filled">not filled in</string>
     <string name="scripts_setting_value">%1$s: %2$s</string>
 

@@ -105,7 +105,7 @@
     <string name="layouts_action_delete">刪除</string>
     <string name="layouts_delete_title">刪除這個佈局？</string>
     <string name="layouts_delete_body">「%1$s」會從這臺手機上移除，已匯出的檔案不受影響。</string>
-    <string name="layout_copy_suffix"> 副本</string>
+    <string name="layout_copy_suffix">" 副本"</string>
     <string name="pages_title">頁面庫</string>
     <string name="pages_entry_body">鍵盤可以使用的 123、符號和 ABC 頁面</string>
     <string name="pages_kind_numeric">123 頁面</string>

@@ -20,7 +20,7 @@
     <string name="candidate_bar_columns">Columns</string>
     <string name="candidate_bar_row_gap">Row spacing</string>
     <string name="candidate_bar_column_gap">Column spacing</string>
-    <string name="appearance_copy_suffix"> (custom)</string>
+    <string name="appearance_copy_suffix">" (custom)"</string>
     <string name="appearance_key_gap_scaling_title">Larger gaps and labels on large screens</string>
     <string name="appearance_key_gap_scaling_body">In landscape, on an unfolded foldable and on a tablet, key gaps, labels and corners grow with the keys.</string>
     <string name="appearance_section_candidates">Candidate bar</string>
@@ -105,7 +105,7 @@
     <string name="layouts_action_delete">Delete</string>
     <string name="layouts_delete_title">Delete this layout?</string>
     <string name="layouts_delete_body">\"%1$s\" is removed from this phone. Exported files are not affected.</string>
-    <string name="layout_copy_suffix"> copy</string>
+    <string name="layout_copy_suffix">" copy"</string>
     <string name="pages_title">Page library</string>
     <string name="pages_entry_body">The 123, symbol and ABC pages a keyboard can use</string>
     <string name="pages_kind_numeric">123 pages</string>

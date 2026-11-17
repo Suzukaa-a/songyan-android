@@ -15,7 +15,7 @@
     <string name="shuangpin_export">Export</string>
     <string name="shuangpin_delete">Delete</string>
     <string name="shuangpin_copy_suffix">%1$s copy</string>
-    <string name="shuangpin_imported_suffix"> (imported)</string>
+    <string name="shuangpin_imported_suffix">" (imported)"</string>
     <string name="shuangpin_new">New hint preset</string>
     <string name="shuangpin_import_file">Import from file</string>
     <string name="shuangpin_import_link">Import from link</string>

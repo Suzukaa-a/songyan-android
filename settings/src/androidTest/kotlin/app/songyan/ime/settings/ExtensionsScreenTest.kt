@@ -184,7 +184,9 @@ class ExtensionsScreenTest {
                 .hasText(str(R.string.extensions_incompatible)),
             timeoutMillis = 5_000,
         )
-        compose.onNodeWithText("no common protocol version").assertIsDisplayed()
+        // The raw protocol reason stays in the logs; the user reads the localized hint.
+        compose.onNodeWithText(str(R.string.extensions_incompatible_hint)).assertIsDisplayed()
+        compose.onNodeWithText("no common protocol version").assertDoesNotExist()
         compose
             .onNodeWithContentDescription(str(R.string.extensions_switch, "Sample Addon"))
             .assertIsNotEnabled()

@@ -91,7 +91,7 @@ class ComposingLocaleSpanDeviceTest {
                 val text = field.editableText
                 tags = text.getSpans(0, text.length, LocaleSpan::class.java).flatMap(::localeTags)
             }
-            assertEquals("composing locale for " + language, listOf(languageTag), tags)
+            assertEquals("composing locale for " + language, languageTag.split(","), tags)
         }
     }
 
@@ -137,6 +137,12 @@ class ComposingLocaleSpanDeviceTest {
                 InputLanguage.JA to "ja",
                 InputLanguage.ZH_HANT to "zh-Hant",
                 InputLanguage.ZH_HANS to "zh-Hans",
+                InputLanguage.KO to "ko",
+                // Nothing is forced: the system's own locales mark the text.
+                InputLanguage.UNSPECIFIED to
+                    android.os.LocaleList
+                        .getDefault()
+                        .toLanguageTags(),
             )
 
         lateinit var engine: DeployedEngine

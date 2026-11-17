@@ -109,12 +109,47 @@ object SchemaKeyProfiles {
         return written.filterKeys { it in ids } + computeAll(buildDir, missing)
     }
 
-    /** Writes the profiles of [ids] next to the compiled schemas of [buildDir]. */
+    /**
+     * Writes the profiles of [ids] next to the compiled schemas of [buildDir]. With the package's
+     * [sourceDir] the language of each primary dictionary is read into its profile as well.
+     */
     fun write(
         buildDir: File,
         ids: Collection<String>,
+        sourceDir: File? = null,
     ) {
-        File(buildDir, SchemaKeyProfile.FILE_NAME).writeText(SchemaKeyProfile.encode(computeAll(buildDir, ids)))
+        val profiles = computeAll(buildDir, ids)
+        val withLanguage =
+            if (sourceDir == null) {
+                profiles
+            } else {
+                profiles.mapValues { (id, profile) -> profile.copy(language = languageOf(buildDir, id, sourceDir)) }
+            }
+        File(buildDir, SchemaKeyProfile.FILE_NAME).writeText(SchemaKeyProfile.encode(withLanguage))
+    }
+
+    /** The language the primary dictionary of [id] is written in; null when it cannot be told. */
+    private fun languageOf(
+        buildDir: File,
+        id: String,
+        sourceDir: File,
+    ): String? {
+        val file = File(buildDir, "$id.schema.yaml").takeIf { it.isFile } ?: return null
+        val dictionary = runCatching { primaryDictionary(file.readText()) }.getOrNull() ?: return null
+        return DictionaryLanguage.read(sourceDir, dictionary)
+    }
+
+    /** The dictionary the primary script or table translator of a compiled schema reads. */
+    internal fun primaryDictionary(compiledSchema: String): String? {
+        val root = YamsYaml.loadMap(compiledSchema) ?: return null
+        val translators =
+            root["engine"]
+                .asStringMap()
+                ?.get("translators")
+                .asStringList()
+                .orEmpty()
+        val primary = CompactSchemaAdapter.primaryProducer(translators) ?: return null
+        return root[primary.namespace].asStringMap()?.get("dictionary") as? String
     }
 
     private const val MAX_FILE_BYTES = 1L shl 20

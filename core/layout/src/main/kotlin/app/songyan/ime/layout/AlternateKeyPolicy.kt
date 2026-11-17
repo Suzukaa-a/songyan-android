@@ -89,7 +89,7 @@ object AlternateKeyPolicy {
         val key = letter.lowercase()
         val marks =
             when (inputLanguage) {
-                InputLanguage.ZH_HANS -> DEFAULT_LETTERS
+                InputLanguage.ZH_HANS, InputLanguage.KO, InputLanguage.UNSPECIFIED -> DEFAULT_LETTERS
                 InputLanguage.ZH_HANT -> HANT_LETTERS
                 InputLanguage.JA -> JAPANESE_LETTERS
             }

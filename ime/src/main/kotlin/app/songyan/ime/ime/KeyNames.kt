@@ -21,7 +21,8 @@ internal class KeyNames(
     fun chinese(): Context = chinese
 
     /** Whether [space] names the key differently while a composition is open. */
-    fun spaceFollowsComposition(language: InputLanguage): Boolean = language != InputLanguage.ZH_HANS
+    fun spaceFollowsComposition(language: InputLanguage): Boolean =
+        language == InputLanguage.ZH_HANT || language == InputLanguage.JA
 
     fun space(
         language: InputLanguage,
@@ -29,7 +30,8 @@ internal class KeyNames(
     ): String =
         chinese.getString(
             when (language) {
-                InputLanguage.ZH_HANS -> R.string.ime_space
+                // Korean and an unspecified language keep the Simplified face names, as before they existed.
+                InputLanguage.ZH_HANS, InputLanguage.KO, InputLanguage.UNSPECIFIED -> R.string.ime_space
                 InputLanguage.ZH_HANT ->
                     if (composing) R.string.input_space_composing_hant else R.string.input_space_hant
                 InputLanguage.JA ->
@@ -44,7 +46,7 @@ internal class KeyNames(
     ): String =
         chinese.getString(
             when (language) {
-                InputLanguage.ZH_HANS -> action
+                InputLanguage.ZH_HANS, InputLanguage.KO, InputLanguage.UNSPECIFIED -> action
                 InputLanguage.ZH_HANT -> hantAction(action)
                 InputLanguage.JA -> japaneseAction(action)
             },
@@ -67,7 +69,7 @@ internal class KeyNames(
     fun symbolPageDrawn(language: InputLanguage): String =
         chinese.getString(
             when (language) {
-                InputLanguage.ZH_HANS -> R.string.ime_symbol_key
+                InputLanguage.ZH_HANS, InputLanguage.KO, InputLanguage.UNSPECIFIED -> R.string.ime_symbol_key
                 InputLanguage.ZH_HANT -> R.string.input_symbol_key_hant
                 InputLanguage.JA -> R.string.input_symbol_key_ja
             },
@@ -90,7 +92,8 @@ internal class KeyNames(
     fun symbolPanelDrawn(language: InputLanguage): String =
         chinese.getString(
             when (language) {
-                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT -> R.string.input_more_chinese
+                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT, InputLanguage.KO, InputLanguage.UNSPECIFIED ->
+                    R.string.input_more_chinese
                 InputLanguage.JA -> R.string.input_more_ja
             },
         )

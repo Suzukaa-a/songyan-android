@@ -18,7 +18,7 @@ internal suspend fun InputSession.refreshInputLanguage() {
     val conversions = activeScriptConversions(options)
     val key = conversions.sorted().joinToString(",")
     if (schemaID == inputLanguageSource && key == inputLanguageConversion) return
-    inputLanguage = resolveScriptState(schemaID, alphabetOf(schemaID), conversions)
+    inputLanguage = resolveScriptState(schemaID, alphabetOf(schemaID), conversions, detectedLanguageOf(schemaID))
     inputLanguageSource = schemaID
     inputLanguageConversion = key
 }
@@ -33,12 +33,19 @@ private fun resolveScriptState(
     schemaID: String,
     alphabet: String,
     conversions: List<String>,
+    detected: String?,
 ): InputLanguageProfile {
     val directions = conversions.mapNotNull(::directionOf).distinct()
-    if (directions.size != 1) return InputLanguageResolver.resolve(schemaID, alphabet, null)
+    if (directions.size != 1) return InputLanguageResolver.resolve(schemaID, alphabet, null, detected)
     val direction = directions.single()
     val config = conversions.first { directionOf(it) == direction }
-    return InputLanguageResolver.resolve(schemaID, alphabet, config)
+    return InputLanguageResolver.resolve(schemaID, alphabet, config, detected)
+}
+
+/** What the deployment read from the dictionary of [schemaID] (a generated companion answers for its source). */
+private fun InputSession.detectedLanguageOf(schemaID: String): String? {
+    val source = engine.encodingAdapters.firstOrNull { it.schemaID == schemaID }?.sourceSchemaID ?: schemaID
+    return engine.keyProfiles[source]?.language
 }
 
 private enum class ScriptDirection { TRADITIONAL, SIMPLIFIED }

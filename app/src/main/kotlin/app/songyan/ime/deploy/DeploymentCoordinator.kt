@@ -856,7 +856,7 @@ class DeploymentCoordinator(
                 }
             }
         // The profiles come from the schemas as compiled, before any companion is generated from them.
-        SchemaKeyProfiles.write(engine.compiledDir, manifest.schemaIds)
+        SchemaKeyProfiles.write(engine.compiledDir, manifest.schemaIds, scope.sourceDir)
         if (manifest.kind == SourceKind.SCHEME) {
             KeyboardCompanions(
                 scope.sourceDir,

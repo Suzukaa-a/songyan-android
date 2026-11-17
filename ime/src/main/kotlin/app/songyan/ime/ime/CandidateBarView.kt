@@ -8,7 +8,6 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Handler
-import android.os.LocaleList
 import android.os.Looper
 import android.text.TextPaint
 import android.view.HapticFeedbackConstants
@@ -208,7 +207,7 @@ class CandidateBarView(
 
     /** Applies [language] to the paints measuring and drawing the bar's text; widths are remeasured. */
     private fun applyTextLanguage() {
-        val locales = LocaleList.forLanguageTags(language.languageTag)
+        val locales = language.localeList()
         paint.setTextLocales(locales)
         textPaint.setTextLocales(locales)
         measureGeneration++

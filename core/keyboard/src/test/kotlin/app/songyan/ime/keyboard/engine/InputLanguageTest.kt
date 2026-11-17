@@ -147,4 +147,50 @@ class InputLanguageTest {
         // Interleaves tone digits with the letters and spreads the punctuation keys out.
         const val BOPOMOFO_ALPHABET = "1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik,9ol.0p;/-"
     }
+
+    private fun detected(
+        detected: String?,
+        conversion: String? = null,
+        schemaID: String = "wubi86",
+    ) = InputLanguageResolver.resolve(schemaID, LATIN_ALPHABET, conversion, detected).language
+
+    @Test
+    fun aDictionaryTheDeploymentReadDecidesTheLanguageOfAnUnclaimedInputMethod() {
+        assertEquals(InputLanguage.ZH_HANS, detected("zh-Hans"))
+        assertEquals(InputLanguage.ZH_HANT, detected("zh-Hant"))
+        assertEquals(InputLanguage.JA, detected("ja"))
+        assertEquals(InputLanguage.KO, detected("ko"))
+        assertEquals(InputLanguage.UNSPECIFIED, detected(InputLanguageResolver.DETECTED_NONE))
+        // Not read (a build made before the deployment looked): the old rule.
+        assertEquals(InputLanguage.ZH_HANS, detected(null))
+        assertEquals(InputLanguage.ZH_HANT, detected(null, conversion = "s2t"))
+    }
+
+    @Test
+    fun aDeclaredScriptSwitchStillFlipsDetectedChineseButNotOtherLanguages() {
+        assertEquals(InputLanguage.ZH_HANT, detected("zh-Hans", conversion = "s2t"))
+        assertEquals(InputLanguage.ZH_HANS, detected("zh-Hant", conversion = "t2s"))
+        assertEquals(InputLanguage.JA, detected("ja", conversion = "s2t"))
+    }
+
+    @Test
+    fun anEvenMixFollowsTheSystemChineseScript() {
+        val before = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("zh-Hant-TW"))
+            assertEquals(InputLanguage.ZH_HANT, detected(InputLanguageResolver.DETECTED_SYSTEM_CHINESE))
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("zh-CN"))
+            assertEquals(InputLanguage.ZH_HANS, detected(InputLanguageResolver.DETECTED_SYSTEM_CHINESE))
+            java.util.Locale.setDefault(java.util.Locale.ENGLISH)
+            assertEquals(InputLanguage.ZH_HANS, detected(InputLanguageResolver.DETECTED_SYSTEM_CHINESE))
+        } finally {
+            java.util.Locale.setDefault(before)
+        }
+    }
+
+    @Test
+    fun aFamilyKeepsItsRulesWhateverTheDictionarySays() {
+        assertEquals(InputLanguage.JA, detected("zh-Hans", schemaID = "kagiroi"))
+        assertEquals(InputLanguage.ZH_HANT, detected("none", schemaID = "cangjie5"))
+    }
 }

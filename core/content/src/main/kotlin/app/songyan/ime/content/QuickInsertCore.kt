@@ -60,7 +60,9 @@ object QuickInsertFormatting {
     ): String {
         val (pattern, locale) =
             when (language) {
-                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT -> CHINESE_PATTERNS.getValue(format) to Locale.ROOT
+                InputLanguage.ZH_HANS, InputLanguage.ZH_HANT, InputLanguage.KO, InputLanguage.UNSPECIFIED ->
+                    CHINESE_PATTERNS.getValue(format) to
+                        Locale.ROOT
                 InputLanguage.JA -> JAPANESE_PATTERNS.getValue(format) to Locale.JAPAN
             }
         return DateTimeFormatter.ofPattern(pattern, locale).withZone(zone).format(instant)

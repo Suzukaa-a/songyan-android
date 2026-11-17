@@ -136,7 +136,7 @@ class EditorConnection(
             if (preedit.isNotEmpty()) {
                 if (language != composingLanguage) {
                     composingLanguage = language
-                    composingLocales = LocaleList.forLanguageTags(language.languageTag)
+                    composingLocales = language.localeList()
                 }
                 val composingText = preeditWithLanguage(preedit)
                 // Android 17: mark the composing text of a candidate selection for CJKV

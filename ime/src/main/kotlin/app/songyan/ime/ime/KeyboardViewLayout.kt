@@ -1,7 +1,6 @@
 package app.songyan.ime.ime
 
 import android.graphics.RectF
-import android.os.LocaleList
 import app.songyan.ime.candidate.KeyboardWideContentPolicy
 import app.songyan.ime.candidate.NineKeyCandidateSide
 import app.songyan.ime.candidate.NineKeySideCandidatePlan
@@ -684,7 +683,7 @@ private fun KeyboardView.applyTextLanguage() {
     val language = faces.language
     if (language == textLanguage) return
     textLanguage = language
-    val locales = LocaleList.forLanguageTags(language.languageTag)
+    val locales = language.localeList()
     paint.setTextLocales(locales)
     measurePaint.setTextLocales(locales)
 }

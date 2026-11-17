@@ -13,6 +13,10 @@ enum class InputLanguage(
     ZH_HANS("zh-Hans"),
     ZH_HANT("zh-Hant"),
     JA("ja"),
+    KO("ko"),
+
+    /** The dictionary has no Chinese, Japanese or Korean: no glyph locale is forced, the system's own applies. */
+    UNSPECIFIED(""),
 }
 
 /**
@@ -53,6 +57,12 @@ object InputLanguageResolver {
         schemaID: String,
         alphabet: String,
         declaredConversion: String?,
+        /**
+         * What the deployment read from the input method's dictionary ([DETECTED_NONE] when it has no
+         * Chinese, Japanese or Korean text; null when it did not look, as in a build made before it did).
+         * Only an input method no family claims takes it.
+         */
+        detected: String? = null,
     ): InputLanguageProfile =
         when {
             schemaID.startsWith("kagiroi") -> InputLanguageProfile(InputLanguage.JA, InputSchemeFamily.JAPANESE)
@@ -65,10 +75,58 @@ object InputLanguageResolver {
                 )
             schemaID.startsWith("jyut6ping3") ->
                 InputLanguageProfile(traditionalUnlessSimplified(declaredConversion), InputSchemeFamily.LATIN_PHONETIC)
+            detected != null ->
+                InputLanguageProfile(
+                    detectedLanguage(detected, declaredConversion),
+                    InputSchemeFamily.GENERIC,
+                )
             isTraditionalConversion(declaredConversion) ->
                 InputLanguageProfile(InputLanguage.ZH_HANT, InputSchemeFamily.GENERIC)
             else -> InputLanguageProfile(InputLanguage.ZH_HANS, InputSchemeFamily.GENERIC)
         }
+
+    /** The language a dictionary's text proves; a declared script switch in force still flips Chinese. */
+    private fun detectedLanguage(
+        detected: String,
+        declaredConversion: String?,
+    ): InputLanguage {
+        val chinese =
+            when (detected) {
+                "zh-Hans" -> InputLanguage.ZH_HANS
+                "zh-Hant" -> InputLanguage.ZH_HANT
+                DETECTED_SYSTEM_CHINESE -> systemChinese()
+                else -> null
+            }
+        if (chinese != null) {
+            return when {
+                isTraditionalConversion(declaredConversion) -> InputLanguage.ZH_HANT
+                declaredConversion in SIMPLIFIED_CONVERSIONS -> InputLanguage.ZH_HANS
+                else -> chinese
+            }
+        }
+        return when (detected) {
+            "ja" -> InputLanguage.JA
+            "ko" -> InputLanguage.KO
+            else -> InputLanguage.UNSPECIFIED
+        }
+    }
+
+    /** The Chinese script of the system language; Simplified when the system is not Chinese. */
+    private fun systemChinese(): InputLanguage {
+        val locale = java.util.Locale.getDefault()
+        if (locale.language != "zh") return InputLanguage.ZH_HANS
+        return if (locale.script == "Hant" || locale.country in setOf("TW", "HK", "MO")) {
+            InputLanguage.ZH_HANT
+        } else {
+            InputLanguage.ZH_HANS
+        }
+    }
+
+    /** The dictionary's Chinese is about evenly Simplified and Traditional: the system language decides. */
+    const val DETECTED_SYSTEM_CHINESE = "zh"
+
+    /** The deployment read the dictionary and found no Chinese, Japanese or Korean text. */
+    const val DETECTED_NONE = "none"
 
     // The Dachen layout carries this run in its alphabet while its punctuation keys sit elsewhere,
     // so each of them is required on its own rather than as one contiguous sequence.

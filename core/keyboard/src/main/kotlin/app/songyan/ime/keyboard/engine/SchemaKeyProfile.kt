@@ -25,7 +25,10 @@ data class SchemaKeyProfile(
     val codes: List<String> = emptyList(),
     /** The stroke keys with their captions; only for [Kind.STROKES]. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val strokes: List<Stroke> = emptyList(),
-    /** Section of the design note on candidate language: filled by the deployment when it reads the dictionary. */
+    /**
+     * The language the dictionary is written in, read at deployment: `zh-Hans`, `zh-Hant`, `ja`, `ko`, `zh`
+     * (Chinese in both scripts: the system's decides) or `none` (nothing to force); null when not read.
+     */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val language: String? = null,
 ) {
     @Serializable(with = KindSerializer::class)

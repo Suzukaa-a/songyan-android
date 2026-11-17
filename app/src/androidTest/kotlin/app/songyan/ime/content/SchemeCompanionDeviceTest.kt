@@ -5,7 +5,10 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.TestZips
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.UserKeyboards
+import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
 import app.songyan.ime.rime.RimeKey
@@ -16,6 +19,7 @@ import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.PublicationRecord
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -27,9 +31,10 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * On a device: importing a scheme package makes the real :deploy process generate and compile
- * 14-, 18- and 9-key companions for its input method, and the keyboard's engine over the published
- * build offers them and types the package's words through them.
+ * On a device: importing a scheme package folds no keyboard; once the user picks the 14-, 18- and
+ * 9-key keyboards for its input method, the real :deploy process generates and compiles their
+ * companions, and the keyboard's engine over the published build types the package's words through
+ * them.
  */
 @RunWith(AndroidJUnit4::class)
 class SchemeCompanionDeviceTest {
@@ -37,15 +42,21 @@ class SchemeCompanionDeviceTest {
     private val context: Context = instrumentation.targetContext
     private val storage = AppStorage(context.filesDir)
     private val publisher = GenerationPublisher(storage)
+    private val preferences = KeyboardPreferences(context)
+    private var savedKeyboards: UserKeyboards.Stored? = null
     private val settings = SettingsInForeground()
     private var scheme: String? = null
 
     @Before
-    fun setUp() = settings.open()
+    fun setUp() {
+        settings.open()
+        savedKeyboards = runBlocking { preferences.myKeyboards.first() }
+    }
 
     @After
     fun tearDown() {
         scheme?.let { id -> runCatching { runBlocking { StoredSourcesHolder.current.delete(id) } } }
+        savedKeyboards?.let { runBlocking { preferences.setMyKeyboards(it) } }
         settings.close()
     }
 
@@ -57,14 +68,20 @@ class SchemeCompanionDeviceTest {
             val record = requireNotNull(publisher.readActive())
             scheme = record.sourceId
             assertEquals(listOf(SCHEMA), record.schemaIds)
+            assertEquals(
+                "nothing is folded before the user picks",
+                emptyMap<KeyboardLayoutKind, String>(),
+                adaptersOf(record),
+            )
 
-            val adapters = adaptersOf(record)
+            val picked = pickEveryKeyboard(SCHEMA)
+            val adapters = adaptersOf(picked)
             assertEquals(
                 listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
                 adapters.keys.toList(),
             )
-            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.MERGED14), "tabagu").contains(WORD))
-            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.PHONE9), "926744").contains(WORD))
+            assertTrue(candidates(picked, adapters.getValue(KeyboardLayoutKind.MERGED14), "tabagu").contains(WORD))
+            assertTrue(candidates(picked, adapters.getValue(KeyboardLayoutKind.PHONE9), "926744").contains(WORD))
         }
 
     /**
@@ -80,48 +97,62 @@ class SchemeCompanionDeviceTest {
             val record = requireNotNull(publisher.readActive())
             scheme = record.sourceId
 
-            val adapters = adaptersOf(record)
+            val picked = pickEveryKeyboard(SCHEMA)
+            val adapters = adaptersOf(picked)
             assertEquals(
                 listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
                 adapters.keys.toList(),
             )
-            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.MERGED14), "tabagu").contains(WORD))
-            assertTrue(candidates(record, adapters.getValue(KeyboardLayoutKind.PHONE9), "926744").contains(WORD))
+            assertTrue(candidates(picked, adapters.getValue(KeyboardLayoutKind.MERGED14), "tabagu").contains(WORD))
+            assertTrue(candidates(picked, adapters.getValue(KeyboardLayoutKind.PHONE9), "926744").contains(WORD))
         }
 
     /**
-     * A package with two input methods is usable as soon as the first has its layouts; the deploy
-     * process then publishes a complete generation on its own, without another request.
+     * A package with two input methods is usable right after the import with no folded keyboards;
+     * picking keyboards for both makes the deploy process build them, without another import.
      */
     @Test
-    fun theOtherInputMethodsGetTheirLayoutsRightAfterTheImport() =
+    fun bothInputMethodsGetTheLayoutsPickedAfterTheImport() =
         runBlocking {
-            val before = publisher.readActive()?.sequence ?: 0L
             val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage(SCHEMA, SECOND)))
             assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
-            // The completing generation may be out already; the one the import published is kept beside it.
-            val first =
-                publisher
-                    .publishedRecords()
-                    .filter { it.sequence > before }
-                    .minBy { it.sequence }
-            scheme = first.sourceId
-            assertEquals(listOf(SCHEMA, SECOND), first.schemaIds)
-            assertTrue("only the first input method is ready yet", first.companionsPending)
-            assertEquals(setOf(SCHEMA), layoutsBySource(first).keys)
+            val record = requireNotNull(publisher.readActive())
+            scheme = record.sourceId
+            assertEquals(listOf(SCHEMA, SECOND), record.schemaIds)
+            assertFalse("a fresh install waits for the user to pick", record.companionsPending)
+            assertEquals(emptyMap<String, Set<KeyboardLayoutKind>>(), layoutsBySource(record))
 
-            var complete = requireNotNull(publisher.readActive())
-            val deadline = System.currentTimeMillis() + 90_000
-            while (complete.companionsPending && System.currentTimeMillis() < deadline) {
-                delay(250)
-                complete = requireNotNull(publisher.readActive())
-            }
-
-            assertFalse("the deploy process completed the generation", complete.companionsPending)
-            val layouts = layoutsBySource(complete)
+            val layouts = layoutsBySource(pickEveryKeyboard(SCHEMA, SECOND))
             val all = setOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9)
             assertEquals(mapOf(SCHEMA to all, SECOND to all), layouts)
         }
+
+    /** Stores every shape as the keyboards of [schemas], as the install picker does, and waits for the build. */
+    private suspend fun pickEveryKeyboard(vararg schemas: String): PublicationRecord {
+        val before = requireNotNull(publisher.readActive()).sequence
+        val stored = preferences.myKeyboards.first()
+        val picked = schemas.flatMap { id -> KeyboardLayoutKind.entries.map { PublishedKeyboard(id, it) } }
+        preferences.setMyKeyboards(
+            UserKeyboards.Stored(
+                stored.keyboards.filter { it.schemaID !in schemas } + picked,
+                stored.schemes + schemas,
+            ),
+        )
+        // Settled: built, and no later generation replaces it (an older one's files are pruned).
+        val deadline = System.currentTimeMillis() + 120_000
+        var settled: PublicationRecord? = null
+        while (System.currentTimeMillis() < deadline) {
+            val active = requireNotNull(publisher.readActive())
+            if (active.sequence > before && !active.companionsPending) {
+                if (active == settled) return active
+                settled = active
+                delay(3_000)
+            } else {
+                delay(250)
+            }
+        }
+        throw AssertionError("the picked keyboards were not built")
+    }
 
     private suspend fun layoutsBySource(record: PublicationRecord): Map<String, Set<KeyboardLayoutKind>> {
         val generation = storage.generationDir(record.generation)

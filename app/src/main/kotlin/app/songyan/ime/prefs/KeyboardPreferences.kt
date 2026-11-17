@@ -257,15 +257,8 @@ class KeyboardPreferences(
                 data[KEY_MENU_HIDDEN_LAYOUTS].orEmpty(),
             )
         withContext(Dispatchers.IO) {
-            runCatching {
-                val file = AppStorage(appContext.filesDir).keyboardCompanionsFile
-                val text = requests.encode()
-                if (file.isFile && file.readText() == text) return@withContext
-                file.parentFile?.mkdirs()
-                val temp = File(file.parentFile, file.name + ".tmp")
-                temp.writeText(text)
-                if (!temp.renameTo(file)) temp.delete()
-            }.onFailure { Log.w(TAG, "cannot mirror the keyboard list", it) }
+            runCatching { CompanionRequests.mirror(AppStorage(appContext.filesDir).keyboardCompanionsFile, requests) }
+                .onFailure { Log.w(TAG, "cannot mirror the keyboard list", it) }
         }
         DeploymentStarter.completeCompanionsIfPending(appContext)
     }

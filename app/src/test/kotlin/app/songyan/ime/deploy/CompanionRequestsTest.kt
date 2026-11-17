@@ -40,6 +40,26 @@ class CompanionRequestsTest {
     }
 
     @Test
+    fun aPreferenceWriteKeepsWhatAFirstInstallCovered() {
+        val file =
+            kotlin.io.path
+                .createTempFile("requests")
+                .toFile()
+        try {
+            file.delete()
+            CompanionRequests.cover(file, listOf("new"))
+            val stored = UserKeyboards.Stored(listOf(k("a:phone9#phone9")), setOf("a"))
+            CompanionRequests.mirror(file, CompanionRequests(stored, hiddenLayouts = setOf("merged14")))
+            val read = CompanionRequests.read(file)
+            assertTrue(read.kinds("new").isEmpty())
+            assertEquals(setOf(KeyboardLayoutKind.PHONE9), read.kinds("a"))
+            assertEquals(setOf(KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9), read.kinds("older"))
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun aStoredInputMethodIsAskedForExactlyItsKeyboardsFolds() {
         val stored =
             UserKeyboards.Stored(

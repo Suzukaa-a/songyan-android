@@ -88,6 +88,27 @@ internal data class CompanionRequests(
             }
         }
 
+        /**
+         * Writes [requests] from the preferences. Input methods a first install covered stay covered:
+         * the preferences never spoke for them, and dropping them would ask for every fold.
+         */
+        fun mirror(
+            file: File,
+            requests: CompanionRequests,
+        ) {
+            val previous = read(file)
+            val merged =
+                requests.copy(
+                    stored = requests.stored.copy(schemes = requests.stored.schemes + previous.stored.schemes),
+                )
+            val text = merged.encode()
+            if (file.isFile && file.readText() == text) return
+            file.parentFile?.mkdirs()
+            val temp = File(file.parentFile, file.name + ".tmp")
+            temp.writeText(text)
+            if (!temp.renameTo(file)) temp.delete()
+        }
+
         /** The mirrored requests; without the file, nothing was ever edited, so every input method is legacy. */
         fun read(file: File): CompanionRequests =
             runCatching { file.takeIf { it.isFile }?.readText() }.getOrNull()?.let(::decode) ?: CompanionRequests()

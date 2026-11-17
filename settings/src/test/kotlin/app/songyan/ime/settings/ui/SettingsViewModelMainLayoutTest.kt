@@ -2,11 +2,13 @@ package app.songyan.ime.settings.ui
 
 import android.app.Application
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.CurrentMainLayout
 import app.songyan.ime.settings.state.ImeStatus
@@ -19,6 +21,7 @@ import app.songyan.ime.settings.state.LayoutDisplayName
 import app.songyan.ime.settings.state.SettingsAppState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -54,11 +57,9 @@ class SettingsViewModelMainLayoutTest {
         return result
     }
 
-    private fun viewModel(
-        registry: LayoutRegistry,
-        layoutId: String = "qwerty26",
-    ): SettingsViewModel {
-        val preferences = InMemorySettingsPreferences(schemaId = "bopomofo_tw", layoutId = layoutId)
+    private val preferences = InMemorySettingsPreferences(schemaId = "bopomofo_tw", layoutId = "qwerty26")
+
+    private fun viewModel(registry: LayoutRegistry): SettingsViewModel {
         val source =
             InMemorySettingsAppStateSource(
                 SettingsAppState(
@@ -121,6 +122,92 @@ class SettingsViewModelMainLayoutTest {
             assertEquals(
                 CurrentMainLayout("mine", LayoutDisplayName.Authored("我的注音")),
                 viewModel.uiState.value.mainLayout,
+            )
+        }
+
+    private fun k(id: String) = requireNotNull(PublishedKeyboard.parse(id)) { id }
+
+    @Test
+    fun `my keyboards start as what the menu offered and name the one in use`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(LayoutRegistry.create(layouts = BuiltinLayouts.all + mine))
+            advanceUntilIdle()
+            val list = requireNotNull(viewModel.uiState.value.keyboardList)
+            assertEquals(listOf("bopomofo_tw:qwerty26#zhuyin41"), list.keyboards.map { it.keyboard.id })
+            assertEquals(listOf(true), list.keyboards.map { it.inUse })
+            assertEquals(
+                listOf("bopomofo_tw:qwerty26#qwerty26", "bopomofo_tw:qwerty26#mine"),
+                list.groups
+                    .single()
+                    .addable
+                    .map { it.keyboard.id },
+            )
+        }
+
+    @Test
+    fun `using a keyboard stores its input method shape and layout and names it`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(LayoutRegistry.create(layouts = BuiltinLayouts.all + mine))
+            advanceUntilIdle()
+            viewModel.addKeyboard(k("bopomofo_tw:qwerty26#mine"))
+            advanceUntilIdle()
+            assertEquals(
+                UserKeyboards.Stored(
+                    listOf(k("bopomofo_tw:qwerty26#zhuyin41"), k("bopomofo_tw:qwerty26#mine")),
+                    setOf("bopomofo_tw"),
+                ),
+                preferences.myKeyboards.first(),
+            )
+            viewModel.useKeyboard(k("bopomofo_tw:qwerty26#mine"))
+            advanceUntilIdle()
+            assertEquals("mine", preferences.layoutDefinitionId.first())
+            assertEquals(
+                CurrentMainLayout("mine", LayoutDisplayName.Authored("我的注音")),
+                viewModel.uiState.value.mainLayout,
+            )
+            assertEquals(
+                listOf(false, true),
+                viewModel.uiState.value.keyboardList
+                    ?.keyboards
+                    ?.map { it.inUse },
+            )
+        }
+
+    @Test
+    fun `the keyboard in use is never removed and another one is`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(LayoutRegistry.create(layouts = BuiltinLayouts.all + mine))
+            advanceUntilIdle()
+            viewModel.addKeyboard(k("bopomofo_tw:qwerty26#mine"))
+            advanceUntilIdle()
+            viewModel.removeKeyboard(k("bopomofo_tw:qwerty26#zhuyin41"))
+            advanceUntilIdle()
+            assertEquals(
+                2,
+                preferences.myKeyboards
+                    .first()
+                    .keyboards.size,
+            )
+            viewModel.removeKeyboard(k("bopomofo_tw:qwerty26#mine"))
+            advanceUntilIdle()
+            assertEquals(listOf(k("bopomofo_tw:qwerty26#zhuyin41")), preferences.myKeyboards.first().keyboards)
+        }
+
+    @Test
+    fun `activating a keyboard that is not listed adds it`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(LayoutRegistry.create(layouts = BuiltinLayouts.all + mine))
+            advanceUntilIdle()
+            viewModel.activateKeyboard(k("bopomofo_tw:qwerty26#mine"))
+            advanceUntilIdle()
+            assertEquals("mine", preferences.layoutDefinitionId.first())
+            assertEquals(
+                listOf("bopomofo_tw:qwerty26#zhuyin41", "bopomofo_tw:qwerty26#mine"),
+                preferences
+                    .myKeyboards
+                    .first()
+                    .keyboards
+                    .map { it.id },
             )
         }
 }

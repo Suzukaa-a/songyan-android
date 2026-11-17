@@ -76,10 +76,9 @@
     <string name="options_reset_default">初期設定に戻す</string>
     <string name="keyboards_pages_section">キー配列とページ</string>
     <string name="composition_title">ページの組み合わせ</string>
-    <string name="composition_entry_body">このキーボードで使うキー配列と、123、記号、ABC のページを選びます</string>
-    <string name="composition_body">上で選んだキー配列と、それを「%1$s」で使うときのページです。</string>
+    <string name="composition_entry_body">使用中のキーボードの 123、記号、ABC のページを選びます</string>
+    <string name="composition_body">「%1$s」で使う 123、記号、ABC のページです。</string>
     <string name="composition_missing_marks">この組み合わせでは %1$s を入力できません。記号ページにキーを追加できます。</string>
-    <string name="composition_main_section">キー配列</string>
     <string name="layouts_title">キー配列</string>
     <string name="layouts_entry_body">キー配列の編集、コピー、インポート、エクスポート</string>
     <string name="layouts_section">キー配列</string>
@@ -274,12 +273,11 @@
     <string name="page_editor_category_recent">最近使った記号</string>
     <string name="page_editor_category_recent_body">最近入力した記号がここに並びます。</string>
     <!-- キーボードメニュー -->
-    <string name="keyboard_menu_title">キーボードメニュー</string>
-    <string name="keyboard_menu_entry_body">キーボードメニューに表示する入力方式とキー配列を選びます</string>
-    <string name="keyboard_menu_body">「中/英」を長押しするとキーボードのメニューが開き、入力方式やキー配列を切り替えられます。ほかの入力パックの入力方式も切り替えられます。ここでオフにしたものはメニューに表示されません。使用中のものは常に表示されます。</string>
-    <string name="keyboard_menu_input_methods">入力方式</string>
-    <string name="keyboard_menu_layouts">キー配列</string>
-    <string name="keyboard_menu_layouts_of">%1$s のキー配列</string>
+    <string name="keyboards_body">「中/英」を長押しするとキーボードメニューが開き、これらのキーボードを切り替えられます。</string>
+    <string name="keyboards_add">キーボードを追加</string>
+    <string name="keyboards_add_title">「%1$s」にキーボードを追加</string>
+    <string name="keyboards_remove">「%1$s」を削除</string>
+    <string name="keyboards_none_for_method">キーボードがまだないため、この入力方式はキーボードメニューに表示されません。</string>
     <string name="keyboard_menu_in_use">使用中</string>
     <string name="t9_symbols_title">9 キーのクイック記号</string>
     <string name="t9_symbols_field">記号</string>

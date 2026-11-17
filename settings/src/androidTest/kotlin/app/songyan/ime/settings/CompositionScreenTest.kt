@@ -9,12 +9,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.compositionKey
 import app.songyan.ime.settings.state.EngineStatus
 import app.songyan.ime.settings.state.InMemoryLayoutLibrarySource
 import app.songyan.ime.settings.state.InstalledScheme
@@ -60,7 +63,8 @@ class CompositionScreenTest {
     fun aSavedPageIsOnlyAppliedAfterChoosingANamedKeyboardAndCanBeTried() {
         val source = InMemoryLayoutLibrarySource(LayoutRegistry.create().withPage(mine))
         val model = LayoutLibraryViewModel(source)
-        var activated: KeyboardCompositionKey? = null
+        var activated: PublishedKeyboard? = null
+        val keyboard = PublishedKeyboard("test_ime", KeyboardLayoutKind.QWERTY26, "qwerty26")
         var tried = false
         val activation = kotlinx.coroutines.CompletableDeferred<Unit>()
         compose.setContent {
@@ -73,6 +77,7 @@ class CompositionScreenTest {
                             app.songyan.ime.settings.state
                                 .InstalledScheme("test_ime", "全拼"),
                         ),
+                    keyboards = listOf(keyboard),
                     sourcesLoaded = true,
                     onActivate = {
                         activated = it
@@ -102,12 +107,18 @@ class CompositionScreenTest {
         assertNull(activated)
         compose.onNodeWithText(str(R.string.content_use_on, target)).performClick()
         compose.waitForIdle()
-        assertEquals(key, activated)
+        assertEquals(keyboard, activated)
         assertEquals(
             mine.id,
             source.registry.value!!
-                .composition(key)
+                .composition(keyboard.compositionKey())
                 .symbolPageID,
+        )
+        // The page is the keyboard's own: the pairing of its shape is not written.
+        assertEquals(
+            setOf(keyboard.id),
+            source.registry.value!!
+                .compositions.keys,
         )
         compose.onNodeWithText(str(R.string.row_tryout_title)).assertDoesNotExist()
         activation.complete(Unit)
@@ -135,39 +146,12 @@ class CompositionScreenTest {
                 )
             }
         }
-        compose.onNodeWithText(str(R.string.layout_name_zhuyin41)).performScrollTo().assertExists()
-        // The stored definition's own Simplified literal is not what the UI shows.
+        val name = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41))
+        compose.onNodeWithText(str(R.string.composition_body, name)).assertExists()
+        // The layout is the keyboard's own: the page offers no other layout to pick.
+        compose.onNodeWithText(str(R.string.layout_name_zhuyin41)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.layout_name_26)).assertDoesNotExist()
         compose.onNodeWithText(BuiltinLayouts.zhuyin41.name).assertDoesNotExist()
-    }
-
-    @Test
-    fun aUseTargetNamesThePhysicalBoardItWouldDraw() {
-        val zhuyin = KeyboardCompositionKey("bopomofo_tw", LayoutInput.Builtin.QWERTY26)
-        val registry =
-            LayoutRegistry
-                .create()
-                .withComposition(KeyboardComposition(mainLayoutID = "zhuyin41"), zhuyin.rawValue)
-        val model = LayoutLibraryViewModel(InMemoryLayoutLibrarySource(registry))
-        compose.setContent {
-            SongyanTheme(dynamicColor = false) {
-                app.songyan.ime.settings.ui.screens.UseContentScreen(
-                    contentId = BuiltinLayouts.zhuyin41.id,
-                    isPage = false,
-                    schemes = listOf(InstalledScheme("bopomofo_tw", "注音", family = InputSchemeFamily.ZHUYIN)),
-                    sourcesLoaded = true,
-                    onActivate = {},
-                    onTryOut = {},
-                    onOpenSchemes = {},
-                    onChooseScheme = {},
-                    engine = EngineStatus.Ready,
-                    onBack = {},
-                    viewModel = model,
-                )
-            }
-        }
-        val target = str(R.string.keyboard_title, "注音", str(R.string.layout_name_zhuyin41))
-        compose.onNodeWithText(target).performScrollTo().assertExists()
-        compose.onNodeWithText(str(R.string.keyboard_title, "注音", str(R.string.layout_name_26))).assertDoesNotExist()
     }
 
     private val keypadMisses =

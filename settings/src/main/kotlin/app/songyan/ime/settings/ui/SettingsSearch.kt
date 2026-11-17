@@ -104,7 +104,6 @@ object SettingsSearch {
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_release_haptic_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.FEATURES, R.string.features_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.SHUANGPIN, R.string.shuangpin_title, R.string.row_options_title),
-            SearchEntry(SettingsRoutes.KEYBOARD_MENU, R.string.keyboard_menu_title, R.string.row_keyboards_title),
             SearchEntry(SettingsRoutes.SHUANGPIN, R.string.shuangpin_switch, R.string.shuangpin_title),
             SearchEntry(
                 SettingsRoutes.CANDIDATE_BAR,

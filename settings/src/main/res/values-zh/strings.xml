@@ -87,9 +87,7 @@
     <string name="schemes_empty_body">内置方案会在第一次准备完成后出现。</string>
 
     <!-- My keyboards -->
-    <string name="keyboards_current_compact">当前输入方式：%1$s</string>
     <string name="keyboards_current_none">还没有可用的键盘。</string>
-    <string name="keyboards_layout_section">键盘布局</string>
     <string name="layout_name_26">26 键</string>
     <string name="layout_name_14">14 键</string>
     <string name="layout_name_18">18 键</string>

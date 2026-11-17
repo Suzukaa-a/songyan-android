@@ -7,11 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
-import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
-import app.songyan.ime.layout.KeyboardCompositionKey
-import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.settings.state.AppKeyboardInfo
 import app.songyan.ime.settings.state.CurrentMainLayout
@@ -25,6 +24,7 @@ import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.IncomingPackageHolder
 import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.state.KeyboardLayoutOption
+import app.songyan.ime.settings.state.KeyboardList
 import app.songyan.ime.settings.state.LayoutLibraryHolder
 import app.songyan.ime.settings.state.LayoutLibrarySource
 import app.songyan.ime.settings.state.OnboardingProgress
@@ -43,6 +43,7 @@ import app.songyan.ime.settings.state.StoredSourcesGateway
 import app.songyan.ime.settings.state.StoredSourcesHolder
 import app.songyan.ime.settings.state.TransferProgress
 import app.songyan.ime.settings.state.currentMainLayout
+import app.songyan.ime.settings.state.keyboardList
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.screens.KeyboardFeelState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -67,8 +68,12 @@ data class SettingsUiState(
     val inUseSchemeId: String? = null,
     val currentKeyboard: AppKeyboardInfo? = null,
     val layoutId: String = SettingsPreferences.DEFAULT_LAYOUT_ID,
+    /** The layout the keyboard in use names; null follows the pairing of its shape. */
+    val layoutDefinitionId: String? = null,
     /** The main layout the keyboard in use draws, once the layout catalog is read; null until then. */
     val mainLayout: CurrentMainLayout? = null,
+    /** 我的键盘, once the layout catalog is read; null until then. */
+    val keyboardList: KeyboardList? = null,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
     val showCandidateComments: Boolean = true,
     val collapsedCandidateComments: Boolean = true,
@@ -112,6 +117,10 @@ data class SettingsUiState(
 /** Stored choices as read so far; [pending] counts the preferences that have not emitted yet. */
 private data class StoredPreferences(
     val layoutId: String = SettingsPreferences.DEFAULT_LAYOUT_ID,
+    val layoutDefinitionId: String? = null,
+    val myKeyboards: UserKeyboards.Stored = UserKeyboards.Stored(),
+    val menuHiddenSchemas: Set<String> = emptySet(),
+    val menuHiddenLayouts: Set<String> = emptySet(),
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
     val showCandidateComments: Boolean = true,
     val collapsedCandidateComments: Boolean = true,
@@ -181,6 +190,10 @@ class SettingsViewModel(
 
     init {
         collectPreference(preferences.layoutId) { copy(layoutId = it) }
+        collectPreference(preferences.layoutDefinitionId) { copy(layoutDefinitionId = it) }
+        collectPreference(preferences.myKeyboards) { copy(myKeyboards = it) }
+        collectPreference(preferences.menuHiddenSchemas) { copy(menuHiddenSchemas = it) }
+        collectPreference(preferences.menuHiddenLayouts) { copy(menuHiddenLayouts = it) }
         collectPreference(preferences.candidateTextSize) { copy(candidateTextSize = CandidateTextSize.fromId(it)) }
         collectPreference(preferences.showCandidateComments) { copy(showCandidateComments = it) }
         collectPreference(preferences.collapsedCandidateComments) { copy(collapsedCandidateComments = it) }
@@ -262,43 +275,45 @@ class SettingsViewModel(
         }
     }
 
-    private val baseState: Flow<SettingsUiState> =
+    private val baseState: Flow<Pair<StoredPreferences, SettingsUiState>> =
         combine(
             appStateSource.state,
             imeStatus,
             hasTyped,
             stored,
         ) { app, ime, typed, prefs ->
-            SettingsUiState(
-                engine = app.engine,
-                sourcesLoaded = app.sourcesLoaded,
-                schemes = app.schemes,
-                inUseSchemeId = app.inUseSchemeId,
-                currentKeyboard = app.currentKeyboard,
-                importedDictionary = app.importedDictionary,
-                stackedDictionaries = app.stackedDictionaries,
-                sources = app.sources,
-                otherSources = app.otherSources,
-                layoutId = prefs.layoutId,
-                candidateTextSize = prefs.candidateTextSize,
-                showCandidateComments = prefs.showCandidateComments,
-                collapsedCandidateComments = prefs.collapsedCandidateComments,
-                keyFeedback = prefs.keyFeedback,
-                keyboardFeel = prefs.keyboardFeel,
-                preferencesLoaded = prefs.pending == 0,
-                onboardingShown = prefs.onboardingShown,
-                notificationRationaleShown = prefs.notificationRationaleShown,
-                ime = ime,
-                progress = onboardingProgress(ime, typed, schemeReady = app.schemes.isNotEmpty()),
-            )
+            prefs to
+                SettingsUiState(
+                    engine = app.engine,
+                    sourcesLoaded = app.sourcesLoaded,
+                    schemes = app.schemes,
+                    inUseSchemeId = app.inUseSchemeId,
+                    currentKeyboard = app.currentKeyboard,
+                    importedDictionary = app.importedDictionary,
+                    stackedDictionaries = app.stackedDictionaries,
+                    sources = app.sources,
+                    otherSources = app.otherSources,
+                    layoutId = prefs.layoutId,
+                    layoutDefinitionId = prefs.layoutDefinitionId,
+                    candidateTextSize = prefs.candidateTextSize,
+                    showCandidateComments = prefs.showCandidateComments,
+                    collapsedCandidateComments = prefs.collapsedCandidateComments,
+                    keyFeedback = prefs.keyFeedback,
+                    keyboardFeel = prefs.keyboardFeel,
+                    preferencesLoaded = prefs.pending == 0,
+                    onboardingShown = prefs.onboardingShown,
+                    notificationRationaleShown = prefs.notificationRationaleShown,
+                    ime = ime,
+                    progress = onboardingProgress(ime, typed, schemeReady = app.schemes.isNotEmpty()),
+                )
         }
 
     /**
-     * The catalog the keyboard reads decides the keyboard's main layout; it is already in memory, so
-     * nothing here touches a file or the engine.
+     * The catalog the keyboard reads decides the keyboard's main layout and the keyboards the user
+     * has; it is already in memory, so nothing here touches a file or the engine.
      */
     private val stateWithMainLayout: Flow<SettingsUiState> =
-        combine(baseState, layoutLibrary.registry) { state, registry ->
+        combine(baseState, layoutLibrary.registry) { (prefs, state), registry ->
             state.copy(
                 mainLayout =
                     currentMainLayout(
@@ -306,7 +321,21 @@ class SettingsViewModel(
                         shapeId = state.layoutId,
                         family = state.inUseScheme?.family,
                         registry = registry,
+                        layoutDefinitionId = state.layoutDefinitionId,
                     ),
+                keyboardList =
+                    registry?.let {
+                        keyboardList(
+                            schemes = state.schemes,
+                            inUseSchemeId = state.inUseSchemeId,
+                            layoutId = state.layoutId,
+                            layoutDefinitionId = state.layoutDefinitionId,
+                            stored = prefs.myKeyboards,
+                            hiddenSchemas = prefs.menuHiddenSchemas,
+                            hiddenLayouts = prefs.menuHiddenLayouts,
+                            registry = it,
+                        )
+                    },
             )
         }
 
@@ -486,34 +515,38 @@ class SettingsViewModel(
         }
     }
 
-    suspend fun activateKeyboard(key: app.songyan.ime.layout.KeyboardCompositionKey) {
-        preferences.setActiveSchemaId(key.inputMethodId)
-        preferences.setLayoutId(key.layout.wire)
+    /** Switches the keyboard to [keyboard], adding it to 我的键盘 when it is not there yet. */
+    suspend fun activateKeyboard(keyboard: PublishedKeyboard) {
+        storeAdded(keyboard)
+        preferences.setKeyboard(keyboard)
         appStateSource.refresh()
     }
 
-    /**
-     * Makes [boardId] the main layout of the input method in use and switches to the identity shape
-     * that carries it, so a Japanese keyboard moves between romaji and kana in one tap.
-     */
-    fun selectBoard(boardId: String) {
-        val scheme = uiState.value.inUseScheme ?: return
-        val key = KeyboardCompositionKey(scheme.id, LayoutInput.Builtin.QWERTY26)
+    /** Switches the keyboard to one of the user's keyboards. */
+    fun useKeyboard(keyboard: PublishedKeyboard) {
         viewModelScope.launch {
-            layoutLibrary.edit { registry ->
-                val families = LayoutFamilyContext.of(scheme.id to scheme.family)
-                registry.withComposition(registry.composition(key, families).withMainLayoutId(boardId), key.rawValue)
-            }
-            preferences.setLayoutId(KeyboardLayoutOption.QWERTY26.id)
+            preferences.setKeyboard(keyboard)
             appStateSource.refresh()
         }
     }
 
-    /** Switches the keyboard layout. */
-    fun selectLayout(layout: KeyboardLayoutOption) {
+    fun addKeyboard(keyboard: PublishedKeyboard) {
+        viewModelScope.launch { storeAdded(keyboard) }
+    }
+
+    private suspend fun storeAdded(keyboard: PublishedKeyboard) {
+        val list = uiState.value.keyboardList ?: return
+        val listed = UserKeyboards.effective(list.stored, listOf(keyboard.schemaID), list.legacy)
+        if (listed.any { it.id == keyboard.id }) return
+        preferences.setMyKeyboards(UserKeyboards.adding(keyboard, list.stored, list.legacy))
+    }
+
+    /** Takes a keyboard out of 我的键盘; the one in use stays until the user switches away. */
+    fun removeKeyboard(keyboard: PublishedKeyboard) {
+        val list = uiState.value.keyboardList ?: return
+        if (list.current?.id == keyboard.id) return
         viewModelScope.launch {
-            preferences.setLayoutId(layout.id)
-            appStateSource.refresh()
+            preferences.setMyKeyboards(UserKeyboards.removing(keyboard, list.stored, list.legacy))
         }
     }
 

@@ -16,6 +16,7 @@ import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutException
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.PhoneKeypadStructure
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.settings.state.LayoutEditResult
 import app.songyan.ime.settings.state.LayoutImportOutcome
 import app.songyan.ime.settings.state.LayoutLibraryHolder
@@ -55,6 +56,7 @@ sealed interface LibraryEvent {
 class LayoutLibraryViewModel(
     private val source: LayoutLibrarySource,
     private val newId: () -> String = { UUID.randomUUID().toString() },
+    private val preferences: SettingsPreferences = SettingsPreferencesHolder.current,
 ) : ViewModel() {
     val registry: StateFlow<LayoutRegistry?> = source.registry
 
@@ -80,7 +82,15 @@ class LayoutLibraryViewModel(
         registry.copy(BuiltinLayouts.persistingHandCuts(original), newId(), name).first
     }
 
-    fun deleteLayout(id: String) = edit { it.remove(id) }
+    /** A layout one of the user's keyboards names stays, like one a pairing uses. */
+    fun deleteLayout(id: String) {
+        viewModelScope.launch {
+            val named = UserKeyboards.layoutIds(preferences.myKeyboards.first().keyboards)
+            val inUse = setOfNotNull(preferences.layoutDefinitionId.first())
+            val result = source.edit { it.remove(id, named + inUse) }
+            if (result is LayoutEditResult.Rejected) mutableEvent.value = LibraryEvent.Failed(result.error)
+        }
+    }
 
     /** Puts an edited bundled layout back to what ships with the app. */
     fun restorePreset(id: String) =

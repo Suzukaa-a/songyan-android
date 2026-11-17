@@ -77,10 +77,9 @@
     <string name="options_reset_default">恢復預設</string>
     <string name="keyboards_pages_section">佈局與頁面</string>
     <string name="composition_title">頁面搭配</string>
-    <string name="composition_entry_body">選擇這個鍵盤用的佈局，以及 123、符號和 ABC 頁面</string>
-    <string name="composition_body">上面選的鍵盤配置在「%1$s」下使用的佈局和頁面。</string>
+    <string name="composition_entry_body">選擇正在使用的鍵盤的 123、符號和 ABC 頁面</string>
+    <string name="composition_body">「%1$s」用的 123、符號和 ABC 頁面。</string>
     <string name="composition_missing_marks">這個搭配打不出：%1$s，可以在符號頁加上這些鍵。</string>
-    <string name="composition_main_section">鍵盤配置</string>
     <string name="layouts_title">鍵盤配置</string>
     <string name="layouts_entry_body">編輯、複製、匯入和匯出佈局</string>
     <string name="layouts_section">佈局</string>
@@ -275,12 +274,11 @@
     <string name="page_editor_category_recent">最近使用的符號</string>
     <string name="page_editor_category_recent_body">鍵盤在這裡列出你最近輸入過的符號。</string>
     <!-- 鍵盤選單 -->
-    <string name="keyboard_menu_title">鍵盤選單</string>
-    <string name="keyboard_menu_entry_body">選擇鍵盤選單裡顯示哪些輸入方式和佈局</string>
-    <string name="keyboard_menu_body">長按「中/英」開啟鍵盤選單，可切換輸入方式和鍵盤配置，也包括其他輸入方案裡的輸入方式。在這裡關掉的不會出現在選單裡，使用中的總會留下。</string>
-    <string name="keyboard_menu_input_methods">輸入方式</string>
-    <string name="keyboard_menu_layouts">鍵盤配置</string>
-    <string name="keyboard_menu_layouts_of">「%1$s」的鍵盤配置</string>
+    <string name="keyboards_body">長按「中/英」開啟鍵盤選單，在這些鍵盤之間切換。</string>
+    <string name="keyboards_add">新增鍵盤</string>
+    <string name="keyboards_add_title">給「%1$s」新增鍵盤</string>
+    <string name="keyboards_remove">移除「%1$s」</string>
+    <string name="keyboards_none_for_method">還沒有鍵盤，鍵盤選單裡不顯示這個輸入方式。</string>
     <string name="keyboard_menu_in_use">使用中</string>
     <string name="t9_symbols_title">九鍵快捷符號</string>
     <string name="t9_symbols_field">符號</string>

@@ -77,10 +77,9 @@
     <string name="options_reset_default">Reset to default</string>
     <string name="keyboards_pages_section">Layouts and pages</string>
     <string name="composition_title">Page pairing</string>
-    <string name="composition_entry_body">Choose the layout and the 123, symbol and ABC pages of this keyboard</string>
-    <string name="composition_body">The layout and pages the keyboard uses for %1$s with the layout you picked above.</string>
+    <string name="composition_entry_body">Choose the 123, symbol and ABC pages of the keyboard in use</string>
+    <string name="composition_body">The 123, symbol and ABC pages of %1$s.</string>
     <string name="composition_missing_marks">This pairing can’t type %1$s. You can add these keys to the symbol page.</string>
-    <string name="composition_main_section">Keyboard layout</string>
     <string name="layouts_title">Keyboard layouts</string>
     <string name="layouts_entry_body">Edit, copy, import and export layouts</string>
     <string name="layouts_section">Layouts</string>
@@ -275,12 +274,11 @@
     <string name="page_editor_category_recent">Recently used symbols</string>
     <string name="page_editor_category_recent_body">The keyboard lists the symbols you typed last here.</string>
     <!-- Keyboard menu -->
-    <string name="keyboard_menu_title">Keyboard menu</string>
-    <string name="keyboard_menu_entry_body">Choose which input methods and layouts the keyboard menu shows</string>
-    <string name="keyboard_menu_body">Press and hold the language key to open the keyboard menu and switch input methods or keyboard layouts, including the input methods of your other input schemes. What you turn off here leaves the menu; the ones in use always stay.</string>
-    <string name="keyboard_menu_input_methods">Input methods</string>
-    <string name="keyboard_menu_layouts">Keyboard layouts</string>
-    <string name="keyboard_menu_layouts_of">Keyboard layouts for %1$s</string>
+    <string name="keyboards_body">Press and hold the language key to open the keyboard menu and switch between these keyboards.</string>
+    <string name="keyboards_add">Add keyboard</string>
+    <string name="keyboards_add_title">Add a keyboard for %1$s</string>
+    <string name="keyboards_remove">Remove %1$s</string>
+    <string name="keyboards_none_for_method">No keyboards yet, so the keyboard menu leaves this input method out.</string>
     <string name="keyboard_menu_in_use">In use</string>
     <string name="t9_symbols_title">9-key quick symbols</string>
     <string name="t9_symbols_field">Symbols</string>

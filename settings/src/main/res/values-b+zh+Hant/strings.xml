@@ -87,9 +87,7 @@
     <string name="schemes_empty_body">內建方案會在第一次準備完成後出現。</string>
 
     <!-- My keyboards -->
-    <string name="keyboards_current_compact">當前輸入方式：%1$s</string>
     <string name="keyboards_current_none">還沒有可用的鍵盤。</string>
-    <string name="keyboards_layout_section">鍵盤配置</string>
     <string name="layout_name_26">26 鍵</string>
     <string name="layout_name_14">14 鍵</string>
     <string name="layout_name_18">18 鍵</string>

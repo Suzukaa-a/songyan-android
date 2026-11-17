@@ -67,8 +67,8 @@ fun layoutDisplayName(
 }
 
 /**
- * The main layout the keyboard with [inputMethodId] and shape [shapeId] actually draws. The saved
- * pairing wins; without one the scheme family's preferred board answers; only then the shape's own
+ * The main layout the keyboard with [inputMethodId] and shape [shapeId] actually draws. The layout
+ * the keyboard names wins; then the saved pairing of its shape; without one the scheme family's preferred board answers; only then the shape's own
  * preset. Nothing is guessed from the UI language, and a saved pairing is never rewritten here.
  * Returns null until the catalog is read or when the shape is unknown.
  */
@@ -77,6 +77,8 @@ fun currentMainLayout(
     shapeId: String,
     family: InputSchemeFamily?,
     registry: LayoutRegistry?,
+    /** The layout the keyboard in use names; null follows the pairing of its shape. */
+    layoutDefinitionId: String? = null,
 ): CurrentMainLayout? {
     if (registry == null) return null
     val inputMethod = inputMethodId?.takeIf { it.isNotBlank() } ?: return null
@@ -84,7 +86,7 @@ fun currentMainLayout(
     val families = family?.let { LayoutFamilyContext.of(inputMethod to it) } ?: LayoutFamilyContext.UNKNOWN
     val definition =
         registry.resolvedLayout(
-            registry.composition(KeyboardCompositionKey(inputMethod, shape), families).mainLayoutID,
+            registry.composition(KeyboardCompositionKey(inputMethod, shape, layoutDefinitionId), families).mainLayoutID,
         ) ?: return null
     return CurrentMainLayout(definition.id, layoutDisplayName(definition, KeyboardLayoutOption.fromId(shapeId)))
 }

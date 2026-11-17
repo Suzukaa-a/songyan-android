@@ -77,10 +77,9 @@
     <string name="options_reset_default">恢复默认</string>
     <string name="keyboards_pages_section">布局与页面</string>
     <string name="composition_title">页面搭配</string>
-    <string name="composition_entry_body">选择这个键盘用的布局，以及 123、符号和 ABC 页面</string>
-    <string name="composition_body">上面选的键盘布局在「%1$s」下使用的布局和页面。</string>
+    <string name="composition_entry_body">选择正在使用的键盘的 123、符号和 ABC 页面</string>
+    <string name="composition_body">「%1$s」用的 123、符号和 ABC 页面。</string>
     <string name="composition_missing_marks">这个搭配打不出：%1$s，可以在符号页加上这些键。</string>
-    <string name="composition_main_section">键盘布局</string>
     <string name="layouts_title">键盘布局</string>
     <string name="layouts_entry_body">编辑、复制、导入和导出布局</string>
     <string name="layouts_section">布局</string>
@@ -275,12 +274,11 @@
     <string name="page_editor_category_recent">最近使用的符号</string>
     <string name="page_editor_category_recent_body">键盘在这里列出你最近输入过的符号。</string>
     <!-- 键盘菜单 -->
-    <string name="keyboard_menu_title">键盘菜单</string>
-    <string name="keyboard_menu_entry_body">选择键盘菜单里显示哪些输入方式和布局</string>
-    <string name="keyboard_menu_body">长按「中/英」打开键盘菜单，可切换输入方式和键盘布局，也包括其他输入方案里的输入方式。在这里关掉的不会出现在菜单里，正在使用的总会留下。</string>
-    <string name="keyboard_menu_input_methods">输入方式</string>
-    <string name="keyboard_menu_layouts">键盘布局</string>
-    <string name="keyboard_menu_layouts_of">「%1$s」的键盘布局</string>
+    <string name="keyboards_body">长按「中/英」打开键盘菜单，在这些键盘之间切换。</string>
+    <string name="keyboards_add">添加键盘</string>
+    <string name="keyboards_add_title">给「%1$s」添加键盘</string>
+    <string name="keyboards_remove">移除「%1$s」</string>
+    <string name="keyboards_none_for_method">还没有键盘，键盘菜单里不显示这个输入方式。</string>
     <string name="keyboard_menu_in_use">正在使用</string>
     <string name="t9_symbols_title">九键快捷符号</string>
     <string name="t9_symbols_field">符号</string>

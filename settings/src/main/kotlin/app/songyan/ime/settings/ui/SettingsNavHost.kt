@@ -56,11 +56,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
-import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.support.SettingsTarget
+import app.songyan.ime.layout.KeyboardCompositionKey
+import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.layout.compositionKey
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.platform.SystemAction
 import app.songyan.ime.settings.platform.openInputMethodSettings
@@ -84,7 +87,6 @@ import app.songyan.ime.settings.ui.screens.FontsScreen
 import app.songyan.ime.settings.ui.screens.GrammarModelCardInput
 import app.songyan.ime.settings.ui.screens.HomeScreen
 import app.songyan.ime.settings.ui.screens.InputOptionsScreen
-import app.songyan.ime.settings.ui.screens.KeyboardMenuScreen
 import app.songyan.ime.settings.ui.screens.KeyboardsScreen
 import app.songyan.ime.settings.ui.screens.LayoutEditorScreen
 import app.songyan.ime.settings.ui.screens.LayoutsScreen
@@ -104,7 +106,6 @@ import app.songyan.ime.settings.ui.screens.ScriptsScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
 import app.songyan.ime.settings.ui.screens.ToolbarScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
-import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
 
 @Composable
@@ -151,7 +152,6 @@ object SettingsRoutes {
     const val SHUANGPIN = "shuangpinHints"
     const val T9_SYMBOLS = "t9QuickSymbols"
     const val NINE_KEY_EDITOR = "nineKeyEditor"
-    const val KEYBOARD_MENU = "keyboardMenu"
     const val LAYOUTS = "layouts"
     const val LAYOUT_EDITOR = "layouts/edit/{id}"
     const val PAGES = "pages"
@@ -188,7 +188,6 @@ object SettingsRoutes {
             PAGE_EDITOR,
             COMPOSITION,
             USE_CONTENT,
-            KEYBOARD_MENU,
             T9_SYMBOLS,
             NINE_KEY_EDITOR,
             -> KEYBOARDS
@@ -447,26 +446,20 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.KEYBOARDS) {
-        if (!state.value.preferencesLoaded) {
+        val list = state.value.keyboardList
+        if (!state.value.preferencesLoaded || list == null) {
             LoadingScreen(stringResource(R.string.row_keyboards_title), topBack(navController))
         } else {
             KeyboardsScreen(
-                inputMethodName = state.value.inUseScheme?.name,
-                layoutId = state.value.layoutId,
-                mainLayout = state.value.mainLayout,
-                supportedLayouts = state.value.inUseScheme?.supportedLayouts,
-                onSelectLayout = viewModel::selectLayout,
-                boards =
-                    state.value.inUseScheme
-                        ?.family
-                        ?.let(InputLayoutPolicy::boardsOf)
-                        .orEmpty(),
-                onSelectBoard = viewModel::selectBoard,
+                list = list,
+                onUse = viewModel::useKeyboard,
+                onAdd = viewModel::addKeyboard,
+                onRemove = viewModel::removeKeyboard,
+                otherSources = state.value.otherSources,
                 onOpenLayouts = { navController.navigate(SettingsRoutes.LAYOUTS) },
                 onOpenPages = { navController.navigate(SettingsRoutes.PAGES) },
                 onOpenComposition = { navController.navigate(SettingsRoutes.COMPOSITION) },
                 onOpenSchemes = { navController.openAddScheme() },
-                onOpenMenu = { navController.navigate(SettingsRoutes.KEYBOARD_MENU) },
                 onBack = topBack(navController),
             )
         }
@@ -558,7 +551,12 @@ private fun NavGraphBuilder.settingsGraph(
             contentId = entry.arguments?.getString("id").orEmpty(),
             isPage = entry.arguments?.getString("kind") == "page",
             schemes = state.value.schemes,
-            sourcesLoaded = state.value.sourcesLoaded,
+            keyboards =
+                state.value.keyboardList
+                    ?.keyboards
+                    ?.map { it.keyboard }
+                    .orEmpty(),
+            sourcesLoaded = state.value.sourcesLoaded && state.value.keyboardList != null,
             onActivate = viewModel::activateKeyboard,
             onTryOut = { navController.navigate(SettingsRoutes.TRY_OUT) },
             onOpenSchemes = { navController.openAddScheme() },
@@ -569,7 +567,10 @@ private fun NavGraphBuilder.settingsGraph(
     }
 
     composable(SettingsRoutes.COMPOSITION) {
-        val key = compositionKeyOf(state.value.inUseSchemeId, state.value.layoutId)
+        val key =
+            state.value.keyboardList
+                ?.current
+                ?.compositionKey()
         if (!state.value.sourcesLoaded && key == null) {
             LoadingScreen(stringResource(R.string.composition_title), topBack(navController))
         } else if (key == null) {
@@ -727,27 +728,6 @@ private fun NavGraphBuilder.settingsGraph(
         ToolbarScreen(onBack = { navController.popBackStack() })
     }
 
-    composable(SettingsRoutes.KEYBOARD_MENU) {
-        KeyboardMenuScreen(
-            schemes = state.value.schemes,
-            inUseSchemeId = state.value.inUseSchemeId,
-            layoutId = state.value.layoutId,
-            otherSources = state.value.otherSources,
-            sourceName =
-                state.value.sources
-                    .firstOrNull { it.inUse }
-                    ?.name,
-            mainLayout = state.value.mainLayout,
-            supportedLayouts = state.value.inUseScheme?.supportedLayouts,
-            boards =
-                state.value.inUseScheme
-                    ?.family
-                    ?.let(InputLayoutPolicy::boardsOf)
-                    .orEmpty(),
-            onBack = { navController.popBackStack() },
-        )
-    }
-
     composable(SettingsRoutes.T9_SYMBOLS) {
         LaunchedEffect(Unit) {
             navController.navigate(SettingsRoutes.NINE_KEY_EDITOR) {
@@ -765,7 +745,15 @@ private fun NavGraphBuilder.settingsGraph(
         LaunchedEffect(registry, state.value.inUseSchemeId, state.value.sourcesLoaded) {
             if (!state.value.sourcesLoaded && state.value.inUseSchemeId == null) return@LaunchedEffect
             val catalog = registry ?: return@LaunchedEffect
-            val key = compositionKeyOf(state.value.inUseSchemeId, "phone9")
+            // The 9-key keyboard in use, else the input method's 9-key shape.
+            val key =
+                state.value.keyboardList
+                    ?.current
+                    ?.takeIf { it.layout == KeyboardLayoutKind.PHONE9 }
+                    ?.compositionKey()
+                    ?: state.value.inUseSchemeId
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { KeyboardCompositionKey(it, LayoutInput.Builtin.PHONE9) }
             val families =
                 state.value.inUseScheme?.let { LayoutFamilyContext.of(it.id to it.family) }
                     ?: LayoutFamilyContext.UNKNOWN

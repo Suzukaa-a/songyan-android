@@ -74,6 +74,7 @@ import app.songyan.ime.settings.ui.theme.ThemePreferencesHolder
 fun AppearanceScreen(
     onBack: (() -> Unit)?,
     onOpenCandidateBar: () -> Unit,
+    onOpenFonts: () -> Unit,
     keyGapScaling: Boolean,
     onKeyGapScalingChanged: (Boolean) -> Unit,
     viewModel: AppearanceViewModel = viewModel(factory = AppearanceViewModel.Factory()),
@@ -191,6 +192,13 @@ fun AppearanceScreen(
                 title = stringResource(R.string.candidate_bar_title),
                 subtitle = stringResource(R.string.candidate_bar_entry_subtitle),
                 onClick = onOpenCandidateBar,
+            )
+
+            SectionHeader(stringResource(R.string.fonts_title))
+            SettingsRow(
+                title = stringResource(R.string.fonts_title),
+                subtitle = stringResource(R.string.fonts_entry_subtitle),
+                onClick = onOpenFonts,
             )
 
             SectionHeader(stringResource(R.string.appearance_section_files))

@@ -17,6 +17,7 @@ import app.songyan.ime.content.StoredSourcesGatewayImpl
 import app.songyan.ime.deploy.RimeDeployRunner
 import app.songyan.ime.engine.EngineOwnership
 import app.songyan.ime.engine.PublishedEngineFactory
+import app.songyan.ime.ime.DisplayFonts
 import app.songyan.ime.learning.LearningBackupService
 import app.songyan.ime.learning.LearningSnapshots
 import app.songyan.ime.script.ScriptHostCapability
@@ -27,6 +28,7 @@ import app.songyan.ime.settings.state.DiagnosticsHolder
 import app.songyan.ime.settings.state.DictionaryImportHolder
 import app.songyan.ime.settings.state.EngineFeaturesHolder
 import app.songyan.ime.settings.state.EngineOptionsHolder
+import app.songyan.ime.settings.state.FontGatewayHolder
 import app.songyan.ime.settings.state.LearningBackupHolder
 import app.songyan.ime.settings.state.LinkDownloadHolder
 import app.songyan.ime.settings.state.RimeConfigHolder
@@ -43,6 +45,10 @@ import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.userconfig.RimeConfigGatewayImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SongyanApplication : Application() {
     lateinit var storage: AppStorage
@@ -64,6 +70,12 @@ class SongyanApplication : Application() {
     val keyboardPreferences: app.songyan.ime.prefs.KeyboardPreferences by lazy {
         app.songyan.ime.prefs
             .KeyboardPreferences(this)
+    }
+
+    /** Imported fonts and the display font choices; the keyboard and the settings share it. */
+    val fontStore: app.songyan.ime.fonts.FontStore by lazy {
+        app.songyan.ime.fonts
+            .FontStore(this, keyboardPreferences, storage.fontsDir)
     }
 
     /**
@@ -146,6 +158,12 @@ class SongyanApplication : Application() {
             layoutRepository
             SettingsAppStateHolder.install(AppSettingsStateSource(this, storage))
             SettingsPreferencesHolder.install(AppSettingsPreferences(this))
+            FontGatewayHolder.install(fontStore)
+            // The settings previews draw with the keyboard's views, which read the shared typefaces;
+            // the keyboard itself applies the same choice and redraws when it changes.
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                fontStore.displayFonts.collect { DisplayFonts.configure(it) }
+            }
             // Imports and source switches are settings actions only; the work itself (including any
             // download) runs in the :deploy process.
             DictionaryImportHolder.install(DictionaryImportGatewayImpl(this, storage))

@@ -55,6 +55,7 @@ class SettingsSearchTest {
                 SettingsRoutes.OPTIONS,
                 SettingsRoutes.FEATURES,
                 SettingsRoutes.CANDIDATE_BAR,
+                SettingsRoutes.FONTS,
                 SettingsRoutes.TOOLBAR,
                 SettingsRoutes.SHUANGPIN,
                 SettingsRoutes.KEYBOARD_MENU,

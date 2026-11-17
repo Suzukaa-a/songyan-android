@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fonts_title">Fonts</string>
+    <string name="fonts_entry_subtitle">Fonts for candidates and keys</string>
+    <string name="fonts_candidates_section">Candidate font</string>
+    <string name="fonts_keys_section">Key font</string>
+    <string name="fonts_system">System font</string>
+    <string name="fonts_fallback_body">Characters the chosen font doesn\'t have are drawn with your other imported fonts, then the system font.</string>
+    <string name="fonts_imported_section">Imported fonts</string>
+    <string name="fonts_import_title">Import fonts</string>
+    <string name="fonts_import_body">Pick TTF, OTF or TTC files. You can pick several.</string>
+    <string name="fonts_unreadable">%1$s · Can\'t read this font</string>
+    <string name="fonts_delete_action">Delete %1$s</string>
+    <string name="fonts_delete_title">Delete \"%1$s\"?</string>
+    <string name="fonts_delete_body">Anything using it switches to the system font.</string>
+    <string name="fonts_delete_confirm">Delete</string>
+    <string name="fonts_import_done_one">Imported \"%1$s\".</string>
+    <string name="fonts_import_done_many">Imported %1$d fonts.</string>
+    <string name="fonts_import_rejected">%1$s isn\'t a usable font file.</string>
+    <string name="fonts_import_partial">Imported %1$d fonts. %2$s isn\'t a usable font file.</string>
+    <string name="fonts_import_failed">Couldn\'t import the fonts.</string>
+    <!-- Sample text drawn in the chosen fonts; separated by spaces, one candidate or key each. -->
+    <string name="fonts_preview_candidates" translatable="false">你好 𠀀 𠮷 abc</string>
+    <string name="fonts_preview_keys" translatable="false">q 拼 𠀀 ⌫</string>
+    <string name="fonts_row_sample" translatable="false">你好𠀀</string>
+</resources>

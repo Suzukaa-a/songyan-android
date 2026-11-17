@@ -11,6 +11,9 @@ class AppStorage(
     filesDir: File,
 ) {
     val rimeRoot: File = File(filesDir, "rime")
+
+    /** Font files the user imported, under their stored names; their order lives in the preferences. */
+    val fontsDir: File = File(filesDir, "fonts")
     val sourcesDir: File = File(rimeRoot, "sources")
     val versionsDir: File = File(rimeRoot, "versions")
     val userRoot: File = File(rimeRoot, "user")

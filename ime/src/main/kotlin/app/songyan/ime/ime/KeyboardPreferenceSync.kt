@@ -10,8 +10,10 @@ import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputSession
 import app.songyan.ime.keyboard.support.CandidateTextSize
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Applies the stored key height; the views re-solve their rows only when it actually changed. */
 internal fun KeyboardController.applyKeyHeight(wire: String) {
@@ -126,6 +128,15 @@ internal fun KeyboardController.observePreferences() {
             CandidateBarStyle.textFactor = factor
             candidates.textSizeFactor = factor
             // Larger text may need a taller row, which every part of the keyboard lays out around.
+            refreshAppearance()
+        }
+    }
+    scope.launch {
+        source.displayFonts.collect { spec ->
+            if (displayFonts == spec) return@collect
+            // Opening font files is disk work; the views are redrawn on the main thread afterwards.
+            withContext(Dispatchers.IO) { DisplayFonts.configure(spec) }
+            displayFonts = spec
             refreshAppearance()
         }
     }

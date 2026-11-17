@@ -195,9 +195,10 @@ class CandidateBarView(
     internal var measuredCommentSize = 0f
 
     internal fun applyTypeface() {
-        val face = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        val face = KeyboardTypefaces.candidates(palette.tokens.fontFamily, palette.tokens.fontWeight)
         paint.typeface = face
         textPaint.typeface = face
+        measureGeneration++
     }
 
     init {

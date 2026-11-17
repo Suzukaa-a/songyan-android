@@ -60,7 +60,7 @@ class KeyboardView(
     internal val paint =
         Paint(Paint.ANTI_ALIAS_FLAG).also {
             it.typeface =
-                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+                KeyboardTypefaces.keys(palette.tokens.fontFamily, palette.tokens.fontWeight)
         }
     internal val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     internal val iconPath = Path()
@@ -325,7 +325,7 @@ class KeyboardView(
     private val strokeBounds = RectF()
 
     private fun applyTypeface() {
-        val face = KeyboardTypefaces.of(metrics.fontFamily, metrics.fontWeight)
+        val face = KeyboardTypefaces.keys(metrics.fontFamily, metrics.fontWeight)
         paint.typeface = face
         measurePaint.typeface = face
     }
@@ -333,7 +333,7 @@ class KeyboardView(
     internal val measurePaint =
         Paint(Paint.ANTI_ALIAS_FLAG).also {
             it.typeface =
-                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+                KeyboardTypefaces.keys(palette.tokens.fontFamily, palette.tokens.fontWeight)
         }
     internal var pressedFlags = BooleanArray(0)
 

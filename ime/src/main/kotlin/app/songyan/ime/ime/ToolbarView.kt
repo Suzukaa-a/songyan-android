@@ -196,7 +196,7 @@ class ToolbarView(
     private val textPaint =
         Paint(Paint.ANTI_ALIAS_FLAG).also {
             it.typeface =
-                KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+                KeyboardTypefaces.candidates(palette.tokens.fontFamily, palette.tokens.fontWeight)
         }
 
     /** The entries currently drawn; the keyboard's render tests read this instead of private state. */
@@ -221,7 +221,7 @@ class ToolbarView(
     fun refreshAppearance() {
         palette = KeyboardPalette.from(context)
         metrics = palette.tokens
-        textPaint.typeface = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        textPaint.typeface = KeyboardTypefaces.candidates(palette.tokens.fontFamily, palette.tokens.fontWeight)
         drawables.clear()
         chipLayout = null
         noticeLayout = null

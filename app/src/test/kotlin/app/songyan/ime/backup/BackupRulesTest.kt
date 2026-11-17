@@ -129,7 +129,8 @@ class BackupRulesTest {
     }
 
     /** Imports that can grow past the 25 MB cloud limit, which would make the system drop the whole backup. */
-    private val largeImports get() = listOf(rel(storage.sourcesDir), rel(storage.stackedDictionariesDir))
+    private val largeImports get() =
+        listOf(storage.sourcesDir, storage.stackedDictionariesDir, storage.fontsDir).map(::rel)
 
     @Test
     fun largeImportsAreOutOfTheCloudButInDeviceTransfer() {

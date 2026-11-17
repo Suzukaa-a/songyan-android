@@ -54,6 +54,18 @@ internal object KeyboardTypefaces {
         }
     }
 
+    /** Candidate text: the imported font the user chose for it, else the skin's face. */
+    fun candidates(
+        family: String,
+        weight: String,
+    ): Typeface = DisplayFonts.candidates ?: of(family, weight)
+
+    /** Key labels: the imported font the user chose for them, else the skin's face. */
+    fun keys(
+        family: String,
+        weight: String,
+    ): Typeface = DisplayFonts.keys ?: of(family, weight)
+
     private const val REGULAR = 400
     private const val MEDIUM = 500
     private const val SEMIBOLD = 600

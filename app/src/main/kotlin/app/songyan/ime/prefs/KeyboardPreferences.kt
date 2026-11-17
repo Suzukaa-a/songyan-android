@@ -12,6 +12,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import app.songyan.ime.appearance.font.FontCascade
+import app.songyan.ime.appearance.font.FontOrderWire
+import app.songyan.ime.appearance.font.FontRole
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.NineKeyCandidateSide
 import app.songyan.ime.keyboard.support.CandidateTextSize
@@ -428,6 +431,48 @@ class KeyboardPreferences(
         }
     }
 
+    /** Imported font file names in import order; the fallback order of the display fonts. */
+    val fontOrder: Flow<List<String>> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { FontOrderWire.decode(it[KEY_FONT_ORDER]) }
+            .distinctUntilChanged()
+
+    /** Rewrites the import order; the display font choices are untouched. */
+    suspend fun updateFontOrder(transform: (List<String>) -> List<String>) {
+        appContext.keyboardDataStore.edit {
+            val next = transform(FontOrderWire.decode(it[KEY_FONT_ORDER]))
+            if (next.isEmpty()) it.remove(KEY_FONT_ORDER) else it[KEY_FONT_ORDER] = FontOrderWire.encode(next)
+        }
+    }
+
+    /** The stored font file for [role]; empty is the system font. */
+    fun displayFont(role: FontRole): Flow<String> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[fontKey(role)] ?: FontCascade.SYSTEM }
+            .distinctUntilChanged()
+
+    suspend fun setDisplayFont(
+        role: FontRole,
+        file: String,
+    ) {
+        appContext.keyboardDataStore.edit {
+            if (file == FontCascade.SYSTEM) it.remove(fontKey(role)) else it[fontKey(role)] = file
+        }
+    }
+
+    /** Drops [file] from the import order and from both choices in one write. */
+    suspend fun forgetFont(file: String) {
+        appContext.keyboardDataStore.edit {
+            val next = FontOrderWire.decode(it[KEY_FONT_ORDER]).filter { name -> name != file }
+            if (next.isEmpty()) it.remove(KEY_FONT_ORDER) else it[KEY_FONT_ORDER] = FontOrderWire.encode(next)
+            FontRole.entries.forEach { role -> if (it[fontKey(role)] == file) it.remove(fontKey(role)) }
+        }
+    }
+
+    private fun fontKey(role: FontRole) = if (role == FontRole.CANDIDATES) KEY_CANDIDATE_FONT else KEY_KEY_FONT
+
     /** A second haptic tick on key release; off by default because some systems answer a press twice. */
     val releaseHaptic: Flow<Boolean> =
         appContext.keyboardDataStore.data
@@ -706,6 +751,9 @@ class KeyboardPreferences(
         private val KEY_SPLIT_MODE = stringPreferencesKey("split_mode")
         private val KEY_SHUANGPIN_HINTS = stringPreferencesKey("shuangpin_hints")
         private val KEY_TOOLBAR_LAYOUT = stringPreferencesKey("toolbar_layout")
+        private val KEY_FONT_ORDER = stringPreferencesKey("font_order")
+        private val KEY_CANDIDATE_FONT = stringPreferencesKey("candidate_font")
+        private val KEY_KEY_FONT = stringPreferencesKey("key_font")
         private val KEY_T9_QUICK_SYMBOLS = stringPreferencesKey("t9_quick_symbols")
         private val KEY_MENU_HIDDEN_SCHEMAS = stringSetPreferencesKey("menu_hidden_schemas")
         private val KEY_MENU_HIDDEN_LAYOUTS = stringSetPreferencesKey("menu_hidden_layouts")

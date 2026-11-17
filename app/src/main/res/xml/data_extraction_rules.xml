@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 31+. Cloud backup is limited to 25 MB and the system drops the whole backup above it, so anything
      that can grow large travels only in a device-to-device transfer: imported scheme packages
-     (rime/sources), stacked dictionaries, the engine feature models (rime/features: the prediction database
+     (rime/sources), stacked dictionaries, imported fonts (fonts), the engine feature models (rime/features: the prediction database
      and grammar models) and the automatic learning snapshots. The cloud keeps what is small and cannot be
      downloaded again: learning data, the Rime configuration files (rime/config/sources, one folder per
      source, 8 MB at most each), phrases, settings, layouts and appearances.
@@ -32,6 +32,7 @@
         <include domain="file" path="rime/sources" />
         <include domain="file" path="rime/stacked-dictionaries" />
         <include domain="file" path="rime/features" />
+        <include domain="file" path="fonts" />
         <include domain="file" path="rime/options" />
         <include domain="file" path="rime/config/sources" />
         <include domain="file" path="rime/config/edit" />

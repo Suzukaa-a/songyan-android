@@ -319,6 +319,7 @@ internal class FeatureHost(
 
     /** The layouts the user turned off in 我的键盘, as the store's `menuHiddenLayouts` would hold them. */
     val hiddenLayoutsFlow = MutableStateFlow<Set<String>>(emptySet())
+    val displayFontsFlow = MutableStateFlow(DisplayFontSpec.SYSTEM)
 
     private val preferences =
         object : KeyboardPreferencesSource {
@@ -336,6 +337,7 @@ internal class FeatureHost(
             override val hideIdleToolbar = hideToolbarFlow
             override val toolbarLayout = toolbarLayoutFlow
             override val menuHiddenLayouts = hiddenLayoutsFlow
+            override val displayFonts = displayFontsFlow
 
             override suspend fun setOneHand(value: String) {
                 oneHandFlow.value = value

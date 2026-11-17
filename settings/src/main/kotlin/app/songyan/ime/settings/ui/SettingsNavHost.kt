@@ -80,6 +80,7 @@ import app.songyan.ime.settings.ui.screens.CandidateBarScreen
 import app.songyan.ime.settings.ui.screens.CompositionScreen
 import app.songyan.ime.settings.ui.screens.EngineFeaturesScreen
 import app.songyan.ime.settings.ui.screens.ExtensionsScreen
+import app.songyan.ime.settings.ui.screens.FontsScreen
 import app.songyan.ime.settings.ui.screens.GrammarModelCardInput
 import app.songyan.ime.settings.ui.screens.HomeScreen
 import app.songyan.ime.settings.ui.screens.InputOptionsScreen
@@ -145,6 +146,7 @@ object SettingsRoutes {
     const val OPTIONS = "options"
     const val FEATURES = "features"
     const val CANDIDATE_BAR = "candidateBar"
+    const val FONTS = "fonts"
     const val TOOLBAR = "toolbar"
     const val SHUANGPIN = "shuangpinHints"
     const val T9_SYMBOLS = "t9QuickSymbols"
@@ -179,6 +181,7 @@ object SettingsRoutes {
         when (route) {
             null, HOME -> null
             FEATURES, CANDIDATE_BAR, TOOLBAR, SHUANGPIN -> OPTIONS
+            FONTS -> APPEARANCE
             LAYOUTS,
             LAYOUT_EDITOR,
             PAGES,
@@ -601,6 +604,7 @@ private fun NavGraphBuilder.settingsGraph(
         AppearanceScreen(
             onBack = topBack(navController),
             onOpenCandidateBar = { navController.navigate(SettingsRoutes.CANDIDATE_BAR) },
+            onOpenFonts = { navController.navigate(SettingsRoutes.FONTS) },
             keyGapScaling = state.value.keyboardFeel.keyGapScaling,
             onKeyGapScalingChanged = viewModel::setKeyGapScaling,
         )
@@ -713,6 +717,10 @@ private fun NavGraphBuilder.settingsGraph(
             onCollapsedCommentsChanged = viewModel::setCollapsedCandidateComments,
             onBack = { navController.popBackStack() },
         )
+    }
+
+    composable(SettingsRoutes.FONTS) {
+        FontsScreen(onBack = { navController.popBackStack() })
     }
 
     composable(SettingsRoutes.TOOLBAR) {

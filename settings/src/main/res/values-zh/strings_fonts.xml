@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fonts_title">字体</string>
+    <string name="fonts_entry_subtitle">候选栏和按键的字体</string>
+    <string name="fonts_candidates_section">候选栏字体</string>
+    <string name="fonts_keys_section">按键字体</string>
+    <string name="fonts_system">系统字体</string>
+    <string name="fonts_fallback_body">所选字体里没有的字，依次用其他已导入的字体显示，最后用系统字体。</string>
+    <string name="fonts_imported_section">已导入的字体</string>
+    <string name="fonts_import_title">导入字体</string>
+    <string name="fonts_import_body">选择 TTF、OTF 或 TTC 文件，可一次选多个。</string>
+    <string name="fonts_unreadable">%1$s · 无法读取这个字体</string>
+    <string name="fonts_delete_action">删除 %1$s</string>
+    <string name="fonts_delete_title">删除「%1$s」？</string>
+    <string name="fonts_delete_body">用到它的地方会改用系统字体。</string>
+    <string name="fonts_delete_confirm">删除</string>
+    <string name="fonts_import_done_one">已导入「%1$s」。</string>
+    <string name="fonts_import_done_many">已导入 %1$d 个字体。</string>
+    <string name="fonts_import_rejected">%1$s 不是可用的字体文件。</string>
+    <string name="fonts_import_partial">已导入 %1$d 个字体。%2$s 不是可用的字体文件。</string>
+    <string name="fonts_import_failed">没能导入字体。</string>
+</resources>

@@ -157,7 +157,7 @@ internal class ReadingRowView(
     private var dragging = false
 
     private fun applyTypeface() {
-        val face = KeyboardTypefaces.of(palette.tokens.fontFamily, palette.tokens.fontWeight)
+        val face = KeyboardTypefaces.candidates(palette.tokens.fontFamily, palette.tokens.fontWeight)
         paint.typeface = face
         textPaint.typeface = face
     }

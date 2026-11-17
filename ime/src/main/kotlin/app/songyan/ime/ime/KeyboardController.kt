@@ -461,6 +461,9 @@ class KeyboardController(
     internal var lastOneHandSide = KeyboardOneHandMode.RIGHT
     internal var hideIdleToolbar = false
 
+    /** The imported fonts last applied to the views; the system font until the first choice arrives. */
+    internal var displayFonts = DisplayFontSpec.SYSTEM
+
     /** The user's choice of idle toolbar entries and their order. */
     internal var toolbarLayout = ToolbarLayout.DEFAULT
 

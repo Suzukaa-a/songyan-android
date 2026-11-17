@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fonts_title">フォント</string>
+    <string name="fonts_entry_subtitle">候補バーとキーのフォント</string>
+    <string name="fonts_candidates_section">候補バーのフォント</string>
+    <string name="fonts_keys_section">キーのフォント</string>
+    <string name="fonts_system">システムフォント</string>
+    <string name="fonts_fallback_body">選んだフォントにない文字は、読み込んだ他のフォントの順に、最後にシステムフォントで表示します。</string>
+    <string name="fonts_imported_section">インポートしたフォント</string>
+    <string name="fonts_import_title">フォントをインポート</string>
+    <string name="fonts_import_body">TTF、OTF、TTC ファイルを選びます。複数選べます。</string>
+    <string name="fonts_unreadable">%1$s · このフォントを読み込めません</string>
+    <string name="fonts_delete_action">%1$s を削除</string>
+    <string name="fonts_delete_title">「%1$s」を削除しますか？</string>
+    <string name="fonts_delete_body">使っている場所はシステムフォントに戻ります。</string>
+    <string name="fonts_delete_confirm">削除</string>
+    <string name="fonts_import_done_one">「%1$s」をインポートしました。</string>
+    <string name="fonts_import_done_many">%1$d 個のフォントをインポートしました。</string>
+    <string name="fonts_import_rejected">%1$s は使えるフォントファイルではありません。</string>
+    <string name="fonts_import_partial">%1$d 個のフォントをインポートしました。%2$s は使えるフォントファイルではありません。</string>
+    <string name="fonts_import_failed">フォントをインポートできませんでした。</string>
+</resources>

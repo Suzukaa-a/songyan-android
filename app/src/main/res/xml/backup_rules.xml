@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- API 26-30 full backup (cloud, and device transfer through it), held to the 25 MB cloud limit like the
-     API 31+ cloud rules: imported scheme packages and stacked dictionaries can be large, so they are not in
+     API 31+ cloud rules: imported scheme packages, stacked dictionaries and imported fonts can be large, so they are not in
      it (they can be imported again). Also not in it: published Rime generations, deploy work, caches and request state (rebuildable),
      the clipboard history (private to this device), the large engine feature models (over the 25 MB cloud
      limit) and the automatic learning snapshots (the live userdb is already in). The built-in source is

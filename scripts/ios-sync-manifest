@@ -60,3 +60,4 @@ Packages/PackageManager/Tests/PackageManagerTests/Fixtures/songyan_flypy.project
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_flypy.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_flypy.projection.json
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_mspy_test.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_mspy_test.projection.json
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/KeyProfiles/ core/packages/src/test/resources/package-fixtures/key-profiles/
+Packages/PackageManager/Sources/PackageManager/Resources/ScriptCharacters.txt core/packages/src/main/resources/script-characters.txt

@@ -69,7 +69,6 @@ class SettingsSearchTest {
                 SettingsRoutes.LEARNING,
                 SettingsRoutes.quickContent(),
                 SettingsRoutes.SCRIPTS,
-                SettingsRoutes.VOICE_INPUT,
                 SettingsRoutes.EXTENSIONS,
                 SettingsRoutes.ONBOARDING,
                 SettingsRoutes.ABOUT,
@@ -99,5 +98,12 @@ class SettingsSearchTest {
         assertTrue(R.string.options_key_flick_title in titles)
         assertTrue(R.string.options_double_space_title in titles)
         assertTrue(R.string.options_long_press_title in titles)
+    }
+
+    @Test
+    fun voiceInputIsFoundOnTheScriptsPage() {
+        val entry = SettingsSearch.entries.single { it.title == R.string.voice_title }
+        assertEquals(SettingsRoutes.SCRIPTS, entry.route)
+        assertEquals(R.string.search_keywords_voice, entry.keywords)
     }
 }

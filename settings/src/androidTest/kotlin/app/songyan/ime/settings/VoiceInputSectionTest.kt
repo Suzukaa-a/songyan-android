@@ -1,6 +1,7 @@
 package app.songyan.ime.settings
 
 import android.content.Context
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -20,7 +21,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.songyan.ime.settings.ui.VoiceInputUiState
 import app.songyan.ime.settings.ui.VoiceScriptOption
 import app.songyan.ime.settings.ui.VoiceSourceOrigin
-import app.songyan.ime.settings.ui.screens.VoiceInputPage
+import app.songyan.ime.settings.ui.screens.VoicePermission
+import app.songyan.ime.settings.ui.screens.showsSection
+import app.songyan.ime.settings.ui.screens.voiceInputSection
 import app.songyan.ime.settings.ui.theme.SongyanTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -29,13 +32,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 语音输入 page states the tests can reach without the proxy or the system dialog: the empty catalog
- * with its way to the 脚本 page, the microphone permission row with its system-settings action, the
- * selection semantics of the source list, a failed catalog with its retry, and a large-font dark
- * rendering where the actions stay on screen and clickable.
+ * The voice input section of the Scripts page, rendered on its own: the microphone permission row
+ * with its system-settings action, the selection semantics of the source list, a failed catalog
+ * with its retry, when the section shows at all, and a large-font dark rendering where the actions
+ * stay on screen and clickable.
  */
 @RunWith(AndroidJUnit4::class)
-class VoiceInputScreenTest {
+class VoiceInputSectionTest {
     @get:Rule
     val compose = createComposeRule()
 
@@ -59,18 +62,23 @@ class VoiceInputScreenTest {
         compose.setContent {
             SongyanTheme(darkTheme = dark, dynamicColor = false) {
                 CompositionLocalProvider(LocalDensity provides Density(1f, fontScale)) {
-                    VoiceInputPage(
-                        state = state,
-                        microphoneGranted = granted,
-                        onEnabledChange = { calls += if (it) "enabled" else "disabled" },
-                        onSelect = { calls += "select:$it" },
-                        onOpenScripts = { calls += "scripts" },
-                        onOpenSystemSettings = { calls += "settings" },
-                        onRetry = { calls += "retry" },
-                        onBack = null,
-                        permissionDialogBlocked = dialogBlocked,
-                        onRequestPermission = { calls += "request" },
-                    )
+                    LazyColumn {
+                        if (state.showsSection()) {
+                            voiceInputSection(
+                                state = state,
+                                permission =
+                                    VoicePermission(
+                                        granted = granted,
+                                        dialogBlocked = dialogBlocked,
+                                        request = { calls += "request" },
+                                        openSystemSettings = { calls += "settings" },
+                                    ),
+                                onEnabledChange = { calls += if (it) "enabled" else "disabled" },
+                                onSelect = { calls += "select:$it" },
+                                onRetry = { calls += "retry" },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -85,19 +93,39 @@ class VoiceInputScreenTest {
     ) = VoiceScriptOption(id = id, name = name, isAddon = isAddon, origin = origin, enabled = true)
 
     @Test
-    fun anEmptyCatalogExplainsItselfAndPointsAtTheScriptsPage() {
-        val calls = show(VoiceInputUiState(loading = false))
+    fun noSourceAndVoiceOffShowsNoSection() {
+        show(VoiceInputUiState(loading = false))
 
-        compose.onNodeWithText(string(R.string.voice_empty_scripts_title)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.voice_empty_scripts_body)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.voice_open_scripts)).assertIsDisplayed().performClick()
+        compose.onNodeWithText(string(R.string.voice_title)).assertDoesNotExist()
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertDoesNotExist()
+    }
 
-        assertEquals(listOf("scripts"), calls)
+    @Test
+    fun aVoiceSourceShowsTheSection() {
+        show(VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))))
+
+        compose.onNodeWithText(string(R.string.voice_title)).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun voiceSwitchedOnKeepsTheSectionSoItCanBeTurnedOff() {
+        val calls = show(VoiceInputUiState(loading = false, enabled = true))
+
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsEnabled().performClick()
+        assertEquals(listOf("disabled"), calls)
+    }
+
+    @Test
+    fun whileLoadingThereIsNoSection() {
+        show(VoiceInputUiState(loading = true, enabled = true))
+
+        compose.onNodeWithText(string(R.string.voice_title)).assertDoesNotExist()
     }
 
     @Test
     fun aMissingPermissionIsAskedForWithTheSystemDialogFirst() {
-        val calls = show(VoiceInputUiState(loading = false), granted = false)
+        val calls = show(VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))), granted = false)
 
         compose.onNodeWithText(string(R.string.voice_permission_denied)).assertIsDisplayed()
         compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertDoesNotExist()
@@ -107,7 +135,12 @@ class VoiceInputScreenTest {
 
     @Test
     fun onceAndroidStopsShowingTheDialogTheButtonOpensTheSystemPage() {
-        val calls = show(VoiceInputUiState(loading = false), granted = false, dialogBlocked = true)
+        val calls =
+            show(
+                VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))),
+                granted = false,
+                dialogBlocked = true,
+            )
 
         compose.onNodeWithText(string(R.string.voice_permission_request)).assertDoesNotExist()
         compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertIsDisplayed().performClick()
@@ -116,7 +149,7 @@ class VoiceInputScreenTest {
 
     @Test
     fun aGrantedPermissionStatesItWithoutTheAction() {
-        show(VoiceInputUiState(loading = false), granted = true)
+        show(VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))), granted = true)
 
         compose.onNodeWithText(string(R.string.voice_permission_granted)).assertIsDisplayed()
         compose.onNodeWithText(string(R.string.voice_permission_open_settings)).assertDoesNotExist()
@@ -163,12 +196,11 @@ class VoiceInputScreenTest {
 
     @Test
     fun aCatalogThatCannotBeReadOffersARetry() {
-        val calls = show(VoiceInputUiState(loading = false, failed = true))
+        val calls = show(VoiceInputUiState(loading = false, failed = true, enabled = true))
 
         compose.onNodeWithText(string(R.string.voice_load_failed_title)).assertIsDisplayed()
         compose.onNodeWithText(string(R.string.voice_retry)).assertIsDisplayed().performClick()
         assertTrue(calls.contains("retry"))
-        compose.onNodeWithText(string(R.string.voice_open_scripts)).assertDoesNotExist()
     }
 
     @Test
@@ -182,9 +214,9 @@ class VoiceInputScreenTest {
 
     @Test
     fun theSwitchSaysItNeedsAVoiceScript() {
-        show(VoiceInputUiState(loading = false, scripts = emptyList()), granted = true)
+        show(VoiceInputUiState(loading = false, enabled = true, scripts = emptyList()), granted = true)
 
-        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsNotEnabled()
+        compose.onNodeWithText(string(R.string.voice_switch_title)).assertIsEnabled()
         compose.onNodeWithText(string(R.string.voice_switch_needs_script)).assertIsDisplayed()
     }
 
@@ -201,12 +233,17 @@ class VoiceInputScreenTest {
     }
 
     @Test
-    fun theEmptyCatalogStaysReachableAtTheLargestFontInTheDarkTheme() {
-        val calls = show(VoiceInputUiState(loading = false), dark = true, fontScale = 2f)
+    fun thePermissionActionStaysClickableAtTheLargestFontInTheDarkTheme() {
+        val calls =
+            show(
+                VoiceInputUiState(loading = false, scripts = listOf(option("a", "听写"))),
+                granted = false,
+                dark = true,
+                fontScale = 2f,
+            )
 
-        compose.onNodeWithText(string(R.string.voice_empty_scripts_title)).assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.voice_open_scripts)).assertIsDisplayed().performClick()
-        assertEquals(listOf("scripts"), calls)
+        compose.onNodeWithText(string(R.string.voice_permission_request)).assertIsDisplayed().performClick()
+        assertEquals(listOf("request"), calls)
     }
 
     @Test

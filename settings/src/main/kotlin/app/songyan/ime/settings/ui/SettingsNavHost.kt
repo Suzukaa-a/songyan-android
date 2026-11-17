@@ -103,7 +103,6 @@ import app.songyan.ime.settings.ui.screens.ScriptsScreen
 import app.songyan.ime.settings.ui.screens.ShuangpinHintScreen
 import app.songyan.ime.settings.ui.screens.ToolbarScreen
 import app.songyan.ime.settings.ui.screens.TryOutScreen
-import app.songyan.ime.settings.ui.screens.VoiceInputScreen
 import app.songyan.ime.settings.ui.screens.compositionKeyOf
 import kotlinx.coroutines.launch
 
@@ -165,7 +164,6 @@ object SettingsRoutes {
 
     const val QUICK_CONTENT = "quickContent?addPhrase={addPhrase}"
     const val SCRIPTS = "scripts"
-    const val VOICE_INPUT = "voiceInput"
     const val EXTENSIONS = "extensions"
     const val SCRIPT_DETAIL = "scripts/{id}"
     const val SCRIPT_CONFIRM = "scripts/{id}/confirm"
@@ -696,13 +694,6 @@ private fun NavGraphBuilder.settingsGraph(
             scriptId = entry.arguments?.getString("id").orEmpty(),
             onDone = { navController.popBackStack() },
             viewModel = scriptsViewModel,
-        )
-    }
-
-    composable(SettingsRoutes.VOICE_INPUT) {
-        VoiceInputScreen(
-            onBack = topBack(navController),
-            onOpenScripts = { navController.navigate(SettingsRoutes.SCRIPTS) },
         )
     }
 

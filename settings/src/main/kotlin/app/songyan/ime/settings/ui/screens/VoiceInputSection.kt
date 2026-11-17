@@ -13,15 +13,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,39 +35,27 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.VoiceInputUiState
-import app.songyan.ime.settings.ui.VoiceInputViewModel
 import app.songyan.ime.settings.ui.VoiceScriptOption
 import app.songyan.ime.settings.ui.VoiceSourceOrigin
 import app.songyan.ime.settings.ui.components.DetailRow
-import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
-import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.SwitchRow
 
-/**
- * Voice input: the keyboard's own voice input. The switch shows the microphone in the toolbar; the list
- * picks the installed script (or extension) that turns the recording into text. Only sources that
- * declare audio input and can run on this device are listed, so a script that asks for text only
- * never appears.
- *
- * The page states plainly what is wrong and what to do about it: a missing microphone permission
- * is asked for with the system dialog, and only once Android stops showing that dialog does the
- * button open the app's system settings instead, an empty catalog points at the Scripts page, and a catalog
- * that cannot be read offers a retry instead of an empty list.
- */
+/** What the section needs from Android: the microphone permission and the two ways to fix it. */
+internal class VoicePermission(
+    val granted: Boolean,
+    val dialogBlocked: Boolean,
+    val request: () -> Unit,
+    val openSystemSettings: () -> Unit,
+)
+
+/** Reads the microphone permission, re-reading it on every return from the system page. */
 @Composable
-fun VoiceInputScreen(
-    onBack: (() -> Unit)?,
-    onOpenScripts: () -> Unit,
-    model: VoiceInputViewModel = viewModel(factory = VoiceInputViewModel.Factory()),
-) {
-    val state by model.uiState.collectAsStateWithLifecycle()
+internal fun rememberVoicePermission(): VoicePermission {
     val context = LocalContext.current
     var microphoneGranted by remember { mutableStateOf(microphoneGranted(context)) }
     // The user may grant it in the system page and come back: read it again on every return.
@@ -88,120 +72,94 @@ fun VoiceInputScreen(
                     !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)
             }
         }
-
-    VoiceInputPage(
-        state = state,
-        microphoneGranted = microphoneGranted,
-        onEnabledChange = model::setEnabled,
-        onSelect = model::selectScript,
-        onOpenScripts = onOpenScripts,
-        permissionDialogBlocked = dialogBlocked,
-        onRequestPermission = { request.launch(Manifest.permission.RECORD_AUDIO) },
-        onOpenSystemSettings = { openMicrophoneSettings(context) },
-        onRetry = model::refresh,
-        onBack = onBack,
+    return VoicePermission(
+        granted = microphoneGranted,
+        dialogBlocked = dialogBlocked,
+        request = { request.launch(Manifest.permission.RECORD_AUDIO) },
+        openSystemSettings = { openMicrophoneSettings(context) },
     )
 }
 
-/** The page itself, without Android lookups: everything the tests and the screen both render. */
-@Composable
-internal fun VoiceInputPage(
+/**
+ * Voice input lives with the scripts and extensions that provide it, so the Scripts page shows this
+ * section only when it has something to say: a source that can record, voice input already on (so it
+ * can always be turned off), or a catalog that could not be read while it is on.
+ */
+internal fun VoiceInputUiState.showsSection(): Boolean = !loading && (scripts.isNotEmpty() || enabled)
+
+/**
+ * The section's rows: the switch for the toolbar microphone, the microphone permission, and the
+ * list of sources (audio scripts and extensions). A missing permission is asked for with the
+ * system dialog, and only once Android stops showing that dialog does the button open the app's
+ * system settings instead; a catalog that cannot be read offers a retry instead of an empty list.
+ */
+internal fun LazyListScope.voiceInputSection(
     state: VoiceInputUiState,
-    microphoneGranted: Boolean,
+    permission: VoicePermission,
     onEnabledChange: (Boolean) -> Unit,
     onSelect: (String) -> Unit,
-    onOpenScripts: () -> Unit,
-    onOpenSystemSettings: () -> Unit,
     onRetry: () -> Unit,
-    onBack: (() -> Unit)?,
-    permissionDialogBlocked: Boolean,
-    onRequestPermission: () -> Unit,
 ) {
-    if (state.loading) {
-        LoadingScreen(stringResource(R.string.voice_title), onBack)
-        return
-    }
     // The switch is only live when voice input could actually run: a granted microphone and at
     // least one runnable source. A switch already on stays tappable, so it can still be turned off.
-    val canStartVoice = microphoneGranted && state.scripts.isNotEmpty() && !state.failed
-    SettingsScaffold(title = stringResource(R.string.voice_title), onBack = onBack) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.voice_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            )
-            SwitchRow(
-                title = stringResource(R.string.voice_switch_title),
-                subtitle =
-                    stringResource(
-                        when {
-                            !microphoneGranted -> R.string.voice_switch_needs_permission
-                            state.scripts.isEmpty() && !state.failed -> R.string.voice_switch_needs_script
-                            else -> R.string.voice_switch_subtitle
-                        },
-                    ),
-                checked = state.enabled,
-                onCheckedChange = onEnabledChange,
-                enabled = state.enabled || canStartVoice,
-            )
-            SectionHeader(stringResource(R.string.voice_permission_section))
+    val canStartVoice = permission.granted && state.scripts.isNotEmpty() && !state.failed
+    item(key = "voice-header", contentType = "voice-header") {
+        SectionHeader(stringResource(R.string.voice_title))
+    }
+    item(key = "voice-switch", contentType = "voice-switch") {
+        SwitchRow(
+            title = stringResource(R.string.voice_switch_title),
+            subtitle =
+                stringResource(
+                    when {
+                        !permission.granted -> R.string.voice_switch_needs_permission
+                        state.scripts.isEmpty() && !state.failed -> R.string.voice_switch_needs_script
+                        else -> R.string.voice_switch_subtitle
+                    },
+                ),
+            checked = state.enabled,
+            onCheckedChange = onEnabledChange,
+            enabled = state.enabled || canStartVoice,
+        )
+    }
+    item(key = "voice-permission", contentType = "voice-permission") {
+        Column {
             DetailRow(
                 title = stringResource(R.string.voice_permission_title),
                 body =
                     stringResource(
-                        if (microphoneGranted) R.string.voice_permission_granted else R.string.voice_permission_denied,
+                        if (permission.granted) R.string.voice_permission_granted else R.string.voice_permission_denied,
                     ),
             )
-            if (!microphoneGranted) {
-                if (permissionDialogBlocked) {
-                    PermissionAction(R.string.voice_permission_open_settings, onOpenSystemSettings)
+            if (!permission.granted) {
+                if (permission.dialogBlocked) {
+                    PermissionAction(R.string.voice_permission_open_settings, permission.openSystemSettings)
                 } else {
-                    PermissionAction(R.string.voice_permission_request, onRequestPermission)
+                    PermissionAction(R.string.voice_permission_request, permission.request)
                 }
             }
+        }
+    }
+    if (state.failed) {
+        item(key = "voice-failed", contentType = "voice-failed") {
+            StateMessage(
+                title = stringResource(R.string.voice_load_failed_title),
+                body = stringResource(R.string.voice_load_failed_body),
+                actionLabel = stringResource(R.string.voice_retry),
+                onAction = onRetry,
+            )
+        }
+    } else if (state.scripts.isNotEmpty()) {
+        item(key = "voice-sources-header", contentType = "voice-header") {
             SectionHeader(stringResource(R.string.voice_scripts_section))
-            when {
-                state.failed -> {
-                    StateMessage(
-                        title = stringResource(R.string.voice_load_failed_title),
-                        body = stringResource(R.string.voice_load_failed_body),
-                        actionLabel = stringResource(R.string.voice_retry),
-                        onAction = onRetry,
-                    )
-                }
-                state.scripts.isEmpty() -> {
-                    StateMessage(
-                        title = stringResource(R.string.voice_empty_scripts_title),
-                        body = stringResource(R.string.voice_empty_scripts_body),
-                        icon = Icons.Outlined.Mic,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Button(onClick = onOpenScripts) { Text(stringResource(R.string.voice_open_scripts)) }
-                    }
-                }
-                else -> {
-                    for (script in state.scripts) {
-                        VoiceSourceRow(
-                            script = script,
-                            selected = script.id == state.selectedScriptId,
-                            enabled = state.enabled,
-                            onSelect = onSelect,
-                        )
-                    }
-                }
-            }
+        }
+        items(state.scripts, key = { "voice-source-" + it.id }, contentType = { "voice-source" }) { script ->
+            VoiceSourceRow(
+                script = script,
+                selected = script.id == state.selectedScriptId,
+                enabled = state.enabled,
+                onSelect = onSelect,
+            )
         }
     }
 }

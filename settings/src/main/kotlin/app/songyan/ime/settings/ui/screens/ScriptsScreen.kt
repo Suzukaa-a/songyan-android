@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -59,6 +60,7 @@ import app.songyan.ime.script.ScriptSourceOrigin
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.ui.ScriptsNotice
 import app.songyan.ime.settings.ui.ScriptsViewModel
+import app.songyan.ime.settings.ui.VoiceInputViewModel
 import app.songyan.ime.settings.ui.components.ImeDialog
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SettingsScaffold
@@ -90,11 +92,31 @@ fun ScriptsScreen(
     onOpen: (id: String) -> Unit,
     onOpenConfirmation: (id: String) -> Unit,
     viewModel: ScriptsViewModel = viewModel(factory = ScriptsViewModel.Factory()),
+    voiceViewModel: VoiceInputViewModel = viewModel(factory = VoiceInputViewModel.Factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val voice by voiceViewModel.uiState.collectAsStateWithLifecycle()
+    val permission = rememberVoicePermission()
     // The keyboard and this screen live in the same process; a script added or removed while the
     // user is elsewhere shows up on every return without a manual refresh.
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refresh()
+        voiceViewModel.refresh()
+    }
+    // Enabling or removing a script changes which ones can take voice input.
+    val voiceSignature = state.entries.map { Triple(it.id, it.enabled, it.confirmationPending) }
+    LaunchedEffect(voiceSignature) { if (!state.loading) voiceViewModel.refresh() }
+    val voiceSection: LazyListScope.() -> Unit = {
+        if (voice.showsSection()) {
+            voiceInputSection(
+                state = voice,
+                permission = permission,
+                onEnabledChange = voiceViewModel::setEnabled,
+                onSelect = voiceViewModel::selectScript,
+                onRetry = voiceViewModel::refresh,
+            )
+        }
+    }
 
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -178,6 +200,7 @@ fun ScriptsScreen(
                 onCopyGuide = { viewModel.copyAiGuide(context, guideLabel) },
                 onAdd = { addOpen = true },
                 onAddExample = viewModel::addFromPaste,
+                extra = voiceSection,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
             )
         } else {
@@ -199,6 +222,7 @@ fun ScriptsScreen(
                         onEnabled = { enabled -> viewModel.setEnabled(entry.id, enabled) },
                     )
                 }
+                voiceSection()
             }
         }
     }
@@ -480,6 +504,7 @@ private fun ScriptsEmpty(
     onCopyGuide: () -> Unit,
     onAdd: () -> Unit,
     onAddExample: (String) -> Unit,
+    extra: LazyListScope.() -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(bottom = 32.dp)) {
@@ -518,6 +543,7 @@ private fun ScriptsEmpty(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
+        extra()
     }
 }
 

@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
 
 /**
  * Home at a larger system font (1.3, the size the visual audit found clipping): every row keeps its
- * title and subtitle on screen, the voice row leaves room for its icon and both lines, and the list
+ * title and subtitle on screen, there is no voice row (it lives on the Scripts page), and the list
  * keeps padding below the last row so the navigation bar cannot cut it at the end.
  */
 @RunWith(AndroidJUnit4::class)
@@ -53,36 +53,11 @@ class HomeScreenLargeFontTest {
     }
 
     @Test
-    fun theVoiceInputRowStaysWholeAtThirteenTenthsFont() {
-        showHome(fontScale = 1.3f)
+    fun voiceInputIsNotARowOfItsOwn() {
+        showHome(fontScale = 1.0f)
 
-        compose.onNodeWithText(string(R.string.row_voice_title)).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(string(R.string.row_voice_subtitle)).assertIsDisplayed()
-        // The list item merges its two lines, so the unmerged tree is what says each line has its
-        // own laid-out bounds: both inside the row and stacked, none cut at this font size.
-        val row = compose.onNodeWithText(string(R.string.row_voice_title)).fetchSemanticsNode()
-        val title =
-            compose.onNodeWithText(string(R.string.row_voice_title), useUnmergedTree = true).fetchSemanticsNode()
-        val subtitle =
-            compose.onNodeWithText(string(R.string.row_voice_subtitle), useUnmergedTree = true).fetchSemanticsNode()
-        val root = compose.onRoot().fetchSemanticsNode()
-        assertTrue(
-            "both lines must stay inside the row, title=" + title.boundsInRoot + " subtitle=" + subtitle.boundsInRoot,
-            title.boundsInRoot.top >= row.boundsInRoot.top &&
-                title.boundsInRoot.bottom <= row.boundsInRoot.bottom &&
-                subtitle.boundsInRoot.top >= title.boundsInRoot.bottom &&
-                subtitle.boundsInRoot.bottom <= row.boundsInRoot.bottom,
-        )
-        assertTrue(
-            "the voice row must stay inside the window",
-            row.boundsInRoot.bottom <= root.boundsInRoot.bottom,
-        )
-        // The lines start past the row's leading edge, which is the icon's own column: a larger
-        // font wraps the label instead of pushing it over the 24 dp icon.
-        assertTrue(
-            "the text must keep clear of the leading icon, row=" + row.boundsInRoot + " title=" + title.boundsInRoot,
-            title.boundsInRoot.left > row.boundsInRoot.left && subtitle.boundsInRoot.left > row.boundsInRoot.left,
-        )
+        compose.onNodeWithText(string(R.string.voice_title)).assertDoesNotExist()
+        compose.onNodeWithText(string(R.string.row_scripts_title)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -104,7 +79,6 @@ class HomeScreenLargeFontTest {
         showHome(fontScale = 1.3f)
 
         for (subtitle in listOf(
-            R.string.row_voice_subtitle,
             R.string.row_scripts_subtitle,
             R.string.row_appearance_subtitle,
         )) {

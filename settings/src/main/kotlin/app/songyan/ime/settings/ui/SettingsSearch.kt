@@ -173,10 +173,10 @@ object SettingsSearch {
                 R.string.row_scripts_subtitle,
             ),
             SearchEntry(
-                SettingsRoutes.VOICE_INPUT,
-                R.string.row_voice_title,
-                R.string.section_content,
-                R.string.row_voice_subtitle,
+                SettingsRoutes.SCRIPTS,
+                R.string.voice_title,
+                R.string.row_scripts_title,
+                R.string.search_keywords_voice,
             ),
             SearchEntry(
                 SettingsRoutes.EXTENSIONS,

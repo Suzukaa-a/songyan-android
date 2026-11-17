@@ -147,6 +147,12 @@ data class KeyboardResourceSet(
      * scheme's family without asking the engine on the key path.
      */
     val schemaFacts: List<KeyboardSchemaDescriptor> = emptyList(),
+    /**
+     * What each source scheme's speller needs ([SchemaKeyProfile]), read from the deployed build.
+     * A scheme with a profile that is not syllabic is never offered on a folded layout; one without
+     * (a build published before profiles) keeps the family rule alone.
+     */
+    val keyProfiles: Map<String, SchemaKeyProfile> = emptyMap(),
     val selectedSchemaID: String? = null,
     val preferredLayout: KeyboardLayoutKind? = null,
     /** Used for the "same source, same revision" check; null never passes by default. */
@@ -229,6 +235,7 @@ data class KeyboardResourceSet(
                 for (layout in KeyboardLayoutKind.entries) {
                     // The family rule comes before any declared entry, adapter or publication.
                     if (!InputLayoutPolicy.allows(layout, family)) continue
+                    if (layout != KeyboardLayoutKind.QWERTY26 && keyProfiles[source]?.allowsFolding == false) continue
                     if (publishedKeyboards != null) {
                         val published = publishedKeyboards
                         val engine = structurallyRunnableEngineSchema(source, layout)

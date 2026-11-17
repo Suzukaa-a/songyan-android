@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.settings.state.AppKeyboardInfo
@@ -530,8 +531,20 @@ class SettingsViewModel(
         }
     }
 
-    fun addKeyboard(keyboard: PublishedKeyboard) {
-        viewModelScope.launch { storeAdded(keyboard) }
+    /**
+     * Adds [keyboard] to 我的键盘. A layout made from the key profile ([layout]) is installed into the
+     * catalog first, so the keyboard has something to draw the moment it is listed.
+     */
+    fun addKeyboard(
+        keyboard: PublishedKeyboard,
+        layout: LayoutDefinition? = null,
+    ) {
+        viewModelScope.launch {
+            if (layout != null && layoutLibrary.registry.value?.layout(layout.id) == null) {
+                layoutLibrary.edit { it.install(layout.encoded()) }
+            }
+            storeAdded(keyboard)
+        }
     }
 
     private suspend fun storeAdded(keyboard: PublishedKeyboard) {

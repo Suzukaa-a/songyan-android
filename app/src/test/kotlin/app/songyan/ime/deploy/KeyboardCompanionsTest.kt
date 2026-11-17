@@ -94,6 +94,18 @@ class KeyboardCompanionsTest {
         }
 
     @Test
+    fun aSchemeWhoseSpellerIsNotProvableIsNotFolded() =
+        runBlocking {
+            // The same input method without a speller processor: its profile is unknown, so no folded keys.
+            val (sourceDir, workDir, engine) = setUp(compiled = schemaText.replace("- speller", "- lua_processor"))
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(engine)
+
+            assertTrue(EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)).isEmpty())
+            assertTrue(engine.deployed.isEmpty())
+        }
+
+    @Test
     fun aRomanizationSchemeFoldsLikePinyin() =
         runBlocking {
             val schemaId = "jyut6ping3"

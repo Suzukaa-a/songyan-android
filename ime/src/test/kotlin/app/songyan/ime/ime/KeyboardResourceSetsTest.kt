@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
@@ -101,6 +102,23 @@ class KeyboardResourceSetsTest {
             }
         assertTrue(folded.isEmpty())
         assertNotNull(set.incompatibilityReason(KeyboardLayoutKind.MERGED14, imported))
+    }
+
+    @Test
+    fun aSchemeWhoseProfileIsNotSyllabicIsNeverFolded() {
+        val quanpin = BuiltinTemplateSchemas.QUANPIN
+
+        fun layoutsWith(profiles: Map<String, SchemaKeyProfile>) =
+            requireNotNull(KeyboardResourceSets.forEngineSchemas(listOf(schema(quanpin)), profiles = profiles))
+                .availableCombinations
+                .filter { it.schemaID == quanpin }
+                .map { it.layout }
+        assertTrue(layoutsWith(emptyMap()).size > 1)
+        assertTrue(layoutsWith(mapOf(quanpin to SchemaKeyProfile(SchemaKeyProfile.Kind.SYLLABIC))).size > 1)
+        assertEquals(
+            listOf(KeyboardLayoutKind.QWERTY26),
+            layoutsWith(mapOf(quanpin to SchemaKeyProfile(SchemaKeyProfile.Kind.SHAPE_CODE))),
+        )
     }
 
     @Test

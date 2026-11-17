@@ -109,7 +109,7 @@ internal suspend fun KeyboardController.reapplyEditorMode() {
  * gate before selectSchema would refuse a schema the engine is already able to run.
  */
 internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardResourceSet? =
-    KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters)
+    KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters, backend.keyProfiles)
 
 /**
  * Switches to one of the user's keyboards: the engine moves to its input method and shape, and the

@@ -35,6 +35,7 @@ class ExternalFixtureFilter : Filter() {
                 add(ZhuyinKeyboardDeviceTest::class.java.name)
                 add(CangjieKeyboardDeviceTest::class.java.name)
             }
+            if (arguments.getString("wubiFixture") == null) add(WubiKeyProfileDeviceTest::class.java.name)
             if (arguments.getString("kagiroiFixture") == null) {
                 add(JapaneseRomajiDeviceTest::class.java.name)
                 add(KanaFlickDeviceTest::class.java.name)

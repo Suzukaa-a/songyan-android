@@ -3,6 +3,7 @@ package app.songyan.ime.layout
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -12,6 +13,8 @@ import kotlinx.serialization.json.Json
 data class KeyboardScheme(
     val id: String,
     val shapes: Set<KeyboardLayoutKind>,
+    /** What its speller needs; null while unknown (a build published before profiles). */
+    val profile: SchemaKeyProfile? = null,
 )
 
 /** The pairing key of a keyboard: its input method, its shape and the layout it names, if any. */
@@ -220,22 +223,102 @@ object UserKeyboards {
  * add asks here, so the rule lives in one function.
  */
 object ApplicableLayouts {
-    /**
-     * The keyboards [scheme] could have, each naming its layout, in the order they are offered: per
-     * shape its engine data can run, the physical boards of its family, the shape's own layout, then
-     * the user's layouts that fit the input method and shape.
-     */
+    /** A keyboard that could be added, with what it cannot send and whether its layout is yet to be made. */
+    data class Entry(
+        val keyboard: PublishedKeyboard,
+        /** The codes the scheme needs that the layout has no key for, in the scheme's order. */
+        val missingCodes: List<String> = emptyList(),
+        /** Set for a layout made from the key profile; it is installed into the catalog when added. */
+        val generated: Generated? = null,
+    )
+
+    enum class Generated { KEYS26, STROKES }
+
+    /** The keyboards [scheme] could have; see [entries]. */
     fun of(
         scheme: KeyboardScheme,
         registry: LayoutRegistry,
         families: LayoutFamilyContext,
-    ): List<PublishedKeyboard> {
+    ): List<PublishedKeyboard> = entries(scheme, registry, families).map { it.keyboard }
+
+    /**
+     * The keyboards [scheme] could have, each naming its layout, in the order they are offered: per
+     * shape its engine data can run (folded shapes only for syllabic schemes), on the identity shape
+     * the layouts the key profile asks for first (the stroke pad; the 26-key board with the missing
+     * codes when plain 26 lacks them, which a syllabic scheme only gets as an extra choice), then the
+     * physical boards of its family and the user's layouts that fit the input method and shape.
+     */
+    fun entries(
+        scheme: KeyboardScheme,
+        registry: LayoutRegistry,
+        families: LayoutFamilyContext,
+    ): List<Entry> {
         val boards = InputLayoutPolicy.boardsOf(families.familyOf(scheme.id))
-        return KeyboardLayoutKind.entries.filter { it in scheme.shapes }.flatMap { kind ->
-            val shape = PublishedKeyboard(scheme.id, kind)
-            val candidates = registry.mainLayoutCandidates(shape.compositionKey(), families).map { it.id }
-            val ordered = boards.filter { it in candidates } + candidates.filter { it !in boards }
-            ordered.map { shape.copy(board = it) }
+        val profile = scheme.profile
+        return KeyboardLayoutKind.entries
+            .filter { it in scheme.shapes && (it == KeyboardLayoutKind.QWERTY26 || profile?.allowsFolding != false) }
+            .flatMap { kind ->
+                val shape = PublishedKeyboard(scheme.id, kind)
+                val candidates = registry.mainLayoutCandidates(shape.compositionKey(), families).map { it.id }
+                val ordered = boards.filter { it in candidates } + candidates.filter { it !in boards }
+                val entries = ordered.map { id -> entry(shape.copy(board = id), registry, profile, kind) }
+                // A family with physical boards of its own keeps them; nothing is generated beside them.
+                if (kind == KeyboardLayoutKind.QWERTY26 && profile != null && boards.isEmpty()) {
+                    withGenerated(scheme.id, shape, entries, profile)
+                } else {
+                    entries
+                }
+            }
+    }
+
+    private fun entry(
+        keyboard: PublishedKeyboard,
+        registry: LayoutRegistry,
+        profile: SchemaKeyProfile?,
+        kind: KeyboardLayoutKind,
+    ): Entry {
+        val layout = keyboard.board?.let(registry::resolvedLayout)
+        val missing =
+            if (profile == null || layout == null || kind != KeyboardLayoutKind.QWERTY26) {
+                emptyList()
+            } else {
+                LayoutCodeCoverage.missing(layout, profile)
+            }
+        val generated =
+            when (keyboard.board) {
+                GeneratedLayouts.keys26Id(keyboard.schemaID) -> Generated.KEYS26
+                GeneratedLayouts.strokesId(keyboard.schemaID) -> Generated.STROKES
+                else -> null
+            }
+        return Entry(keyboard, if (generated == null) missing else emptyList(), generated)
+    }
+
+    private fun withGenerated(
+        schemeId: String,
+        shape: PublishedKeyboard,
+        entries: List<Entry>,
+        profile: SchemaKeyProfile,
+    ): List<Entry> {
+        if (profile.kind == SchemaKeyProfile.Kind.UNKNOWN) return entries
+        val plain = BuiltinLayouts.qwerty26
+        val plainMissing = LayoutCodeCoverage.missing(plain, profile)
+        val strokes = profile.kind == SchemaKeyProfile.Kind.STROKES && profile.strokes.isNotEmpty()
+        val keys26 = plainMissing.isNotEmpty()
+
+        fun generated(
+            id: String,
+            kind: Generated,
+        ): Entry? =
+            entries.firstOrNull { it.keyboard.board == id }?.copy(generated = kind)
+                ?: Entry(shape.copy(board = id), emptyList(), kind)
+        val keys26Entry = if (keys26) generated(GeneratedLayouts.keys26Id(schemeId), Generated.KEYS26) else null
+        val strokesEntry = if (strokes) generated(GeneratedLayouts.strokesId(schemeId), Generated.STROKES) else null
+        val own = setOfNotNull(keys26Entry, strokesEntry).mapTo(HashSet()) { it.keyboard.board }
+        val rest = entries.filter { it.keyboard.board !in own }
+        return when {
+            strokesEntry != null -> listOfNotNull(strokesEntry) + rest + listOfNotNull(keys26Entry)
+            profile.kind == SchemaKeyProfile.Kind.SHAPE_CODE -> listOfNotNull(keys26Entry) + rest
+            else -> rest + listOfNotNull(keys26Entry)
         }
     }
 }

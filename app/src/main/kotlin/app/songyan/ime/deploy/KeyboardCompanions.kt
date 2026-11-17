@@ -4,9 +4,11 @@ import android.util.Log
 import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.RecipeInstallError
+import app.songyan.ime.packages.SchemaKeyProfiles
 import java.io.File
 
 /**
@@ -66,10 +68,27 @@ internal class KeyboardCompanions(
             val family = InputLayoutPolicy.familyOf(source, engine.schemaValue(source, "speller/alphabet").orEmpty())
             // A forbidden layout cannot be used; exporting a shape dictionary's full spelling map can exhaust the heap.
             if (COMPACT_LAYOUTS.none { InputLayoutPolicy.allows(it, family) }) continue
+            // Only a scheme spelled syllable by syllable folds: a shape code or a stroke code would
+            // fold into keys that mean nothing to its speller.
+            if (!profileOf(source, engine).allowsFolding) continue
             adapters +=
                 if (source in reuse) existing.filter { it.sourceSchemaID == source } else companionsOf(source, engine)
         }
         registry.writeText(EncodingAdapterRegistry.encode(adapters), Charsets.UTF_8)
+    }
+
+    private fun profileOf(
+        source: String,
+        engine: DeployedEngine,
+    ): SchemaKeyProfile {
+        val file = File(engine.compiledDir, "$source.schema.yaml")
+        return if (file.isFile) {
+            SchemaKeyProfiles.compute(
+                file.readText(Charsets.UTF_8),
+            )
+        } else {
+            SchemaKeyProfile(SchemaKeyProfile.Kind.UNKNOWN)
+        }
     }
 
     private suspend fun companionsOf(

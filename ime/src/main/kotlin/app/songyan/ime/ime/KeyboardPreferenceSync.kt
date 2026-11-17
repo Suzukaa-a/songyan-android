@@ -403,7 +403,13 @@ internal fun KeyboardController.menuKeyboards(listed: List<String>? = null): Key
     val shapes = set?.availableCombinations?.groupBy({ it.schemaID }, { it.layout })
     val schemes =
         ids.map { id ->
-            KeyboardScheme(id, shapes?.let { it[id].orEmpty().toSet() } ?: KeyboardLayoutKind.entries.toSet())
+            KeyboardScheme(
+                id,
+                shapes?.let {
+                    it[id].orEmpty().toSet()
+                } ?: KeyboardLayoutKind.entries.toSet(),
+                set?.keyProfiles?.get(id),
+            )
         }
     val current =
         PublishedKeyboard(schemaId, layoutKind, preferredLayoutDefinitionId.takeIf { layoutKind == preferredLayout })

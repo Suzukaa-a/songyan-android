@@ -7,6 +7,7 @@ import app.songyan.ime.ServiceLocale
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.EngineFeatureSettings
+import app.songyan.ime.packages.SchemaKeyProfiles
 import app.songyan.ime.rime.AndroidAssetTree
 import app.songyan.ime.rime.AssetTree
 import app.songyan.ime.rime.BuiltinSourceInstaller
@@ -837,6 +838,8 @@ class DeploymentCoordinator(
                     ).apply(engine)
                 }
             }
+        // The profiles come from the schemas as compiled, before any companion is generated from them.
+        SchemaKeyProfiles.write(engine.compiledDir, manifest.schemaIds)
         if (manifest.kind == SourceKind.SCHEME) {
             KeyboardCompanions(
                 scope.sourceDir,

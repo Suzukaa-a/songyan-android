@@ -39,6 +39,9 @@ interface EngineBackend {
      */
     val encodingAdapters: List<KeyboardResourceSet.EncodingAdapter> get() = emptyList()
 
+    /** What each source scheme's speller needs, read from the build with [encodingAdapters]. */
+    val keyProfiles: Map<String, SchemaKeyProfile> get() = emptyMap()
+
     /** The `speller/alphabet` of a running schema, generated adapters included; null when unknown. */
     suspend fun spellerAlphabet(schemaID: String): String? =
         availableSchemas.firstOrNull { it.id == schemaID }?.alphabet

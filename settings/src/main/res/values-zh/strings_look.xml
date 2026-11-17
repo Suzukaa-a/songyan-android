@@ -279,6 +279,10 @@
     <string name="keyboards_add_title">给「%1$s」添加键盘</string>
     <string name="keyboards_remove">移除「%1$s」</string>
     <string name="keyboards_none_for_method">还没有键盘，键盘菜单里不显示这个输入方式。</string>
+    <string name="keyboards_missing_codes">键盘上没有这些编码：%1$s</string>
+    <string name="keyboards_unknown_codes">有些编码键盘上没有，可在键盘布局里补上</string>
+    <string name="keyboards_preparing">正在准备…</string>
+    <string name="keyboards_unavailable">这个输入方式用不了这种键盘</string>
     <string name="keyboard_menu_in_use">正在使用</string>
     <string name="t9_symbols_title">九键快捷符号</string>
     <string name="t9_symbols_field">符号</string>

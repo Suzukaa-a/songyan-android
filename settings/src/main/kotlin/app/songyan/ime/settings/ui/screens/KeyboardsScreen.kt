@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.KeyboardGroup
 import app.songyan.ime.settings.state.KeyboardLayoutOption
@@ -34,6 +35,7 @@ import app.songyan.ime.settings.state.KeyboardList
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.state.SettingsPreferencesHolder
 import app.songyan.ime.settings.state.StoredSourceInfo
+import app.songyan.ime.settings.state.generatedLayout
 import app.songyan.ime.settings.state.layoutDisplayName
 import app.songyan.ime.settings.ui.components.RadioRow
 import app.songyan.ime.settings.ui.components.SectionHeader
@@ -53,7 +55,7 @@ import kotlinx.coroutines.launch
 fun KeyboardsScreen(
     list: KeyboardList,
     onUse: (PublishedKeyboard) -> Unit,
-    onAdd: (PublishedKeyboard) -> Unit,
+    onAdd: (PublishedKeyboard, LayoutDefinition?) -> Unit,
     onRemove: (PublishedKeyboard) -> Unit,
     onBack: (() -> Unit)?,
     otherSources: List<StoredSourceInfo> = emptyList(),
@@ -90,12 +92,30 @@ fun KeyboardsScreen(
             )
             for (group in list.groups) {
                 SectionHeader(group.schemeName.ifEmpty { group.schemeId })
+                if (group.unknownCodes) {
+                    Text(
+                        text = stringResource(R.string.keyboards_unknown_codes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
                 Column(modifier = Modifier.selectableGroup()) {
                     for (row in group.keyboards) {
                         val name = row.layoutName.text()
+                        val missing =
+                            if (row.missingCodes.isEmpty()) {
+                                null
+                            } else {
+                                stringResource(R.string.keyboards_missing_codes, row.missingCodes.joinToString(" "))
+                            }
                         RadioRow(
                             title = name,
-                            subtitle = if (row.inUse) inUse else null,
+                            subtitle =
+                                listOfNotNull(
+                                    inUse.takeIf { row.inUse },
+                                    missing,
+                                ).joinToString("\n").ifEmpty { null },
                             selected = row.inUse,
                             onClick = { onUse(row.keyboard) },
                             trailing = {
@@ -175,8 +195,8 @@ fun KeyboardsScreen(
     list.groups.firstOrNull { it.schemeId == addingTo }?.let { group ->
         AddKeyboardDialog(
             group = group,
-            onAdd = {
-                onAdd(it)
+            onAdd = { keyboard, layout ->
+                onAdd(keyboard, layout)
                 addingTo = null
             },
             onDismiss = { addingTo = null },
@@ -188,7 +208,7 @@ fun KeyboardsScreen(
 @Composable
 private fun AddKeyboardDialog(
     group: KeyboardGroup,
-    onAdd: (PublishedKeyboard) -> Unit,
+    onAdd: (PublishedKeyboard, LayoutDefinition?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -197,7 +217,15 @@ private fun AddKeyboardDialog(
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 for (row in group.addable) {
-                    SettingsRow(title = row.layoutName.text(), subtitle = null, onClick = { onAdd(row.keyboard) })
+                    val title = row.layoutName.text()
+                    SettingsRow(
+                        title = title,
+                        subtitle =
+                            row.missingCodes.takeIf { it.isNotEmpty() }?.let {
+                                stringResource(R.string.keyboards_missing_codes, it.joinToString(" "))
+                            },
+                        onClick = { onAdd(row.keyboard, group.generatedLayout(row, title)) },
+                    )
                 }
             }
         },

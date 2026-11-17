@@ -21,6 +21,7 @@ import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.ReadingRailRead
 import app.songyan.ime.keyboard.engine.ReadingRailRequest
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.engine.TextSelection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +85,9 @@ class RimeEngineBackend(
 
     override var encodingAdapters: List<KeyboardResourceSet.EncodingAdapter> = emptyList()
         private set
+
+    /** Set by the owner that reads the build's key profiles (the rime module cannot parse schemas). */
+    override var keyProfiles: Map<String, SchemaKeyProfile> = emptyMap()
 
     override suspend fun validateSchema(schemaID: String) {
         if (schemas.none { it.id == schemaID } && encodingAdapters.none { it.schemaID == schemaID }) {

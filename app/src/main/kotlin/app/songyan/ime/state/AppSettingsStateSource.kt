@@ -21,6 +21,7 @@ import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutInput
+import app.songyan.ime.packages.SchemaKeyProfiles
 import app.songyan.ime.packages.SchemeGrammarRequirements
 import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.prefs.LogAndContinue
@@ -202,9 +203,11 @@ class AppSettingsStateSource(
             ids.map {
                 KeyboardSchemaDescriptor(it, it, SchemaOptionCapabilities.spellerAlphabet(build, it))
             }
-        val resources = KeyboardResourceSets.forEngineSchemas(schemas, adapters)
+        val profiles = SchemaKeyProfiles.read(build, ids)
+        val resources = KeyboardResourceSets.forEngineSchemas(schemas, adapters, profiles)
         return schemesNamed(manifest, ids).map { scheme ->
             scheme.copy(
+                profile = profiles[scheme.id],
                 supportedLayouts =
                     KeyboardLayoutKind.entries
                         .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }

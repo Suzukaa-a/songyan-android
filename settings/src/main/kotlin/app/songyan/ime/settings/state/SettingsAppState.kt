@@ -2,6 +2,7 @@ package app.songyan.ime.settings.state
 
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,8 @@ data class InstalledScheme(
      * physical layout. Unknown stays generic.
      */
     val family: InputSchemeFamily = InputSchemeFamily.GENERIC,
+    /** What its speller needs, read from the deployed build; null for an input method not read yet. */
+    val profile: SchemaKeyProfile? = null,
 )
 
 /** The families the app state already resolved, for choosing a keyboard's physical layout. */

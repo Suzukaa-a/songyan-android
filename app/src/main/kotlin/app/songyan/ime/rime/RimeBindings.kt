@@ -9,7 +9,10 @@ import app.songyan.ime.learning.LearningEngine
 import app.songyan.ime.learning.LearningEngineException
 import app.songyan.ime.learning.LearningEngineFailure
 import app.songyan.ime.learning.LearningSnapshot
+import app.songyan.ime.packages.SchemaKeyProfiles
 import app.songyan.ime.storage.LearningMerger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -217,6 +220,9 @@ object RimeBindings {
                     optionPreferences = EngineOptionPreferences(optionsDir),
                     optionResourceID = user.name,
                 )
+            // The compiled build carries what each scheme's speller needs; the menu offers only layouts that send it.
+            backend.keyProfiles =
+                withContext(Dispatchers.IO) { SchemaKeyProfiles.read(compiled, backend.availableSchemas.map { it.id }) }
             object : EngineHandle {
                 override val backend = backend
 

@@ -2,6 +2,7 @@ package app.songyan.ime.ime
 
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 
@@ -19,6 +20,7 @@ object KeyboardResourceSets {
     fun forEngineSchemas(
         schemas: List<KeyboardSchemaDescriptor>,
         adapters: List<KeyboardResourceSet.EncodingAdapter> = emptyList(),
+        profiles: Map<String, SchemaKeyProfile> = emptyMap(),
     ): KeyboardResourceSet? {
         if (schemas.isEmpty()) return null
         val base = KeyboardResourceSet.builtin("", "")
@@ -32,7 +34,7 @@ object KeyboardResourceSets {
                 .filter { it.isNotEmpty() && it !in companions && it !in known }
                 .distinct()
         val offered = generated.filter { it.sourceSchemaID in extra }
-        if (extra.isEmpty()) return base
+        if (extra.isEmpty()) return base.copy(keyProfiles = profiles)
         return base.copy(
             layoutEntries =
                 base.layoutEntries + extra.map { KeyboardResourceSet.LayoutEntry(KeyboardLayoutKind.QWERTY26, it) },
@@ -40,6 +42,7 @@ object KeyboardResourceSets {
             // The descriptors keep the declared speller alphabet: the family rule reads it, and
             // nothing on the key path has to ask the engine for it again.
             schemaFacts = schemas,
+            keyProfiles = profiles,
         )
     }
 

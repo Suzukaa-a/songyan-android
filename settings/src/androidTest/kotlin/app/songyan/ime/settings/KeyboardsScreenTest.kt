@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.UserKeyboards
@@ -80,7 +81,7 @@ class KeyboardsScreenTest {
                         used += it.id
                         inUse = it
                     },
-                    onAdd = { stored = UserKeyboards.adding(it, list.stored, list.legacy) },
+                    onAdd = { keyboard, _ -> stored = UserKeyboards.adding(keyboard, list.stored, list.legacy) },
                     onRemove = { stored = UserKeyboards.removing(it, list.stored, list.legacy) },
                     onBack = null,
                     otherSources = otherSources,
@@ -200,5 +201,29 @@ class KeyboardsScreenTest {
         compose.onNodeWithText("Romaji").performClick()
         compose.waitForIdle()
         assertEquals(emptySet<String>(), runBlocking { preferences.menuHiddenSchemas.first() })
+    }
+
+    @Test
+    fun aShapeCodeSchemeShowsWhatPlain26LacksAndOffersTheBoardThatHasIt() {
+        val letters = ('a'..'z').map { it.toString() }
+        val wubi =
+            InstalledScheme(
+                "wubi86",
+                "五笔",
+                supportedLayouts = setOf("qwerty26"),
+                profile = SchemaKeyProfile(SchemaKeyProfile.Kind.SHAPE_CODE, letters + listOf(";", "'")),
+            )
+        show(listOf(wubi), k("wubi86:qwerty26"))
+        compose.onNodeWithText(str(R.string.keyboards_missing_codes, "; '"), substring = true).assertExists()
+        compose.onNodeWithText(str(R.string.layout_name_14)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.keyboards_add)).performScrollTo().performClick()
+        compose.onNodeWithText(str(R.string.layout_name_keys26)).assertExists()
+    }
+
+    @Test
+    fun aSchemeWhoseSpellerIsUnknownCarriesTheNotice() {
+        val lua = InstalledScheme("lua_only", "Lua", profile = SchemaKeyProfile(SchemaKeyProfile.Kind.UNKNOWN))
+        show(listOf(lua), k("lua_only:qwerty26"))
+        compose.onNodeWithText(str(R.string.keyboards_unknown_codes)).assertExists()
     }
 }

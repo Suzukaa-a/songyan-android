@@ -277,6 +277,32 @@ class SchemePackageImportTest {
     }
 
     @Test
+    fun aPackageOfOnlyDataFilesImportsAsADependencyPackage() {
+        val essay =
+            prepareArchive(
+                zip(
+                    "rime-essay-054920de4f54c9e5994276a96a4fc2a35cb51aa3/essay.txt" to "你好\t100\n".toByteArray(),
+                    "rime-essay-054920de4f54c9e5994276a96a4fc2a35cb51aa3/README.md" to "x".toByteArray(),
+                ),
+            )
+        assertTrue(essay.dataOnly)
+        assertEquals("rime-essay", essay.displayName)
+        assertTrue(File(essay.root, "essay.txt").isFile)
+
+        val dictionary = prepare(zip("words.dict.yaml" to dictionaryFile("words")))
+        assertTrue(dictionary.dataOnly)
+    }
+
+    @Test
+    fun aPackageWithNoSchemeAndNoDataFilesSaysWhatItLacks() {
+        val error =
+            assertReason(SchemePackageImportError.Reason.MISSING_SCHEMA) {
+                prepare(zip("README.md" to "x".toByteArray(), "logo.png" to byteArrayOf(1)))
+            }
+        assertTrue(error.message, error.message!!.contains("no dictionary"))
+    }
+
+    @Test
     fun rejectsAListedSchemaWhoseIdDoesNotMatchItsFile() {
         assertReason(SchemePackageImportError.Reason.INVALID_SCHEMA) {
             prepare(

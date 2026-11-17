@@ -18,6 +18,8 @@
     <string name="schemes_sources_section">我的输入方案</string>
     <string name="schemes_source_kind_builtin">内置</string>
     <string name="schemes_source_kind_dictionary">内置输入方式 · 导入的词库</string>
+    <string name="schemes_source_kind_data">依赖包</string>
+    <string name="schemes_status_used_by">%s 正在使用</string>
     <string name="schemes_source_kind_scheme">导入的输入方案</string>
     <string name="schemes_source_use">使用</string>
     <string name="schemes_source_delete">删除</string>

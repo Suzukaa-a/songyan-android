@@ -121,7 +121,7 @@ class SourceBuilder(
             manifest =
                 SourceManifest(
                     sourceId = sourceId ?: prepared.packageId,
-                    kind = SourceKind.SCHEME,
+                    kind = if (prepared.dataOnly) SourceKind.DATA else SourceKind.SCHEME,
                     displayName = prepared.displayName,
                     schemes = prepared.schemes.map { SourceScheme(it.schemaId, it.name) },
                     revision = prepared.revision,

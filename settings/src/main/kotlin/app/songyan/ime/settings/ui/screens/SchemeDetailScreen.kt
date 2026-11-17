@@ -267,6 +267,7 @@ private fun LazyListScope.statusItems(
                 source.status == StoredSourceStatus.UPDATE_AVAILABLE ->
                     stringResource(R.string.schemes_status_update_available)
                 source.inUse -> stringResource(R.string.schemes_status_in_use)
+                source.usedBy != null -> stringResource(R.string.schemes_status_used_by, source.usedBy)
                 else -> stringResource(R.string.schemes_status_not_in_use)
             }
         ListItem(
@@ -281,7 +282,7 @@ private fun LazyListScope.statusItems(
     }
     val useLabel =
         when {
-            !source.usable -> null
+            !source.usable || source.kind == StoredSourceKind.DATA -> null
             source.status == StoredSourceStatus.UPDATE_AVAILABLE -> R.string.schemes_source_use_new
             !source.inUse -> R.string.schemes_source_use
             else -> null

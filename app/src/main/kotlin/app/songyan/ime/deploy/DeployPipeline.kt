@@ -13,6 +13,7 @@ import app.songyan.ime.packages.DictionaryImportError
 import app.songyan.ime.packages.DictionarySourceFile
 import app.songyan.ime.packages.DictionaryStacking
 import app.songyan.ime.packages.RecipeResourceBudget
+import app.songyan.ime.packages.SchemePackageImportBuilder
 import app.songyan.ime.packages.SchemePackageImportError
 import app.songyan.ime.packages.SchemePackageLimits
 import app.songyan.ime.storage.AppStorage
@@ -257,11 +258,12 @@ class DeployPipeline(
         // Read once the package is extracted: a stored package with the same main input method is
         // the one this import replaces, whose files must not paper over what the new version lacks.
         val others by lazy {
-            catalog.list().filter {
-                it.kind == SourceKind.SCHEME &&
-                    it.sourceId != update &&
-                    !File(staged, it.primarySchemaId + ".schema.yaml").isFile
-            }
+            catalog.listData() +
+                catalog.list().filter {
+                    it.kind == SourceKind.SCHEME &&
+                        it.sourceId != update &&
+                        !File(staged, it.primarySchemaId + ".schema.yaml").isFile
+                }
         }
         val prepared =
             builder.buildScheme(
@@ -272,7 +274,7 @@ class DeployPipeline(
                 origin = origin,
                 advertisedSchemas = advertisedSchemas,
                 packageName = packageName,
-                provide = { path -> others.firstNotNullOfOrNull { storedFile(it.sourceId, path) } },
+                provide = { path -> others.firstNotNullOfOrNull { catalog.storedFile(it.sourceId, path) } },
             )
         Log.i(DeployTimer.TAG, "scheme package checked in " + (SystemClock.elapsedRealtime() - checkStart) + " ms")
         // Learned-word snapshots only wait for the user's answer; the import never depends on them.
@@ -315,6 +317,7 @@ class DeployPipeline(
         cancelled: () -> Boolean,
         update: String?,
     ): RequestStatus {
+        if (prepared.manifest.kind == SourceKind.DATA) return installData(prepared)
         // A new version of a stored package, picked as a file or a new link: it takes the stored
         // package's place instead of being stored beside it.
         val replaced =
@@ -350,6 +353,15 @@ class DeployPipeline(
                 ),
             )
         if (carried.isNotEmpty()) Log.i(TAG, "kept the grammar models " + carried + " of " + targetId)
+        if (replaced == null && update == null && providesForActive(built)) {
+            // A package the one in use refers to (its reverse-lookup scheme, its word list) is stored
+            // beside it: switching to it would take the user's input methods away.
+            return published(
+                coordinator.installBesideActive(built),
+                SchemeImportProblemKind.DEPLOY_FAILED.name,
+                DeployMode.IMPORT_SCHEME,
+            )
+        }
         if (replaced != null) {
             return published(
                 coordinator.installSource(built),
@@ -374,15 +386,52 @@ class DeployPipeline(
         )
     }
 
-    /** [path] of the stored package [sourceId], when it ships one inside its own tree. */
-    private fun storedFile(
-        sourceId: String,
-        path: String,
-    ): File? {
-        val root = storage.sourceDir(sourceId).canonicalFile
-        val file = File(root, path).canonicalFile
-        return file.takeIf { it.isFile && it.path.startsWith(root.path + File.separator) }
+    /** Whether the package in use lacks files that [built] ships and its schemes refer to. */
+    private fun providesForActive(built: BuiltSource): Boolean {
+        val activeId = coordinator.activeGeneration()?.sourceId ?: return false
+        val active = catalog.read(activeId)?.takeIf { it.kind == SourceKind.SCHEME } ?: return false
+        if (active.sourceId == built.manifest.sourceId) return false
+        val activeDir = storage.sourceDir(activeId)
+        if (!activeDir.isDirectory) return false
+        return SchemePackageImportBuilder
+            .borrowPlan(activeDir, { path -> File(built.directory, path).takeIf { it.isFile } })
+            .isNotEmpty()
     }
+
+    /**
+     * Stores a dependency package. A package that ships the same files as a stored one is its new
+     * version and takes its place, so a newer word list does not sit beside the old one.
+     */
+    private suspend fun installData(prepared: BuiltSource): RequestStatus {
+        val names = dataFileNames(prepared.directory)
+        val same =
+            catalog.listData().firstOrNull {
+                it.sourceId != prepared.manifest.sourceId && dataFileNames(storage.sourceDir(it.sourceId)) == names
+            }
+        val built =
+            BuiltSource(
+                prepared.directory,
+                prepared.manifest.copy(
+                    sourceId = same?.sourceId ?: prepared.manifest.sourceId,
+                    origin = prepared.manifest.origin ?: same?.origin,
+                ),
+            )
+        return coordinator.installDataPackage(built).fold(
+            onSuccess = { RequestStatus(RequestState.SUCCEEDED, sourceId = built.manifest.sourceId) },
+            onFailure = { failure(it, SchemeImportProblemKind.DEPLOY_FAILED.name, DeployMode.IMPORT_SCHEME) },
+        )
+    }
+
+    private fun isNotice(name: String): Boolean = NOTICE_PREFIXES.any { name.uppercase().startsWith(it) }
+
+    /** The data files of a dependency package tree, as package-relative paths. */
+    private fun dataFileNames(root: File): Set<String> =
+        root
+            .walkTopDown()
+            .filter { it.isFile && it.name != SourceCatalog.MANIFEST }
+            .map { it.relativeTo(root).invariantSeparatorsPath }
+            .filter { path -> DATA_EXTENSIONS.any { path.endsWith(it) } && !isNotice(path.substringAfterLast('/')) }
+            .toSet()
 
     /**
      * The repository a link downloads (`rime-wubi` for github.com/rime/rime-wubi and its codeload
@@ -530,6 +579,8 @@ class DeployPipeline(
 
     companion object {
         private const val TAG = "DeployPipeline"
+        private val DATA_EXTENSIONS = listOf(".yaml", ".yml", ".txt", ".json", ".lua", ".gram", ".ocd", ".ocd2")
+        private val NOTICE_PREFIXES = listOf("LICENSE", "LICENCE", "README", "AUTHORS", "NOTICE", "COPYING")
 
         /** Generic failure of a request without an import (rebuild, activate, delete). */
         const val DEPLOY_FAILED = "DEPLOY_FAILED"

@@ -50,7 +50,14 @@ object InputSchemeSetup {
 }
 
 /** What kind of content a stored source holds. */
-enum class SourceKind { BUILTIN, DICTIONARY, SCHEME }
+enum class SourceKind {
+    BUILTIN,
+    DICTIONARY,
+    SCHEME,
+
+    /** A dependency package: files other packages read (word list, dictionaries), no input method of its own. */
+    DATA,
+}
 
 /** One selectable input method of a source, with the name its schema declares. */
 data class SourceScheme(
@@ -109,12 +116,13 @@ data class SourceManifest(
                         val id = item.string("id") ?: return@mapNotNull null
                         SourceScheme(id, item.string("name") ?: id)
                     }.orEmpty()
-            if (schemes.isEmpty()) return null
+            val kind =
+                root.string("kind")?.let { name -> SourceKind.entries.firstOrNull { it.name == name } }
+                    ?: return null
+            if (schemes.isEmpty() && kind != SourceKind.DATA) return null
             return SourceManifest(
                 sourceId = root.string("sourceId") ?: return null,
-                kind =
-                    root.string("kind")?.let { name -> SourceKind.entries.firstOrNull { it.name == name } }
-                        ?: return null,
+                kind = kind,
                 displayName = root.string("displayName") ?: "",
                 schemes = schemes,
                 revision = root.string("revision") ?: return null,
@@ -180,8 +188,26 @@ class SourceCatalog(
         }
     }
 
-    /** Every stored source with a readable manifest: built-in first, then by id. */
-    fun list(): List<SourceManifest> =
+    /**
+     * Every stored source that offers input methods, with a readable manifest: built-in first, then
+     * by id. Dependency packages are not input sources; see [listData].
+     */
+    fun list(): List<SourceManifest> = listAll().filter { it.kind != SourceKind.DATA }
+
+    /** [path] of the stored package [sourceId], when it ships one inside its own tree. */
+    fun storedFile(
+        sourceId: String,
+        path: String,
+    ): File? {
+        val root = storage.sourceDir(sourceId).canonicalFile
+        val file = File(root, path).canonicalFile
+        return file.takeIf { it.isFile && it.path.startsWith(root.path + File.separator) }
+    }
+
+    /** The stored dependency packages, by id. */
+    fun listData(): List<SourceManifest> = listAll().filter { it.kind == SourceKind.DATA }
+
+    private fun listAll(): List<SourceManifest> =
         storage.sourcesDir
             .listFiles()
             .orEmpty()
@@ -205,6 +231,7 @@ class SourceCatalog(
     /** Whether the files a deploy of [manifest] needs are all there. */
     fun isIntact(manifest: SourceManifest): Boolean {
         val dir = storage.sourceDir(manifest.sourceId)
+        if (manifest.kind == SourceKind.DATA) return true
         if (!File(dir, "default.yaml").isFile) return false
         return manifest.schemaIds.all { File(dir, "$it.schema.yaml").isFile }
     }

@@ -9,7 +9,9 @@ import androidx.core.content.ContextCompat
 import app.songyan.ime.R
 import app.songyan.ime.content.ImportedDictionaryMetadataReader
 import app.songyan.ime.deploy.CompanionStatus
+import app.songyan.ime.deploy.DependencyUse
 import app.songyan.ime.deploy.DeployContract
+import app.songyan.ime.deploy.DeployOverlay
 import app.songyan.ime.deploy.DeployState
 import app.songyan.ime.deploy.DeployStatusStore
 import app.songyan.ime.ime.KeyboardResourceSets
@@ -126,6 +128,11 @@ class AppSettingsStateSource(
         // A source that lists fine but lost files its manifest names is as unusable as one without manifest.
         val damaged = catalog.damaged()
         val schemes = usable?.let { schemesOf(it, stored) }.orEmpty()
+        val user =
+            usable
+                ?.let { record ->
+                    stored.firstOrNull { it.sourceId == record.sourceId }
+                }?.let(::dependencyUser)
         val engine =
             engineStatus(
                 usable = usable != null,
@@ -161,14 +168,15 @@ class AppSettingsStateSource(
             importedDictionary = importedDictionary(stored, usable),
             stackedDictionaries = stackedDictionaries(stored, usable),
             sources =
-                stored
+                (stored + catalog.listData())
                     .filter { it.kind != SourceKind.BUILTIN || active?.sourceId == it.sourceId }
-                    .map { sourceInfo(it, if (it.kind == SourceKind.BUILTIN) active else usable, activeSchemaId) } +
-                    damaged.map(::damagedInfo),
+                    .map {
+                        sourceInfo(it, if (it.kind == SourceKind.BUILTIN) active else usable, activeSchemaId, user)
+                    } + damaged.map(::damagedInfo),
             otherSources =
                 SwitchTargets
                     .of(stored, active?.sourceId)
-                    .map { sourceInfo(it, usable, activeSchemaId) }
+                    .map { sourceInfo(it, usable, activeSchemaId, user) }
                     .filter { it.usable },
         )
     }
@@ -287,10 +295,44 @@ class AppSettingsStateSource(
             InstalledScheme(id = id, name = name)
         }
 
+    /** The package in use, with the files other packages provide to it. */
+    private class DependencyUser(
+        val name: String,
+        val directory: File,
+        val provided: List<File>,
+    )
+
+    private fun dependencyUser(active: SourceManifest): DependencyUser? {
+        if (active.kind != SourceKind.SCHEME) return null
+        val provided = DeployOverlay(storage).provided(active).values.map { it.canonicalFile }
+        return DependencyUser(
+            active.displayName.ifBlank {
+                active.primarySchemaId
+            },
+            storage.sourceDir(active.sourceId),
+            provided,
+        )
+    }
+
+    /**
+     * Whether [manifest]'s files are read by the package in use: it provides a file the package
+     * lacks at deployment, or ships the dictionary or scheme the package carries a copy of (copied
+     * in when the package was imported after it).
+     */
+    private fun usedBy(
+        manifest: SourceManifest,
+        user: DependencyUser?,
+    ): String? {
+        if (user == null || manifest.kind == SourceKind.BUILTIN) return null
+        val own = storage.sourceDir(manifest.sourceId)
+        return if (DependencyUse.reads(user.directory, user.provided, own)) user.name else null
+    }
+
     private fun sourceInfo(
         manifest: SourceManifest,
         active: PublicationRecord?,
         activeSchemaId: String?,
+        user: DependencyUser? = null,
     ): StoredSourceInfo {
         val schemes = schemesNamed(manifest, manifest.schemaIds)
         val inUse = active?.sourceId == manifest.sourceId
@@ -307,8 +349,10 @@ class AppSettingsStateSource(
                     SourceKind.BUILTIN -> StoredSourceKind.BUILTIN
                     SourceKind.DICTIONARY -> StoredSourceKind.DICTIONARY
                     SourceKind.SCHEME -> StoredSourceKind.SCHEME
+                    SourceKind.DATA -> StoredSourceKind.DATA
                 },
             inUse = inUse,
+            usedBy = if (inUse) null else usedBy(manifest, user),
             status = statusOf(manifest, active),
             updatable = manifest.kind == SourceKind.SCHEME && manifest.origin != null,
             originHost = manifest.origin?.let { runCatching { URI(it).host }.getOrNull() },

@@ -51,7 +51,7 @@
     <string name="scheme_import_error_too_many_files">压缩包里的文件太多，最多支持 2000 个。</string>
     <string name="scheme_import_error_unsafe_files">压缩包里有不安全的文件路径，请换一个文件。</string>
     <string name="scheme_import_error_user_data">压缩包里带有学习数据（.userdb），请去掉后再试。</string>
-    <string name="scheme_import_error_missing_scheme">这个文件里没有可用的输入方式。</string>
+    <string name="scheme_import_error_missing_scheme">这个文件里没有输入方案，也没有词库等 Rime 数据文件（如 .dict.yaml、essay.txt）。</string>
     <string name="scheme_import_error_invalid_scheme">输入方案里的配置文件有误，请检查文件内容。</string>
     <string name="scheme_import_error_encoding">输入方案里有文件不是 UTF-8 文本。</string>
     <string name="scheme_import_error_missing_dependency">输入方案缺少这些文件：%s。</string>

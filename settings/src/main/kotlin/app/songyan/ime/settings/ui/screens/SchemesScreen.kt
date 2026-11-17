@@ -563,6 +563,22 @@ private fun ImportedDictionaryRow(
     )
 }
 
+/** The status line of a stored package: a package whose files the one in use reads is used, not idle. */
+@Composable
+internal fun sourceStatusText(
+    source: StoredSourceInfo,
+    working: Boolean,
+): String =
+    when {
+        working -> stringResource(R.string.schemes_source_working)
+        source.status == StoredSourceStatus.DAMAGED -> stringResource(R.string.schemes_status_damaged)
+        source.status == StoredSourceStatus.UPDATE_AVAILABLE ->
+            stringResource(R.string.schemes_status_update_available)
+        source.inUse -> stringResource(R.string.schemes_status_in_use)
+        source.usedBy != null -> stringResource(R.string.schemes_status_used_by, source.usedBy)
+        else -> stringResource(R.string.schemes_status_not_in_use)
+    }
+
 /** One stored input scheme: its name, kind and status; tapping it opens the page with its actions. */
 @Composable
 private fun StoredSourceRow(
@@ -576,18 +592,10 @@ private fun StoredSourceRow(
                 StoredSourceKind.BUILTIN -> R.string.schemes_source_kind_builtin
                 StoredSourceKind.DICTIONARY -> R.string.schemes_source_kind_dictionary
                 StoredSourceKind.SCHEME -> R.string.schemes_source_kind_scheme
+                StoredSourceKind.DATA -> R.string.schemes_source_kind_data
             },
         )
-    val status =
-        stringResource(
-            when {
-                working -> R.string.schemes_source_working
-                source.status == StoredSourceStatus.DAMAGED -> R.string.schemes_status_damaged
-                source.status == StoredSourceStatus.UPDATE_AVAILABLE -> R.string.schemes_status_update_available
-                source.inUse -> R.string.schemes_status_in_use
-                else -> R.string.schemes_status_not_in_use
-            },
-        )
+    val status = sourceStatusText(source, working)
     ListItem(
         headlineContent = { Text(source.name) },
         supportingContent = { Text(if (source.status == StoredSourceStatus.DAMAGED) status else "$kind · $status") },

@@ -18,6 +18,8 @@
     <string name="schemes_sources_section">我的輸入方案</string>
     <string name="schemes_source_kind_builtin">內建</string>
     <string name="schemes_source_kind_dictionary">內建輸入方式 · 匯入的詞庫</string>
+    <string name="schemes_source_kind_data">相依套件</string>
+    <string name="schemes_status_used_by">%s 正在使用</string>
     <string name="schemes_source_kind_scheme">匯入的輸入方案</string>
     <string name="schemes_source_use">使用</string>
     <string name="schemes_source_delete">刪除</string>

@@ -157,6 +157,48 @@ class DeploymentCoordinator(
      */
     suspend fun installSource(staged: BuiltSource): Result<PublicationRecord> = locked { installLocked(staged) }
 
+    /**
+     * Stores the dependency package [staged] (files other packages read, no input methods) and
+     * rebuilds the package in use when it now finds files it lacked. Nothing is activated.
+     */
+    suspend fun installDataPackage(staged: BuiltSource): Result<Unit> =
+        locked {
+            val manifest = staged.manifest
+            requireIdentifier("source", manifest.sourceId, SOURCE_ID_PATTERN)
+            requireIdentifier("revision", manifest.revision, REVISION_PATTERN)
+            if (manifest.kind != SourceKind.DATA) throw DeployException("not a dependency package")
+            validateStagedSource(staged.directory, requireConfig = false)
+            SourceCatalog.write(staged.directory, manifest)
+            purgeStaleSourceBackups()
+            storage.trashedSourceDir(manifest.sourceId).deleteRecursively()
+            val target = storage.sourceDir(manifest.sourceId)
+            val previous = supersedeSource(target, manifest.sourceId)
+            try {
+                moveDirectory(staged.directory, target)
+                previous?.deleteRecursively()
+            } catch (e: Throwable) {
+                restoreSource(target, previous)
+                throw e
+            }
+            try {
+                refreshActiveLocked()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The package is stored; the next deployment of the package in use picks it up.
+                Log.w(TAG, "cannot rebuild the package in use with " + manifest.sourceId, e)
+            }
+        }
+
+    /** Rebuilds the package in use when what its deployment is made of changed since it was published. */
+    private suspend fun refreshActiveLocked() {
+        val active = publisher.readActive() ?: return
+        if (active.sourceId == SourceIds.BUILTIN) return
+        val manifest = catalog.read(active.sourceId)?.takeIf { it.kind == SourceKind.SCHEME } ?: return
+        if (active.stamp == stamp && active.revision == effectiveRevision(manifest)) return
+        redeploySourceLocked(manifest.sourceId)
+    }
+
     /** Makes a stored source active, reusing its latest current generation when there is one. */
     suspend fun activateSource(sourceId: String): Result<PublicationRecord> =
         locked {
@@ -292,20 +334,39 @@ class DeploymentCoordinator(
      * as [installSource] does). Stacked dictionaries are rebuilt with the package.
      */
     suspend fun updateSource(staged: BuiltSource): Result<PublicationRecord> =
+        locked { installKeepingActiveLocked(staged) }
+
+    /**
+     * Installs [staged], a package whose files the package in use refers to, without switching the
+     * keyboard to it, and rebuilds the package in use with those files.
+     */
+    suspend fun installBesideActive(staged: BuiltSource): Result<PublicationRecord> =
         locked {
-            val before = publisher.readActive()
-            val record = installLocked(staged)
-            if (before == null || before.sourceId == staged.manifest.sourceId) return@locked record
-            // The update must not switch the keyboard to another package; the previous source's
-            // generation is still stored, so this is a reactivation, not a deploy.
+            val record = installKeepingActiveLocked(staged)
             try {
-                // Publishing committed the update; a late cancellation must not prevent restoring the selection.
-                publisher.reactivate(before.generation) ?: record
+                refreshActiveLocked()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "cannot put the keyboard back on " + before.sourceId + " after an update", e)
-                record
+                Log.w(TAG, "cannot rebuild the package in use with " + staged.manifest.sourceId, e)
             }
+            publisher.readActive() ?: record
         }
+
+    private suspend fun installKeepingActiveLocked(staged: BuiltSource): PublicationRecord {
+        val before = publisher.readActive()
+        val record = installLocked(staged)
+        if (before == null || before.sourceId == staged.manifest.sourceId) return record
+        // The update must not switch the keyboard to another package; the previous source's
+        // generation is still stored, so this is a reactivation, not a deploy.
+        return try {
+            // Publishing committed the update; a late cancellation must not prevent restoring the selection.
+            publisher.reactivate(before.generation) ?: record
+        } catch (e: Exception) {
+            Log.e(TAG, "cannot put the keyboard back on " + before.sourceId + " after an update", e)
+            record
+        }
+    }
 
     /**
      * Applies the user's configuration changes for the source in use ([UserConfigScope.active]):
@@ -908,7 +969,10 @@ class DeploymentCoordinator(
      * directory with default.yaml, without symbolic links and bounded in size. Everything else is
      * refused before the live source tree is touched.
      */
-    private fun validateStagedSource(stagingDir: File) {
+    private fun validateStagedSource(
+        stagingDir: File,
+        requireConfig: Boolean = true,
+    ) {
         val root = storage.importStagingDir
         val rootPath = root.canonicalFile.toPath()
         val stagingPath = stagingDir.canonicalFile.toPath()
@@ -916,7 +980,11 @@ class DeploymentCoordinator(
             throw DeployException("staged source is outside the import staging root: $stagingDir")
         }
         if (!stagingDir.isDirectory) throw DeployException("staged source is not a directory: $stagingDir")
-        if (!File(stagingDir, "default.yaml").isFile) throw DeployException("staged source is missing default.yaml")
+        if (requireConfig &&
+            !File(stagingDir, "default.yaml").isFile
+        ) {
+            throw DeployException("staged source is missing default.yaml")
+        }
         var files = 0
         var bytes = 0L
         val pending = ArrayDeque<File>()

@@ -1,7 +1,14 @@
 package app.songyan.ime.settings.state
 
 /** What a stored input scheme is; settings words its row accordingly. */
-enum class StoredSourceKind { BUILTIN, DICTIONARY, SCHEME }
+enum class StoredSourceKind {
+    BUILTIN,
+    DICTIONARY,
+    SCHEME,
+
+    /** Files other packages read (a word list, dictionaries); it has no input method of its own. */
+    DATA,
+}
 
 /** Where a stored input scheme stands; the row shows it as its status. */
 enum class StoredSourceStatus {
@@ -32,6 +39,8 @@ data class StoredSourceInfo(
     /** The input method the keyboard types with; only set while this package is in use. */
     val inUseSchemeId: String? = null,
     val requiredModels: List<String> = emptyList(),
+    /** Name of the package in use whose files this package provides; null when none uses it. */
+    val usedBy: String? = null,
 ) {
     /** The bundled package is never deleted: it is what the keyboard falls back to. */
     val deletable: Boolean get() = kind != StoredSourceKind.BUILTIN

@@ -5,7 +5,9 @@ import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.DictionaryImportBuilder
 import app.songyan.ime.packages.DictionaryStacking
 import app.songyan.ime.packages.EngineFeatureSettings
+import app.songyan.ime.packages.SchemePackageImportBuilder
 import app.songyan.ime.storage.AppStorage
+import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.userconfig.UserConfigFiles
@@ -29,6 +31,8 @@ import java.security.MessageDigest
 internal class DeployOverlay(
     private val storage: AppStorage,
 ) {
+    private val catalog = SourceCatalog(storage)
+
     /**
      * Identity of [manifest]'s overlay with [features]. It is part of the published revision, so a
      * stored generation is only reused when it was built with the same overlay.
@@ -43,6 +47,8 @@ internal class DeployOverlay(
             "features:" + MessageDigest.getInstance("SHA-256").digest(features.encode().toByteArray()).toHexString()
         parts += "companions:" + CompactSchemaAdapter.DISPLAY_GENERATOR_VERSION
         config?.let { UserConfigFiles.digest(it, excluded(manifest, it)) }?.let { parts += "config:$it" }
+        // The files are other packages' own; their size and time stand for their content.
+        provided(manifest).forEach { (path, file) -> parts += "provided:$path:${file.length()}:${file.lastModified()}" }
         stackOf(manifest)?.let { stack ->
             val revision = ImportedDictionaryMetadataReader.read(stack)?.revision ?: sha256(File(stack, STACKED_FILE))
             parts += "stack:$revision"
@@ -67,8 +73,35 @@ internal class DeployOverlay(
         config: File? = null,
     ): List<File> {
         val configured = config?.let { UserConfigFiles.copyInto(it, workDir, excluded(manifest, it)) }.orEmpty()
+        for ((path, file) in provided(manifest)) {
+            val target = File(workDir, path)
+            if (!target.exists()) link(file, target)
+        }
         stackOf(manifest)?.let { writeStack(sourceDir, manifest, it, workDir) }
         return configured
+    }
+
+    /**
+     * Files other stored packages provide of those [manifest]'s package refers to and lacks, by
+     * path: the shared word list or a reverse-lookup dictionary imported after the package. They
+     * are looked up at every deployment, so a package gets them without being imported again.
+     * Dependency packages come first, then packages with input methods of their own.
+     */
+    fun provided(manifest: SourceManifest): Map<String, File> {
+        if (manifest.kind != SourceKind.SCHEME) return emptyMap()
+        val dir = storage.sourceDir(manifest.sourceId)
+        if (!dir.isDirectory) return emptyMap()
+        val others =
+            catalog.listData() +
+                catalog.list().filter {
+                    it.kind == SourceKind.SCHEME &&
+                        it.sourceId != manifest.sourceId &&
+                        !File(dir, it.primarySchemaId + ".schema.yaml").isFile
+                }
+        if (others.isEmpty()) return emptyMap()
+        return SchemePackageImportBuilder.borrowPlan(dir, { path ->
+            others.firstNotNullOfOrNull { catalog.storedFile(it.sourceId, path) }
+        })
     }
 
     /**

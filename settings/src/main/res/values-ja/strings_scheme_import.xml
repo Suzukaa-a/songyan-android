@@ -16,6 +16,8 @@
     <string name="schemes_sources_section">自分の入力パック</string>
     <string name="schemes_source_kind_builtin">内蔵</string>
     <string name="schemes_source_kind_dictionary">内蔵の入力方式 · インポートした辞書</string>
+    <string name="schemes_source_kind_data">依存パック</string>
+    <string name="schemes_status_used_by">%s が使用中</string>
     <string name="schemes_source_kind_scheme">インポートした入力パック</string>
     <string name="schemes_source_use">使う</string>
     <string name="schemes_source_delete">削除</string>

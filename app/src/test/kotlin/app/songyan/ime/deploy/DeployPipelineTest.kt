@@ -282,6 +282,79 @@ class DeployPipelineTest {
         }
 
     @Test
+    fun aDataOnlyPackageIsStoredAsADependencyAndReachesPackagesThatLackedIt() =
+        runTest {
+            val vocab =
+                mapOf(
+                    "vocab-main/default.yaml" to "schema_list:\n  - schema: vocab\n",
+                    "vocab-main/vocab.schema.yaml" to
+                        "schema:\n  schema_id: vocab\n  name: 词汇\ntranslator:\n  dictionary: vocab\n" +
+                        "  use_preset_vocabulary: true\n",
+                    "vocab-main/vocab.dict.yaml" to "---\nname: vocab\nversion: \"1\"\n...\n你好\tni hao\t1\n",
+                )
+            DeployFixtures.pickSchemePackage(storage, "r1", vocab)
+            val first = pipeline.run(DeployRequest("r1", DeployMode.IMPORT_SCHEME))
+            assertEquals(first.problem, RequestState.SUCCEEDED, first.state)
+            val scheme = publisher.readActive()!!
+            assertFalse("essay.txt" in runner.overlays.last())
+
+            DeployFixtures.pickSchemePackage(
+                storage,
+                "r2",
+                mapOf("rime-essay-main/essay.txt" to "你好\t100\n", "rime-essay-main/README.md" to "x"),
+            )
+            val status = pipeline.run(DeployRequest("r2", DeployMode.IMPORT_SCHEME))
+
+            assertEquals(status.problem, RequestState.SUCCEEDED, status.state)
+            val catalog = SourceCatalog(storage)
+            assertEquals(listOf(SourceKind.DATA), catalog.listData().map { it.kind })
+            assertEquals("rime-essay", catalog.listData().single().displayName)
+            assertEquals(
+                "a dependency package offers no input method",
+                listOf(scheme.sourceId),
+                catalog.list().map { it.sourceId },
+            )
+            assertEquals("the keyboard stays on its package", scheme.sourceId, publisher.readActive()!!.sourceId)
+            assertEquals("the package is rebuilt with the word list", "你好\t100\n", runner.overlays.last()["essay.txt"])
+        }
+
+    @Test
+    fun aPackageTheOneInUseRefersToIsStoredBesideItAndTheKeyboardStays() =
+        runTest {
+            val terra =
+                mapOf(
+                    "terra-main/default.yaml" to "schema_list:\n  - schema: terra\n",
+                    "terra-main/terra.schema.yaml" to
+                        "schema:\n  schema_id: terra\n  name: 地球\n  dependencies:\n    - stroke\n" +
+                        "translator:\n  dictionary: terra\n",
+                    "terra-main/terra.dict.yaml" to "---\nname: terra\nversion: \"1\"\n...\n你好\tni hao\t1\n",
+                )
+            DeployFixtures.pickSchemePackage(storage, "r1", terra)
+            pipeline.run(DeployRequest("r1", DeployMode.IMPORT_SCHEME))
+            val active = publisher.readActive()!!
+
+            DeployFixtures.pickSchemePackage(
+                storage,
+                "r2",
+                mapOf(
+                    "stroke-main/default.yaml" to "schema_list:\n  - schema: stroke\n",
+                    "stroke-main/stroke.schema.yaml" to
+                        "schema:\n  schema_id: stroke\n  name: 五笔画\ntranslator:\n  dictionary: stroke\n",
+                    "stroke-main/stroke.dict.yaml" to "---\nname: stroke\nversion: \"1\"\n...\n一\th\t1\n",
+                ),
+            )
+            val status = pipeline.run(DeployRequest("r2", DeployMode.IMPORT_SCHEME))
+
+            assertEquals(status.problem, RequestState.SUCCEEDED, status.state)
+            assertEquals(2, SourceCatalog(storage).list().size)
+            assertEquals("the input methods in use stay", active.sourceId, publisher.readActive()!!.sourceId)
+            assertTrue(
+                "the package in use is rebuilt with the scheme it names",
+                "stroke.dict.yaml" in runner.overlays.last(),
+            )
+        }
+
+    @Test
     fun aRejectedPackageReportsWhyAndLeavesNothingBehind() =
         runTest {
             val files = DeployFixtures.schemePackageFiles().filterKeys { !it.endsWith(".lua") }

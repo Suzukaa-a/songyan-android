@@ -168,6 +168,8 @@ data class PreparedSchemeImport(
     /** What the package's input methods go without; see [MissingFeature]. */
     val missingFeatures: List<MissingFeature> = emptyList(),
 ) {
+    /** True for a dependency package: data files other packages read, and no input method of its own. */
+    val dataOnly: Boolean get() = schemes.isEmpty()
     val schemaIds: List<String> get() = schemes.map { it.schemaId }
     val primarySchemaId: String get() = schemes.first().schemaId
 }
@@ -211,6 +213,7 @@ object SchemePackageImportBuilder {
     private const val MAX_DEPTH = 32
     private const val MAX_DISPLAY_NAME_CODE_POINTS = 64
     private const val SCHEMA_SUFFIX = ".schema.yaml"
+    private const val DATA_PACKAGE_NAME = "Rime data"
     private const val CUSTOM_SUFFIX = ".custom.yaml"
     private const val DEFAULT_CONFIG = "default.yaml"
     private const val BUFFER_BYTES = 64 * 1024
@@ -294,6 +297,9 @@ object SchemePackageImportBuilder {
                 fail(SchemePackageImportError.Reason.MISSING_SCHEMA, "$id$SCHEMA_SUFFIX is advertised but not shipped")
             }
         }
+        if (advertisedSchemas.isEmpty() && !hasRootSchema(target)) {
+            return dataOnly(target, extracted, cleanPackageName(packageName) ?: cleanPackageName(extracted.wrapper))
+        }
         // A package that ships its own default.yaml decides its input methods itself.
         val ownConfiguration = File(target, DEFAULT_CONFIG).isFile
         supplement(target)
@@ -324,6 +330,51 @@ object SchemePackageImportBuilder {
             )
         }
         return prepared
+    }
+
+    private fun hasRootSchema(target: File): Boolean =
+        target.listFiles().orEmpty().any { it.isFile && it.name.endsWith(SCHEMA_SUFFIX) }
+
+    /**
+     * Files other packages read by name from the shared data folder: dictionaries, the shared word
+     * list, includes, OpenCC data, Lua modules and models. A package made of these alone is a
+     * dependency package; one with none of them (only documentation or images) is not a package.
+     */
+    private fun isDataFile(path: String): Boolean {
+        if (!SchemeSourceCheck.isRuntimeSourceFile(path)) return false
+        val name = path.substringAfterLast('/')
+        return when {
+            path.startsWith("opencc/") || path.startsWith("lua/") || name.endsWith(".gram") -> true
+            path.contains('/') -> false
+            name == "essay.txt" || name.endsWith(".dict.yaml") -> true
+            name.endsWith(".yaml") -> name != DEFAULT_CONFIG && !name.endsWith(CUSTOM_SUFFIX)
+            else -> false
+        }
+    }
+
+    /** A package without input methods that carries data files; [PreparedSchemeImport.schemes] is empty. */
+    private fun dataOnly(
+        target: File,
+        extracted: Extracted,
+        name: String?,
+    ): PreparedSchemeImport {
+        val files = sortedMapOf<String, File>()
+        collectFiles(target, "", files)
+        if (files.keys.none(::isDataFile)) {
+            fail(
+                SchemePackageImportError.Reason.MISSING_SCHEMA,
+                "no $SCHEMA_SUFFIX file and no dictionary, word list or other Rime data file",
+            )
+        }
+        val records = files.entries.joinToString("") { (path, file) -> path + file.sha256() }
+        return PreparedSchemeImport(
+            root = target,
+            schemes = emptyList(),
+            displayName = name ?: DATA_PACKAGE_NAME,
+            packageId = SOURCE_PREFIX + extracted.identity,
+            revision = sha256Hex(records.toByteArray(StandardCharsets.UTF_8)).take(REVISION_HEX),
+            skippedFiles = extracted.skipped,
+        )
     }
 
     private class Extracted(
@@ -613,39 +664,57 @@ object SchemePackageImportBuilder {
     }
 
     /**
-     * Copies in what another installed package provides of the files this one refers to and lacks,
-     * until nothing more is found. Only runtime files at their package-relative path; a file the
-     * package ships is never replaced. Bounded by the package's own byte budget.
+     * Copies in what another installed package provides of the files this one refers to and lacks;
+     * see [borrowPlan].
      */
     private fun borrow(
         target: File,
         provide: (String) -> File?,
         limits: SchemePackageLimits,
     ) {
+        for ((path, source) in borrowPlan(target, provide, limits)) {
+            val destination = File(target, path)
+            if (destination.exists()) continue
+            destination.parentFile?.mkdirs()
+            source.copyTo(destination)
+        }
+    }
+
+    /**
+     * The files another installed package provides of those the package in [target] refers to and
+     * lacks, found until nothing more turns up: package-relative path to the provider's file. Only
+     * runtime files; a file the package ships is never replaced. Bounded by the package's own byte
+     * budget. Nothing is written, so a deployment can ask again with the packages installed since.
+     */
+    fun borrowPlan(
+        target: File,
+        provide: (String) -> File?,
+        limits: SchemePackageLimits = SchemePackageLimits(),
+    ): Map<String, File> {
         val tried = HashSet<String>()
         var added = 0L
+        val own = sortedMapOf<String, File>()
+        collectFiles(target, "", own)
+        val borrowed = sortedMapOf<String, File>()
         while (true) {
-            val files = sortedMapOf<String, File>()
-            collectFiles(target, "", files)
+            val files = sortedMapOf<String, File>().apply { putAll(own) }
+            files.putAll(borrowed)
             val closure =
                 try {
                     SchemeSourceDependencies(files.keys) { path -> files[path]?.let(::readConfig) }.closure()
                 } catch (_: SchemeSourceDependencies.Invalid) {
-                    return
+                    return borrowed
                 }
-            var copied = false
+            var found = false
             for (path in closure.missing + closure.optional) {
                 if (!tried.add(path) || !SchemeSourceCheck.isRuntimeSourceFile(path)) continue
                 val source = provide(path)?.takeIf { it.isFile } ?: continue
                 added += source.length()
-                if (source.length() > limits.sourceFileBytes || added > limits.sourceTotalBytes) return
-                val destination = File(target, path)
-                if (destination.exists()) continue
-                destination.parentFile?.mkdirs()
-                source.copyTo(destination)
-                copied = true
+                if (source.length() > limits.sourceFileBytes || added > limits.sourceTotalBytes) return borrowed
+                borrowed[path] = source
+                found = true
             }
-            if (!copied) return
+            if (!found) return borrowed
         }
     }
 

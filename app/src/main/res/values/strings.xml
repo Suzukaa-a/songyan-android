@@ -51,7 +51,7 @@
     <string name="scheme_import_error_too_many_files">The archive has too many files. The limit is 2000.</string>
     <string name="scheme_import_error_unsafe_files">The archive contains unsafe file paths. Use another file.</string>
     <string name="scheme_import_error_user_data">The archive contains learning data (.userdb). Remove it and try again.</string>
-    <string name="scheme_import_error_missing_scheme">This file has no usable input method.</string>
+    <string name="scheme_import_error_missing_scheme">This file has no input scheme and no Rime data files (such as .dict.yaml or essay.txt).</string>
     <string name="scheme_import_error_invalid_scheme">A configuration file of the input scheme is invalid. Check its contents.</string>
     <string name="scheme_import_error_encoding">A file of the input scheme is not UTF-8 text.</string>
     <string name="scheme_import_error_missing_dependency">The input scheme is missing these files: %s.</string>

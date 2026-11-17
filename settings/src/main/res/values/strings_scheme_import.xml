@@ -17,6 +17,8 @@
     <string name="schemes_sources_section">My input schemes</string>
     <string name="schemes_source_kind_builtin">Built-in</string>
     <string name="schemes_source_kind_dictionary">Built-in input methods · imported dictionary</string>
+    <string name="schemes_source_kind_data">Dependency package</string>
+    <string name="schemes_status_used_by">Used by %s</string>
     <string name="schemes_source_kind_scheme">Imported input scheme</string>
     <string name="schemes_source_use">Use</string>
     <string name="schemes_source_delete">Delete</string>

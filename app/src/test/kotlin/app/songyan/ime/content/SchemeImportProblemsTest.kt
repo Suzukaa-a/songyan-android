@@ -1,6 +1,7 @@
 package app.songyan.ime.content
 
 import app.songyan.ime.packages.DictionaryImportError
+import app.songyan.ime.packages.MissingFeature
 import app.songyan.ime.packages.SchemePackageImportError
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -63,6 +64,17 @@ class SchemeImportProblemsTest {
         assertEquals(
             "a.dict.yaml、b.dict.yaml、c.dict.yaml…",
             ImportPaths.list(listOf("x/a.dict.yaml", "b.dict.yaml", "c.dict.yaml", "d.dict.yaml"), "、"),
+        )
+    }
+
+    @Test
+    fun aMissingFileNamesTheRepositoryThatProvidesIt() {
+        assertEquals(
+            "terra_pinyin.schema.yaml (rime/rime-terra-pinyin), essay.txt (rime/rime-essay), unknown.dict.yaml",
+            ImportPaths.list(
+                listOf("terra_pinyin.schema.yaml", "essay.txt", "unknown.dict.yaml"),
+                ", ",
+            ) { name -> MissingFeature.repositoryOfPath(name)?.let { "$name ($it)" } ?: name },
         )
     }
 }

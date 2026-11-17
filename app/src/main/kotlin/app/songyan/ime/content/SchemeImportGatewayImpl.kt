@@ -285,9 +285,15 @@ internal class SchemeImportGatewayImpl(
                         res,
                         SchemeImportProblems.SIZE_LIMIT_LABEL,
                     )
-                SchemeImportProblemKind.MISSING_DEPENDENCY,
-                SchemeImportProblemKind.CONFLICTING_FILES,
-                ->
+                SchemeImportProblemKind.MISSING_DEPENDENCY ->
+                    appContext.getString(
+                        res,
+                        ImportPaths.list(paths, appContext.getString(R.string.import_path_separator)) { name ->
+                            MissingFeatureMessages.named(appContext, name)
+                        },
+                    )
+
+                SchemeImportProblemKind.CONFLICTING_FILES ->
                     appContext.getString(
                         res,
                         ImportPaths.list(paths, appContext.getString(R.string.import_path_separator)),

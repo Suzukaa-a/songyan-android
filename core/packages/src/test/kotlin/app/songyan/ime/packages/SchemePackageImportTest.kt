@@ -579,8 +579,11 @@ class SchemePackageImportTest {
             listOf("wubi86", "wubi_pinyin"),
             prepared.schemaIds,
         )
-        // pinyin_simp's own stroke lookup is never built for wubi86, so it is not reported.
-        assertEquals(emptyList<MissingFeature>(), prepared.missingFeatures)
+        // pinyin_simp declares a stroke lookup of its own; the notice names it too.
+        assertEquals(
+            listOf(MissingFeature(MissingFeature.Kind.REVERSE_LOOKUP, listOf("stroke"))),
+            prepared.missingFeatures,
+        )
     }
 
     @Test

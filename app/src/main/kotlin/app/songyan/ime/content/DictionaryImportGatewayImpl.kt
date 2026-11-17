@@ -265,9 +265,10 @@ internal object ImportPaths {
     fun list(
         paths: List<String>,
         separator: String,
+        decorate: (String) -> String = { it },
     ): String {
         val names = paths.map { it.substringAfterLast('/') }.distinct()
-        val shown = names.take(MAX_SHOWN).joinToString(separator)
+        val shown = names.take(MAX_SHOWN).joinToString(separator, transform = decorate)
         return if (names.size > MAX_SHOWN) "$shown…" else shown
     }
 }

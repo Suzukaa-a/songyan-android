@@ -111,14 +111,21 @@ data class MissingFeature(
         /** The upstream repository that provides [name], when it is one of the well-known ones. */
         fun repositoryOf(name: String): String? = REPOSITORIES[name]
 
+        /** The upstream repository that provides the file [path] (`terra_pinyin.dict.yaml`), when well known. */
+        fun repositoryOfPath(path: String): String? = repositoryOf(stem(path))
+
         /** Groups a closure's optional gaps by what they cost the user. */
         internal fun of(closure: SchemeSourceDependencies.Closure): List<MissingFeature> {
+            // A scheme another package of the tree declares as its own lookup is as unmet as one the
+            // package names itself: the user asked for every gap to be shown.
+            val declared =
+                closure.optional.filter { it !in closure.direct && it.endsWith(SchemeSourceDependencies.SCHEMA_SUFFIX) }
             val lookup =
-                closure.lookups
+                (closure.lookups + declared)
                     .map(::stem)
                     .distinct()
                     .sorted()
-            val vocabulary = closure.direct.filter { it == PRESET_VOCABULARY_FILE }.map(::stem)
+            val vocabulary = closure.optional.filter { it == PRESET_VOCABULARY_FILE }.map(::stem)
             val other =
                 closure.direct
                     .filter { it !in closure.lookups && it != PRESET_VOCABULARY_FILE }

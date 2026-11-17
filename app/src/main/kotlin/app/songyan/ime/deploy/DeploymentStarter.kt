@@ -43,8 +43,9 @@ object DeploymentStarter {
             // Performance journeys use the same offline fixture on every clean emulator.
             val benchmark =
                 BuildConfig.BUILD_TYPE == "benchmarkRelease" || BuildConfig.BUILD_TYPE == "nonMinifiedRelease"
-            if (!needsDownload || benchmark) {
-                start(app, DeployContract.builtinIntent(app, force = needsDownload && benchmark), jobFallback = true)
+            val force = needsDownload && benchmark
+            if ((!needsDownload || benchmark) && !exhausted(app, DeployMode.BUILTIN, force)) {
+                start(app, DeployContract.builtinIntent(app, force = force), jobFallback = true)
             }
         }
     }
@@ -106,7 +107,7 @@ object DeploymentStarter {
         scope.launch {
             if (!isReady(appContext)) {
                 requestEnsureDeployed(appContext)
-            } else if (companionsPending(appContext)) {
+            } else if (companionsPending(appContext) && !exhausted(appContext, DeployMode.COMPLETE_COMPANIONS)) {
                 start(appContext, DeployContract.completeCompanionsIntent(appContext), jobFallback = true)
             }
         }
@@ -116,10 +117,29 @@ object DeploymentStarter {
     fun completeCompanionsIfPending(context: Context) {
         val appContext = context.applicationContext
         scope.launch {
-            if (isReady(appContext) && companionsPending(appContext)) {
+            if (isReady(appContext) &&
+                companionsPending(appContext) &&
+                !exhausted(appContext, DeployMode.COMPLETE_COMPANIONS)
+            ) {
                 start(appContext, DeployContract.completeCompanionsIntent(appContext), jobFallback = true)
             }
         }
+    }
+
+    /**
+     * Whether [mode] took the deploy process down on every recent run against the generation in
+     * use; starting it again would only be refused (see [DeployAttempts]).
+     */
+    private fun exhausted(
+        context: Context,
+        mode: DeployMode,
+        force: Boolean = false,
+    ): Boolean {
+        val app = context.applicationContext as? SongyanApplication ?: return false
+        return runCatching {
+            val generation = GenerationPublisher(app.storage).readActive()?.generation
+            DeployAttempts.keyOf(mode, force, generation)?.let { DeployWorker.attempts(app).exhausted(it) } == true
+        }.getOrDefault(false)
     }
 
     private fun companionsPending(context: Context): Boolean {

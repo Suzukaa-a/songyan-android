@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.concurrent.thread
@@ -172,10 +173,22 @@ class DeployWorker private constructor(
         val request = queued.request
         synchronized(lock) { current = queued }
         val runStart = SystemClock.elapsedRealtime()
+        val attempts = attempts(app)
+        val attemptKey =
+            DeployAttempts.keyOf(
+                request,
+                runCatching { GenerationPublisher(app.storage).readActive()?.generation }.getOrNull(),
+            )
+        val wasCancelled = queued.requestIds.any { it in cancelled }
+        // A run that took the process down writes no end; after a few the work is refused, not retried.
+        val refused = !wasCancelled && attemptKey != null && !attempts.begin(attemptKey)
         val status =
             try {
-                if (queued.requestIds.any { it in cancelled }) {
+                if (wasCancelled) {
                     RequestStatus(RequestState.FAILED, problem = DeployPipeline.CANCELLED)
+                } else if (refused) {
+                    Log.e(TAG, "giving up on " + request.mode.wireName + ": it never finished in its last runs")
+                    RequestStatus(RequestState.FAILED, problem = DeployPipeline.DEPLOY_FAILED)
                 } else {
                     queued.requestIds.forEach { requests.write(it, RequestStatus(RequestState.RUNNING)) }
                     coarse.write(DeployState.PREPARING, request.requestId)
@@ -192,6 +205,7 @@ class DeployWorker private constructor(
                     }
                 }
             } catch (e: CancellationException) {
+                if (attemptKey != null && !refused) runCatching { attempts.end(attemptKey) }
                 synchronized(lock) { current = null }
                 throw e
             } catch (e: Exception) {
@@ -204,6 +218,8 @@ class DeployWorker private constructor(
                 (SystemClock.elapsedRealtime() - runStart) +
                 " ms",
         )
+        // A refused run never started, so it keeps its count and stays refused.
+        if (attemptKey != null && !refused) runCatching { attempts.end(attemptKey) }
         cancelled.removeAll(queued.requestIds.toSet())
         synchronized(lock) { current = null }
         finish(queued, status)
@@ -287,6 +303,11 @@ class DeployWorker private constructor(
 
     companion object {
         private const val TAG = "DeployWorker"
+
+        /** The attempt counter all processes read; see [DeployAttempts]. */
+        internal fun attempts(app: SongyanApplication): DeployAttempts =
+            DeployAttempts(File(app.storage.rimeRoot, DeployAttempts.FILE_NAME))
+
         private const val PROGRESS_INTERVAL_MS = 300L
 
         /** Status files outlive every waiter by far; older ones are swept. */

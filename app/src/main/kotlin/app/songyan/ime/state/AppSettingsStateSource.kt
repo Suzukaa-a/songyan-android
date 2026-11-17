@@ -1,5 +1,6 @@
 package app.songyan.ime.state
 
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -123,17 +124,14 @@ class AppSettingsStateSource(
         // A source that lists fine but lost files its manifest names is as unusable as one without manifest.
         val damaged = catalog.damaged()
         val schemes = usable?.let { schemesOf(it, stored) }.orEmpty()
-        val deployState = deployStatus.read()
         val engine =
-            when {
-                // Ready only when the IME could actually start this generation: the record alone is
-                // not proof (an interrupted publish leaves a generation directory behind).
-                usable != null -> EngineStatus.Ready
-                deployState == DeployState.PREPARING -> EngineStatus.Preparing(percent = 0)
-                deployState == DeployState.FAILED -> EngineStatus.Failed
-                active != null -> EngineStatus.Failed
-                else -> EngineStatus.Unknown
-            }
+            engineStatus(
+                usable = usable != null,
+                published = active != null,
+                companionsPending = usable?.companionsPending == true,
+                deployState = deployStatus.read(),
+                deployRunning = deployProcessRunning(),
+            )
         val inUseSchemeId = schemes.firstOrNull { it.id == activeSchemaId }?.id ?: schemes.firstOrNull()?.id
         val inUseScheme = schemes.firstOrNull { it.id == inUseSchemeId }
         val layoutName =
@@ -170,6 +168,17 @@ class AppSettingsStateSource(
                     .map { sourceInfo(it, usable, activeSchemaId) }
                     .filter { it.usable },
         )
+    }
+
+    /** Whether the :deploy process is alive; a status file cannot tell a running deploy from a killed one. */
+    private fun deployProcessRunning(): Boolean {
+        val name = appContext.packageName + DEPLOY_PROCESS_SUFFIX
+        return runCatching {
+            appContext
+                .getSystemService(ActivityManager::class.java)
+                ?.runningAppProcesses
+                ?.any { it.processName == name } == true
+        }.getOrDefault(false)
     }
 
     /**
@@ -366,8 +375,37 @@ class AppSettingsStateSource(
 
     companion object {
         private const val DEFAULT_KEYBOARD_ID = "default"
+
+        /** The deploy components' `android:process` in the manifest. */
+        private const val DEPLOY_PROCESS_SUFFIX = ":deploy"
     }
 }
+
+/**
+ * What the home screen says about the engine. A usable generation is not "ready" while the deploy
+ * process is still working on it, or while the layouts it still lacks failed to build: the work
+ * that failed would otherwise go unnoticed behind 「松烟已就绪」. A status the deploy process left at
+ * "preparing" when it died says failed, since nothing is preparing any more.
+ */
+internal fun engineStatus(
+    usable: Boolean,
+    published: Boolean,
+    companionsPending: Boolean,
+    deployState: DeployState,
+    deployRunning: Boolean,
+): EngineStatus =
+    when {
+        deployState == DeployState.PREPARING && deployRunning -> EngineStatus.Preparing(percent = 0)
+        deployState == DeployState.PREPARING -> EngineStatus.Failed
+        // Ready only when the IME could actually start this generation: the record alone is
+        // not proof (an interrupted publish leaves a generation directory behind).
+        usable && companionsPending && deployState == DeployState.FAILED -> EngineStatus.Failed
+        usable && companionsPending -> EngineStatus.Preparing(percent = 0)
+        usable -> EngineStatus.Ready
+        deployState == DeployState.FAILED -> EngineStatus.Failed
+        published -> EngineStatus.Failed
+        else -> EngineStatus.Unknown
+    }
 
 /** Localized names of the built-in package's input methods, whose manifest names them by id. */
 internal val BUILTIN_SCHEME_NAMES =

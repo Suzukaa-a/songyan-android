@@ -12,10 +12,16 @@ import java.nio.file.Files
 
 /** Which switches of a compiled schema the keyboard offers, and what each is called. */
 class SchemaOptionCapabilitiesTest {
-    private fun parse(
+    private fun parseAll(
         yaml: String,
         installed: Set<String> = setOf("s2t.json", "t2s.json", "emoji.json", "s2tw.json"),
     ) = SchemaOptionCapabilities.parse("pinyin", "luna", yaml, installed::contains)
+
+    /** The conversion switches; the schema's own declared ones are covered where they are the subject. */
+    private fun parse(
+        yaml: String,
+        installed: Set<String> = setOf("s2t.json", "t2s.json", "emoji.json", "s2tw.json"),
+    ) = parseAll(yaml, installed).filter { it.kind != EngineOptionKind.DECLARED }
 
     @Test
     fun theDeployedSpellerAlphabetIsReadForLayoutSelection() {
@@ -114,8 +120,8 @@ class SchemaOptionCapabilitiesTest {
     }
 
     @Test
-    fun theAsciiModeKeyAndOtherSwitchesNoFilterDrivesAreNotListed() {
-        assertEquals(listOf("traditionalize"), parse(traditional).map { it.name })
+    fun theAsciiModeKeyIsNotListedButOtherDeclaredSwitchesAre() {
+        assertEquals(listOf("traditionalize", "ascii_punct"), parseAll(traditional).map { it.name })
     }
 
     @Test
@@ -394,5 +400,71 @@ class SchemaOptionCapabilitiesTest {
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    private val wubiSwitches =
+        """
+        schema:
+          schema_id: wubi86
+        switches:
+          - name: ascii_mode
+            reset: 0
+            states: [ 中文, 西文 ]
+          - name: full_shape
+            states: [ 半角, 全角 ]
+          - name: extended_charset
+            states: [ 常用, 增廣 ]
+          - name: ascii_punct
+            states: [ 。，, ．， ]
+        """.trimIndent()
+
+    @Test
+    fun everyDeclaredSwitchIsOfferedExceptTheOneTheLanguageKeyAlreadyFlips() {
+        val options = parseAll(wubiSwitches)
+        assertEquals(listOf("full_shape", "extended_charset", "ascii_punct"), options.map { it.name })
+        val declared = options.filter { it.kind == EngineOptionKind.DECLARED }
+        assertEquals(listOf("extended_charset", "ascii_punct"), declared.map { it.name })
+        assertEquals(listOf("常用", "增廣"), declared[0].stateLabels)
+        assertEquals(listOf("。，", "．，"), declared[1].stateLabels)
+        assertEquals(EngineOptionKind.FULL_SHAPE, options[0].kind)
+        assertTrue(options.none { it.defaultValue })
+    }
+
+    @Test
+    fun anOptionGroupOfTheSchemasOwnBecomesOneMemberPerOption() {
+        val yaml =
+            """
+            schema:
+              schema_id: s
+            switches:
+              - options: [ pinyin, wubi_form, free ]
+                states: [ 拼音, 五笔, 自由 ]
+                reset: 1
+            """.trimIndent()
+        val options = parseAll(yaml)
+        assertEquals(listOf("pinyin", "wubi_form", "free"), options.map { it.name })
+        assertTrue(
+            options.all {
+                it.kind == EngineOptionKind.DECLARED &&
+                    it.choiceGroup == listOf("pinyin", "wubi_form", "free")
+            },
+        )
+        assertEquals(listOf("拼音", "五笔", "自由"), options.map { it.choiceLabel })
+        assertEquals(listOf(false, true, false), options.map { it.defaultValue })
+    }
+
+    @Test
+    fun aSwitchWithoutTwoLabelsOrAGroupWithoutLabelsStaysOut() {
+        val yaml =
+            """
+            schema:
+              schema_id: s
+            switches:
+              - name: no_labels
+              - name: one_label
+                states: [ 只有一个 ]
+              - options: [ a, b ]
+            """.trimIndent()
+        assertTrue(parseAll(yaml).isEmpty())
     }
 }

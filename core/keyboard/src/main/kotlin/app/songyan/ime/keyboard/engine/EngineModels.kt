@@ -208,6 +208,12 @@ enum class EngineOptionKind {
     SIMPLIFIED,
     EMOJI,
     FULL_SHAPE,
+
+    /**
+     * Any other two-state switch or option group the schema declares (`extended_charset`,
+     * `ascii_punct`): worded by the schema's own state labels.
+     */
+    DECLARED,
 }
 
 /**
@@ -231,6 +237,8 @@ data class EngineOptionDescriptor(
      * groups keep null and are worded by their own labels.
      */
     val knownScriptState: BuiltinScriptState? = null,
+    /** The schema's labels for the off and on state of a two-state switch; empty when it declares none. */
+    val stateLabels: List<String> = emptyList(),
 ) {
     val id: String get() = name
 }

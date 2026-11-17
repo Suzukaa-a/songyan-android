@@ -13,6 +13,8 @@ data class EngineOptionSetting(
     val choiceLabel: String? = null,
     /** The bundled scheme's known script state; its wording comes from resources instead of [choiceLabel]. */
     val knownScriptState: BuiltinScriptState? = null,
+    /** The schema's labels for the off and on state of a [EngineOptionKind.DECLARED] switch. */
+    val stateLabels: List<String> = emptyList(),
 )
 
 /**

@@ -61,6 +61,30 @@ internal class KeyboardSwitcherPanel(
         val label: String,
     )
 
+    /** One schema switch of the running input method as the menu shows it. */
+    sealed interface SwitchEntry {
+        /** A two-state switch: the row shows the label of the state it is in, and a tap flips it. */
+        data class Toggle(
+            val name: String,
+            val label: String,
+            val on: Boolean,
+        ) : SwitchEntry
+
+        /** A group of options of which exactly one is chosen: one chip each. */
+        data class Group(
+            val options: List<Option>,
+        ) : SwitchEntry {
+            data class Option(
+                val name: String,
+                val label: String,
+                val selected: Boolean,
+            )
+        }
+    }
+
+    /** A schema switch was flipped (name, new value); a group option is switched on. */
+    var onSwitch: (String, Boolean) -> Unit = { _, _ -> }
+
     var onSchema: (String) -> Unit = {}
 
     /** A keyboard of the running input method was picked. */
@@ -83,6 +107,11 @@ internal class KeyboardSwitcherPanel(
     private var shortcutRows: List<View> = emptyList()
     private var oneHandRows: List<View> = emptyList()
     private var oneHandLabel: TextView? = null
+
+    /** The running input method's schema switches; the section only exists while it declares any. */
+    private var switchTitle: TextView? = null
+    private var switchSection: LinearLayout? = null
+    private var switchEntries: List<SwitchEntry> = emptyList()
 
     /** Extensions that offer their own panel; the section only exists while there are any. */
     private var extensionSection: LinearLayout? = null
@@ -128,6 +157,15 @@ internal class KeyboardSwitcherPanel(
                 KeyboardChip(PublishedKeyboard(defaultSchemaId, it, it.wire), layoutName(context, it))
             },
         )
+        // The running input method's own switches sit under the chips, before the rows that leave the menu.
+        val switchHeading = title(context.getString(R.string.ime_menu_switches))
+        val switchBox = LinearLayout(context).apply { orientation = VERTICAL }
+        switchHeading.visibility = View.GONE
+        switchBox.visibility = View.GONE
+        body.addView(switchHeading)
+        body.addView(switchBox)
+        switchTitle = switchHeading
+        switchSection = switchBox
         // Extensions with their own panel sit right under the chip groups: the menu's height is the
         // fixed key surface, and the rows below (quick content, settings, input methods) are long
         // enough that anything put under them needs a scroll to be seen at all.
@@ -280,6 +318,46 @@ internal class KeyboardSwitcherPanel(
         }
         update(currentSchema, currentKeyboardId)
     }
+
+    /**
+     * The schema switches of the running input method; rebuilt only when they change. An empty list
+     * hides the section so a menu without switches stays as short as before.
+     */
+    fun setSwitches(entries: List<SwitchEntry>) {
+        val section = switchSection ?: return
+        if (entries == switchEntries) return
+        switchEntries = entries
+        val removed = (0 until section.childCount).map { section.getChildAt(it) }
+        section.removeAllViews()
+        val removedSet = removed.toSet()
+        actionRows.removeAll(removedSet)
+        actionLabels.removeAll { (it.parent as? View) in removedSet }
+        switchTitle?.visibility = if (entries.isEmpty()) GONE else VISIBLE
+        section.visibility = if (entries.isEmpty()) GONE else VISIBLE
+        for (entry in entries) {
+            when (entry) {
+                is SwitchEntry.Toggle -> {
+                    val row = actionRow(entry.label, chevron = false) { onSwitch(entry.name, !entry.on) }
+                    row.contentDescription = entry.label
+                    section.addView(row)
+                }
+                is SwitchEntry.Group -> {
+                    val scroll = chipRow(emptyList())
+                    val box = scroll.getChildAt(0) as LinearLayout
+                    for (option in entry.options) {
+                        val view = chip(option.label) { onSwitch(option.name, true) }
+                        style(view, option.selected)
+                        view.contentDescription = chipDescription(option.label, option.selected)
+                        box.addView(view)
+                    }
+                    section.addView(scroll)
+                }
+            }
+        }
+    }
+
+    /** The switches the menu shows, for tests. */
+    internal val switches: List<SwitchEntry> get() = switchEntries
 
     /** The keyboards the menu offers, in order. */
     internal val keyboards: List<KeyboardChip> get() = keyboardChips.map { it.first }

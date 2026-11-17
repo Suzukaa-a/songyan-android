@@ -31,6 +31,7 @@
     <string name="ime_return_to_letters">返回主鍵盤</string>
     <string name="ime_menu_input_method">輸入方式</string>
     <string name="ime_menu_layout">鍵盤配置</string>
+    <string name="ime_menu_switches">輸入方式選項</string>
     <string name="ime_menu_close">關閉</string>
     <string name="ime_menu_title">鍵盤</string>
     <string name="ime_item_selected">使用中：%1$s</string>

@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import app.songyan.ime.candidate.KeyboardOneHandMode
+import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -210,6 +211,7 @@ internal fun KeyboardController.wireViews() {
     }
     menu.onSchema = { id -> enqueue { chooseSchema(id) } }
     menu.onKeyboard = { keyboard -> enqueue { chooseKeyboard(keyboard) } }
+    menu.onSwitch = { name, on -> applyQuickSetting(QuickSettingChange.EngineOption(name, on)) }
     menu.onQuickContent = { openQuickContentPanel() }
     menu.onKeyboardSettings = { openKeyboardSettingsPanel() }
     menu.onEmoji = { openEmojiPanel() }

@@ -4,6 +4,7 @@ import app.songyan.ime.candidate.KeyboardContentDock
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.QuickSettingChange
+import app.songyan.ime.keyboard.engine.EngineOptionKind
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
@@ -372,7 +373,40 @@ internal fun KeyboardController.syncMenu() {
             )
         },
     )
+    menu.setSwitches(menuSwitches())
     menu.update(schemaId, keyboards.current.id)
+}
+
+/** The running input method's own schema switches, worded by the labels its schema declares. */
+internal fun KeyboardController.menuSwitches(): List<KeyboardSwitcherPanel.SwitchEntry> {
+    val declared =
+        session
+            ?.takeIf { ready }
+            ?.options
+            .orEmpty()
+            .filter { it.descriptor.kind == EngineOptionKind.DECLARED }
+    val seen = HashSet<String>()
+    return declared.mapNotNull { state ->
+        val descriptor = state.descriptor
+        if (descriptor.choiceGroup.isEmpty()) {
+            val labels = descriptor.stateLabels
+            if (labels.size != 2) return@mapNotNull null
+            KeyboardSwitcherPanel.SwitchEntry.Toggle(descriptor.name, labels[if (state.value) 1 else 0], state.value)
+        } else if (seen.add(descriptor.choiceGroup.first())) {
+            val members = descriptor.choiceGroup.mapNotNull { name -> declared.find { it.descriptor.name == name } }
+            KeyboardSwitcherPanel.SwitchEntry.Group(
+                members.map {
+                    KeyboardSwitcherPanel.SwitchEntry.Group.Option(
+                        it.descriptor.name,
+                        it.descriptor.choiceLabel ?: it.descriptor.name,
+                        it.value,
+                    )
+                },
+            )
+        } else {
+            null
+        }
+    }
 }
 
 /**

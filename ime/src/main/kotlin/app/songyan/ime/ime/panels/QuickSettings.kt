@@ -214,6 +214,7 @@ object QuickSettingsModel {
                 QuickTile(QuickSetting.PHRASES, QuickTile.Kind.ACTION),
             ) +
             state.engineOptions
+                .filter { it.kind != EngineOptionKind.DECLARED }
                 .distinctBy { it.choiceGroup.firstOrNull() ?: it.name }
                 .map { option ->
                     if (option.choiceGroup.isEmpty()) {

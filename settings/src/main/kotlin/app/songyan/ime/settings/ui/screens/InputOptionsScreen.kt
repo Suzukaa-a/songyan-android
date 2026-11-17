@@ -182,14 +182,14 @@ private fun EngineOptionsSection(
     state.options.distinctBy { it.choiceGroup.firstOrNull() ?: it.name }.forEach { option ->
         if (option.choiceGroup.isEmpty()) {
             SwitchRow(
-                title = stringResource(engineOptionTitle(option.kind)),
+                title = engineOptionTitle(option),
                 subtitle = null,
                 checked = option.on,
                 onCheckedChange = { onChange(option.name, it) },
             )
         } else {
             SettingsRow(
-                title = stringResource(R.string.options_engine_character_form),
+                title = engineGroupTitle(option, state.options),
                 subtitle =
                     state.options
                         .firstOrNull { it.name in option.choiceGroup && it.on }
@@ -201,7 +201,7 @@ private fun EngineOptionsSection(
     state.options.firstOrNull { it.name == openGroupName }?.choiceGroup?.let { group ->
         AlertDialog(
             onDismissRequest = { openGroupName = null },
-            title = { Text(stringResource(R.string.options_engine_character_form)) },
+            title = { Text(engineGroupTitle(state.options.first { it.name == openGroupName }, state.options)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
                     group.mapNotNull { name -> state.options.find { it.name == name } }.forEach { option ->
@@ -246,12 +246,27 @@ private fun scriptStateLabel(state: BuiltinScriptState): Int =
         BuiltinScriptState.HONG_KONG -> R.string.options_engine_script_hong_kong
     }
 
-private fun engineOptionTitle(kind: EngineOptionKind): Int =
-    when (kind) {
-        EngineOptionKind.TRADITIONAL -> R.string.options_engine_traditional
-        EngineOptionKind.SIMPLIFIED -> R.string.options_engine_simplified
-        EngineOptionKind.EMOJI -> R.string.options_engine_emoji
-        EngineOptionKind.FULL_SHAPE -> R.string.options_engine_full_shape
+/** A switch of the schema's own is worded by its two state labels; the others by their kind. */
+@Composable
+private fun engineOptionTitle(option: EngineOptionSetting): String =
+    when (option.kind) {
+        EngineOptionKind.TRADITIONAL -> stringResource(R.string.options_engine_traditional)
+        EngineOptionKind.SIMPLIFIED -> stringResource(R.string.options_engine_simplified)
+        EngineOptionKind.EMOJI -> stringResource(R.string.options_engine_emoji)
+        EngineOptionKind.FULL_SHAPE -> stringResource(R.string.options_engine_full_shape)
+        EngineOptionKind.DECLARED -> option.stateLabels.joinToString(" / ").ifEmpty { option.name }
+    }
+
+/** The title of a group of choices: "character form" for the script groups, the choices themselves for a schema's own. */
+@Composable
+private fun engineGroupTitle(
+    option: EngineOptionSetting,
+    all: List<EngineOptionSetting>,
+): String =
+    if (option.kind == EngineOptionKind.DECLARED) {
+        option.choiceGroup.mapNotNull { name -> all.find { it.name == name }?.choiceLabel }.joinToString(" / ")
+    } else {
+        stringResource(R.string.options_engine_character_form)
     }
 
 @Composable

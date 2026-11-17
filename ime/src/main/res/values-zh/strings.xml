@@ -31,6 +31,7 @@
     <string name="ime_return_to_letters">返回主键盘</string>
     <string name="ime_menu_input_method">输入方式</string>
     <string name="ime_menu_layout">键盘布局</string>
+    <string name="ime_menu_switches">输入方式选项</string>
     <string name="ime_menu_close">关闭</string>
     <string name="ime_menu_title">键盘</string>
     <string name="ime_item_selected">正在使用：%1$s</string>

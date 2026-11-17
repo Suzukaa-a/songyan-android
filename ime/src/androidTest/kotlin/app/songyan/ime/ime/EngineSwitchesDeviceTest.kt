@@ -370,12 +370,49 @@ emoji:
         }
     }
 
+    @Test
+    fun aSwitchOfTheSchemasOwnIsInTheKeyboardMenuAndFlipsInTheEngine() =
+        withHost(declared, File(declared.root, "options-declared").also { it.mkdirs() }) { host ->
+            host.start()
+            host.awaitIdle()
+            // The panel keeps to the switches it words itself; the menu owns the schema's own.
+            val states = host.main2 { host.controller.session!!.options }
+            assertEquals(
+                listOf("traditionalize", "extended_charset"),
+                states.map { it.descriptor.name },
+            )
+            host.main { host.controller.openKeyboardMenu() }
+            val toggles =
+                host.main2 {
+                    host.controller.menu.switches
+                        .filterIsInstance<KeyboardSwitcherPanel.SwitchEntry.Toggle>()
+                }
+            assertEquals(listOf(KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "常用", false)), toggles)
+
+            host.main { host.controller.menu.onSwitch("extended_charset", true) }
+            assertTrue(
+                "the engine holds the new state and the menu names it",
+                host.await {
+                    host.main2 {
+                        host.controller.session!!
+                            .options
+                            .any { it.descriptor.name == "extended_charset" && it.value } &&
+                            host.controller.menu.switches ==
+                            listOf(KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "增廣", true))
+                    }
+                },
+            )
+        }
+
     private companion object {
         /** The bundled scheme exactly as shipped: its own four-state group declares which states it has. */
         private lateinit var builtin: DeployedEngine
 
         /** A copy of the bundled scheme patched to one generic boolean switch, as a scheme package adds one. */
         private lateinit var engine: DeployedEngine
+
+        /** The same with a switch of the schema's own, which only the keyboard menu offers. */
+        private lateinit var declared: DeployedEngine
 
         private val FOUR_STATE_LABELS =
             listOf(
@@ -393,37 +430,44 @@ emoji:
                     val context = InstrumentationRegistry.getInstrumentation().targetContext
                     AssetTrees.copy(context.assets, "rime/opencc", File(source, "opencc"))
                 }
-            engine =
-                DeployedEngine("switches", english = false) { source ->
-                    val context = InstrumentationRegistry.getInstrumentation().targetContext
-                    AssetTrees.copy(context.assets, "rime/opencc", File(source, "opencc"))
-                    val schema = File(source, "songyan_quanpin.schema.yaml")
-                    val text = schema.readText()
-                    // Replace the bundled's own filters and switches block with one author-style switch.
-                    val filters =
-                        text.replace(
-                            "    - simplifier@zht\n    - simplifier@zh_tw\n    - simplifier@zh_hk\n",
-                            "    - simplifier@traditionalize\n",
-                        )
-                    assertNotEquals("the bundled script filters moved", text, filters)
-                    val switches =
-                        filters.replace(
-                            "switches:\n  - options: [simplification, zht, zh_tw, zh_hk]\n" +
-                                "    states: [简体, 繁體, 臺灣, 香港]\n    reset: 0",
-                            "switches:\n  - name: traditionalize\n    reset: 0\n    states: [ 简, 繁 ]",
-                        )
-                    assertNotEquals("the bundled switches block moved", filters, switches)
-                    schema.writeText(
-                        switches +
-                            "\ntraditionalize:\n  option_name: traditionalize\n  opencc_config: s2t.json\n",
-                    )
+            engine = DeployedEngine("switches", english = false) { source -> patchSwitches(source, "") }
+            declared =
+                DeployedEngine("declared", english = false) { source ->
+                    patchSwitches(source, "  - name: extended_charset\n    reset: 0\n    states: [ 常用, 增廣 ]\n")
                 }
+        }
+
+        /** The bundled scheme with one author-style switch, plus the schema's own [extra] switches. */
+        private fun patchSwitches(
+            source: File,
+            extra: String,
+        ) {
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            AssetTrees.copy(context.assets, "rime/opencc", File(source, "opencc"))
+            val schema = File(source, "songyan_quanpin.schema.yaml")
+            val text = schema.readText()
+            // Replace the bundled's own filters and switches block with one author-style switch.
+            val filters =
+                text.replace(
+                    "    - simplifier@zht\n    - simplifier@zh_tw\n    - simplifier@zh_hk\n",
+                    "    - simplifier@traditionalize\n",
+                )
+            assertNotEquals("the bundled script filters moved", text, filters)
+            val switches =
+                filters.replace(
+                    "switches:\n  - options: [simplification, zht, zh_tw, zh_hk]\n" +
+                        "    states: [简体, 繁體, 臺灣, 香港]\n    reset: 0",
+                    "switches:\n  - name: traditionalize\n    reset: 0\n    states: [ 简, 繁 ]\n" + extra.trimEnd('\n'),
+                )
+            assertNotEquals("the bundled switches block moved", filters, switches)
+            schema.writeText(switches + "\ntraditionalize:\n  option_name: traditionalize\n  opencc_config: s2t.json\n")
         }
 
         @AfterClass
         @JvmStatic
         fun cleanUp() {
             engine.delete()
+            declared.delete()
             builtin.delete()
         }
     }

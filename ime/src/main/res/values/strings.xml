@@ -59,6 +59,7 @@
     <string name="input_more_ja" translatable="false">その他</string>
     <string name="ime_menu_input_method">Input method</string>
     <string name="ime_menu_layout">Keyboard layout</string>
+    <string name="ime_menu_switches">Input method options</string>
     <string name="ime_menu_close">Close</string>
     <string name="ime_item_selected">In use: %1$s</string>
     <string name="ime_schema_quanpin">Built-in Full Pinyin</string>

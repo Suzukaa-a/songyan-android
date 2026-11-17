@@ -85,7 +85,15 @@ object SchemaOptionCapabilities {
         for (item in items) {
             val name = scalarField(item, "name")
             if (name != null) {
-                val kind = if (name == FULL_SHAPE) EngineOptionKind.FULL_SHAPE else conversions[name] ?: continue
+                val states = listField(item, "states").takeIf { it.size == 2 && it.none(String::isBlank) }.orEmpty()
+                val kind =
+                    when {
+                        name == FULL_SHAPE -> EngineOptionKind.FULL_SHAPE
+                        name in conversions -> conversions[name] ?: continue
+                        // The 中/英 key already switches ascii_mode; every other two-state switch is declared.
+                        name != ASCII_MODE && states.isNotEmpty() -> EngineOptionKind.DECLARED
+                        else -> continue
+                    }
                 result +=
                     EngineOptionDescriptor(
                         resourceID,
@@ -97,6 +105,7 @@ object SchemaOptionCapabilities {
                             declaredConfigs[name]?.takeIf {
                                 kind == EngineOptionKind.TRADITIONAL || kind == EngineOptionKind.SIMPLIFIED
                             },
+                        stateLabels = states,
                     )
                 continue
             }
@@ -110,11 +119,25 @@ object SchemaOptionCapabilities {
                 continue
             }
             val kinds = options.mapNotNull { conversions[it] }
-            if (kinds.isEmpty() ||
-                kinds.any { it != EngineOptionKind.TRADITIONAL && it != EngineOptionKind.SIMPLIFIED }
-            ) {
+            if (kinds.isEmpty()) {
+                // A group of the schema's own: one member per option, worded by its labels.
+                if (options.any { it in conversions } || options.any { it == ASCII_MODE }) continue
+                val reset = scalarField(item, "reset")?.toIntOrNull() ?: 0
+                for ((index, option) in options.withIndex()) {
+                    result +=
+                        EngineOptionDescriptor(
+                            resourceID,
+                            schemaID,
+                            option,
+                            EngineOptionKind.DECLARED,
+                            reset == index,
+                            options,
+                            labels[index],
+                        )
+                }
                 continue
             }
+            if (kinds.any { it != EngineOptionKind.TRADITIONAL && it != EngineOptionKind.SIMPLIFIED }) continue
             if (options.any { it in conversions && conversions[it] == null }) continue
             val reset = scalarField(item, "reset")?.toIntOrNull() ?: 0
             val knownStates = knownScriptStates(schemaID, options, labels)
@@ -315,4 +338,5 @@ object SchemaOptionCapabilities {
     private val TRUE_VALUES = setOf("1", "true")
 
     private const val FULL_SHAPE = "full_shape"
+    private const val ASCII_MODE = "ascii_mode"
 }

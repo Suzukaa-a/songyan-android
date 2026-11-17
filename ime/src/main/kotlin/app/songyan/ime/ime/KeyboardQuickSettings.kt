@@ -72,6 +72,7 @@ internal fun KeyboardController.applyQuickSetting(change: QuickSettingChange) {
                     } catch (error: Exception) {
                         callbacks.error(error)
                     }
+                    syncMenu()
                     render()
                 }
             }

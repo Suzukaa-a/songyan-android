@@ -113,4 +113,49 @@ class KeyboardSwitcherPanelTest {
         scroll.scrollTo(0, Int.MAX_VALUE)
         assertTrue("the last row can be scrolled to", !scroll.canScrollVertically(1))
     }
+
+    private fun texts(view: View): List<String> =
+        buildList {
+            if (view.visibility != View.VISIBLE) return@buildList
+            if (view is android.widget.TextView) add(view.text.toString())
+            if (view is ViewGroup) for (index in 0 until view.childCount) addAll(texts(view.getChildAt(index)))
+        }
+
+    private fun clickWithText(
+        view: View,
+        text: String,
+    ) {
+        val row = clickables(view).first { texts(it).contains(text) }
+        androidx.test.platform.app.InstrumentationRegistry
+            .getInstrumentation()
+            .runOnMainSync { row.performClick() }
+    }
+
+    @Test
+    fun theSwitchSectionShowsTheStateLabelAndFlipsOnATap() {
+        val base = ApplicationProvider.getApplicationContext<Context>()
+        val panel = KeyboardSwitcherPanel(base, BuiltinTemplateSchemas.QUANPIN, KeyboardLayoutKind.QWERTY26)
+        val title = base.getString(R.string.ime_menu_switches)
+        assertTrue("no switches, no section", title !in texts(panel))
+        val flips = mutableListOf<Pair<String, Boolean>>()
+        panel.onSwitch = { name, on -> flips += name to on }
+        panel.setSwitches(
+            listOf(
+                KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "常用", on = false),
+                KeyboardSwitcherPanel.SwitchEntry.Group(
+                    listOf(
+                        KeyboardSwitcherPanel.SwitchEntry.Group.Option("pinyin", "拼音", selected = true),
+                        KeyboardSwitcherPanel.SwitchEntry.Group.Option("free", "自由", selected = false),
+                    ),
+                ),
+            ),
+        )
+        assertTrue(title in texts(panel))
+        clickWithText(panel, "常用")
+        clickWithText(panel, "自由")
+        assertEquals(listOf("extended_charset" to true, "free" to true), flips)
+
+        panel.setSwitches(emptyList())
+        assertTrue(title !in texts(panel))
+    }
 }

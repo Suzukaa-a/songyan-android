@@ -31,6 +31,7 @@
     <string name="ime_return_to_letters">文字キーに戻る</string>
     <string name="ime_menu_input_method">入力方式</string>
     <string name="ime_menu_layout">キー配列</string>
+    <string name="ime_menu_switches">入力方式のオプション</string>
     <string name="ime_menu_close">閉じる</string>
     <string name="ime_item_selected">使用中：%1$s</string>
     <string name="ime_schema_quanpin">内蔵全拼</string>

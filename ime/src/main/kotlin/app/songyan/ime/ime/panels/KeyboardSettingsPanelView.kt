@@ -281,6 +281,8 @@ class KeyboardSettingsPanelView(
             EngineOptionKind.SIMPLIFIED -> R.string.ime_qs_engine_simplified
             EngineOptionKind.EMOJI -> R.string.ime_qs_engine_emoji
             EngineOptionKind.FULL_SHAPE -> R.string.ime_qs_engine_full_shape
+            // The menu's switch section owns these; the panel never builds a tile for one.
+            EngineOptionKind.DECLARED -> R.string.ime_panel_settings_title
         }
 
     /** A known bundled state is worded by its resource; every other choice keeps the schema's own label. */

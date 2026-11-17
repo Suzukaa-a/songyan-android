@@ -129,8 +129,17 @@ class LayoutCatalogTest {
         runTest {
             val catalog = catalog()
             catalog.edit { it.install(mine.encoded()) }
-            assertEquals(mine, LayoutJson.decode(catalog.export("mine")!!))
-            assertEquals(BuiltinLayouts.phone9, LayoutJson.decode(catalog.export("phone9")!!))
+            assertEquals(LayoutBottomRow.exportable(mine), LayoutJson.decode(catalog.export("mine")!!))
+            // A bundled layout is exported with the bottom row it draws, so the file keeps 123 and 中/英.
+            val exported = LayoutJson.decode(catalog.export("zhuyin41")!!)
+            assertEquals(
+                LayoutBottomRow.preview(BuiltinLayouts.zhuyin41),
+                exported.rows.last().keys,
+            )
+            assertEquals(
+                LayoutBottomRow.preview(BuiltinLayouts.phone9),
+                LayoutBottomRow.preview(LayoutJson.decode(catalog.export("phone9")!!)),
+            )
             assertNull(catalog.export("missing"))
         }
 

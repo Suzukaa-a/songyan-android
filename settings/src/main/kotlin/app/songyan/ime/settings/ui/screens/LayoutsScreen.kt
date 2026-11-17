@@ -17,6 +17,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -70,6 +71,13 @@ internal fun libraryEventText(event: LibraryEvent): String =
         is LibraryEvent.Failed -> layoutErrorMessage(event.error)
     }
 
+/** How long the sentence stays: an import's result is the only sign a file was taken, so it stays long enough to read. */
+internal fun libraryEventDuration(event: LibraryEvent): SnackbarDuration =
+    when (event) {
+        is LibraryEvent.Imported, is LibraryEvent.Failed -> SnackbarDuration.Long
+        else -> SnackbarDuration.Short
+    }
+
 /** Shows each library event once in a snackbar. */
 @Composable
 internal fun LibraryEvents(
@@ -80,7 +88,7 @@ internal fun LibraryEvents(
     val text = event?.let { libraryEventText(it) }
     LaunchedEffect(text) {
         if (text != null) {
-            snackbar.showSnackbar(text)
+            snackbar.showSnackbar(text, duration = event?.let(::libraryEventDuration) ?: SnackbarDuration.Short)
             viewModel.consumeEvent()
         }
     }

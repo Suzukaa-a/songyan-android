@@ -92,7 +92,13 @@ class LayoutCatalog(
     /** The exported JSON of one layout (a bundled one included), or null when it does not exist. */
     suspend fun export(id: String): String? =
         withContext(io) {
-            mutex.withLock { (mutable.value ?: store.load()).resolvedLayout(id)?.encoded() }
+            mutex.withLock {
+                (mutable.value ?: store.load())
+                    .resolvedLayout(
+                        id,
+                    )?.let(LayoutBottomRow::exportable)
+                    ?.encoded()
+            }
         }
 
     private fun publishState(registry: LayoutRegistry) {

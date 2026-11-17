@@ -45,6 +45,10 @@ object FooterKeys {
     val ENTER: LayoutKey =
         key("⏎", LayoutAction(LayoutActionKind.ENTER), Weight.ENTER, titleMode = LayoutKeyTitleMode.AUTOMATIC)
 
+    /** The 中/英 key: a tap switches the language, a long press opens the keyboard menu. */
+    val LANGUAGE: LayoutKey =
+        key("中/英", LayoutAction.languageSwitch(), Weight.LANGUAGE, titleMode = LayoutKeyTitleMode.AUTOMATIC)
+
     /** The 123 key of the letters footer. */
     val PAGE: LayoutKey =
         key(
@@ -84,7 +88,7 @@ object FooterKeys {
             // took the thumb's aim for the page key), and takes its share from the space bar.
             val second =
                 if (languageSwitch) {
-                    key("中/英", LayoutAction.languageSwitch(), Weight.LANGUAGE, titleMode = LayoutKeyTitleMode.AUTOMATIC)
+                    LANGUAGE
                 } else {
                     beside
                 }

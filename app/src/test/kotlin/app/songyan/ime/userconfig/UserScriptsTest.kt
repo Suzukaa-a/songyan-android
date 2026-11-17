@@ -10,10 +10,14 @@ import java.nio.file.Files
 
 /** A script has to be agreed to once, and again whenever it changes; a source's own scripts are not the user's to agree to. */
 class UserScriptsTest {
-    private val storage = AppStorage(Files.createTempDirectory("files").toFile()).also { it.ensureBaseDirectories() }
+    private val storage =
+        AppStorage(Files.createTempDirectory("files").toFile()).also {
+            it.ensureBaseDirectories()
+            it.userConfigDir("scheme-1").mkdirs()
+        }
     private val scripts = UserScripts(storage)
     private val source = File(storage.sourcesDir, "scheme-1").also { it.mkdirs() }
-    private val edit get() = storage.userConfigDir
+    private val edit get() = storage.userConfigDir("scheme-1")
 
     private fun put(
         dir: File,

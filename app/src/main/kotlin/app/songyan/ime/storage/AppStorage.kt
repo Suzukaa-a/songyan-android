@@ -81,22 +81,51 @@ class AppStorage(
     val learningSnapshotsDir: File = File(rimeRoot, "learning-snapshots")
 
     /**
-     * The user's own Rime configuration ([app.songyan.ime.userconfig.UserConfigFiles]): `edit/` is
-     * what the Files app shows and changes, `applied/` the checked copy every deployment layers
-     * over its source; only applying the changes copies one to the other.
+     * The user's own Rime configuration ([app.songyan.ime.userconfig.UserConfigFiles]), kept apart for
+     * each source: a patch or script written for one scheme package must never reach another, and two
+     * packages may ship the same schema id. A source's scope survives deleting the source, like its
+     * learning data, so installing it again brings the user's files back.
      */
     val configRoot: File = File(rimeRoot, "config")
-    val userConfigDir: File = File(configRoot, "edit")
-    val appliedConfigDir: File = File(configRoot, "applied")
 
-    /** Which edited files replace a file of the source and what the user was told about them ([app.songyan.ime.userconfig.UserOverrides]). */
-    val overrideMarksFile: File = File(configRoot, "overrides.json")
+    /** Every source's scope ([configScopeDir]); this is what backups carry. */
+    val configScopesDir: File = File(configRoot, "sources")
 
-    /** The scripts the user confirmed using ([app.songyan.ime.userconfig.UserScripts]); not part of any backup. */
+    /**
+     * How the last application ended, one file per source. Outside [configScopesDir], so a restored
+     * backup never brings back a status that describes another device's deployments.
+     */
+    val configStatusDir: File = File(configRoot, "status")
+
+    fun configScopeDir(sourceId: String): File = File(configScopesDir, sourceId)
+
+    /**
+     * What the Files app shows and changes for [sourceId]; [appliedConfigDir] is the checked copy
+     * every deployment of that source layers over it. Only applying the changes copies one to the other.
+     */
+    fun userConfigDir(sourceId: String): File = File(configScopeDir(sourceId), "edit")
+
+    fun appliedConfigDir(sourceId: String): File = File(configScopeDir(sourceId), "applied")
+
+    /** Which edited files of [sourceId]'s scope replace a file of the source and what the user was told about them ([app.songyan.ime.userconfig.UserOverrides]). */
+    fun overrideMarksFile(sourceId: String): File = File(configScopeDir(sourceId), "overrides.json")
+
+    fun configStatusFile(sourceId: String): File = File(configStatusDir, "$sourceId.json")
+
+    /**
+     * The scripts the user confirmed using ([app.songyan.ime.userconfig.UserScripts]); not part of any
+     * backup. Shared by every scope: it is keyed by content hash, and confirming a script is not editing.
+     */
     val scriptsConfirmedFile: File = File(configRoot, "scripts-confirmed.json")
 
-    /** How the last application of the configuration ended, for the settings screen. */
-    val configStatusFile: File = File(configRoot, "status.json")
+    /** Held while [app.songyan.ime.userconfig.UserConfigMigration] moves the single folder of earlier versions into the scopes. */
+    val configMigrationLockFile: File = File(configRoot, "migration.lock")
+
+    /** The single folder earlier versions layered over every source; only the migration reads it. */
+    val legacyUserConfigDir: File = File(configRoot, "edit")
+    val legacyAppliedConfigDir: File = File(configRoot, "applied")
+    val legacyOverrideMarksFile: File = File(configRoot, "overrides.json")
+    val legacyConfigStatusFile: File = File(configRoot, "status.json")
 
     val layoutsDir: File = File(filesDir, "layouts")
     val appearanceDir: File = File(filesDir, "appearance")
@@ -163,7 +192,7 @@ class AppStorage(
             importStagingDir,
             trashDir,
             requestsDir,
-            userConfigDir,
+            configScopesDir,
             layoutsDir,
             appearanceDir,
             contentDir,

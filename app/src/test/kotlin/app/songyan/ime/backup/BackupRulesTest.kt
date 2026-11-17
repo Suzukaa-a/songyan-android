@@ -156,6 +156,33 @@ class BackupRulesTest {
     }
 
     @Test
+    fun theUsersRimeConfigurationOfEverySourceIsInEveryBackupButNotItsDeviceState() {
+        val scope = "scheme-0123456789abcdef"
+        for ((name, rules) in listOf("legacy" to legacy, "cloud" to cloud, "transfer" to transfer)) {
+            for (file in listOf(
+                File(storage.userConfigDir(scope), "lua/date.lua"),
+                File(storage.appliedConfigDir(SourceIds.BUILTIN), "default.custom.yaml"),
+                storage.overrideMarksFile(scope),
+            )) {
+                assertTrue("$name keeps ${rel(file)}", covered(rules, rel(file)))
+            }
+            assertTrue(rel(storage.configScopesDir) in rules.includes)
+            assertFalse("$name has the application status", covered(rules, rel(storage.configStatusFile(scope))))
+            assertFalse("$name has the confirmed scripts", covered(rules, rel(storage.scriptsConfirmedFile)))
+            assertFalse(covered(rules, rel(storage.configMigrationLockFile)))
+            // Restore applies the rules too: a backup made by an earlier version must still bring its folder back.
+            for (file in listOf(
+                storage.legacyUserConfigDir,
+                storage.legacyAppliedConfigDir,
+                storage.legacyOverrideMarksFile,
+            )) {
+                assertTrue("$name restores ${rel(file)} of earlier versions", rel(file) in rules.includes)
+            }
+            assertFalse(covered(rules, rel(storage.legacyConfigStatusFile)))
+        }
+    }
+
+    @Test
     fun cloudAndLegacyRulesAgree() {
         assertEquals(legacy.includes, cloud.includes)
         assertEquals(legacy.excludes, cloud.excludes)

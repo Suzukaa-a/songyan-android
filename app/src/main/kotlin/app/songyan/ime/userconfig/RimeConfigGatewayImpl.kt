@@ -23,6 +23,7 @@ import app.songyan.ime.settings.state.RimeScriptCreateResult
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceCatalog
+import app.songyan.ime.storage.SourceIds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -30,7 +31,9 @@ import java.io.IOException
 
 /**
  * The settings side of the user's Rime configuration: the folder's state, read off the main
- * thread, and applying it through the :deploy process ([DeployMode.APPLY_USER_CONFIG]).
+ * thread, and applying it through the :deploy process ([DeployMode.APPLY_USER_CONFIG]). Everything
+ * here works on the configuration of the source in use ([UserConfigScope.active]); another source's
+ * stays as it is.
  */
 internal class RimeConfigGatewayImpl(
     context: Context,
@@ -38,10 +41,32 @@ internal class RimeConfigGatewayImpl(
     private val client: ImportDeployClient = ImportDeployClient(context.applicationContext, storage),
 ) : RimeConfigGateway {
     private val appContext = context.applicationContext
-    private val statusStore = UserConfigStatus.Store(storage)
-    private val overrides = UserOverrides(storage)
-    private val editor = UserConfigEditor(storage, overrides)
     private val scripts = UserScripts(storage)
+
+    /** The scope [info] last read, for the folder intent, which is built on the main thread. */
+    @Volatile private var lastScope: String? = null
+
+    /** The scope everything edits now, once the single folder of earlier versions is moved into the scopes. */
+    private class Scope(
+        val sourceId: String,
+        storage: AppStorage,
+    ) {
+        val overrides = UserOverrides(storage, sourceId)
+        val editor = UserConfigEditor(storage, sourceId, overrides)
+        val status = UserConfigStatus.Store(storage, sourceId)
+        val edit: File = storage.userConfigDir(sourceId)
+        val applied: File = storage.appliedConfigDir(sourceId)
+        val sourceDir: File? = storage.sourceDir(sourceId).takeIf { it.isDirectory }
+    }
+
+    /** Reads the disk: on IO only. */
+    private fun scope(): Scope {
+        UserConfigMigration.run(storage)
+        return Scope(UserConfigScope.active(storage), storage).also { lastScope = it.sourceId }
+    }
+
+    /** File names only; the scope does not matter for them. */
+    private val names = UserConfigEditor(storage, SourceIds.BUILTIN)
 
     override val available: Boolean = true
 
@@ -55,25 +80,28 @@ internal class RimeConfigGatewayImpl(
                 .setDataAndType(RimeConfigProvider.rootUri(appContext), DocumentsContract.Root.MIME_TYPE_ITEM)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
             Intent(Intent.ACTION_VIEW)
-                .setDataAndType(RimeConfigProvider.editFolderUri(appContext), DocumentsContract.Document.MIME_TYPE_DIR)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                .setDataAndType(
+                    RimeConfigProvider.editFolderUri(appContext, lastScope),
+                    DocumentsContract.Document.MIME_TYPE_DIR,
+                ).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
         )
 
     override suspend fun info(): RimeConfigInfo =
         withContext(Dispatchers.IO) {
-            val files = UserConfigFiles.files(storage.userConfigDir)
-            val edited = UserConfigFiles.digest(storage.userConfigDir)
-            val applied = UserConfigFiles.digest(storage.appliedConfigDir)
-            val status = statusStore.read()
+            val scope = scope()
+            val files = UserConfigFiles.files(scope.edit)
+            val edited = UserConfigFiles.digest(scope.edit)
+            val applied = UserConfigFiles.digest(scope.applied)
+            val status = scope.status.read()
             val active = GenerationPublisher(storage).readActive()?.sourceId
-            val sourceDir = active?.let(storage::sourceDir)?.takeIf { it.isDirectory }
-            val editedFiles = overrides.entries(sourceDir)
+            val sourceDir = scope.sourceDir
+            val editedFiles = scope.overrides.entries(sourceDir)
             RimeConfigInfo(
                 overrides = editedFiles.map { RimeOverrideFile(it.path, it.updated) },
-                unacknowledged = overrides.unacknowledged(sourceDir, editedFiles.map { it.path }),
+                unacknowledged = scope.overrides.unacknowledged(sourceDir, editedFiles.map { it.path }),
                 unusedScripts =
                     scripts
-                        .unconfirmed(storage.appliedConfigDir, sourceDir)
+                        .unconfirmed(scope.applied, sourceDir)
                         .map { it.path }
                         .distinct(),
                 editTargets =
@@ -91,7 +119,7 @@ internal class RimeConfigGatewayImpl(
                     ),
                 notice =
                     status
-                        ?.takeIf { it.state == UserConfigStatus.State.SKIPPED && it.sourceId == active }
+                        ?.takeIf { it.state == UserConfigStatus.State.SKIPPED && it.sourceId == scope.sourceId }
                         ?.let { appContext.getString(R.string.rime_config_skipped) },
             )
         }
@@ -99,7 +127,10 @@ internal class RimeConfigGatewayImpl(
     override suspend fun apply(confirmed: List<String>): RimeConfigApplyResult =
         client.detached {
             val unconfirmed =
-                withContext(Dispatchers.IO) { scripts.unconfirmed(storage.userConfigDir, activeSourceDir()) }
+                withContext(Dispatchers.IO) {
+                    val scope = scope()
+                    scripts.unconfirmed(scope.edit, scope.sourceDir)
+                }
             if (unconfirmed.isNotEmpty()) {
                 // Only what the user was shown counts: a script that turned up since is asked about too.
                 if (!unconfirmed.all { it.key in confirmed }) {
@@ -130,11 +161,11 @@ internal class RimeConfigGatewayImpl(
         }
 
     override suspend fun restore(path: String) {
-        withContext(Dispatchers.IO) { overrides.restore(path) }
+        withContext(Dispatchers.IO) { scope().overrides.restore(path) }
     }
 
     override suspend fun acknowledge(paths: List<String>) {
-        withContext(Dispatchers.IO) { overrides.acknowledge(paths) }
+        withContext(Dispatchers.IO) { scope().overrides.acknowledge(paths) }
     }
 
     override suspend fun loadFile(
@@ -142,9 +173,10 @@ internal class RimeConfigGatewayImpl(
         grammarExample: Boolean,
     ): RimeConfigFileResult =
         withContext(Dispatchers.IO) {
-            val name = editor.fileName(key) ?: return@withContext RimeConfigFileResult.Failure(null)
+            val name = names.fileName(key) ?: return@withContext RimeConfigFileResult.Failure(null)
             try {
-                val loaded = editor.load(name, activeSourceDir()) { templateFor(name) }
+                val scope = scope()
+                val loaded = scope.editor.load(name, scope.sourceDir) { templateFor(name) }
                 val text =
                     if (grammarExample) {
                         GrammarParameterExample.appendedTo(loaded) { appContext.getString(grammarHeading(it)) }
@@ -162,16 +194,17 @@ internal class RimeConfigGatewayImpl(
     override suspend fun createScript(name: String): RimeScriptCreateResult =
         withContext(Dispatchers.IO) {
             val key = RimeEditTarget.scriptKey(name)
-            val path = editor.fileName(key) ?: return@withContext RimeScriptCreateResult.Failure(null)
+            val path = names.fileName(key) ?: return@withContext RimeScriptCreateResult.Failure(null)
             try {
+                val scope = scope()
                 // A name the source's own scripts use would replace that script: not by accident.
-                val own = activeSourceDir()?.let { UserOverrides.packageFile(it, path) }
+                val own = scope.sourceDir?.let { UserOverrides.packageFile(it, path) }
                 if (own != null) {
                     return@withContext RimeScriptCreateResult.Failure(
                         appContext.getString(R.string.rime_config_script_taken, name),
                     )
                 }
-                editor.load(path, null) {
+                scope.editor.load(path, null) {
                     ScriptTemplate.text(name, appContext.getString(R.string.rime_config_script_template_hint, name))
                 }
                 RimeScriptCreateResult.Created(key)
@@ -187,18 +220,15 @@ internal class RimeConfigGatewayImpl(
         text: String,
     ): RimeConfigSaveResult =
         withContext(Dispatchers.IO) {
-            val name = editor.fileName(key) ?: return@withContext RimeConfigSaveResult.Failure(null)
+            val name = names.fileName(key) ?: return@withContext RimeConfigSaveResult.Failure(null)
             try {
-                val refusal = editor.save(name, text)
+                val scope = scope()
+                val refusal = scope.editor.save(name, text)
                 when {
                     refusal == null -> {
-                        activeSourceDir()
-                            ?.let {
-                                UserOverrides.packageFile(
-                                    it,
-                                    name,
-                                )
-                            }?.let { overrides.recordBase(name, it) }
+                        scope.sourceDir
+                            ?.let { UserOverrides.packageFile(it, name) }
+                            ?.let { scope.overrides.recordBase(name, it) }
                         RimeConfigSaveResult.Saved
                     }
                     else ->
@@ -213,26 +243,29 @@ internal class RimeConfigGatewayImpl(
 
     override suspend fun externalEditIntents(key: String): RimeConfigEditResult =
         withContext(Dispatchers.IO) {
-            val name = editor.fileName(key) ?: return@withContext RimeConfigEditResult.Failure(null)
+            val name = names.fileName(key) ?: return@withContext RimeConfigEditResult.Failure(null)
+            val scope = scope()
             try {
-                val sourceDir = activeSourceDir()
-                val loaded = editor.load(name, sourceDir) { templateFor(name) }
-                if (overrides.overrideFile(name) == null) {
-                    editor.save(name, loaded)?.let { return@withContext RimeConfigEditResult.Failure(failureText(it)) }
+                val sourceDir = scope.sourceDir
+                val loaded = scope.editor.load(name, sourceDir) { templateFor(name) }
+                if (scope.overrides.overrideFile(name) == null) {
+                    scope.editor.save(name, loaded)?.let {
+                        return@withContext RimeConfigEditResult.Failure(failureText(it))
+                    }
                     sourceDir
-                        ?.let {
-                            UserOverrides.packageFile(
-                                it,
-                                name,
-                            )
-                        }?.let { overrides.recordBase(name, it) }
+                        ?.let { UserOverrides.packageFile(it, name) }
+                        ?.let { scope.overrides.recordBase(name, it) }
                 }
             } catch (e: UserConfigException) {
                 return@withContext RimeConfigEditResult.Failure(failureText(e))
             } catch (_: IOException) {
                 return@withContext RimeConfigEditResult.Failure(null)
             }
-            val uri = DocumentsContract.buildDocumentUri(RimeConfigProvider.authority(appContext), "edit/$name")
+            val uri =
+                DocumentsContract.buildDocumentUri(
+                    RimeConfigProvider.authority(appContext),
+                    RimeConfigPaths.editId(scope.sourceId, name),
+                )
             RimeConfigEditResult.Ready(
                 listOf(Intent.ACTION_EDIT, Intent.ACTION_VIEW).map {
                     Intent(it)
@@ -242,16 +275,9 @@ internal class RimeConfigGatewayImpl(
             )
         }
 
-    private fun activeSourceDir(): File? =
-        GenerationPublisher(storage)
-            .readActive()
-            ?.sourceId
-            ?.let(storage::sourceDir)
-            ?.takeIf { it.isDirectory }
-
     private fun titleOf(key: String): String? =
         if (RimeEditTarget.scriptName(key) != null) {
-            editor.fileName(key)
+            names.fileName(key)
         } else if (key == RimeEditTarget.GLOBAL_KEY) {
             null
         } else {

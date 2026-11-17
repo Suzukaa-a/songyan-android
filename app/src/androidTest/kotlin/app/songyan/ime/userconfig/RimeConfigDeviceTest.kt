@@ -52,7 +52,11 @@ class RimeConfigDeviceTest {
     private val publisher = GenerationPublisher(storage)
     private val settings = SettingsInForeground()
     private val authority = RimeConfigProvider.authority(context)
-    private val editFolder = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.EDIT)
+
+    /** The built-in package is in use in every test unless one imports another: its folder is the one edited. */
+    private val scopeId = RimeConfigPaths.editId(SourceIds.BUILTIN)
+    private val editDir = storage.userConfigDir(SourceIds.BUILTIN)
+    private val editFolder = DocumentsContract.buildDocumentUri(authority, scopeId)
     private var imported: String? = null
 
     @Before
@@ -74,16 +78,19 @@ class RimeConfigDeviceTest {
     }
 
     private fun clearEdits() {
-        storage.userConfigDir.listFiles()?.forEach { it.deleteRecursively() }
-        storage.overrideMarksFile.delete()
+        for (scope in storage.configScopesDir.list().orEmpty()) {
+            storage.userConfigDir(scope).listFiles()?.forEach { it.deleteRecursively() }
+            storage.overrideMarksFile(scope).delete()
+        }
         storage.scriptsConfirmedFile.delete()
     }
 
     private fun create(
         name: String,
         text: String,
+        folder: Uri = editFolder,
     ): Uri {
-        val uri = requireNotNull(DocumentsContract.createDocument(resolver, editFolder, "text/plain", name))
+        val uri = requireNotNull(DocumentsContract.createDocument(resolver, folder, "text/plain", name))
         write(uri, text)
         return uri
     }
@@ -94,9 +101,10 @@ class RimeConfigDeviceTest {
     ) {
         requireNotNull(resolver.openOutputStream(uri, "wt")).use { it.write(text.toByteArray()) }
         // The provider replaces the document once the writer closed it, on its own thread.
-        val name = DocumentsContract.getDocumentId(uri).substringAfter('/')
+        // `edit/<sourceId>/<path>`.
+        val (_, scope, name) = DocumentsContract.getDocumentId(uri).split('/', limit = 3)
         val deadline = System.currentTimeMillis() + 5_000
-        while (File(storage.userConfigDir, name).readText() != text &&
+        while (File(storage.userConfigDir(scope), name).readText() != text &&
             System.currentTimeMillis() < deadline
         ) {
             Thread.sleep(20)
@@ -129,21 +137,21 @@ class RimeConfigDeviceTest {
         assertEquals(1, roots)
 
         val uri = create("rime_ice.custom.yaml", PAGE_SIZE_PATCH)
-        assertEquals("rime_ice.custom.yaml", DocumentsContract.getDocumentId(uri).substringAfter('/'))
+        assertEquals("$scopeId/rime_ice.custom.yaml", DocumentsContract.getDocumentId(uri))
         assertEquals(PAGE_SIZE_PATCH, read(uri))
-        assertEquals(listOf("rime_ice.custom.yaml"), children(RimeConfigProvider.EDIT))
+        assertEquals(listOf("rime_ice.custom.yaml"), children(scopeId))
 
         val again = create("rime_ice.custom.yaml", "patch: {}\n")
         assertEquals(
             "a second file never replaces the first",
-            "edit/rime_ice.custom-2.yaml",
+            "$scopeId/rime_ice.custom-2.yaml",
             DocumentsContract.getDocumentId(again),
         )
 
         val renamed = requireNotNull(DocumentsContract.renameDocument(resolver, again, "default.custom.yaml"))
-        assertEquals("edit/default.custom.yaml", DocumentsContract.getDocumentId(renamed))
+        assertEquals("$scopeId/default.custom.yaml", DocumentsContract.getDocumentId(renamed))
         assertTrue(DocumentsContract.deleteDocument(resolver, renamed))
-        assertEquals(listOf("rime_ice.custom.yaml"), children(RimeConfigProvider.EDIT))
+        assertEquals(listOf("rime_ice.custom.yaml"), children(scopeId))
 
         // The source in use can be read; its text files take writes through the user's copy.
         val sources = children(RimeConfigProvider.ACTIVE)
@@ -177,12 +185,12 @@ class RimeConfigDeviceTest {
         val mine = original.replace("page_size: 5", "page_size: 3")
 
         requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write(mine.toByteArray()) }
-        val copy = File(storage.userConfigDir, "default.yaml")
+        val copy = File(editDir, "default.yaml")
         waitFor { copy.isFile && copy.readText() == mine }
 
         assertEquals("the package is never modified", original, packaged.readText())
         assertEquals("reading shows the file in effect", mine, read(doc))
-        assertTrue("default.yaml" in children(RimeConfigProvider.EDIT))
+        assertTrue("default.yaml" in children(scopeId))
         val info = runBlocking { RimeConfigHolder.current.info() }
         assertEquals(listOf("default.yaml"), info.overrides.map { it.path })
         assertEquals(listOf("default.yaml"), info.unacknowledged)
@@ -213,12 +221,12 @@ class RimeConfigDeviceTest {
         try {
             val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/lua/probe.lua")
             requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write("return 'mine'\n".toByteArray()) }
-            waitFor { File(storage.userConfigDir, "lua/probe.lua").isFile }
+            waitFor { File(editDir, "lua/probe.lua").isFile }
 
             assertEquals("return 'mine'\n", read(doc))
             assertEquals("return 'package'\n", probe.readText())
-            assertTrue("lua" in children(RimeConfigProvider.EDIT))
-            assertEquals(listOf("probe.lua"), children(RimeConfigProvider.EDIT + "/lua"))
+            assertTrue("lua" in children(scopeId))
+            assertEquals(listOf("probe.lua"), children("$scopeId/lua"))
             assertTrue(
                 runBlocking { RimeConfigHolder.current.info() }.overrides.any { it.path == "lua/probe.lua" },
             )
@@ -235,11 +243,11 @@ class RimeConfigDeviceTest {
                     e.message
                 }
             assertEquals(context.getString(R.string.rime_config_refused_large, "probe-big.txt"), error)
-            assertFalse(File(storage.userConfigDir, "probe-big.txt").exists())
+            assertFalse(File(editDir, "probe-big.txt").exists())
 
-            val own = DocumentsContract.buildDocumentUri(authority, "edit/lua/probe.lua")
+            val own = DocumentsContract.buildDocumentUri(authority, "$scopeId/lua/probe.lua")
             assertTrue(DocumentsContract.deleteDocument(resolver, own))
-            assertFalse("the emptied folder goes too", File(storage.userConfigDir, "lua").exists())
+            assertFalse("the emptied folder goes too", File(editDir, "lua").exists())
             assertEquals("return 'package'\n", read(doc))
         } finally {
             probe.parentFile?.deleteRecursively()
@@ -254,7 +262,7 @@ class RimeConfigDeviceTest {
         assertEquals("songyan_quanpin", targets.first().key)
 
         val loaded = runBlocking { gateway.loadFile("songyan_quanpin") } as RimeConfigFileResult.Loaded
-        val file = File(storage.userConfigDir, "songyan_quanpin.custom.yaml")
+        val file = File(editDir, "songyan_quanpin.custom.yaml")
         assertEquals("songyan_quanpin.custom.yaml", loaded.fileName)
         assertTrue(loaded.text.endsWith("patch: {}\n"))
         assertFalse(file.exists())
@@ -292,7 +300,7 @@ class RimeConfigDeviceTest {
         assertTrue(grammar.text.contains("#   grammar/collocation_max_length: 6"))
         assertEquals(PAGE_SIZE_PATCH, file.readText())
         runBlocking { gateway.loadFile(RimeEditTarget.GLOBAL_KEY) }
-        assertFalse(File(storage.userConfigDir, "default.custom.yaml").exists())
+        assertFalse(File(editDir, "default.custom.yaml").exists())
     }
 
     @Test
@@ -303,7 +311,7 @@ class RimeConfigDeviceTest {
                     "songyan_quanpin",
                 )
             } as RimeConfigEditResult.Ready
-        val file = File(storage.userConfigDir, "songyan_quanpin.custom.yaml")
+        val file = File(editDir, "songyan_quanpin.custom.yaml")
         val intent = ready.intents.first()
         assertEquals(Intent.ACTION_EDIT, intent.action)
         assertEquals("text/plain", intent.type)
@@ -325,7 +333,7 @@ class RimeConfigDeviceTest {
         try {
             val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/lua/probe.lua")
             requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write("return 'mine'\n".toByteArray()) }
-            waitFor { File(storage.userConfigDir, "lua/probe.lua").isFile }
+            waitFor { File(editDir, "lua/probe.lua").isFile }
             val before = requireNotNull(publisher.readActive())
 
             val first = apply() as RimeConfigApplyResult.NeedsConfirmation
@@ -353,6 +361,12 @@ class RimeConfigDeviceTest {
             "edit/%2e%2e/x.yaml",
             "edit/lua/..%2fx.yaml",
             "edit/a\u0000.yaml",
+            "$scopeId/../../applied/x.yaml",
+            "$scopeId/%2e%2e/x.yaml",
+            "$scopeId/lua/..%2fx.yaml",
+            "$scopeId/a\u0000.yaml",
+            "edit/Songyan-Builtin/x.yaml",
+            "edit/scheme-not-installed/x.yaml",
             "active/../../shared_prefs/x.xml",
             "active/%2e%2e/%2e%2e/shared_prefs/x.xml",
             "active/default.yaml\u0000.txt",
@@ -363,7 +377,7 @@ class RimeConfigDeviceTest {
             assertFailsToOpen { resolver.openInputStream(uri)?.also { it.close() } }
             assertFailsToOpen { resolver.openOutputStream(uri, "wt")?.also { it.close() } }
         }
-        assertEquals("nothing was made", emptyList<String>(), children(RimeConfigProvider.EDIT))
+        assertEquals("nothing was made", emptyList<String>(), children(scopeId))
     }
 
     @Test
@@ -377,28 +391,28 @@ class RimeConfigDeviceTest {
             requireNotNull(
                 DocumentsContract.createDocument(resolver, editFolder, DocumentsContract.Document.MIME_TYPE_DIR, "lua"),
             )
-        assertEquals("edit/lua", DocumentsContract.getDocumentId(lua))
-        assertTrue("an empty lua folder shows, so scripts can be put in it", "lua" in children(RimeConfigProvider.EDIT))
+        assertEquals("$scopeId/lua", DocumentsContract.getDocumentId(lua))
+        assertTrue("an empty lua folder shows, so scripts can be put in it", "lua" in children(scopeId))
         assertFailsToOpen { DocumentsContract.createDocument(resolver, lua, "text/plain", "notes.txt") }
         val script =
             requireNotNull(DocumentsContract.createDocument(resolver, lua, "application/octet-stream", "date.lua"))
-        assertEquals("edit/lua/date.lua", DocumentsContract.getDocumentId(script))
+        assertEquals("$scopeId/lua/date.lua", DocumentsContract.getDocumentId(script))
         val twin =
             requireNotNull(DocumentsContract.createDocument(resolver, lua, "application/octet-stream", "Date.lua"))
-        assertEquals("edit/lua/Date-2.lua", DocumentsContract.getDocumentId(twin))
+        assertEquals("$scopeId/lua/Date-2.lua", DocumentsContract.getDocumentId(twin))
         val renamed = requireNotNull(DocumentsContract.renameDocument(resolver, script, "day.lua"))
-        assertEquals("edit/lua/day.lua", DocumentsContract.getDocumentId(renamed))
+        assertEquals("$scopeId/lua/day.lua", DocumentsContract.getDocumentId(renamed))
         assertFailsToOpen { DocumentsContract.renameDocument(resolver, renamed, "day.yaml")?.also { error("renamed") } }
-        assertEquals(setOf("day.lua", "Date-2.lua"), children("edit/lua").toSet())
+        assertEquals(setOf("day.lua", "Date-2.lua"), children("$scopeId/lua").toSet())
         val rime = requireNotNull(DocumentsContract.createDocument(resolver, editFolder, "text/plain", "rime.lua"))
-        assertEquals("edit/rime.lua", DocumentsContract.getDocumentId(rime))
+        assertEquals("$scopeId/rime.lua", DocumentsContract.getDocumentId(rime))
         assertFailsToOpen { DocumentsContract.createDocument(resolver, editFolder, "text/plain", "rime.lua") }
 
         // Plain files stay flat, and a name that differs only in case is made unique.
         val first = create("custom_phrase.txt", "x\n")
         val phrase =
             requireNotNull(DocumentsContract.createDocument(resolver, editFolder, "text/plain", "Custom_Phrase.txt"))
-        assertEquals("edit/Custom_Phrase-2.txt", DocumentsContract.getDocumentId(phrase))
+        assertEquals("$scopeId/Custom_Phrase-2.txt", DocumentsContract.getDocumentId(phrase))
         assertTrue(DocumentsContract.deleteDocument(resolver, first))
     }
 
@@ -504,7 +518,7 @@ class RimeConfigDeviceTest {
         val gateway = RimeConfigHolder.current
         val created = runBlocking { gateway.createScript("probe_new") } as RimeScriptCreateResult.Created
         assertEquals("script:probe_new", created.key)
-        val file = File(storage.userConfigDir, "lua/probe_new.lua")
+        val file = File(editDir, "lua/probe_new.lua")
         assertTrue(file.readText().contains("lua_filter@*probe_new"))
         val loaded = runBlocking { gateway.loadFile(created.key) } as RimeConfigFileResult.Loaded
         assertEquals("lua/probe_new.lua", loaded.fileName)
@@ -626,8 +640,10 @@ class RimeConfigDeviceTest {
         assumeTrue("no schemePackage argument", path != null)
         val result = runBlocking { SchemeImportHolder.current.importFromUri(Uri.fromFile(File(requireNotNull(path)))) }
         assertTrue("import failed: $result", result is SchemeImportResult.Success)
-        imported = publisher.readActive()!!.sourceId
-        create("default.custom.yaml", "patch:\n  schema_list:\n    - schema: double_pinyin_flypy\n")
+        val id = publisher.readActive()!!.sourceId
+        imported = id
+        val folder = DocumentsContract.buildDocumentUri(authority, RimeConfigPaths.editId(id))
+        create("default.custom.yaml", "patch:\n  schema_list:\n    - schema: double_pinyin_flypy\n", folder)
 
         assertEquals(RimeConfigApplyResult.Applied, apply())
 
@@ -635,6 +651,53 @@ class RimeConfigDeviceTest {
         assertEquals(imported, active.sourceId)
         assertEquals(listOf("double_pinyin_flypy"), active.schemaIds)
         assertTrue(candidates(active, "double_pinyin_flypy", "nihc").contains("你好"))
+    }
+
+    @Test
+    fun myConfigurationHasOneFolderPerSourceNamedAsTheSourceIs() {
+        val folders =
+            requireNotNull(
+                resolver.query(
+                    DocumentsContract.buildChildDocumentsUri(authority, RimeConfigProvider.EDIT),
+                    null,
+                    null,
+                    null,
+                    null,
+                ),
+            ).use { cursor ->
+                val ids = ArrayList<Pair<String, String>>()
+                while (cursor.moveToNext()) {
+                    ids +=
+                        cursor.getString(cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)) to
+                        cursor.getString(cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME))
+                }
+                ids
+            }
+        assertTrue(folders.toString(), scopeId to context.getString(R.string.source_builtin_name) in folders)
+        assertFailsToOpen {
+            DocumentsContract.createDocument(
+                resolver,
+                DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.EDIT),
+                "text/plain",
+                "x.custom.yaml",
+            )
+        }
+
+        // A write through the source in use lands in that source's folder, and only there.
+        val doc = DocumentsContract.buildDocumentUri(authority, RimeConfigProvider.ACTIVE + "/default.yaml")
+        val text = read(doc).replace("page_size: 5", "page_size: 4")
+        requireNotNull(resolver.openOutputStream(doc, "wt")).use { it.write(text.toByteArray()) }
+        waitFor { File(editDir, "default.yaml").isFile }
+        val elsewhere =
+            storage.configScopesDir
+                .list()
+                .orEmpty()
+                .filter { it != SourceIds.BUILTIN && File(storage.userConfigDir(it), "default.yaml").exists() }
+        assertEquals(emptyList<String>(), elsewhere)
+        // The settings screen reads the state before it offers to open the folder.
+        runBlocking { RimeConfigHolder.current.info() }
+        val fallback = RimeConfigHolder.current.openFolderIntents().last()
+        assertEquals(scopeId, DocumentsContract.getDocumentId(requireNotNull(fallback.data)))
     }
 
     @Test

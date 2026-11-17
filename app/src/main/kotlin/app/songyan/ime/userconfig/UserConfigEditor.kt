@@ -17,7 +17,9 @@ import java.nio.file.StandardCopyOption
  */
 class UserConfigEditor(
     private val storage: AppStorage,
-    private val overrides: UserOverrides = UserOverrides(storage),
+    /** Whose configuration scope the files are in. */
+    private val sourceId: String,
+    private val overrides: UserOverrides = UserOverrides(storage, sourceId),
 ) {
     /** The file for [key]: an input method's id, or [RimeEditTarget.GLOBAL_KEY]; null when no such file name is allowed. */
     fun fileName(key: String): String? {
@@ -57,7 +59,7 @@ class UserConfigEditor(
     ): UserConfigException? {
         val bytes = text.toByteArray(Charsets.UTF_8)
         UserConfigFiles.check(name, bytes)?.let { return it }
-        val dir = storage.userConfigDir.also { it.mkdirs() }
+        val dir = storage.userConfigDir(sourceId).also { it.mkdirs() }
         val target = File(dir, name)
         val others = UserConfigFiles.files(dir).filter { UserConfigFiles.relativePath(dir, it) != name }
         if (others.size >= UserConfigFiles.MAX_FILES) return UserConfigException(null, UserConfigProblem.TOO_MANY)
@@ -72,7 +74,7 @@ class UserConfigEditor(
         name: String,
         text: String,
     ): File {
-        val dir = storage.userConfigDir.also { it.mkdirs() }
+        val dir = storage.userConfigDir(sourceId).also { it.mkdirs() }
         if (UserConfigFiles.files(dir).size >= UserConfigFiles.MAX_FILES) {
             throw UserConfigException(null, UserConfigProblem.TOO_MANY)
         }

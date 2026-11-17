@@ -1,5 +1,6 @@
 package app.songyan.ime.userconfig
 
+import app.songyan.ime.storage.SourceIds
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -7,8 +8,9 @@ import java.nio.file.Files
 /**
  * Document ids of [RimeConfigProvider] and the checks that keep every id inside its folder.
  *
- * Ids are paths: `root`; `edit` and `edit/<path>` (the user's files, in folders that mirror the
- * source's layout); `active/...` (the source in use); `sources/<sourceId>/...` (each stored source). A caller can send any string, so
+ * Ids are paths: `root`; `edit` (one folder per source), `edit/<sourceId>` and `edit/<sourceId>/<path>`
+ * (the user's files for that source, in folders that mirror the source's layout); `active/...` (the
+ * source in use); `sources/<sourceId>/...` (each stored source). A caller can send any string, so
  * nothing here trusts one: empty, `.` and `..` segments, backslashes and NUL are refused, and a
  * resolved file must still be inside its folder once symbolic links are followed.
  */
@@ -46,11 +48,23 @@ object RimeConfigPaths {
         val segments = parts.drop(1)
         if (segments.any { !isSafeSegment(it) }) return null
         if (area == Area.EDIT && segments.isNotEmpty()) {
-            val path = segments.joinToString("/")
-            if (!UserConfigFiles.isAllowedPath(path) && !UserConfigFiles.isAllowedFolderPath(path)) return null
+            if (!SourceIds.isValid(segments.first())) return null
+            val path = segments.drop(1).joinToString("/")
+            if (path.isNotEmpty() &&
+                !UserConfigFiles.isAllowedPath(path) &&
+                !UserConfigFiles.isAllowedFolderPath(path)
+            ) {
+                return null
+            }
         }
         return Path(area, segments)
     }
+
+    /** The id of the user's file [path] (or the folder, when empty) in [sourceId]'s configuration. */
+    fun editId(
+        sourceId: String,
+        path: String = "",
+    ): String = if (path.isEmpty()) "$EDIT/$sourceId" else "$EDIT/$sourceId/$path"
 
     private fun isSafeSegment(segment: String): Boolean =
         segment.isNotEmpty() &&

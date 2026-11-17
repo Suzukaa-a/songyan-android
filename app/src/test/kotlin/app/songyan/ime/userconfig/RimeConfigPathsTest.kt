@@ -14,7 +14,10 @@ class RimeConfigPathsTest {
     @Test
     fun theFoldersAndTheirFilesParse() {
         assertEquals(RimeConfigPaths.Area.ROOT, RimeConfigPaths.parse("root")?.area)
-        assertEquals(listOf("rime_ice.custom.yaml"), RimeConfigPaths.parse("edit/rime_ice.custom.yaml")?.segments)
+        assertEquals(
+            listOf("scheme-1", "rime_ice.custom.yaml"),
+            RimeConfigPaths.parse("edit/scheme-1/rime_ice.custom.yaml")?.segments,
+        )
         assertEquals(listOf("lua", "date.lua"), RimeConfigPaths.parse("active/lua/date.lua")?.segments)
         assertEquals(
             listOf("scheme-0123456789abcdef", "default.yaml"),
@@ -23,9 +26,30 @@ class RimeConfigPathsTest {
     }
 
     @Test
+    fun theUsersFilesAreInOneFolderPerSource() {
+        assertEquals(RimeConfigPaths.Area.EDIT, RimeConfigPaths.parse("edit")?.area)
+        assertEquals(emptyList<String>(), RimeConfigPaths.parse("edit")?.segments)
+        assertEquals(listOf("songyan-builtin"), RimeConfigPaths.parse("edit/songyan-builtin")?.segments)
+        assertEquals("edit/scheme-1", RimeConfigPaths.editId("scheme-1"))
+        assertEquals("edit/scheme-1/lua/date.lua", RimeConfigPaths.editId("scheme-1", "lua/date.lua"))
+        for (id in listOf(
+            "edit/rime_ice.custom.yaml",
+            "edit/Scheme-1/x.yaml",
+            "edit/-scheme/x.yaml",
+            "edit/scheme_1/x.yaml",
+            "edit/.scheme/x.yaml",
+            "edit/" + "a".repeat(41) + "/x.yaml",
+        )) {
+            assertNull("not a source's folder: $id", RimeConfigPaths.parse(id))
+        }
+        assertFalse(RimeConfigPaths.isChild("edit/scheme-1", "edit/scheme-10/x.yaml"))
+        assertTrue(RimeConfigPaths.isChild("edit/scheme-1", "edit/scheme-1/x.yaml"))
+    }
+
+    @Test
     fun theUsersFolderMirrorsTheSourcesLayout() {
-        assertEquals(listOf("lua", "date.lua"), RimeConfigPaths.parse("edit/lua/date.lua")?.segments)
-        assertEquals(listOf("lua"), RimeConfigPaths.parse("edit/lua")?.segments)
+        assertEquals(listOf("s", "lua", "date.lua"), RimeConfigPaths.parse("edit/s/lua/date.lua")?.segments)
+        assertEquals(listOf("s", "lua"), RimeConfigPaths.parse("edit/s/lua")?.segments)
         assertNull("a script is never made by a file manager", RimeConfigPaths.newFileName("date.lua", "text/plain"))
         assertNull(RimeConfigPaths.newFileName("date", "application/x-lua"))
     }
@@ -35,6 +59,8 @@ class RimeConfigPathsTest {
         for (id in listOf(
             "",
             "edit/../applied/x.yaml",
+            "edit/s/../applied/x.yaml",
+            "edit/..",
             "active/../../../shared_prefs/x.xml",
             "sources/..",
             "sources/a//b",
@@ -42,13 +68,14 @@ class RimeConfigPathsTest {
             "active/a\\..\\b",
             "active/a\u0000b",
             "edit/",
+            "edit/s/",
             "elsewhere/x.yaml",
-            "/edit/x.yaml",
-            "edit/build/x.yaml",
-            "edit/lua/../x.yaml",
-            "edit/lua/.hidden.lua",
-            "edit/a/b/c/d/e/x.yaml",
-            "edit/.hidden.yaml",
+            "/edit/s/x.yaml",
+            "edit/s/build/x.yaml",
+            "edit/s/lua/../x.yaml",
+            "edit/s/lua/.hidden.lua",
+            "edit/s/a/b/c/d/e/x.yaml",
+            "edit/s/.hidden.yaml",
             "a".repeat(2000),
         )) {
             assertNull(id, RimeConfigPaths.parse(id))
@@ -74,12 +101,12 @@ class RimeConfigPathsTest {
 
     @Test
     fun childrenAreTheDocumentsBelowAFolderOnly() {
-        assertTrue(RimeConfigPaths.isChild("root", "edit/a.yaml"))
-        assertTrue(RimeConfigPaths.isChild("edit", "edit/a.yaml"))
+        assertTrue(RimeConfigPaths.isChild("root", "edit/s/a.yaml"))
+        assertTrue(RimeConfigPaths.isChild("edit", "edit/s/a.yaml"))
         assertTrue(RimeConfigPaths.isChild("active", "active/lua/x.lua"))
         assertFalse(RimeConfigPaths.isChild("edit", "editor/a.yaml"))
         assertFalse(RimeConfigPaths.isChild("active", "sources/x"))
-        assertFalse(RimeConfigPaths.isChild("edit", "edit/../x.yaml"))
+        assertFalse(RimeConfigPaths.isChild("edit", "edit/s/../x.yaml"))
     }
 
     @Test
@@ -108,9 +135,10 @@ class RimeConfigPathsTest {
             "active/%2e%2e%5c%2e%2e",
             "active/a.yaml%00.txt",
             "active/a.yaml\u0000",
+            "edit/s/%2e%2e/x.yaml",
+            "edit/s/lua/..%2fx.yaml",
+            "edit/s/a\u0000.yaml",
             "edit/%2e%2e/x.yaml",
-            "edit/lua/..%2fx.yaml",
-            "edit/a\u0000.yaml",
             "sources/%2e%2e",
         )) {
             val path = RimeConfigPaths.parse(id)

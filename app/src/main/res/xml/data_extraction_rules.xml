@@ -3,14 +3,19 @@
      that can grow large travels only in a device-to-device transfer: imported scheme packages
      (rime/sources), stacked dictionaries, the engine feature models (rime/features: the prediction database
      and grammar models) and the automatic learning snapshots. The cloud keeps what is small and cannot be
-     downloaded again: learning data, the Rime configuration files (8 MB at most), phrases, settings, layouts and appearances.
+     downloaded again: learning data, the Rime configuration files (rime/config/sources, one folder per
+     source, 8 MB at most each), phrases, settings, layouts and appearances.
      Never in either: published generations, deploy work, caches, request state, the clipboard history,
-     the built-in source. BackupRulesTest checks the paths. -->
+     the built-in source, how the last Rime configuration application ended and the scripts the user
+     confirmed. rime/config/edit, applied and overrides.json are the single configuration folder of earlier
+     versions: listed only so their backups still restore (restore applies these rules too); the app moves
+     them into rime/config/sources. BackupRulesTest checks the paths. -->
 <data-extraction-rules>
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="file" path="rime/user" />
         <include domain="file" path="rime/features/settings.json" />
         <include domain="file" path="rime/options" />
+        <include domain="file" path="rime/config/sources" />
         <include domain="file" path="rime/config/edit" />
         <include domain="file" path="rime/config/applied" />
         <include domain="file" path="rime/config/overrides.json" />
@@ -28,6 +33,7 @@
         <include domain="file" path="rime/stacked-dictionaries" />
         <include domain="file" path="rime/features" />
         <include domain="file" path="rime/options" />
+        <include domain="file" path="rime/config/sources" />
         <include domain="file" path="rime/config/edit" />
         <include domain="file" path="rime/config/applied" />
         <include domain="file" path="rime/config/overrides.json" />

@@ -13,8 +13,12 @@ import java.nio.file.Files
 
 /** The in-app editor's file: made from the source's own or a template, saved only when it passes the checks. */
 class UserConfigEditorTest {
-    private val storage = AppStorage(Files.createTempDirectory("files").toFile()).also { it.ensureBaseDirectories() }
-    private val editor = UserConfigEditor(storage)
+    private val storage =
+        AppStorage(Files.createTempDirectory("files").toFile()).also {
+            it.ensureBaseDirectories()
+            it.userConfigDir("scheme-1").mkdirs()
+        }
+    private val editor = UserConfigEditor(storage, "scheme-1")
     private val source = File(storage.sourcesDir, "scheme-1").also { it.mkdirs() }
 
     @Test
@@ -28,13 +32,13 @@ class UserConfigEditorTest {
     @Test
     fun openingACustomFileDoesNotCreateAnOverride() {
         assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
-        assertFalse(File(storage.userConfigDir, "x.custom.yaml").exists())
+        assertFalse(File(storage.userConfigDir("scheme-1"), "x.custom.yaml").exists())
         File(source, "x.custom.yaml").writeText("patch:\n  menu/page_size: 9\n")
         val text = editor.load("x.custom.yaml", source) { "template\n" }
         assertEquals("patch:\n  menu/page_size: 9\n", text)
-        assertTrue(UserOverrides(storage).entries(source).isEmpty())
+        assertTrue(UserOverrides(storage, "scheme-1").entries(source).isEmpty())
         assertNull(editor.save("x.custom.yaml", "patch:\n  menu/page_size: 5\n"))
-        assertEquals(listOf("x.custom.yaml"), UserOverrides(storage).entries(source).map { it.path })
+        assertEquals(listOf("x.custom.yaml"), UserOverrides(storage, "scheme-1").entries(source).map { it.path })
         assertEquals("patch:\n  menu/page_size: 9\n", File(source, "x.custom.yaml").readText())
     }
 
@@ -43,15 +47,15 @@ class UserConfigEditorTest {
         val block = "__patch:\n# Rx: songyan:typo {\n  - patch:\n      typo: true\n# }\n"
         File(source, "x.custom.yaml").writeText(block)
         assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
-        assertFalse(File(storage.userConfigDir, "x.custom.yaml").exists())
-        val copy = File(storage.userConfigDir, "x.custom.yaml")
+        assertFalse(File(storage.userConfigDir("scheme-1"), "x.custom.yaml").exists())
+        val copy = File(storage.userConfigDir("scheme-1"), "x.custom.yaml")
         copy.writeText(block)
         assertEquals("patch: {}\n", editor.load("x.custom.yaml", source) { "patch: {}\n" })
         assertEquals(block, copy.readText())
-        assertTrue(UserOverrides(storage).entries(source).isEmpty())
-        assertTrue(UserOverrides(storage).unacknowledged(source).isEmpty())
+        assertTrue(UserOverrides(storage, "scheme-1").entries(source).isEmpty())
+        assertTrue(UserOverrides(storage, "scheme-1").unacknowledged(source).isEmpty())
         copy.writeText("patch:\n  menu/page_size: 5\n" + block)
-        assertEquals(listOf("x.custom.yaml"), UserOverrides(storage).entries(source).map { it.path })
+        assertEquals(listOf("x.custom.yaml"), UserOverrides(storage, "scheme-1").entries(source).map { it.path })
         assertEquals("patch:\n  menu/page_size: 5\n", editor.load("x.custom.yaml", source) { "" })
     }
 
@@ -59,8 +63,11 @@ class UserConfigEditorTest {
     fun aValidFileIsSavedAndReadBack() {
         assertNull(editor.save("x.custom.yaml", "patch:\n  menu/page_size: 7\n"))
 
-        assertEquals("patch:\n  menu/page_size: 7\n", File(storage.userConfigDir, "x.custom.yaml").readText())
-        assertTrue("no temporary file is left", storage.userConfigDir.list()!!.none { it.startsWith(".") })
+        assertEquals(
+            "patch:\n  menu/page_size: 7\n",
+            File(storage.userConfigDir("scheme-1"), "x.custom.yaml").readText(),
+        )
+        assertTrue("no temporary file is left", storage.userConfigDir("scheme-1").list()!!.none { it.startsWith(".") })
     }
 
     @Test
@@ -71,7 +78,7 @@ class UserConfigEditorTest {
 
         assertEquals(UserConfigProblem.INVALID_YAML, refusal?.problem)
         assertNotNull(refusal?.line)
-        assertEquals("patch: {}\n", File(storage.userConfigDir, "x.custom.yaml").readText())
+        assertEquals("patch: {}\n", File(storage.userConfigDir("scheme-1"), "x.custom.yaml").readText())
     }
 
     @Test
@@ -87,7 +94,7 @@ class UserConfigEditorTest {
             editor.save("x.custom.yaml", "a: " + "[".repeat(500) + "\n")?.problem,
         )
         assertEquals(UserConfigProblem.NOT_TEXT, editor.save("x.custom.yaml", "a: \u0000\n")?.problem)
-        assertEquals("patch: {}\n", File(storage.userConfigDir, "x.custom.yaml").readText())
+        assertEquals("patch: {}\n", File(storage.userConfigDir("scheme-1"), "x.custom.yaml").readText())
     }
 
     @Test
@@ -96,10 +103,10 @@ class UserConfigEditorTest {
         editor.save("x.custom.yaml", "patch: {}\n")
         assertEquals(UserConfigProblem.TOO_LARGE, editor.save("x.custom.yaml", big)?.problem)
 
-        for (i in 0 until UserConfigFiles.MAX_FILES) File(storage.userConfigDir, "f$i.txt").writeText("x")
+        for (i in 0 until UserConfigFiles.MAX_FILES) File(storage.userConfigDir("scheme-1"), "f$i.txt").writeText("x")
         assertEquals(UserConfigProblem.TOO_MANY, editor.save("x.custom.yaml", "patch: {}\n")?.problem)
         assertEquals(UserConfigProblem.TOO_MANY, editor.save("new.custom.yaml", "patch: {}\n")?.problem)
-        assertFalse(File(storage.userConfigDir, "new.custom.yaml").exists())
+        assertFalse(File(storage.userConfigDir("scheme-1"), "new.custom.yaml").exists())
     }
 
     @Test
@@ -127,7 +134,7 @@ class UserConfigEditorTest {
         val text = editor.load(name, null) { ScriptTemplate.text("probe", "How to use it.") }
 
         assertTrue(text.startsWith("-- How to use it.\n-- engine/filters/+: [lua_filter@*probe]\nreturn {"))
-        val file = File(storage.userConfigDir, "lua/probe.lua")
+        val file = File(storage.userConfigDir("scheme-1"), "lua/probe.lua")
         assertEquals(text, file.readText())
         assertTrue(UserConfigFiles.isScriptPath("lua/probe.lua"))
         assertNull(editor.save(name, text + "-- more\n"))
@@ -135,7 +142,7 @@ class UserConfigEditorTest {
         assertEquals(
             "the new script is one the user must confirm",
             listOf("lua/probe.lua"),
-            UserScripts(storage).unconfirmed(storage.userConfigDir, source).map { it.id },
+            UserScripts(storage).unconfirmed(storage.userConfigDir("scheme-1"), source).map { it.id },
         )
     }
 }

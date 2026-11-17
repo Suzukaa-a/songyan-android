@@ -26,7 +26,9 @@ import app.songyan.ime.storage.SourceScheme
 import app.songyan.ime.userconfig.CompiledConfigGuard
 import app.songyan.ime.userconfig.UserConfigException
 import app.songyan.ime.userconfig.UserConfigFiles
+import app.songyan.ime.userconfig.UserConfigMigration
 import app.songyan.ime.userconfig.UserConfigProblem
+import app.songyan.ime.userconfig.UserConfigScope
 import app.songyan.ime.userconfig.UserConfigStatus
 import app.songyan.ime.userconfig.UserScripts
 import kotlinx.coroutines.CancellationException
@@ -68,16 +70,18 @@ class DeploymentCoordinator(
     private val builder = SourceBuilder(assets)
     private val overlay = DeployOverlay(storage)
     private val featureStore = EngineFeatureStore(storage)
-    private val configStatus = UserConfigStatus.Store(storage)
 
     /**
-     * Set while the user's configuration changes are being applied: a deployment that fails with
-     * them must fail, so the keyboard keeps its generation, instead of going ahead without them.
+     * The source whose configuration changes are being applied, while they are: a deployment of it
+     * that fails with them must fail, so the keyboard keeps its generation, instead of going ahead
+     * without them.
      */
-    private var strictConfig = false
+    private var strictScope: String? = null
 
-    /** The applied configuration's files (name, size, time) and whether they passed [UserConfigFiles.verify]. */
+    /** An applied configuration's folder and files (name, size, time) and whether they passed [UserConfigFiles.verify]. */
     private var verifiedConfig: Pair<String, Boolean>? = null
+
+    private fun configStatus(sourceId: String) = UserConfigStatus.Store(storage, sourceId)
 
     /**
      * The packages that offer at least one input method in the keyboard menu: only these keep a
@@ -297,59 +301,57 @@ class DeploymentCoordinator(
         }
 
     /**
-     * Applies the user's configuration changes: checks the files the user edited, makes a copy of
-     * them the configuration every deployment uses, and rebuilds the source in use with it. When a
+     * Applies the user's configuration changes for the source in use ([UserConfigScope.active]):
+     * checks the files the user edited in its scope, makes a copy of them the configuration every
+     * deployment of that source uses, and rebuilds it with them. Other sources keep their own. When a
      * file cannot be used, or the source does not deploy with them, nothing changes: the keyboard
      * keeps its generation and the earlier configuration stays the applied one.
      */
     suspend fun applyUserConfig(): Result<PublicationRecord> =
         locked {
+            val scope = UserConfigScope.active(storage)
+            val status = configStatus(scope)
             val root = storage.configRoot
-            val staging = File(root, CONFIG_STAGING_PREFIX + System.nanoTime())
-            val previous = File(root, CONFIG_PREVIOUS_PREFIX + System.nanoTime())
+            val staging = File(root, CONFIG_STAGING_PREFIX + scope + "-" + System.nanoTime())
+            val previous = File(root, CONFIG_PREVIOUS_PREFIX + scope + "-" + System.nanoTime())
             try {
-                UserConfigFiles.snapshot(storage.userConfigDir, staging)
+                UserConfigFiles.snapshot(storage.userConfigDir(scope), staging)
             } catch (e: UserConfigException) {
                 staging.deleteRecursively()
-                configStatus.write(UserConfigStatus.failed(e))
+                status.write(UserConfigStatus.failed(e))
                 throw e
             }
             // The settings screen asked for the user's yes to each script before this request; the files
             // may have changed since, so what is about to be applied is checked again.
             val unconfirmed =
-                UserScripts(storage).unconfirmed(staging, publisher.readActive()?.sourceId?.let(storage::sourceDir))
+                UserScripts(storage).unconfirmed(staging, storage.sourceDir(scope).takeIf { it.isDirectory })
             if (unconfirmed.isNotEmpty()) {
                 staging.deleteRecursively()
                 val refusal = UserConfigException(unconfirmed.first().id, UserConfigProblem.UNCONFIRMED_SCRIPT)
-                configStatus.write(UserConfigStatus.failed(refusal))
+                status.write(UserConfigStatus.failed(refusal))
                 throw refusal
             }
-            val applied = storage.appliedConfigDir
+            val applied = storage.appliedConfigDir(scope)
             // Its presence marks the application as unfinished until the new generation is published.
             if (applied.exists()) moveDirectory(applied, previous) else previous.mkdirs()
             moveDirectory(staging, applied)
-            strictConfig = true
+            strictScope = scope
             val record =
                 try {
-                    val active = publisher.readActive()?.sourceId
-                    if (active == null || active == SourceIds.BUILTIN || catalog.read(active) == null) {
-                        deployBuiltinLocked()
-                    } else {
-                        redeploySourceLocked(active)
-                    }
+                    if (scope == SourceIds.BUILTIN) deployBuiltinLocked() else redeploySourceLocked(scope)
                 } catch (e: Throwable) {
                     applied.deleteRecursively()
                     moveDirectory(previous, applied)
                     if (e !is CancellationException) {
-                        configStatus.write(UserConfigStatus.failed(e))
+                        status.write(UserConfigStatus.failed(e))
                     }
                     throw e
                 } finally {
-                    strictConfig = false
+                    strictScope = null
                     staging.deleteRecursively()
                 }
             // Activation committed these files; a status write failure must not roll them back.
-            configStatus.write(UserConfigStatus.applied(UserConfigFiles.digest(applied)))
+            status.write(UserConfigStatus.applied(UserConfigFiles.digest(applied)))
             previous.deleteRecursively()
             record
         }
@@ -358,6 +360,8 @@ class DeploymentCoordinator(
         withContext(ioDispatcher) {
             runCatching {
                 withDeployLock {
+                    // Before any scope is read: a restored backup of an earlier version brings back the single folder.
+                    UserConfigMigration.run(storage)
                     recoverAppliedConfig()
                     recoverStackedDictionaries()
                     purgeOldTrash()
@@ -372,24 +376,29 @@ class DeploymentCoordinator(
     private fun effectiveRevision(
         manifest: SourceManifest,
         features: EngineFeatureSettings = featureStore.read(),
-        config: File? = appliedConfig(),
+        config: File? = appliedConfig(manifest.sourceId),
     ): String = manifest.revision + "+" + overlay.digest(manifest, features, config)
 
-    /** The applied user configuration every deployment layers over its source, or null when there is none. */
-    private fun appliedConfig(): File? {
-        val dir = storage.appliedConfigDir.takeIf { UserConfigFiles.hasFiles(it) } ?: return null
+    /**
+     * The applied user configuration of [sourceId]'s scope, which every deployment of that source
+     * layers over it, or null when there is none.
+     */
+    private fun appliedConfig(sourceId: String): File? {
+        val dir = storage.appliedConfigDir(sourceId).takeIf { UserConfigFiles.hasFiles(it) } ?: return null
         // What applying just checked needs no second look; what a restored backup or an older version left does.
-        if (strictConfig) return dir
+        if (strictScope == sourceId) return dir
+        // The folder is part of the key: two scopes may hold files with the same names, sizes and times.
         val signature =
-            UserConfigFiles.files(dir).joinToString("|") {
-                UserConfigFiles.relativePath(dir, it) + ":" + it.length() + ":" + it.lastModified()
-            }
+            dir.path + "|" +
+                UserConfigFiles.files(dir).joinToString("|") {
+                    UserConfigFiles.relativePath(dir, it) + ":" + it.length() + ":" + it.lastModified()
+                }
         val known = verifiedConfig
         if (known?.first == signature) return dir.takeIf { known.second }
         val problem = UserConfigFiles.verify(dir)
         if (problem != null) {
             Log.w(TAG, "the applied configuration no longer passes its checks; deploying without it", problem)
-            configStatus.write(UserConfigStatus.failed(problem.file, problem.problem.name))
+            configStatus(sourceId).write(UserConfigStatus.failed(problem.file, problem.problem.name))
         }
         verifiedConfig = signature to (problem == null)
         return dir.takeIf { problem == null }
@@ -527,24 +536,24 @@ class DeploymentCoordinator(
         allCompanions: Boolean = false,
         resume: PublicationRecord? = null,
     ): PublicationRecord {
-        val config = appliedConfig()
-        if (config == null || strictConfig) {
+        val config = appliedConfig(manifest.sourceId)
+        if (config == null || strictScope == manifest.sourceId) {
             return deployOnce(sourceDir, manifest, allCompanions, resume, config)
         }
         return try {
             deployOnce(sourceDir, manifest, allCompanions, resume, config).also {
-                configStatus.deployedWith(manifest.sourceId)
+                configStatus(manifest.sourceId).deployedWith()
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: InterruptedException) {
             throw e
         } catch (e: Exception) {
-            // The configuration was applied with another source, or before an app update changed
-            // what it patches. Rime's own behaviour beats no keyboard: deploy without it, and tell.
+            // The configuration was applied before an app or package update changed what it patches.
+            // Rime's own behaviour beats no keyboard: deploy without it, and tell.
             Log.w(TAG, "cannot deploy " + manifest.sourceId + " with the user's configuration; deploying without it", e)
             deployOnce(sourceDir, manifest, allCompanions, resume = null, config = null).also {
-                configStatus.write(UserConfigStatus.skipped(manifest.sourceId))
+                configStatus(manifest.sourceId).write(UserConfigStatus.skipped(manifest.sourceId))
             }
         }
     }
@@ -935,21 +944,38 @@ class DeploymentCoordinator(
         }
     }
 
-    /** The active publication decides whether an interrupted configuration application committed. */
+    /**
+     * The active publication decides whether an interrupted configuration application committed: the
+     * new copy of a scope stays only when the generation in use is of that source and was published
+     * with it; otherwise the copy set aside comes back.
+     */
     private fun recoverAppliedConfig() {
         val entries = storage.configRoot.listFiles().orEmpty()
         for (entry in entries.filter { it.name.startsWith(CONFIG_STAGING_PREFIX) }) entry.deleteRecursively()
-        val previous = entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) }.maxByOrNull { it.name } ?: return
-        val applied = storage.appliedConfigDir
-        val digest = UserConfigFiles.digest(applied)
-        if (applied.isDirectory && publisher.usablePublication()?.configDigest == (digest ?: "")) {
-            configStatus.write(UserConfigStatus.applied(digest))
-        } else {
-            applied.deleteRecursively()
-            moveDirectory(previous, applied)
-        }
-        for (entry in entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) }) {
-            entry.deleteRecursively()
+        val previous = entries.filter { it.name.startsWith(CONFIG_PREVIOUS_PREFIX) }
+        if (previous.isEmpty()) return
+        val usable = publisher.usablePublication()
+        for ((sourceId, group) in previous.groupBy { CONFIG_PREVIOUS_PATTERN.find(it.name)?.groupValues?.get(1) }) {
+            val newest =
+                group.maxByOrNull {
+                    CONFIG_PREVIOUS_PATTERN
+                        .find(it.name)
+                        ?.groupValues
+                        ?.get(2)
+                        ?.toLongOrNull()
+                        ?: -1L
+                }
+            if (sourceId != null && newest != null) {
+                val applied = storage.appliedConfigDir(sourceId)
+                val digest = UserConfigFiles.digest(applied)
+                if (applied.isDirectory && usable?.sourceId == sourceId && usable.configDigest == (digest ?: "")) {
+                    configStatus(sourceId).write(UserConfigStatus.applied(digest))
+                } else {
+                    applied.deleteRecursively()
+                    moveDirectory(newest, applied)
+                }
+            }
+            for (entry in group) entry.deleteRecursively()
         }
     }
 
@@ -1034,6 +1060,9 @@ class DeploymentCoordinator(
 
         private const val CONFIG_STAGING_PREFIX = ".staging-"
         private const val CONFIG_PREVIOUS_PREFIX = ".previous-"
+
+        /** `.previous-<sourceId>-<nanos>`: the applied copy of one scope, set aside while applying. */
+        private val CONFIG_PREVIOUS_PATTERN = Regex("^\\.previous-([a-z0-9][a-z0-9-]{0,39})-([0-9]+)$")
 
         /** The failure recorded when the configuration was readable but the source did not deploy with it. */
         const val DEPLOY_PROBLEM = "DEPLOY"

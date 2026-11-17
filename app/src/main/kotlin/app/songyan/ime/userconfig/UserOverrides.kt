@@ -20,14 +20,18 @@ import java.security.MessageDigest
  *
  * Editing a package file creates such a copy (the package is never touched), so the copy is the
  * only place the user's version lives, and a package update cannot merge into it. Two facts are
- * kept beside the folder, in [AppStorage.overrideMarksFile]: the package file's hash when the copy
+ * kept beside the folder, in the scope's [AppStorage.overrideMarksFile]: the package file's hash when the copy
  * was made (to tell that the package has a newer version since) and which copies the user has
  * been told about (once each). Everything here reads and writes the disk: never call it on the
  * main thread.
  */
 class UserOverrides(
     private val storage: AppStorage,
+    /** Whose configuration scope ([AppStorage.userConfigDir]) the copies live in. */
+    private val sourceId: String,
 ) {
+    private val edit: File get() = storage.userConfigDir(sourceId)
+
     /** One file of the user's that shadows a file of the source; [updated] when the package's own changed since the copy. */
     data class Entry(
         val path: String,
@@ -67,7 +71,7 @@ class UserOverrides(
     /** The user's file at [path] (relative to the source), or null when there is none. */
     fun overrideFile(path: String): File? {
         if (!UserConfigFiles.isAllowedPath(path)) return null
-        return RimeConfigPaths.inside(storage.userConfigDir, path.split('/'))?.takeIf { it.isFile }
+        return RimeConfigPaths.inside(edit, path.split('/'))?.takeIf { it.isFile }
     }
 
     /**
@@ -89,11 +93,11 @@ class UserOverrides(
             if (packageFile.length() > UserConfigFiles.MAX_FILE_BYTES) {
                 throw UserConfigException(path, UserConfigProblem.TOO_LARGE)
             }
-            if (UserConfigFiles.files(storage.userConfigDir).size >= UserConfigFiles.MAX_FILES) {
+            if (UserConfigFiles.files(edit).size >= UserConfigFiles.MAX_FILES) {
                 throw UserConfigException(null, UserConfigProblem.TOO_MANY)
             }
         }
-        return RimeConfigPaths.inside(storage.userConfigDir, path.split('/'))
+        return RimeConfigPaths.inside(edit, path.split('/'))
             ?: throw UserConfigException(path, UserConfigProblem.NAME)
     }
 
@@ -149,16 +153,13 @@ class UserOverrides(
         }
 
     /** Whether the user's folder has a file whose path differs from [path] only in letter case. */
-    private fun collides(path: String): Boolean {
-        val edit = storage.userConfigDir
-        return UserConfigFiles.files(edit).map { UserConfigFiles.relativePath(edit, it) }.any {
+    private fun collides(path: String): Boolean =
+        UserConfigFiles.files(edit).map { UserConfigFiles.relativePath(edit, it) }.any {
             it != path && it.equals(path, ignoreCase = true)
         }
-    }
 
     private fun shadowed(sourceDir: File?): List<String> {
         if (sourceDir == null || !sourceDir.isDirectory) return emptyList()
-        val edit = storage.userConfigDir
         return UserConfigFiles
             .files(edit)
             .map { UserConfigFiles.relativePath(edit, it) }
@@ -180,7 +181,7 @@ class UserOverrides(
 
     private fun pruneEmptyFolders(start: File?) {
         var dir = start
-        val root = storage.userConfigDir.canonicalFile
+        val root = edit.canonicalFile
         while (dir != null && dir.canonicalFile != root && dir.listFiles().isNullOrEmpty()) {
             if (!dir.delete()) return
             dir = dir.parentFile
@@ -189,7 +190,11 @@ class UserOverrides(
 
     private fun readMarks(): Marks {
         val root =
-            runCatching { Json.parseToJsonElement(storage.overrideMarksFile.readText()) }.getOrNull() as? JsonObject
+            runCatching {
+                Json.parseToJsonElement(
+                    storage.overrideMarksFile(sourceId).readText(),
+                )
+            }.getOrNull() as? JsonObject
         val bases =
             (root?.get("bases") as? JsonObject)
                 ?.mapNotNull { (key, value) -> (value as? JsonPrimitive)?.contentOrNull?.let { key to it } }
@@ -207,12 +212,12 @@ class UserOverrides(
     private fun writeMarks(marks: Marks) {
         val present =
             UserConfigFiles
-                .files(storage.userConfigDir)
-                .map { UserConfigFiles.relativePath(storage.userConfigDir, it) }
+                .files(edit)
+                .map { UserConfigFiles.relativePath(edit, it) }
                 .toSet()
         val bases = marks.bases.filterKeys { it in present }
         val acknowledged = marks.acknowledged.filter { it in present }
-        val file = storage.overrideMarksFile
+        val file = storage.overrideMarksFile(sourceId)
         if (bases.isEmpty() && acknowledged.isEmpty()) {
             file.delete()
             return

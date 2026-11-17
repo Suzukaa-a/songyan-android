@@ -4,11 +4,17 @@
      it (they can be imported again). Also not in it: published Rime generations, deploy work, caches and request state (rebuildable),
      the clipboard history (private to this device), the large engine feature models (over the 25 MB cloud
      limit) and the automatic learning snapshots (the live userdb is already in). The built-in source is
-     unpacked from the app again. BackupRulesTest checks the paths against AppStorage. -->
+     unpacked from the app again. The Rime configuration travels as each source's folder (rime/config/sources);
+     how its last application ended and the scripts the user confirmed stay on this device. The single
+     folder of earlier versions (rime/config/edit, applied, overrides.json) stays listed because restore
+     applies these rules too: a backup made by an earlier version still brings it back, and the app then
+     moves it into the per-source folders. Nothing writes it any more, so new backups never hold it.
+     BackupRulesTest checks the paths against AppStorage. -->
 <full-backup-content>
     <include domain="file" path="rime/user" />
     <include domain="file" path="rime/features/settings.json" />
     <include domain="file" path="rime/options" />
+    <include domain="file" path="rime/config/sources" />
     <include domain="file" path="rime/config/edit" />
     <include domain="file" path="rime/config/applied" />
     <include domain="file" path="rime/config/overrides.json" />

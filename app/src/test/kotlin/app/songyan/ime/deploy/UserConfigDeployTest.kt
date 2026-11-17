@@ -4,8 +4,11 @@ import app.songyan.ime.packages.EngineFeatureReport
 import app.songyan.ime.packages.EngineFeatureReport.Availability
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.SourceIds
+import app.songyan.ime.userconfig.UserConfigEditor
 import app.songyan.ime.userconfig.UserConfigFiles
+import app.songyan.ime.userconfig.UserConfigScope
 import app.songyan.ime.userconfig.UserConfigStatus
+import app.songyan.ime.userconfig.UserOverrides
 import app.songyan.ime.userconfig.UserScripts
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,12 +29,17 @@ class UserConfigDeployTest {
     private val runner = DeployFixtures.FakeRunner()
     private val pipeline = DeployFixtures.pipeline(storage, runner)
     private val publisher = GenerationPublisher(storage)
-    private val status = UserConfigStatus.Store(storage)
+
+    /** The scope the settings screen edits and applying deploys: the source in use. */
+    private val scope get() = UserConfigScope.active(storage)
+    private val status get() = UserConfigStatus.Store(storage, scope)
+    private val editDir get() = storage.userConfigDir(scope)
+    private val appliedDir get() = storage.appliedConfigDir(scope)
 
     private fun edit(
         name: String,
         text: String,
-    ) = File(storage.userConfigDir.also { it.mkdirs() }, name).writeText(text)
+    ) = File(editDir.also { it.mkdirs() }, name).writeText(text)
 
     private suspend fun run(mode: DeployMode): RequestStatus =
         pipeline.run(DeployRequest("r" + System.nanoTime(), mode))
@@ -71,8 +79,8 @@ class UserConfigDeployTest {
         runTest {
             val id = importPackage()
             val own = "---\nname: cn_dicts/base\n...\n我的\two de\t1\n"
-            File(storage.userConfigDir, "cn_dicts").mkdirs()
-            File(storage.userConfigDir, "cn_dicts/base.dict.yaml").writeText(own)
+            File(editDir, "cn_dicts").mkdirs()
+            File(editDir, "cn_dicts/base.dict.yaml").writeText(own)
 
             val applied = run(DeployMode.APPLY_USER_CONFIG)
 
@@ -94,8 +102,8 @@ class UserConfigDeployTest {
     fun aScriptThatIsNotConfirmedIsRefusedByNameAndOnceConfirmedApplies() =
         runTest {
             importPackage()
-            File(storage.userConfigDir, "lua").mkdirs()
-            File(storage.userConfigDir, "lua/date.lua").writeText("return 1\n")
+            File(editDir, "lua").mkdirs()
+            File(editDir, "lua/date.lua").writeText("return 1\n")
             val calls = runner.calls
 
             val refused = run(DeployMode.APPLY_USER_CONFIG)
@@ -104,17 +112,17 @@ class UserConfigDeployTest {
             assertEquals(DeployPipeline.CONFIG_PREFIX + "UNCONFIRMED_SCRIPT", refused.problem)
             assertEquals(listOf("lua/date.lua"), refused.paths)
             assertEquals("nothing was deployed", calls, runner.calls)
-            assertFalse(File(storage.appliedConfigDir, "lua/date.lua").exists())
+            assertFalse(File(appliedDir, "lua/date.lua").exists())
 
             val scripts = UserScripts(storage)
-            scripts.accept(scripts.unconfirmed(storage.userConfigDir, null))
+            scripts.accept(scripts.unconfirmed(editDir, null))
             val applied = run(DeployMode.APPLY_USER_CONFIG)
 
             assertEquals(applied.problem, RequestState.SUCCEEDED, applied.state)
             assertEquals("return 1\n", runner.overlays.last()["lua/date.lua"])
 
             // A script that changes after it was confirmed is asked about again.
-            File(storage.userConfigDir, "lua/date.lua").writeText("return 2\n")
+            File(editDir, "lua/date.lua").writeText("return 2\n")
             assertEquals(DeployPipeline.CONFIG_PREFIX + "UNCONFIRMED_SCRIPT", run(DeployMode.APPLY_USER_CONFIG).problem)
         }
 
@@ -150,7 +158,7 @@ class UserConfigDeployTest {
             assertEquals(listOf("extra.yaml"), refused.paths)
             assertTrue("it did compile", runner.calls > calls)
             assertEquals("the keyboard keeps its generation", before.generation, publisher.readActive()!!.generation)
-            assertEquals("the earlier configuration stays", null, UserConfigFiles.digest(storage.appliedConfigDir))
+            assertEquals("the earlier configuration stays", null, UserConfigFiles.digest(appliedDir))
             assertEquals("extra.yaml", status.read()?.file)
         }
 
@@ -158,10 +166,10 @@ class UserConfigDeployTest {
     fun aRestoredBackupsScriptsAreLeftOutOfEveryDeploymentUntilConfirmedAgain() =
         runTest {
             importPackage()
-            File(storage.userConfigDir, "lua").mkdirs()
-            File(storage.userConfigDir, "lua/date.lua").writeText("return 1\n")
+            File(editDir, "lua").mkdirs()
+            File(editDir, "lua/date.lua").writeText("return 1\n")
             val scripts = UserScripts(storage)
-            scripts.accept(scripts.unconfirmed(storage.userConfigDir, null))
+            scripts.accept(scripts.unconfirmed(editDir, null))
             assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
             assertEquals("return 1\n", runner.overlays.last()["lua/date.lua"])
 
@@ -194,11 +202,11 @@ class UserConfigDeployTest {
         File(storage.sourceDir("scheme-a"), "lua/date.lua").writeText("return 1\n")
         File(storage.sourceDir("scheme-b"), "lua").mkdirs()
         File(storage.sourceDir("scheme-b"), "lua/date.lua").writeText("return 2\n")
-        File(storage.appliedConfigDir, "lua").mkdirs()
-        File(storage.appliedConfigDir, "lua/date.lua").writeText("return 1\n")
+        File(appliedDir, "lua").mkdirs()
+        File(appliedDir, "lua/date.lua").writeText("return 1\n")
 
-        assertEquals(emptySet<String>(), overlay.excluded(manifest("scheme-a"), storage.appliedConfigDir))
-        assertEquals(setOf("lua/date.lua"), overlay.excluded(manifest("scheme-b"), storage.appliedConfigDir))
+        assertEquals(emptySet<String>(), overlay.excluded(manifest("scheme-a"), appliedDir))
+        assertEquals(setOf("lua/date.lua"), overlay.excluded(manifest("scheme-b"), appliedDir))
     }
 
     @Test
@@ -242,14 +250,14 @@ class UserConfigDeployTest {
             }
 
             assertEquals(Availability.SCHEME, grammarAvailability())
-            File(storage.userConfigDir, name).delete()
+            File(editDir, name).delete()
             assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
             assertEquals(patch, runner.overlays.last()[name])
             assertEquals(Availability.SCHEME, grammarAvailability())
 
             assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
             assertFalse(runner.overlays.last().containsKey(name))
-            assertFalse(File(storage.appliedConfigDir, name).exists())
+            assertFalse(File(appliedDir, name).exists())
             assertEquals(Availability.AVAILABLE, grammarAvailability())
 
             assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
@@ -273,7 +281,7 @@ class UserConfigDeployTest {
             assertEquals(listOf("default.custom.yaml"), refused.paths)
             assertEquals("nothing was deployed", calls, runner.calls)
             assertEquals(active.generation, publisher.readActive()!!.generation)
-            assertFalse(File(storage.appliedConfigDir, "default.custom.yaml").exists())
+            assertFalse(File(appliedDir, "default.custom.yaml").exists())
             assertEquals("default.custom.yaml", status.read()!!.file)
         }
 
@@ -311,7 +319,7 @@ class UserConfigDeployTest {
             edit("songyan_quanpin.custom.yaml", PATCH)
             run(DeployMode.APPLY_USER_CONFIG)
             val active = publisher.readActive()!!
-            val digest = UserConfigFiles.digest(storage.appliedConfigDir)
+            val digest = UserConfigFiles.digest(appliedDir)
             edit("songyan_quanpin.custom.yaml", "patch:\n  engine/processors: []\n")
             runner.failIf = { File(it, "songyan_quanpin.custom.yaml").readText().contains("processors") }
 
@@ -323,37 +331,123 @@ class UserConfigDeployTest {
             assertEquals(
                 "the earlier configuration stays applied",
                 digest,
-                UserConfigFiles.digest(storage.appliedConfigDir),
+                UserConfigFiles.digest(appliedDir),
             )
             assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
         }
 
     @Test
-    fun aConfigurationThatBreaksAnotherSourceIsLeftOutOfItsDeployment() =
+    fun aConfigurationAppliedForOneSourceNeverReachesAnother() =
         runTest {
-            edit("default.custom.yaml", "patch:\n  schema_list:\n    - schema: double_pinyin\n")
+            // Both packages ship double_pinyin; each has its own `lua/` folder.
+            DeployFixtures.pickSchemePackage(storage, "b1", DeployFixtures.schemePackageFiles("other_ime", "别的拼音"))
+            val b = pipeline.run(DeployRequest("b1", DeployMode.IMPORT_SCHEME)).sourceId!!
+            val a = importPackage()
+            assertNotEquals(a, b)
+            assertEquals(a, scope)
+            val mine = listOf("default.custom.yaml", "double_pinyin.custom.yaml", "lua/mine.lua")
+            edit("default.custom.yaml", "patch:\n  menu/page_size: 5\n")
+            edit("double_pinyin.custom.yaml", PATCH)
+            File(editDir, "lua").mkdirs()
+            File(editDir, "lua/mine.lua").writeText("return 1\n")
+            val scripts = UserScripts(storage)
+            scripts.accept(scripts.unconfirmed(editDir, storage.sourceDir(a)))
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            val applied = publisher.readActive()!!
+            assertEquals(a, applied.sourceId)
+            assertTrue(
+                runner.overlays
+                    .last()
+                    .keys
+                    .containsAll(mine),
+            )
+
+            // Switching to the other package: its generation was built without them and still is current.
+            val calls = runner.calls
+            pipeline.run(DeployRequest("s1", DeployMode.ACTIVATE_SOURCE, sourceId = b))
+            assertEquals(b, publisher.readActive()!!.sourceId)
+            assertEquals("its revision did not change", calls, runner.calls)
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
+            assertTrue(
+                runner.overlays
+                    .last()
+                    .keys
+                    .none { it in mine },
+            )
+            val bGeneration = storage.generationDir(publisher.readActive()!!.generation)
+            assertTrue(mine.none { File(bGeneration, "resources/$it").exists() })
+
+            // What the settings screen edits now is the other package's, and it is empty.
+            assertEquals(b, scope)
+            assertTrue(UserConfigFiles.files(editDir).isEmpty())
+            assertNull(status.read())
+            assertNull(UserOverrides(storage, b).overrideFile("double_pinyin.custom.yaml"))
+            assertEquals(
+                "the editor starts from the template",
+                "template",
+                UserConfigEditor(storage, b).load("double_pinyin.custom.yaml", storage.sourceDir(b)) { "template" },
+            )
+
+            // Editing and applying there leaves the first package's files and generation alone.
+            edit("double_pinyin.custom.yaml", "patch:\n  menu/page_size: 3\n")
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            assertEquals("patch:\n  menu/page_size: 3\n", runner.overlays.last()["double_pinyin.custom.yaml"])
+            assertFalse(runner.overlays.last().containsKey("default.custom.yaml"))
+            assertEquals(PATCH, File(storage.userConfigDir(a), "double_pinyin.custom.yaml").readText())
+            assertEquals(PATCH, File(storage.appliedConfigDir(a), "double_pinyin.custom.yaml").readText())
+            assertEquals(UserConfigStatus.State.APPLIED, UserConfigStatus.Store(storage, a).read()!!.state)
+            val before = runner.calls
+            pipeline.run(DeployRequest("s2", DeployMode.ACTIVATE_SOURCE, sourceId = a))
+            assertEquals(applied.revision, publisher.readActive()!!.revision)
+            assertEquals(applied.configDigest, publisher.readActive()!!.configDigest)
+            assertEquals("the first package's generation is reused as it was", before, runner.calls)
+        }
+
+    @Test
+    fun anInterruptedApplicationIsSettledByThePublicationOfItsOwnSource() =
+        runTest {
             val id = importPackage()
-            run(DeployMode.APPLY_USER_CONFIG)
-            // Only the package has double_pinyin: the bundled input methods deploy no schema with it.
-            runner.failIf = { work ->
-                File(work, "default.custom.yaml").isFile && runner.deployedSources.last().name == SourceIds.BUILTIN
-            }
+            edit("rime_ice.custom.yaml", PATCH)
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            pipeline.run(DeployRequest("s1", DeployMode.ACTIVATE_SOURCE, sourceId = SourceIds.BUILTIN))
+            // The package's copy was swapped but never published: the keyboard is on another source.
+            File(storage.appliedConfigDir(id), "rime_ice.custom.yaml").writeText("patch:\n  menu/page_size: 9\n")
+            File(storage.configRoot, ".previous-$id-1")
+                .also { it.mkdirs() }
+                .resolve("rime_ice.custom.yaml")
+                .writeText(PATCH)
 
-            val switched = pipeline.run(DeployRequest("a1", DeployMode.ACTIVATE_SOURCE, sourceId = SourceIds.BUILTIN))
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
 
-            assertEquals(switched.problem, RequestState.SUCCEEDED, switched.state)
-            val active = publisher.readActive()!!
-            assertEquals(SourceIds.BUILTIN, active.sourceId)
+            assertEquals(PATCH, File(storage.appliedConfigDir(id), "rime_ice.custom.yaml").readText())
+            assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
+        }
+
+    @Test
+    fun aConfigurationTheSourceNoLongerDeploysWithIsLeftOutAndNoted() =
+        runTest {
+            val id = importPackage()
+            edit("default.custom.yaml", "patch:\n  menu/page_size: 5\n")
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
+            // An app or package update changed what the patch meets.
+            runner.failIf = { work -> File(work, "default.custom.yaml").isFile }
+
+            val redeployed = run(DeployMode.REDEPLOY_ACTIVE)
+
+            assertEquals(redeployed.problem, RequestState.SUCCEEDED, redeployed.state)
+            assertEquals(id, publisher.readActive()!!.sourceId)
             assertFalse(runner.overlays.last().containsKey("default.custom.yaml"))
             val note = status.read()!!
             assertEquals(UserConfigStatus.State.SKIPPED, note.state)
-            assertEquals(SourceIds.BUILTIN, note.sourceId)
+            assertEquals(id, note.sourceId)
+            assertNull(
+                "the built-in package's status is its own",
+                UserConfigStatus.Store(storage, SourceIds.BUILTIN).read(),
+            )
 
-            // Back on the package, its generation built with the configuration is used again.
-            val calls = runner.calls
-            pipeline.run(DeployRequest("a2", DeployMode.ACTIVATE_SOURCE, sourceId = id))
-            assertEquals(id, publisher.readActive()!!.sourceId)
-            assertEquals(calls, runner.calls)
+            runner.failIf = null
+            assertEquals(RequestState.SUCCEEDED, run(DeployMode.REDEPLOY_ACTIVE).state)
+            assertEquals(UserConfigStatus.State.APPLIED, status.read()!!.state)
         }
 
     @Test
@@ -401,14 +495,14 @@ class UserConfigDeployTest {
             edit("songyan_quanpin.custom.yaml", PATCH)
             run(DeployMode.APPLY_USER_CONFIG)
             // What a process killed between setting the old copy aside and publishing leaves behind.
-            val previous = File(storage.configRoot, ".previous-1")
-            storage.appliedConfigDir.copyRecursively(previous)
-            File(storage.appliedConfigDir, "songyan_quanpin.custom.yaml").writeText("half: done\n")
-            File(storage.configRoot, ".staging-2").mkdirs()
+            val previous = File(storage.configRoot, ".previous-$scope-1")
+            appliedDir.copyRecursively(previous)
+            File(appliedDir, "songyan_quanpin.custom.yaml").writeText("half: done\n")
+            File(storage.configRoot, ".staging-$scope-2").mkdirs()
 
             run(DeployMode.REDEPLOY_ACTIVE)
 
-            assertEquals(PATCH, File(storage.appliedConfigDir, "songyan_quanpin.custom.yaml").readText())
+            assertEquals(PATCH, File(appliedDir, "songyan_quanpin.custom.yaml").readText())
             assertEquals(PATCH, runner.overlays.last()["songyan_quanpin.custom.yaml"])
             assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
         }
@@ -420,16 +514,16 @@ class UserConfigDeployTest {
             edit("rime_ice.custom.yaml", PATCH)
             run(DeployMode.APPLY_USER_CONFIG)
             for (next in listOf("patch:\n  menu/page_size: 9\n", "")) {
-                val old = File(storage.appliedConfigDir, "rime_ice.custom.yaml").readText()
+                val old = File(appliedDir, "rime_ice.custom.yaml").readText()
                 if (next.isEmpty()) {
-                    File(storage.userConfigDir, "rime_ice.custom.yaml").delete()
+                    File(editDir, "rime_ice.custom.yaml").delete()
                 } else {
                     edit("rime_ice.custom.yaml", next)
                 }
                 assertEquals(RequestState.SUCCEEDED, run(DeployMode.APPLY_USER_CONFIG).state)
                 val committed = publisher.readActive()!!
                 // The process died after activation, before deleting the backup or updating the status.
-                File(storage.configRoot, ".previous-1")
+                File(storage.configRoot, ".previous-$scope-1")
                     .also { it.mkdirs() }
                     .resolve("rime_ice.custom.yaml")
                     .writeText(old)
@@ -446,9 +540,9 @@ class UserConfigDeployTest {
                 assertEquals(committed, publisher.readActive())
                 assertEquals(
                     next.takeIf { it.isNotEmpty() },
-                    File(storage.appliedConfigDir, "rime_ice.custom.yaml").takeIf { it.isFile }?.readText(),
+                    File(appliedDir, "rime_ice.custom.yaml").takeIf { it.isFile }?.readText(),
                 )
-                assertEquals(UserConfigStatus.applied(UserConfigFiles.digest(storage.appliedConfigDir)), status.read())
+                assertEquals(UserConfigStatus.applied(UserConfigFiles.digest(appliedDir)), status.read())
                 assertTrue(storage.configRoot.listFiles()!!.none { it.name.startsWith(".") })
             }
         }
@@ -477,7 +571,7 @@ class UserConfigDeployTest {
         runTest {
             importPackage()
             // What a backup restore or an older version left: never run through today's checks.
-            File(storage.appliedConfigDir, "x.custom.yaml")
+            File(appliedDir, "x.custom.yaml")
                 .also { it.parentFile?.mkdirs() }
                 .writeText("translator:\n  user_dict: /abs/leak\n")
 

@@ -44,14 +44,16 @@ data class UserConfigStatus(
             detail?.let { put("detail", it) }
         }.toString()
 
-    /** Reads and writes [AppStorage.configStatusFile]; a damaged file reads as no status. */
+    /** Reads and writes [AppStorage.configStatusFile] of [sourceId]'s scope; a damaged file reads as no status. */
     class Store(
         private val storage: AppStorage,
+        private val sourceId: String,
     ) {
-        fun read(): UserConfigStatus? = decode(runCatching { storage.configStatusFile.readText() }.getOrNull())
+        fun read(): UserConfigStatus? =
+            decode(runCatching { storage.configStatusFile(sourceId).readText() }.getOrNull())
 
         fun write(status: UserConfigStatus) {
-            val file = storage.configStatusFile
+            val file = storage.configStatusFile(sourceId)
             file.parentFile?.mkdirs()
             val temp = File(file.parentFile, file.name + ".tmp")
             temp.writeText(status.encode())
@@ -61,11 +63,11 @@ data class UserConfigStatus(
             }
         }
 
-        /** A deployment of [sourceId] used the configuration: an earlier note that it left it out is outdated. */
-        fun deployedWith(sourceId: String) {
+        /** A deployment of the scope's source used the configuration: an earlier note that it left it out is outdated. */
+        fun deployedWith() {
             val current = read() ?: return
             if (current.state == State.SKIPPED && current.sourceId == sourceId) {
-                write(applied(UserConfigFiles.digest(storage.appliedConfigDir)))
+                write(applied(UserConfigFiles.digest(storage.appliedConfigDir(sourceId))))
             }
         }
     }

@@ -12,8 +12,12 @@ import java.nio.file.Files
 
 /** The user's copies of a source's files: made from the package's bytes, never touching it, tracked per path. */
 class UserOverridesTest {
-    private val storage = AppStorage(Files.createTempDirectory("files").toFile()).also { it.ensureBaseDirectories() }
-    private val overrides = UserOverrides(storage)
+    private val storage =
+        AppStorage(Files.createTempDirectory("files").toFile()).also {
+            it.ensureBaseDirectories()
+            it.userConfigDir("scheme-1").mkdirs()
+        }
+    private val overrides = UserOverrides(storage, "scheme-1")
     private val source = File(storage.sourcesDir, "scheme-1").also { File(it, "lua").mkdirs() }
 
     private fun packaged(
@@ -37,7 +41,7 @@ class UserOverridesTest {
 
         val copy = overrides.copyOf(original, "lua/date.lua")
 
-        assertEquals(File(storage.userConfigDir, "lua/date.lua").canonicalFile, copy.canonicalFile)
+        assertEquals(File(storage.userConfigDir("scheme-1"), "lua/date.lua").canonicalFile, copy.canonicalFile)
         assertEquals("return 'a'\n", copy.readText())
         copy.writeText("return 'mine'\n")
         assertEquals("return 'a'\n", original.readText())
@@ -51,7 +55,7 @@ class UserOverridesTest {
 
         overrides.copyOf(original, "a.schema.yaml")
 
-        assertEquals("x: 2\n", File(storage.userConfigDir, "a.schema.yaml").readText())
+        assertEquals("x: 2\n", File(storage.userConfigDir("scheme-1"), "a.schema.yaml").readText())
     }
 
     @Test
@@ -74,9 +78,9 @@ class UserOverridesTest {
         val big = packaged("big.dict.yaml", "")
         big.writeBytes(ByteArray((UserConfigFiles.MAX_FILE_BYTES + 1).toInt()) { 'a'.code.toByte() })
         assertEquals(UserConfigProblem.TOO_LARGE, refusal { overrides.copyOf(big, "big.dict.yaml") }.problem)
-        assertFalse(File(storage.userConfigDir, "big.dict.yaml").exists())
+        assertFalse(File(storage.userConfigDir("scheme-1"), "big.dict.yaml").exists())
 
-        for (i in 0 until UserConfigFiles.MAX_FILES) File(storage.userConfigDir, "f$i.txt").writeText("x")
+        for (i in 0 until UserConfigFiles.MAX_FILES) File(storage.userConfigDir("scheme-1"), "f$i.txt").writeText("x")
         val one = packaged("one.yaml", "a: 1\n")
         assertEquals(UserConfigProblem.TOO_MANY, refusal { overrides.copyOf(one, "one.yaml") }.problem)
     }
@@ -84,10 +88,10 @@ class UserOverridesTest {
     @Test
     fun onlyFilesThatShadowASourceFileAreOverrides() {
         packaged("a.schema.yaml", "x: 1\n")
-        File(storage.userConfigDir, "a.schema.yaml").writeText("x: 2\n")
-        File(storage.userConfigDir, "default.custom.yaml").writeText("patch: {}\n")
-        File(storage.userConfigDir, "lua").mkdirs()
-        File(storage.userConfigDir, "lua/new.lua").writeText("return 1\n")
+        File(storage.userConfigDir("scheme-1"), "a.schema.yaml").writeText("x: 2\n")
+        File(storage.userConfigDir("scheme-1"), "default.custom.yaml").writeText("patch: {}\n")
+        File(storage.userConfigDir("scheme-1"), "lua").mkdirs()
+        File(storage.userConfigDir("scheme-1"), "lua/new.lua").writeText("return 1\n")
 
         assertEquals(listOf("a.schema.yaml"), overrides.entries(source).map { it.path })
         assertTrue(overrides.entries(null).isEmpty())
@@ -97,20 +101,20 @@ class UserOverridesTest {
     fun eachOverrideIsToldOnceAndAFileMadeAgainIsToldAgain() {
         packaged("a.schema.yaml", "x: 1\n")
         packaged("b.schema.yaml", "y: 1\n")
-        File(storage.userConfigDir, "a.schema.yaml").writeText("x: 2\n")
-        File(storage.userConfigDir, "b.schema.yaml").writeText("y: 2\n")
+        File(storage.userConfigDir("scheme-1"), "a.schema.yaml").writeText("x: 2\n")
+        File(storage.userConfigDir("scheme-1"), "b.schema.yaml").writeText("y: 2\n")
         assertEquals(listOf("a.schema.yaml", "b.schema.yaml"), overrides.unacknowledged(source))
 
         overrides.acknowledge(listOf("a.schema.yaml", "b.schema.yaml"))
         assertTrue(overrides.unacknowledged(source).isEmpty())
-        File(storage.userConfigDir, "c.schema.yaml").writeText("z: 2\n")
+        File(storage.userConfigDir("scheme-1"), "c.schema.yaml").writeText("z: 2\n")
         packaged("c.schema.yaml", "z: 1\n")
         assertEquals(listOf("c.schema.yaml"), overrides.unacknowledged(source))
 
         // What was told survives a new instance (the settings screen is opened again).
-        assertTrue(UserOverrides(storage).unacknowledged(source) == listOf("c.schema.yaml"))
+        assertTrue(UserOverrides(storage, "scheme-1").unacknowledged(source) == listOf("c.schema.yaml"))
         assertTrue(overrides.restore("a.schema.yaml"))
-        File(storage.userConfigDir, "a.schema.yaml").writeText("x: 3\n")
+        File(storage.userConfigDir("scheme-1"), "a.schema.yaml").writeText("x: 3\n")
         assertEquals(listOf("a.schema.yaml", "c.schema.yaml"), overrides.unacknowledged(source))
     }
 
@@ -125,15 +129,15 @@ class UserOverridesTest {
         assertTrue(overrides.entries(source).single().updated)
         assertTrue(overrides.restore("lua/date.lua"))
         assertTrue(overrides.entries(source).isEmpty())
-        assertFalse("the emptied folder goes too", File(storage.userConfigDir, "lua").exists())
-        assertFalse(storage.overrideMarksFile.exists())
+        assertFalse("the emptied folder goes too", File(storage.userConfigDir("scheme-1"), "lua").exists())
+        assertFalse(storage.overrideMarksFile("scheme-1").exists())
         assertEquals("return 2\n", original.readText())
     }
 
     @Test
     fun aFileTheUserMadeHasNoBaseSoItIsNeverCalledUpdated() {
         val original = packaged("a.schema.yaml", "x: 1\n")
-        File(storage.userConfigDir, "a.schema.yaml").writeText("x: 2\n")
+        File(storage.userConfigDir("scheme-1"), "a.schema.yaml").writeText("x: 2\n")
         original.writeText("x: 3\n")
 
         assertFalse(overrides.entries(source).single().updated)
@@ -142,7 +146,7 @@ class UserOverridesTest {
     @Test
     fun aNameThatDiffersOnlyInCaseOrIsNotASourceFileIsRefused() {
         val original = packaged("a.schema.yaml", "x: 1\n")
-        File(storage.userConfigDir, "A.schema.yaml").writeText("x: 2\n")
+        File(storage.userConfigDir("scheme-1"), "A.schema.yaml").writeText("x: 2\n")
 
         assertEquals(UserConfigProblem.NAME, refusal { overrides.target(original, "a.schema.yaml") }.problem)
         assertEquals(

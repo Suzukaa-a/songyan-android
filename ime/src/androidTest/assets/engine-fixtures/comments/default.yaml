@@ -1,0 +1,8 @@
+# Minimal shared data for the candidate comment fixture.
+config_version: "0.1"
+
+schema_list:
+  - schema: comment_probe
+
+menu:
+  page_size: 5

@@ -1,0 +1,38 @@
+# Real-engine fixture: candidates carry their code completion as the engine's comment, so the candidate
+# bar's comment display can be checked against real engine output.
+schema:
+  schema_id: comment_probe
+  name: 注释回归测试
+  version: "0.1.0"
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中文, 英文 ]
+
+engine:
+  processors:
+    - speller
+    - selector
+    - express_editor
+  segmentors:
+    - abc_segmentor
+    - fallback_segmentor
+  translators:
+    - table_translator
+  filters:
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " "
+
+translator:
+  dictionary: comment_probe
+  enable_user_dict: false
+  enable_encoder: false
+  enable_sentence: false
+  enable_completion: true
+
+menu:
+  page_size: 5

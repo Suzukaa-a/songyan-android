@@ -112,6 +112,7 @@ class AppSettingsPreferences(
     override suspend fun setLearningSnapshotDays(value: Int) = preferences.setLearningSnapshotDays(value)
 
     override val candidateTextSize: Flow<String> = preferences.candidateTextSize
+    override val showCandidateComments: Flow<Boolean> = preferences.showCandidateComments
     override val collapsedCandidateComments: Flow<Boolean> = preferences.collapsedCandidateComments
     override val keyFeedback: Flow<KeyFeedbackSettings> = preferences.keyFeedback
 
@@ -131,6 +132,10 @@ class AppSettingsPreferences(
 
     override suspend fun setNotificationRationaleShown() {
         preferences.setNotificationRationaleShown()
+    }
+
+    override suspend fun setShowCandidateComments(value: Boolean) {
+        preferences.setShowCandidateComments(value)
     }
 
     override suspend fun setCollapsedCandidateComments(value: Boolean) {

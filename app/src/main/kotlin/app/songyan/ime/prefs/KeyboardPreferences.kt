@@ -63,6 +63,13 @@ class KeyboardPreferences(
             .map { CandidateTextSize.fromId(it[KEY_CANDIDATE_TEXT_SIZE]).id }
             .distinctUntilChanged()
 
+    /** Whether the candidate bar shows comments at all; off hides them in the row and when expanded. */
+    val showCandidateComments: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_SHOW_CANDIDATE_COMMENTS] ?: true }
+            .distinctUntilChanged()
+
     /** Whether the single-row candidate bar shows comments; the expanded bar always does. */
     val collapsedCandidateComments: Flow<Boolean> =
         appContext.keyboardDataStore.data
@@ -595,6 +602,10 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_CANDIDATE_TEXT_SIZE] = CandidateTextSize.fromId(value).id }
     }
 
+    suspend fun setShowCandidateComments(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_SHOW_CANDIDATE_COMMENTS] = value }
+    }
+
     suspend fun setCollapsedCandidateComments(value: Boolean) {
         appContext.keyboardDataStore.edit { it[KEY_COLLAPSED_CANDIDATE_COMMENTS] = value }
     }
@@ -724,6 +735,7 @@ class KeyboardPreferences(
         private val KEY_VOICE_INPUT_ENABLED = booleanPreferencesKey("voice_input_enabled")
         private val KEY_VOICE_INPUT_SCRIPT_ID = stringPreferencesKey("voice_input_script_id")
         private val KEY_CANDIDATE_TEXT_SIZE = stringPreferencesKey("candidate_text_size")
+        private val KEY_SHOW_CANDIDATE_COMMENTS = booleanPreferencesKey("show_candidate_comments")
         private val KEY_COLLAPSED_CANDIDATE_COMMENTS = booleanPreferencesKey("collapsed_candidate_comments")
         private val KEY_SOUND_ENABLED = booleanPreferencesKey("key_sound_enabled")
         private val KEY_SOUND_VOLUME = floatPreferencesKey("key_sound_volume")

@@ -165,6 +165,9 @@ interface SettingsPreferences {
     /** Candidate text size choice; [CandidateTextSize.id]. */
     val candidateTextSize: Flow<String>
 
+    /** Whether the candidate bar shows comments at all; off hides them in the row and when expanded. */
+    val showCandidateComments: Flow<Boolean>
+
     /** Whether the single-row candidate bar shows comments. */
     val collapsedCandidateComments: Flow<Boolean>
 
@@ -192,6 +195,8 @@ interface SettingsPreferences {
     suspend fun setLayoutId(value: String)
 
     suspend fun setCandidateTextSize(value: String)
+
+    suspend fun setShowCandidateComments(value: Boolean)
 
     suspend fun setCollapsedCandidateComments(value: Boolean)
 
@@ -263,6 +268,7 @@ class InMemorySettingsPreferences(
     private val schema = MutableStateFlow(schemaId)
     private val layout = MutableStateFlow(layoutId)
     private val textSize = MutableStateFlow(CandidateTextSize.DEFAULT.id)
+    private val showComments = MutableStateFlow(true)
     private val collapsedComments = MutableStateFlow(true)
     private val feedback = MutableStateFlow(KeyFeedbackSettings())
     private val onboarding = MutableStateFlow(false)
@@ -497,6 +503,7 @@ class InMemorySettingsPreferences(
     }
 
     override val candidateTextSize: Flow<String> = textSize.asStateFlow()
+    override val showCandidateComments: Flow<Boolean> = showComments.asStateFlow()
     override val collapsedCandidateComments: Flow<Boolean> = collapsedComments.asStateFlow()
     override val keyFeedback: Flow<KeyFeedbackSettings> = feedback.asStateFlow()
     override val onboardingShown: Flow<Boolean> = onboarding.asStateFlow()
@@ -522,6 +529,10 @@ class InMemorySettingsPreferences(
 
     override suspend fun setLayoutId(value: String) {
         layout.value = value
+    }
+
+    override suspend fun setShowCandidateComments(value: Boolean) {
+        showComments.value = value
     }
 
     override suspend fun setCollapsedCandidateComments(value: Boolean) {

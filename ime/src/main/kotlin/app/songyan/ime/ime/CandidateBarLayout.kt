@@ -48,9 +48,12 @@ internal fun CandidateBarView.measureEntries() {
 internal fun CandidateBarView.chipWidth(entry: Entry): Float =
     ChipWidth.of(entry.textWidth, entry.commentWidth, showsComment(entry), chipGapPx, chipPaddingPx)
 
-/** Whether [entry]'s comment is drawn and counted: always when expanded, by the user's choice in the row. */
+/**
+ * Whether [entry]'s comment is drawn and counted: never when the user turned comments off, always
+ * when expanded, by the user's choice in the row.
+ */
 internal fun CandidateBarView.showsComment(entry: Entry): Boolean =
-    entry.comment.isNotEmpty() && (expanded || collapsedComments)
+    entry.comment.isNotEmpty() && showComments && (expanded || collapsedComments)
 
 /**
  * Candidate text width with each emoji counted at most one em, a Chinese character's width. An

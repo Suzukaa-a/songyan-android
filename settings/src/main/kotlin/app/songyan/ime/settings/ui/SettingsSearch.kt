@@ -46,6 +46,11 @@ object SettingsSearch {
             ),
             SearchEntry(
                 SettingsRoutes.CANDIDATE_BAR,
+                R.string.candidate_bar_show_comments_title,
+                R.string.candidate_bar_title,
+            ),
+            SearchEntry(
+                SettingsRoutes.CANDIDATE_BAR,
                 R.string.candidate_bar_row_comments_title,
                 R.string.candidate_bar_title,
             ),

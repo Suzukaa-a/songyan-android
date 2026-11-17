@@ -628,7 +628,16 @@ class CandidateBarView(
             refreshAppearance()
         }
 
-    /** Whether the single row draws comments; the expanded grid always does. */
+    /** Master switch: off draws no comment and gives it no width, in the row and when expanded. */
+    var showComments: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+            invalidate()
+        }
+
+    /** Whether the single row draws comments; the expanded grid always does (while [showComments]). */
     var collapsedComments: Boolean = true
         set(value) {
             if (field == value) return

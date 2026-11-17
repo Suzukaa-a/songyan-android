@@ -1342,6 +1342,7 @@ abstract class RealEngineEditorTestBase {
         override val shuangpinHints = MutableStateFlow<Map<Char, String>>(emptyMap())
         override val menuHiddenSchemas = MutableStateFlow<Set<String>>(emptySet())
         override val widePosition = MutableStateFlow(50)
+        override val showCandidateComments = MutableStateFlow(true)
         override val keyFlickDirection = MutableStateFlow(FlickDirection.UP.wire)
 
         override suspend fun setLayoutId(id: String) {

@@ -1,0 +1,18 @@
+# Real-engine fixture dictionary: words whose candidates carry a completion comment.
+---
+name: comment_probe
+version: "0.1.0"
+sort: by_weight
+use_preset_vocabulary: false
+columns:
+  - text
+  - code
+  - weight
+...
+你	ni	100
+泥	ni	90
+尼	nia	80
+拟	ni	70
+腻	ni	60
+逆	ni	50
+你好	nihao	40

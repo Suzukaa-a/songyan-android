@@ -70,6 +70,7 @@ data class SettingsUiState(
     /** The main layout the keyboard in use draws, once the layout catalog is read; null until then. */
     val mainLayout: CurrentMainLayout? = null,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
+    val showCandidateComments: Boolean = true,
     val collapsedCandidateComments: Boolean = true,
     val keyFeedback: KeyFeedbackSettings = KeyFeedbackSettings(),
     /** Key height, one-handed mode, key preview and release vibration, shown on the options screen. */
@@ -112,6 +113,7 @@ data class SettingsUiState(
 private data class StoredPreferences(
     val layoutId: String = SettingsPreferences.DEFAULT_LAYOUT_ID,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
+    val showCandidateComments: Boolean = true,
     val collapsedCandidateComments: Boolean = true,
     val keyFeedback: KeyFeedbackSettings = KeyFeedbackSettings(),
     val keyboardFeel: KeyboardFeelState = KeyboardFeelState(),
@@ -180,6 +182,7 @@ class SettingsViewModel(
     init {
         collectPreference(preferences.layoutId) { copy(layoutId = it) }
         collectPreference(preferences.candidateTextSize) { copy(candidateTextSize = CandidateTextSize.fromId(it)) }
+        collectPreference(preferences.showCandidateComments) { copy(showCandidateComments = it) }
         collectPreference(preferences.collapsedCandidateComments) { copy(collapsedCandidateComments = it) }
         collectPreference(preferences.keyFeedback) { copy(keyFeedback = it) }
         collectPreference(preferences.keyHeight) { copy(keyboardFeel = keyboardFeel.copy(keyHeight = it)) }
@@ -278,6 +281,7 @@ class SettingsViewModel(
                 otherSources = app.otherSources,
                 layoutId = prefs.layoutId,
                 candidateTextSize = prefs.candidateTextSize,
+                showCandidateComments = prefs.showCandidateComments,
                 collapsedCandidateComments = prefs.collapsedCandidateComments,
                 keyFeedback = prefs.keyFeedback,
                 keyboardFeel = prefs.keyboardFeel,
@@ -511,6 +515,10 @@ class SettingsViewModel(
             preferences.setLayoutId(layout.id)
             appStateSource.refresh()
         }
+    }
+
+    fun setShowCandidateComments(value: Boolean) {
+        viewModelScope.launch { preferences.setShowCandidateComments(value) }
     }
 
     fun setCollapsedCandidateComments(value: Boolean) {

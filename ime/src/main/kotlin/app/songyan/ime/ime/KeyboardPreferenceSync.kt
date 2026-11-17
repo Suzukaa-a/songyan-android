@@ -130,6 +130,9 @@ internal fun KeyboardController.observePreferences() {
         }
     }
     scope.launch {
+        source.showCandidateComments.collect { candidates.showComments = it }
+    }
+    scope.launch {
         source.collapsedCandidateComments.collect { candidates.collapsedComments = it }
     }
     scope.launch {

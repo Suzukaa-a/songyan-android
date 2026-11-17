@@ -1,5 +1,6 @@
 package app.songyan.ime.settings
 
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -51,6 +52,7 @@ class CandidateBarScreenTest {
 
     private var size = CandidateTextSize.STANDARD
     private var rowComments = true
+    private var showComments = true
 
     private fun show(source: Source) {
         compose.setContent {
@@ -60,6 +62,8 @@ class CandidateBarScreenTest {
                     onHideIdleToolbarChanged = {},
                     candidateTextSize = size,
                     onCandidateTextSizeChanged = { size = it },
+                    showComments = showComments,
+                    onShowCommentsChanged = { showComments = it },
                     collapsedComments = rowComments,
                     onCollapsedCommentsChanged = { rowComments = it },
                     onBack = {},
@@ -135,5 +139,24 @@ class CandidateBarScreenTest {
         show(Source())
         compose.onNodeWithText(str(R.string.candidate_bar_row_comments_title)).performScrollTo().performClick()
         assertEquals(false, rowComments)
+    }
+
+    @Test
+    fun theMasterCommentsSwitchReportsTheChoice() {
+        show(Source())
+        compose.onNodeWithText(str(R.string.candidate_bar_show_comments_title)).performScrollTo().performClick()
+        assertEquals(false, showComments)
+    }
+
+    @Test
+    fun theSingleRowSwitchIsDisabledWhileCommentsAreOffAndKeepsItsValue() {
+        showComments = false
+        show(Source())
+        compose
+            .onNodeWithText(str(R.string.candidate_bar_row_comments_title))
+            .performScrollTo()
+            .assertIsNotEnabled()
+            .performClick()
+        assertEquals(true, rowComments)
     }
 }

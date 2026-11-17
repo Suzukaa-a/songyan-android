@@ -50,6 +50,8 @@ fun CandidateBarScreen(
     onHideIdleToolbarChanged: (Boolean) -> Unit,
     candidateTextSize: CandidateTextSize?,
     onCandidateTextSizeChanged: (CandidateTextSize) -> Unit,
+    showComments: Boolean?,
+    onShowCommentsChanged: (Boolean) -> Unit,
     collapsedComments: Boolean?,
     onCollapsedCommentsChanged: (Boolean) -> Unit,
     onBack: (() -> Unit)?,
@@ -142,11 +144,20 @@ fun CandidateBarScreen(
                     }
                 }
             }
+            if (showComments != null) {
+                SwitchRow(
+                    title = stringResource(R.string.candidate_bar_show_comments_title),
+                    subtitle = stringResource(R.string.candidate_bar_show_comments_body),
+                    checked = showComments,
+                    onCheckedChange = onShowCommentsChanged,
+                )
+            }
             if (collapsedComments != null) {
                 SwitchRow(
                     title = stringResource(R.string.candidate_bar_row_comments_title),
                     subtitle = stringResource(R.string.candidate_bar_row_comments_body),
                     checked = collapsedComments,
+                    enabled = showComments != false,
                     onCheckedChange = onCollapsedCommentsChanged,
                 )
             }

@@ -5,6 +5,8 @@
     <string name="candidate_bar_value">%1$s：%2$d</string>
     <string name="candidate_bar_row_section">單行</string>
     <string name="candidate_bar_hide_toolbar_title">空閒時隱藏工具欄</string>
+    <string name="candidate_bar_show_comments_title">顯示註釋</string>
+    <string name="candidate_bar_show_comments_body">關閉後，候選列不顯示註釋，展開後也不顯示。</string>
     <string name="candidate_bar_row_comments_title">單行顯示註釋</string>
     <string name="candidate_bar_row_comments_body">關閉後，註釋只在展開候選列時顯示。</string>
     <string name="candidate_bar_hide_toolbar_body">沒在打字時，候選列不顯示圖示。剪貼簿、表情符號、編輯、單手模式和鍵盤設定可以長按「中/英」找到。</string>

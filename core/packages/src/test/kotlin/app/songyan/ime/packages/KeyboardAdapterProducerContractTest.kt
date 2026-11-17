@@ -48,6 +48,11 @@ class KeyboardAdapterProducerContractTest {
 
     private fun yaml(data: ByteArray): Map<String, Any?> = requireNotNull(YamsYaml.loadMap(String(data)))
 
+    private fun scriptSource(
+        schemaID: String,
+        alphabet: String,
+    ) = tableSource(schemaID, alphabet).replace("table_translator", "script_translator")
+
     private fun tableSource(
         schemaID: String,
         alphabet: String,
@@ -112,7 +117,8 @@ class KeyboardAdapterProducerContractTest {
             custom_phrase: {dictionary: "", user_dict: custom_phrase, db_class: stabledb}
             reverse_lookup: {dictionary: pinyin_simp, prefix: z}
             """.trimIndent().toByteArray()
-        assertEquals(CompactSchemaAdapter.Adaptability.Adaptable, adapter.adaptability(source, "tbl_aux"))
+        // Shape codes are typed on 26 keys; folding a whole code table exhausts a phone's memory.
+        assertTrue(adapter.adaptability(source, "tbl_aux") is CompactSchemaAdapter.Adaptability.Unsupported)
         val projection =
             projection(
                 "tbl_aux",
@@ -282,7 +288,7 @@ class KeyboardAdapterProducerContractTest {
             "zyxwvutsrqponmlkjihgfedcba",
             "zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA`",
         )) {
-            val source = tableSource("sparse_test", alphabet).toByteArray()
+            val source = scriptSource("sparse_test", alphabet).toByteArray()
             assertEquals(
                 alphabet,
                 CompactSchemaAdapter.Adaptability.Adaptable,
@@ -292,19 +298,19 @@ class KeyboardAdapterProducerContractTest {
                 projection(
                     "sparse_test",
                     alphabet = alphabet,
-                    producerClass = "table_translator",
+                    producerClass = "script_translator",
                     syllables = listOf(syllable("abc")),
                 )
             adapter.generate(source, "sparse_test", CompactFold.MERGED14, null, projection)
         }
-        val bad = tableSource("bad_test", "中文").toByteArray()
+        val bad = scriptSource("bad_test", "中文").toByteArray()
         assertEquals(
             CompactSchemaAdapter.Adaptability.Unsupported("speller alphabet has no lowercase latin key to fold"),
             adapter.adaptability(bad, "bad_test"),
         )
         // A numeric key space is typeable on the 9-key layout only, so only that companion is generated.
         val numericAlphabet = "23456789abcdefghijklmnopqrstuvwxyz"
-        val numeric = tableSource("numeric_test", numericAlphabet).toByteArray()
+        val numeric = scriptSource("numeric_test", numericAlphabet).toByteArray()
         assertEquals(CompactSchemaAdapter.Adaptability.Adaptable, adapter.adaptability(numeric, "numeric_test"))
         assertEquals("23456789", adapter.physicalFold(numericAlphabet, CompactFold.MERGED14)?.ignoredCharacters)
         assertEquals("", adapter.physicalFold(numericAlphabet, CompactFold.PHONE9)?.ignoredCharacters)
@@ -547,5 +553,25 @@ class KeyboardAdapterProducerContractTest {
         )
         assertEquals(26, (speller["alphabet"] as String).toSet().intersect(latin.toSet()).size)
         for (rule in algebra.takeLast(12)) assertTrue(rule.split("/")[2][0] in CompactFold.MERGED14.keysSent)
+    }
+
+    @Test
+    fun aSyllableInventoryFitsTheFoldBudgetAndACodeInventoryDoesNot() {
+        for (name in listOf("songyan_quanpin", "songyan_flypy", "double_pinyin_flypy")) {
+            assertNull(name, adapter.foldBudgetExceeded(fixture(name)))
+        }
+        // Five-letter stroke codes: 5^7 codes of seven strokes, each folding into 2^5 spellings on 9 keys.
+        val codes =
+            (0 until 78_125).map { index ->
+                var rest = index
+                (0 until 7).map { "hspnz"[rest % 5].also { rest /= 5 } }.joinToString("")
+            }
+        val strokes = projection("stroke", alphabet = "hspnz", syllables = codes.map { syllable(it) })
+        assertNotNull(adapter.foldBudgetExceeded(strokes))
+        val few = projection("stroke", alphabet = "hspnz", syllables = codes.take(2000).map { syllable(it) })
+        assertNull(adapter.foldBudgetExceeded(few))
+        // One token is within the token cap, but its 20 distinct letters fold into a million spellings.
+        val wide = projection("wide", syllables = listOf(syllable("abcdefghijklmnopqrst")))
+        assertNotNull(adapter.foldBudgetExceeded(wide))
     }
 }

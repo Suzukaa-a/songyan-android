@@ -55,6 +55,16 @@ object CompactSchemaAdapter {
     /** Alias prefix; its `0` is a character no compact layout can type. */
     const val TOKEN_ALIAS_SENTINEL = "90"
 
+    /**
+     * The most a source projection may hold before a fold is planned: the bytes the engine hands over,
+     * the distinct tokens, and the spellings a fold derives (each `derive` doubles every spelling that
+     * holds its letter). A syllable inventory (pinyin, jyutping) stays two orders of magnitude below;
+     * a code inventory (157 000 stroke codes fold into about 4 million spellings) does not.
+     */
+    const val FOLD_PROJECTION_BYTES = 8 * 1024 * 1024
+    const val FOLD_TOKEN_LIMIT = 8192
+    const val FOLD_SPELLING_LIMIT = 500_000L
+
     /** Versioned hard cap on the alias domain; larger domains get no alias layer. */
     const val TOKEN_ALIAS_LIMIT = 4096
     private const val TOKEN_ALIAS_MIN_WIDTH = 1
@@ -199,6 +209,11 @@ object CompactSchemaAdapter {
         if (!producer.isDefaultNamespace) {
             return Adaptability.Unsupported("only a default-namespace primary producer is auto-adaptable")
         }
+        // A shape code (wubi, stroke, array) is a whole code, not a syllable: every one of its tens of
+        // thousands of codes folds into 2^letters spellings, which librime cannot index in a phone's memory.
+        if (producer.klass == ProducerClass.TABLE) {
+            return Adaptability.Unsupported("table_translator codes are typed on 26 keys")
+        }
         val speller = root["speller"].asStringMap()
         val dictionary = root[producer.namespace].asStringMap()?.get("dictionary") as? String
         if (speller == null || dictionary.isNullOrEmpty()) {
@@ -211,6 +226,27 @@ object CompactSchemaAdapter {
             }
         if (!folds) return Adaptability.Unsupported("speller alphabet has no lowercase latin key to fold")
         return Adaptability.Adaptable
+    }
+
+    /**
+     * Why folding [projection] would exceed the fold budget, or null when it fits. Counts the
+     * worst case, the 9-key fold, where every letter moves to a digit.
+     */
+    fun foldBudgetExceeded(projection: SourceProjection): String? {
+        if (projection.syllables.size > FOLD_TOKEN_LIMIT) {
+            return "${projection.syllables.size} tokens exceed the fold limit of $FOLD_TOKEN_LIMIT"
+        }
+        var spellings = 0L
+        for (syllable in projection.syllables) {
+            for (spelling in syllable.spellings) {
+                val letters = spelling.text.filter { it in FOLDABLE_LETTERS || it.lowercaseChar() in FOLDABLE_LETTERS }
+                spellings += 1L shl minOf(letters.toSet().size, 30)
+                if (spellings > FOLD_SPELLING_LIMIT) {
+                    return "folded spellings exceed the limit of $FOLD_SPELLING_LIMIT"
+                }
+            }
+        }
+        return null
     }
 
     // ------------------------------------------------------------------------------------

@@ -196,6 +196,54 @@ class KeyboardCompanionsTest {
         }
 
     @Test
+    fun aShapeCodeTableStaysOn26KeysWithoutReadingItsProjection() =
+        runBlocking {
+            // rime-stroke: a table_translator over 157 000 codes, whose folded spellings exhausted the deploy process.
+            val stroke =
+                "schema:\n  schema_id: $source\n  name: stroke\nengine:\n  translators:\n" +
+                    "    - punct_translator\n    - reverse_lookup_translator\n    - table_translator\n" +
+                    "speller:\n  alphabet: abcdefghijklmnopqrstuvwxyz\ntranslator:\n  dictionary: stroke\n"
+            val (sourceDir, workDir, engine) = setUp(stroke)
+            var asked = false
+            val counting =
+                object : DeployedEngine by engine {
+                    override suspend fun sourceProjection(schemaId: String): ByteArray? {
+                        asked = true
+                        return engine.sourceProjection(schemaId)
+                    }
+                }
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(counting)
+
+            assertFalse(asked)
+            assertTrue(engine.deployed.isEmpty())
+            assertEquals(emptyList<Any>(), EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)))
+        }
+
+    @Test
+    fun aProjectionPastTheFoldBudgetStaysOn26Keys() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp()
+            // A script source whose tokens are whole codes, like a stroke table served by script_translator.
+            val tokens =
+                (0..CompactSchemaAdapter.FOLD_TOKEN_LIMIT).joinToString(",") { index ->
+                    val code = Integer.toString(index, 5).map { "hspnz"[it - '0'] }.joinToString("")
+                    "\"$code\":[{\"text\":\"$code\",\"normal\":true,\"correction\":false}]"
+                }
+            engine.projectionBytes =
+                (
+                    "{\"source_schema\":\"$source\",\"translator_namespace\":\"translator\"," +
+                        "\"producer_class\":\"script_translator\",\"dictionary\":\"d\",\"alphabet\":\"hspnz\"," +
+                        "\"separator\":\" \",\"algebra\":[],\"syllables\":{$tokens}}"
+                ).toByteArray()
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source)).generate(engine)
+
+            assertTrue(engine.deployed.isEmpty())
+            assertEquals(emptyList<Any>(), EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)))
+        }
+
+    @Test
     fun aSchemaTheGeneratorRefusesFailsTheDeployment() {
         val (sourceDir, workDir, engine) = setUp(schemaText.replace("schema_id: $source", "schema_id: someone_else"))
         assertThrows(KeyboardCompanionException::class.java) {

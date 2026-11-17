@@ -233,8 +233,9 @@ internal class EngineFeatures(
         id: String,
         engine: DeployedEngine,
     ): Boolean {
-        val projection =
-            engine.sourceProjection(id)?.let(CompactSchemaAdapter.SourceProjection::decode) ?: return false
+        // A pinyin syllable inventory is small; a code inventory past the fold budget is not pinyin.
+        val bytes = engine.sourceProjection(id)?.takeIf { it.size <= CompactSchemaAdapter.FOLD_PROJECTION_BYTES }
+        val projection = bytes?.let(CompactSchemaAdapter.SourceProjection::decode) ?: return false
         return CompactSchemaAdapter.isCanonicalPinyinDomainAllowingBenignExtras(projection.syllables.map { it.token })
     }
 

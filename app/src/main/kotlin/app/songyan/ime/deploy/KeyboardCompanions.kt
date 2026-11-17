@@ -28,8 +28,8 @@ class KeyboardCompanionException(
  * the same build without joining `schema_list`, and are recorded in the build's
  * [EncodingAdapterRegistry] file, which the keyboard reads with that build.
  *
- * A source the generator does not cover (no single default primary translator, no provable
- * projection) stays a 26-key input method. A schema the generator refuses as invalid fails the
+ * A source the generator does not cover (no single default primary script translator, no provable
+ * projection, a projection past [CompactSchemaAdapter.foldBudgetExceeded]) stays a 26-key input method. A schema the generator refuses as invalid fails the
  * deployment ([KeyboardCompanionException]); so does a companion librime will not compile.
  *
  * The sources in [reuse] already have their companions compiled in this build (a deployment
@@ -89,21 +89,24 @@ internal class KeyboardCompanions(
             Log.i(TAG, "$source stays on 26 keys: ${adaptability.reason}")
             return emptyList()
         }
-        val projection =
-            timed("projection") {
-                engine.sourceProjection(source)
-            }?.let(CompactSchemaAdapter.SourceProjection::decode)
+        val bytes = timed("projection") { engine.sourceProjection(source) }
+        if (bytes != null && bytes.size > CompactSchemaAdapter.FOLD_PROJECTION_BYTES) {
+            Log.w(TAG, "$source stays on 26 keys: its spelling projection is ${bytes.size} bytes")
+            return emptyList()
+        }
+        val projection = bytes?.let(CompactSchemaAdapter.SourceProjection::decode)
         if (projection == null || projection.syllables.isEmpty()) {
             Log.i(TAG, "$source stays on 26 keys: no spelling projection")
             return emptyList()
         }
+        CompactSchemaAdapter.foldBudgetExceeded(projection)?.let { reason ->
+            Log.w(TAG, "$source stays on 26 keys: $reason")
+            return emptyList()
+        }
         val result = ArrayList<KeyboardResourceSet.EncodingAdapter>()
-        val isTableSource =
-            CompactSchemaAdapter.autoAdaptableProducer(compiled)?.klass == CompactSchemaAdapter.ProducerClass.TABLE
         // A source whose own spellings are already telephone digits runs on 9 keys as it is.
         val nativeDigits =
-            !isTableSource &&
-                CompactSchemaAdapter.tokenAliasDomain(projection) != null &&
+            CompactSchemaAdapter.tokenAliasDomain(projection) != null &&
                 CompactSchemaAdapter.isNumericCodeSource(projection) &&
                 !CompactSchemaAdapter.declaresLetterClassPrefixSource(projection)
         if (nativeDigits) {

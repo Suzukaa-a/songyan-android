@@ -53,7 +53,7 @@ class NextLayoutDeviceTest {
             assertTrue(host.await { "你" in host.barLabels() })
             host.main {
                 host.controller.openKeyboardMenu()
-                host.controller.menu.onLayout(KeyboardLayoutKind.PHONE9)
+                host.controller.menu.onKeyboard(host.keyboardOf(KeyboardLayoutKind.PHONE9))
             }
             host.awaitIdle()
             assertEquals(KeyboardLayoutKind.QWERTY26, host.main2 { host.controller.layoutKind })
@@ -75,32 +75,22 @@ class NextLayoutDeviceTest {
         }
     }
 
+    /** An input method that cannot run on the shape in use moves to a keyboard it has. */
     @Test
-    fun aRefusedInputMethodKeepsTheSavedChoice() {
+    fun anInputMethodWithoutTheShapeInUseOpensOnItsOwnKeyboard() {
         val host = FeatureHost(engine.backend(), "phone9")
         try {
             host.start()
-            val saved =
-                runBlocking {
-                    host.controller.preferences!!
-                        .activeSchemaId
-                        .first()
-                }
-            host.main { host.controller.menu.onSchema("qwerty_only") }
-            host.awaitIdle()
-            assertEquals("songyan_quanpin", host.main2 { host.controller.schemaId })
-            assertEquals(
-                saved,
-                runBlocking {
-                    host.controller.preferences!!
-                        .activeSchemaId
-                        .first()
-                },
-            )
-            host.main { host.controller.menu.onLayout(KeyboardLayoutKind.QWERTY26) }
-            assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.QWERTY26 })
             host.main { host.controller.menu.onSchema("qwerty_only") }
             assertTrue(host.await { host.main2 { host.controller.schemaId } == "qwerty_only" })
+            assertEquals(KeyboardLayoutKind.QWERTY26, host.main2 { host.controller.layoutKind })
+            assertEquals(
+                "qwerty_only" to "qwerty26",
+                runBlocking {
+                    val preferences = host.controller.preferences!!
+                    preferences.activeSchemaId.first() to preferences.layoutId.first()
+                },
+            )
             host.type("ni")
             assertTrue(host.await { "你" in host.barLabels() })
             host.tapBar("你")

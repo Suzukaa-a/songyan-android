@@ -47,6 +47,7 @@ import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardPageKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.UserKeyboards
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -367,6 +368,12 @@ class KeyboardController(
     internal var schemaId = BuiltinTemplateSchemas.QUANPIN
     internal var preferredLayout = KeyboardLayoutKind.QWERTY26
 
+    /**
+     * The layout the user's keyboard names; null for a selection that follows its shape's pairing.
+     * It belongs to [preferredLayout], so a visit to another shape draws that shape's own pairing.
+     */
+    internal var preferredLayoutDefinitionId: String? = null
+
     /** A jump key switched to another layout for a visit: 返回 goes back to [preferredLayout]. */
     internal var visitingLayout = false
     internal var preferredSchema = BuiltinTemplateSchemas.QUANPIN
@@ -467,9 +474,16 @@ class KeyboardController(
     /** The user's choice of idle toolbar entries and their order. */
     internal var toolbarLayout = ToolbarLayout.DEFAULT
 
-    /** Input methods (engine ids) and layouts (wire ids) the user took out of the keyboard menu. */
+    /**
+     * Input methods (engine ids) and layouts (wire ids) the user took out of the keyboard menu before
+     * keyboards were listed; they still decide the keyboards of every input method not in
+     * [storedKeyboards], and which input methods of other packages the menu offers.
+     */
     internal var menuHiddenSchemas: Set<String> = emptySet()
     internal var menuHiddenLayouts: Set<String> = emptySet()
+
+    /** The keyboards the user edited in settings, with the input methods they speak for. */
+    internal var storedKeyboards = UserKeyboards.Stored()
 
     /** Input methods of the other installed packages the menu offers next to the running one's. */
     internal var otherInputMethods: List<OtherInputMethod> = emptyList()

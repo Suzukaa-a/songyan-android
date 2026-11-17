@@ -4,10 +4,12 @@ import android.animation.ValueAnimator
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
+import app.songyan.ime.layout.UserKeyboards
 
 internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean = false) {
     val backend = pendingBackend ?: return
@@ -109,47 +111,48 @@ internal suspend fun KeyboardController.reapplyEditorMode() {
 internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardResourceSet? =
     KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters)
 
-internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
-    val before = layoutKind
+/**
+ * Switches to one of the user's keyboards: the engine moves to its input method and shape, and the
+ * keyboard draws the layout it names. Only an accepted switch is stored, so the next start never
+ * begins from a keyboard the engine refused.
+ */
+internal suspend fun KeyboardController.chooseKeyboard(keyboard: PublishedKeyboard) {
+    val schemaBefore = schemaId
+    val keyBefore = compositionKey()
     val active = session
     val accepted =
         if (active != null && ready) {
-            active.selectLayout(kind, preferredSchema)
+            active.selectLayout(keyboard.layout, keyboard.schemaID)
             syncSelection(active)
             updateSwipe(active)
-            active.layout == kind && active.selectedSchemaID == preferredSchema
+            active.layout == keyboard.layout && active.selectedSchemaID == keyboard.schemaID
         } else {
-            layoutKind = kind
+            layoutKind = keyboard.layout
+            schemaId = keyboard.schemaID
             true
         }
-    // The next startup must use an accepted pairing, even when the menu offered an unsupported one.
     if (accepted) {
-        preferredLayout = kind
+        preferredLayout = keyboard.layout
+        preferredSchema = keyboard.schemaID
+        preferredLayoutDefinitionId = keyboard.board
         visitingLayout = false
         page = null
-        preferences?.setLayoutId(kind.wire)
+        preferences?.setKeyboard(keyboard)
     }
     syncMenu()
     closeKeyboardMenu()
-    if (accepted && kind != before) announceSwitch(named = false)
+    if (accepted && schemaId != schemaBefore) {
+        announceSwitch()
+    } else if (accepted && compositionKey() != keyBefore) {
+        announceSwitch(named = false)
+    }
     render()
 }
 
-/**
- * Makes [boardId] the main layout of the running input method's identity shape and moves the keyboard
- * to that shape. Only the pairing and the layout change: the engine keeps its schema, so nothing is
- * redeployed. The pairing is saved first; the catalog it publishes redraws the board, and a refused
- * save leaves the keyboard where it was.
- */
-internal suspend fun KeyboardController.chooseBoard(boardId: String) {
-    val saved = preferences?.setMainLayout(schemaId, layoutFamilies(), boardId) ?: false
-    if (!saved) {
-        closeKeyboardMenu()
-        return
-    }
-    chooseLayout(KeyboardLayoutKind.QWERTY26)
-    announceSwitch(named = false)
-    render()
+/** Switches the running input method to its keyboard of [kind]: the one in the user's list, else the shape's own. */
+internal suspend fun KeyboardController.chooseLayout(kind: KeyboardLayoutKind) {
+    val own = menuKeyboards().of(preferredSchema).firstOrNull { it.layout == kind }
+    chooseKeyboard(own ?: PublishedKeyboard(preferredSchema, kind))
 }
 
 /**
@@ -173,6 +176,13 @@ internal suspend fun KeyboardController.chooseSchema(target: String) {
         otherInputMethods.firstOrNull { it.menuId == target }?.let { switchToOtherPackage(it) }
         return
     }
+    val keyboards = menuKeyboards()
+    val next = UserKeyboards.switchTarget(keyboards.all.filter { it.schemaID == target }, keyboards.current)
+    if (next != null) {
+        chooseKeyboard(next)
+        return
+    }
+    // No keyboard of its own yet (the engine has not listed it): keep the shape, as the session allows.
     val active = session
     val accepted =
         if (active != null && ready) {
@@ -258,11 +268,11 @@ internal fun KeyboardController.announceSwitch(named: Boolean = true) {
 /** How long the space bar names the keyboard after a switch; the same as on iOS. */
 internal const val SWITCH_NOTICE_MS = 2_500L
 
+/** The layout key: the next keyboard of the running input method, in the order of the user's list. */
 internal suspend fun KeyboardController.cycleLayout() {
-    val usable = jumpableLayouts()
-    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, usable)
-    val next = KeyboardMenuEntries.nextLayout(offered, layoutKind) ?: return
-    chooseLayout(next)
+    val keyboards = menuKeyboards()
+    val next = UserKeyboards.next(keyboards.of(schemaId), keyboards.current) ?: return
+    chooseKeyboard(next)
 }
 
 /**

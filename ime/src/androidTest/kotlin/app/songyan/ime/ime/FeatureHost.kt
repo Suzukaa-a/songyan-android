@@ -19,10 +19,13 @@ import app.songyan.ime.ime.panels.QuickContentPanelContent
 import app.songyan.ime.ime.panels.QuickContentPanelDataSource
 import app.songyan.ime.ime.panels.QuickInsertHost
 import app.songyan.ime.keyboard.engine.EngineBackend
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
 import app.songyan.ime.layout.LayoutPageTarget
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.rime.AssetTrees
 import app.songyan.ime.rime.EngineOptionPreferences
 import app.songyan.ime.rime.RimeDeployment
@@ -317,9 +320,18 @@ internal class FeatureHost(
     /** How many times the keyboard asked to open the settings app. */
     var settingsOpened = 0
 
-    /** The layouts the user turned off in 我的键盘, as the store's `menuHiddenLayouts` would hold them. */
+    /** The layouts the user turned off before keyboards were listed, as the store's `menuHiddenLayouts` holds them. */
     val hiddenLayoutsFlow = MutableStateFlow<Set<String>>(emptySet())
     val displayFontsFlow = MutableStateFlow(DisplayFontSpec.SYSTEM)
+
+    /** The layout the keyboard in use names, as the store's `layout_definition_id` would hold it. */
+    val layoutDefinitionFlow = MutableStateFlow<String?>(null)
+
+    /** The keyboards the user edited in 我的键盘, as the store would hold them. */
+    val myKeyboardsFlow = MutableStateFlow(UserKeyboards.Stored())
+
+    /** The keyboard of the running input method on the bundled layout of [kind], as a menu chip names it. */
+    fun keyboardOf(kind: KeyboardLayoutKind) = PublishedKeyboard(controller.schemaId, kind, kind.wire)
 
     private val preferences =
         object : KeyboardPreferencesSource {
@@ -359,25 +371,13 @@ internal class FeatureHost(
                 activeSchemaId.value = id
             }
 
-            // The app stores the edit and publishes the catalog to the keyboard; the host publishes directly.
-            override suspend fun setMainLayout(
-                schemaId: String,
-                families: app.songyan.ime.keyboard.engine.LayoutFamilyContext,
-                boardId: String,
-            ): Boolean {
-                val key =
-                    app.songyan.ime.layout.KeyboardCompositionKey(
-                        schemaId,
-                        app.songyan.ime.layout.LayoutInput.Builtin.QWERTY26,
-                    )
-                val registry = KeyboardLayoutCatalog.snapshot.value.registry
-                KeyboardLayoutCatalog.install(
-                    registry.withComposition(
-                        registry.composition(key, families).withMainLayoutId(boardId),
-                        key.rawValue,
-                    ),
-                )
-                return true
+            override val layoutDefinitionId = layoutDefinitionFlow
+            override val myKeyboards = myKeyboardsFlow
+
+            override suspend fun setKeyboard(keyboard: PublishedKeyboard) {
+                activeSchemaId.value = keyboard.schemaID
+                layoutId.value = keyboard.layout.wire
+                layoutDefinitionFlow.value = keyboard.board
             }
         }
 

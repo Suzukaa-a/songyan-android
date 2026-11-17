@@ -4,8 +4,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.songyan.ime.layout.KeyboardCompositionKey
-import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
@@ -16,8 +14,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The keyboard menu offers both Japanese boards, and a tap on a board chip stores the pairing's main
- * layout, moves to the 26-key shape and draws that board, over the real kagiroi package. The fixture
+ * The keyboard menu offers both Japanese boards as keyboards, and a tap on one stores it as the
+ * keyboard in use and draws that board, over the real kagiroi package. The fixture
  * is the one [KanaFlickDeviceTest] documents (`-e kagiroiFixture <path>`); a missing package fails.
  */
 @RunWith(AndroidJUnit4::class)
@@ -47,7 +45,7 @@ class JapaneseBoardMenuDeviceTest {
             host.main { host.chip(kana).performClick() }
             assertTrue("the kana board was never drawn", host.await { host.drawnKanaRows().isNotEmpty() })
             assertEquals(KANA, host.main2 { host.controller.mainDefinition().id })
-            assertEquals(KANA, storedBoard())
+            assertEquals(KANA, host.layoutDefinitionFlow.value)
 
             host.main { host.controller.openKeyboardMenu() }
             assertTrue("the kana chip is in use", host.main2 { host.chip(kana).isSelected })
@@ -55,20 +53,18 @@ class JapaneseBoardMenuDeviceTest {
             assertTrue("the romaji board was never drawn", host.await { host.drawnKanaRows().isEmpty() })
             assertTrue("the romaji keys were never drawn", host.drawnKeys().contains("q"))
             assertEquals(ROMAJI, host.main2 { host.controller.mainDefinition().id })
-            assertEquals(ROMAJI, storedBoard())
+            assertEquals(ROMAJI, host.layoutDefinitionFlow.value)
+            // Choosing a board is choosing a keyboard: no pairing is written for it.
+            assertTrue(
+                KeyboardLayoutCatalog.snapshot.value.registry.compositions
+                    .isEmpty(),
+            )
         } finally {
             host.close()
             runBlocking { backend.shutdown() }
         }
     }
 
-    private fun storedBoard(): String {
-        val registry = KeyboardLayoutCatalog.snapshot.value.registry
-        val key = KeyboardCompositionKey(KanaFixture.SCHEMA, LayoutInput.Builtin.QWERTY26)
-        return registry.compositions.getValue(key.rawValue).mainLayoutID
-    }
-
-    /** The kana rows of the drawn board; the view keeps no rows once a board without the kana surface is drawn. */
     private fun FeatureHost.drawnKanaRows(): List<String> =
         main2 {
             val view = find(KeyboardView::class.java)

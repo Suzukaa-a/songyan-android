@@ -6,10 +6,16 @@ import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputSession
 import app.songyan.ime.keyboard.support.CandidateTextSize
+import app.songyan.ime.layout.KeyboardScheme
+import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.LegacyKeyboards
+import app.songyan.ime.layout.UserKeyboards
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -90,6 +96,19 @@ internal fun KeyboardController.observePreferences() {
             if (id.isBlank() || preferredSchema == id) return@collect
             preferredSchema = id
             enqueue { applyPreferenceChange() }
+        }
+    }
+    scope.launch {
+        source.layoutDefinitionId.collect { id ->
+            if (preferredLayoutDefinitionId == id) return@collect
+            preferredLayoutDefinitionId = id
+            enqueue { applyPreferenceChange() }
+        }
+    }
+    scope.launch {
+        source.myKeyboards.collect {
+            storedKeyboards = it
+            syncMenu()
         }
     }
     scope.launch { source.keyHeight.collect { applyKeyHeight(it) } }
@@ -225,6 +244,8 @@ internal suspend fun KeyboardController.readPreferences() {
     runCatching { source.activeSchemaId.first() }.getOrNull()?.takeIf { it.isNotBlank() }?.let {
         preferredSchema = it
     }
+    runCatching { source.layoutDefinitionId.first() }.onSuccess { preferredLayoutDefinitionId = it }
+    runCatching { source.myKeyboards.first() }.getOrNull()?.let { storedKeyboards = it }
     runCatching { source.keyHeight.first() }.getOrNull()?.let { applyKeyHeight(it) }
     runCatching { source.bottomGapDp.first() }.getOrNull()?.let { applyBottomGap(it) }
     runCatching { source.showSwitchKey.first() }.getOrNull()?.let {
@@ -301,6 +322,8 @@ internal suspend fun KeyboardController.persistSelection(active: InputSession) {
     val set = active.resourceSet ?: return
     if (InputLayoutPolicy.allows(preferredLayout, set.familyOf(active.selectedSchemaID))) return
     preferredLayout = layoutKind
+    // The named layout belonged to the refused shape; the repaired one follows its own pairing.
+    preferredLayoutDefinitionId = null
     preferences?.setLayoutId(layoutKind.wire)
 }
 
@@ -315,8 +338,8 @@ internal suspend fun KeyboardController.applyPreferenceChange() {
 }
 
 /**
- * The keyboard menu offers every input method the running engine lists and every layout, less the
- * ones the user hid in settings; the ones in use are always there so the menu shows where you are.
+ * The keyboard menu lists the user's keyboards: the input methods that have one, then the keyboards
+ * of the running input method. The keyboard in use is always there so the menu shows where you are.
  */
 internal fun KeyboardController.syncMenu() {
     // The menu covering a switch to another package holds still; it is redrawn once it closes.
@@ -335,20 +358,65 @@ internal fun KeyboardController.syncMenu() {
             ?.filter { it.id !in companions && !KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }
             ?.map { it.id to it.displayName }
             .orEmpty()
-    val own = KeyboardMenuEntries.schemas(listed, menuHiddenSchemas, setOf(schemaId, preferredSchema))
+    val keyboards = menuKeyboards(listed.map { it.first })
+    val own = KeyboardMenuEntries.schemas(listed, keyboards, setOf(schemaId, preferredSchema))
     val others =
         KeyboardMenuEntries.otherSchemas(otherInputMethods, menuHiddenSchemas, listed.map { it.first }.toSet(), own)
     menu.setSchemas(own + others.map { it.menuId to it.label }, others.associate { it.menuId to it.method })
-    val offered = KeyboardMenuEntries.layouts(menuHiddenLayouts, layoutKind, jumpableLayouts())
-    menu.setLayoutNames(layoutNamesByKind())
-    val main = mainDefinition().id
-    menu.setLayouts(offered, KeyboardMenuEntries.boards(layoutBoards(), menuHiddenLayouts, main), main)
-    menu.update(schemaId, layoutKind)
+    val registry = KeyboardLayoutCatalog.snapshot.value.registry
+    menu.setKeyboards(
+        keyboards.of(schemaId).map { keyboard ->
+            KeyboardSwitcherPanel.KeyboardChip(
+                keyboard,
+                layoutName(context, keyboard.board?.let(registry::resolvedLayout), keyboard.layout),
+            )
+        },
+    )
+    menu.update(schemaId, keyboards.current.id)
 }
 
-/** The physical boards the running input method types on, preferred first; empty keeps the shapes. */
-internal fun KeyboardController.layoutBoards(): List<String> =
-    InputLayoutPolicy.boardsOf(layoutFamilies().familyOf(schemaId))
+/**
+ * The user's keyboards the engine can run now, for the input methods the engine [listed] (the
+ * bundled ones before it has), with the keyboard in use. Worked out when the menu is synced or a
+ * keyboard is switched, never per key.
+ */
+internal fun KeyboardController.menuKeyboards(listed: List<String>? = null): KeyboardMenuEntries.Keyboards {
+    val set = session?.takeIf { ready }?.resourceSet
+    val ids =
+        (
+            listed ?: run {
+                val engine = session?.engine ?: pendingBackend
+                val companions =
+                    engine
+                        ?.encodingAdapters
+                        ?.map { it.schemaID }
+                        ?.toSet()
+                        .orEmpty()
+                engine
+                    ?.availableSchemas
+                    ?.map { it.id }
+                    ?.filter { it !in companions && !KeyboardResourceSet.EncodingAdapter.isGeneratedID(it) }
+                    .orEmpty()
+            }
+        ).ifEmpty { BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS }
+    // Without a resource set every shape is offered, as the session cannot refuse one yet.
+    val shapes = set?.availableCombinations?.groupBy({ it.schemaID }, { it.layout })
+    val schemes =
+        ids.map { id ->
+            KeyboardScheme(id, shapes?.let { it[id].orEmpty().toSet() } ?: KeyboardLayoutKind.entries.toSet())
+        }
+    val current =
+        PublishedKeyboard(schemaId, layoutKind, preferredLayoutDefinitionId.takeIf { layoutKind == preferredLayout })
+    return KeyboardMenuEntries.keyboards(
+        schemes,
+        storedKeyboards,
+        menuHiddenSchemas,
+        menuHiddenLayouts,
+        KeyboardLayoutCatalog.snapshot.value.registry,
+        layoutFamilies(),
+        current,
+    )
+}
 
 /** An input method of an installed package other than the running one; plain data the service reads from storage. */
 data class OtherInputMethod(
@@ -394,77 +462,57 @@ internal object KeyboardMenuEntries {
         }
     }
 
-    /** Before the engine has listed its input methods the bundled ones stand in. */
+    /**
+     * The input method chips: the ones with a keyboard, and the ones in use. Before the engine has
+     * listed its input methods the bundled ones stand in.
+     */
     fun schemas(
         listed: List<Pair<String, String>>,
-        hidden: Set<String>,
+        keyboards: Keyboards,
         current: Set<String>,
-    ): List<Pair<String, String>> =
-        listed
+    ): List<Pair<String, String>> {
+        val shown = keyboards.all.mapTo(HashSet()) { it.schemaID }
+        return listed
             .ifEmpty { BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS.map { it to "" } }
-            .filter { (id, _) -> id !in hidden || id in current }
+            .filter { (id, _) -> id in shown || id in current }
+    }
 
-    /**
-     * The layout chips: the running input method's usable shapes, less the ones the user hid. The
-     * running one always stays, so the menu can show where the keyboard is.
-     */
-    fun layouts(
-        hidden: Set<String>,
-        current: KeyboardLayoutKind,
-        usable: Set<KeyboardLayoutKind> = KeyboardLayoutKind.entries.toSet(),
-    ): List<KeyboardLayoutKind> =
-        KeyboardLayoutKind.entries.filter {
-            (it.wire !in hidden || it == current) && (it in usable || it == current)
+    /** The keyboards the menu works with: every one the engine can run, each naming its layout. */
+    class Keyboards(
+        val all: List<PublishedKeyboard>,
+        /** The keyboard in use, its layout named. */
+        val current: PublishedKeyboard,
+    ) {
+        /**
+         * The layout chips of [schemaId]. The keyboard in use is among its input method's even when
+         * the list does not hold it, so the menu can show where the keyboard is.
+         */
+        fun of(schemaId: String): List<PublishedKeyboard> {
+            val own = all.filter { it.schemaID == schemaId }
+            return if (schemaId != current.schemaID || own.any { it.id == current.id }) own else own + current
         }
+    }
 
     /**
-     * The physical [boards] the menu offers: the ones the user hid in settings (by board id) are
-     * dropped, except the one the keyboard draws, so the menu still shows where it is.
+     * The user's keyboards ([UserKeyboards.effective]) limited to what [schemes] can run and the
+     * catalog can draw. [current] is the keyboard in use as the controller holds it.
      */
-    fun boards(
-        boards: List<String>,
-        hidden: Set<String>,
-        mainLayoutId: String?,
-    ): List<String> = boards.filter { it !in hidden || it == mainLayoutId }
-
-    /**
-     * One chip of the layout row: a shape, and the physical board it stands for when the input
-     * method types on several boards that share the identity shape's slot.
-     */
-    data class LayoutChip(
-        val kind: KeyboardLayoutKind,
-        val boardId: String? = null,
-    )
-
-    /**
-     * The layout row for [offered] shapes. The identity shape's chip is replaced by one chip per
-     * entry of [boards] (preferred first); a main layout that is none of them (the user's own) keeps
-     * a chip of the shape itself, after the boards. Without boards the row is the shapes as they are.
-     */
-    fun layoutChips(
-        offered: List<KeyboardLayoutKind>,
-        boards: List<String>,
-        mainLayoutId: String?,
-    ): List<LayoutChip> =
-        offered.flatMap { kind ->
-            when {
-                kind != KeyboardLayoutKind.QWERTY26 || boards.isEmpty() -> listOf(LayoutChip(kind))
-                mainLayoutId in boards -> boards.map { LayoutChip(kind, it) }
-                else -> boards.map { LayoutChip(kind, it) } + LayoutChip(kind)
-            }
-        }
-
-    /**
-     * The layout after [current] in [offered] (the menu's list, already limited to what the running
-     * input method can use), wrapping around; the first one when [current] is not offered. Null when
-     * there is nothing else to switch to.
-     */
-    fun nextLayout(
-        offered: List<KeyboardLayoutKind>,
-        current: KeyboardLayoutKind,
-    ): KeyboardLayoutKind? {
-        if (offered.none { it != current }) return null
-        val at = offered.indexOf(current)
-        return offered[(at + 1) % offered.size]
+    fun keyboards(
+        schemes: List<KeyboardScheme>,
+        stored: UserKeyboards.Stored,
+        hiddenSchemas: Set<String>,
+        hiddenLayouts: Set<String>,
+        registry: LayoutRegistry,
+        families: LayoutFamilyContext,
+        current: PublishedKeyboard,
+    ): Keyboards {
+        val legacy = LegacyKeyboards.of(schemes, hiddenSchemas, hiddenLayouts, registry, families, current)
+        val effective = UserKeyboards.effective(stored, schemes.map { it.id }, legacy)
+        val runnable =
+            UserKeyboards
+                .runnable(effective, schemes, registry, families)
+                .map { UserKeyboards.named(it, registry, families) }
+                .distinctBy { it.id }
+        return Keyboards(runnable, UserKeyboards.named(current, registry, families))
     }
 }

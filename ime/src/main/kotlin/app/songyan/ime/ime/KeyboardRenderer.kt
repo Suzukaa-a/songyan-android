@@ -287,36 +287,47 @@ internal fun KeyboardController.filteredSnapshot(base: EngineSnapshot): EngineSn
     )
 }
 
-/** The pairing key of the running keyboard: the input method and the physical shape. */
+/**
+ * The pairing key of the running keyboard: the input method, the shape, and the layout the user's
+ * keyboard names while the keyboard is on that keyboard's shape.
+ */
 internal fun KeyboardController.compositionKey(): KeyboardCompositionKey =
-    KeyboardCompositionKey(schemaId, LayoutInput.Builtin.fromWire(layoutKind.wire) ?: LayoutInput.Builtin.QWERTY26)
+    KeyboardCompositionKey(
+        schemaId,
+        LayoutInput.Builtin.fromWire(layoutKind.wire) ?: LayoutInput.Builtin.QWERTY26,
+        preferredLayoutDefinitionId.takeIf { layoutKind == preferredLayout },
+    )
 
 /** The main layout last resolved, with what it was resolved for; the renderer asks after every key. */
 internal class MainDefinitionMemo(
     val revision: Long,
     val kind: KeyboardLayoutKind,
     val schemaId: String,
+    val layoutId: String?,
     val family: InputSchemeFamily,
     val definition: LayoutDefinition,
 )
 
-/** The main layout the keyboard draws: the pairing's choice, or the bundled preset of this shape. */
+/** The main layout the keyboard draws: the one its keyboard names, the pairing's choice, or the bundled preset of this shape. */
 internal fun KeyboardController.mainDefinition(): LayoutDefinition {
     val snapshot = KeyboardLayoutCatalog.snapshot.value
     val families = layoutFamilies()
     val family = families.familyOf(schemaId)
+    // Asked after every key: the hit compares fields and allocates nothing.
+    val layoutId = if (layoutKind == preferredLayout) preferredLayoutDefinitionId else null
     mainDefinitionMemo
         ?.takeIf {
             it.revision == snapshot.revision &&
                 it.kind == layoutKind &&
                 it.schemaId == schemaId &&
+                it.layoutId == layoutId &&
                 it.family == family
         }?.let { return it.definition }
     val registry = snapshot.registry
     val resolved =
         registry.resolvedLayout(registry.composition(compositionKey(), families).mainLayoutID)
             ?: builtinDefinition(layoutKind)
-    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, family, resolved)
+    mainDefinitionMemo = MainDefinitionMemo(snapshot.revision, layoutKind, schemaId, layoutId, family, resolved)
     return resolved
 }
 

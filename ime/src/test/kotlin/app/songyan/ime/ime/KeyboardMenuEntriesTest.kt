@@ -1,66 +1,103 @@
 package app.songyan.ime.ime
 
-import app.songyan.ime.keyboard.engine.InputLayoutPolicy
-import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.KeyboardComposition
+import app.songyan.ime.layout.KeyboardScheme
+import app.songyan.ime.layout.LayoutRegistry
+import app.songyan.ime.layout.UserKeyboards
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class KeyboardMenuEntriesTest {
     private val ice = listOf("rime_ice" to "雾凇拼音", "double_pinyin_flypy" to "小鹤双拼", "double_pinyin" to "自然码双拼")
+    private val all = KeyboardLayoutKind.entries.toSet()
+    private val identity = setOf(KeyboardLayoutKind.QWERTY26)
 
-    private fun schema(id: String) = KeyboardSchemaDescriptor(id = id, name = id)
+    private fun k(id: String) = requireNotNull(PublishedKeyboard.parse(id)) { id }
+
+    private fun keyboards(
+        schemes: List<KeyboardScheme>,
+        current: PublishedKeyboard,
+        stored: UserKeyboards.Stored = UserKeyboards.Stored(),
+        hiddenSchemas: Set<String> = emptySet(),
+        hiddenLayouts: Set<String> = emptySet(),
+        registry: LayoutRegistry = LayoutRegistry.create(),
+    ) = KeyboardMenuEntries.keyboards(
+        schemes,
+        stored,
+        hiddenSchemas,
+        hiddenLayouts,
+        registry,
+        LayoutFamilyContext.UNKNOWN,
+        current,
+    )
+
+    private val iceSchemes = ice.map { KeyboardScheme(it.first, all) }
 
     @Test
-    fun theMenuOffersEveryInputMethodTheEngineListsLessTheHiddenOnes() {
-        assertEquals(ice, KeyboardMenuEntries.schemas(ice, emptySet(), setOf("rime_ice")))
+    fun theMenuOffersEveryInputMethodThatHasAKeyboard() {
+        val current = k("rime_ice:qwerty26")
+        assertEquals(ice, KeyboardMenuEntries.schemas(ice, keyboards(iceSchemes, current), setOf("rime_ice")))
         assertEquals(
             listOf("rime_ice" to "雾凇拼音", "double_pinyin_flypy" to "小鹤双拼"),
-            KeyboardMenuEntries.schemas(ice, setOf("double_pinyin"), setOf("rime_ice")),
+            KeyboardMenuEntries.schemas(
+                ice,
+                keyboards(iceSchemes, current, hiddenSchemas = setOf("double_pinyin")),
+                setOf("rime_ice"),
+            ),
         )
-    }
-
-    /** Japanese types on romaji and kana boards; hiding one in settings drops its chip, never the one drawn. */
-    @Test
-    fun aHiddenBoardLeavesTheMenuUnlessTheKeyboardDrawsIt() {
-        val boards = listOf("romaji26", "kana12")
-        assertEquals(boards, KeyboardMenuEntries.boards(boards, emptySet(), "romaji26"))
-        assertEquals(listOf("romaji26"), KeyboardMenuEntries.boards(boards, setOf("kana12"), "romaji26"))
-        assertEquals(boards, KeyboardMenuEntries.boards(boards, setOf("kana12"), "kana12"))
-        // A hidden shape id never matches a board.
-        assertEquals(boards, KeyboardMenuEntries.boards(boards, setOf("qwerty26"), "romaji26"))
+        // An input method whose keyboards the user removed leaves the menu the same way.
+        val none = UserKeyboards.Stored(schemes = setOf("double_pinyin_flypy"))
+        assertEquals(
+            listOf("rime_ice", "double_pinyin"),
+            KeyboardMenuEntries.schemas(ice, keyboards(iceSchemes, current, none), setOf("rime_ice")).map { it.first },
+        )
     }
 
     @Test
     fun theInputMethodInUseStaysEvenWhenHidden() {
-        val shown = KeyboardMenuEntries.schemas(ice, setOf("rime_ice", "double_pinyin"), setOf("rime_ice"))
+        val shown =
+            KeyboardMenuEntries.schemas(
+                ice,
+                keyboards(iceSchemes, k("rime_ice:qwerty26"), hiddenSchemas = setOf("rime_ice", "double_pinyin")),
+                setOf("rime_ice"),
+            )
         assertEquals(listOf("rime_ice", "double_pinyin_flypy"), shown.map { it.first })
     }
 
     @Test
     fun beforeTheEngineListsTheBundledOnesStandIn() {
-        assertEquals(
-            BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS,
-            KeyboardMenuEntries
-                .schemas(
-                    emptyList(),
-                    emptySet(),
-                    emptySet(),
-                ).map {
-                    it.first
-                },
-        )
+        val bundled = BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS.map { KeyboardScheme(it, all) }
+        val shown =
+            KeyboardMenuEntries.schemas(
+                emptyList(),
+                keyboards(bundled, k(BuiltinTemplateSchemas.QUANPIN + ":qwerty26")),
+                emptySet(),
+            )
+        assertEquals(BuiltinTemplateSchemas.SOURCE_SCHEMA_IDS, shown.map { it.first })
     }
 
     @Test
     fun hiddenLayoutsLeaveTheMenuButTheCurrentOneStays() {
-        val shown = KeyboardMenuEntries.layouts(setOf("merged14", "phone9"), KeyboardLayoutKind.PHONE9)
-        assertEquals(listOf(KeyboardLayoutKind.QWERTY26, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9), shown)
+        val shown = keyboards(iceSchemes, k("rime_ice:phone9"), hiddenLayouts = setOf("merged14", "phone9"))
+        assertEquals(
+            listOf("rime_ice:qwerty26#qwerty26", "rime_ice:merged18#merged18", "rime_ice:phone9#phone9"),
+            shown.of("rime_ice").map { it.id },
+        )
+        assertEquals("rime_ice:phone9#phone9", shown.current.id)
+        // Another input method has no keyboard in use to keep.
+        assertEquals(
+            listOf("double_pinyin:qwerty26#qwerty26", "double_pinyin:merged18#merged18"),
+            shown.of("double_pinyin").map { it.id },
+        )
     }
 
-    private val all = KeyboardLayoutKind.entries
+    private fun schema(id: String) = KeyboardSchemaDescriptor(id = id, name = id)
 
     @Test
     fun theLayoutChipsFollowTheShapesTheInputMethodCanUse() {
@@ -70,130 +107,71 @@ class KeyboardMenuEntriesTest {
                     listOf(schema(BuiltinTemplateSchemas.QUANPIN), schema("jyut6ping3"), schema("bopomofo_tw")),
                 ),
             )
-        val cantonese = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "jyut6ping3")
-        assertEquals(
-            listOf(KeyboardLayoutKind.QWERTY26),
-            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, cantonese),
-        )
-        val zhuyin = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "bopomofo_tw")
-        assertEquals(
-            listOf(KeyboardLayoutKind.QWERTY26),
-            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, zhuyin),
-        )
+        val shapes = set.availableCombinations.groupBy({ it.schemaID }, { it.layout })
+        val schemes =
+            listOf(BuiltinTemplateSchemas.QUANPIN, "jyut6ping3", "bopomofo_tw").map {
+                KeyboardScheme(it, shapes[it].orEmpty().toSet())
+            }
+        val shown = keyboards(schemes, k(BuiltinTemplateSchemas.QUANPIN + ":qwerty26"))
+        assertEquals(listOf("jyut6ping3:qwerty26#qwerty26"), shown.of("jyut6ping3").map { it.id })
+        assertEquals(listOf("bopomofo_tw:qwerty26#zhuyin41"), shown.of("bopomofo_tw").map { it.id })
         // A bundled scheme keeps every chip.
-        val bundled = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, BuiltinTemplateSchemas.QUANPIN)
         assertEquals(
-            KeyboardLayoutKind.entries.toList(),
-            KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26, bundled),
+            KeyboardLayoutKind.entries.map { it.wire },
+            shown.of(BuiltinTemplateSchemas.QUANPIN).map { it.board },
         )
     }
 
     @Test
-    fun nextLayoutSkipsTheDisabledOnes() {
-        val offered = KeyboardMenuEntries.layouts(setOf("merged14"), KeyboardLayoutKind.QWERTY26)
-        val seen = mutableListOf<KeyboardLayoutKind>()
-        var at = KeyboardLayoutKind.QWERTY26
-        repeat(all.size * 2) {
-            at = KeyboardMenuEntries.nextLayout(offered, at)!!
-            seen += at
-        }
-        assertEquals(false, KeyboardLayoutKind.MERGED14 in seen)
-        assertEquals(offered.toSet(), seen.toSet())
+    fun japaneseOffersBothBoardsAndAUsersOwnMainLayoutFollowsThem() {
+        val japanese = listOf(KeyboardScheme("kagiroi", identity))
+        assertEquals(
+            listOf("kagiroi:qwerty26#romaji26", "kagiroi:qwerty26#kana12"),
+            keyboards(japanese, k("kagiroi:qwerty26")).of("kagiroi").map { it.id },
+        )
+        val mine =
+            LayoutRegistry
+                .create()
+                .copy(BuiltinLayouts.qwerty26, "my-keys", "mine")
+                .first
+                .withComposition(KeyboardComposition(mainLayoutID = "my-keys"), "kagiroi:qwerty26")
+        val shown = keyboards(japanese, k("kagiroi:qwerty26"), registry = mine)
+        assertEquals(
+            listOf("kagiroi:qwerty26#romaji26", "kagiroi:qwerty26#kana12", "kagiroi:qwerty26#my-keys"),
+            shown.of("kagiroi").map { it.id },
+        )
+        assertEquals("kagiroi:qwerty26#my-keys", shown.current.id)
     }
 
     @Test
-    fun nextLayoutWrapsAround() {
-        assertEquals(all.first(), KeyboardMenuEntries.nextLayout(all, all.last()))
+    fun theKeyboardsTheUserEditedReplaceTheDerivedOnesOfThatInputMethodOnly() {
+        val mine = LayoutRegistry.create().copy(BuiltinLayouts.qwerty26, "my-26", "mine").first
+        val stored = UserKeyboards.Stored(listOf(k("rime_ice:qwerty26#my-26")), setOf("rime_ice"))
+        val shown = keyboards(iceSchemes, k("rime_ice:qwerty26#my-26"), stored, registry = mine)
+        assertEquals(listOf("rime_ice:qwerty26#my-26"), shown.of("rime_ice").map { it.id })
+        assertEquals(4, shown.of("double_pinyin").size)
     }
 
     @Test
-    fun nextLayoutDoesNothingWithOneEntryOrNone() {
-        assertEquals(null, KeyboardMenuEntries.nextLayout(listOf(KeyboardLayoutKind.PHONE9), KeyboardLayoutKind.PHONE9))
-        assertEquals(null, KeyboardMenuEntries.nextLayout(emptyList(), KeyboardLayoutKind.PHONE9))
-    }
-
-    @Test
-    fun nextLayoutStartsAtTheFirstWhenTheCurrentOneIsNotOffered() {
-        val offered = listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.PHONE9)
-        assertEquals(KeyboardLayoutKind.MERGED14, KeyboardMenuEntries.nextLayout(offered, KeyboardLayoutKind.QWERTY26))
-    }
-
-    @Test
-    fun nextLayoutSkipsLayoutsTheInputMethodCannotUse() {
-        // rime_ice runs on 26 keys only, so only the running layout is left: nothing to switch to.
-        val set =
-            requireNotNull(
-                KeyboardResourceSets.forEngineSchemas(
-                    listOf(
-                        app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor(
-                            BuiltinTemplateSchemas.QUANPIN,
-                            BuiltinTemplateSchemas.QUANPIN,
-                        ),
-                        app.songyan.ime.keyboard.engine
-                            .KeyboardSchemaDescriptor("rime_ice", "rime_ice"),
-                    ),
-                ),
+    fun aStoredKeyboardThatCannotRunOrBeDrawnIsLeftOut() {
+        val stored =
+            UserKeyboards.Stored(
+                listOf(k("rime_ice:qwerty26#gone"), k("rime_ice:merged14#merged14"), k("rime_ice:qwerty26#qwerty26")),
+                setOf("rime_ice"),
             )
-        val usable = JumpTargets.usable(KeyboardLayoutKind.QWERTY26, set, "rime_ice")
-        val offered = KeyboardMenuEntries.layouts(emptySet(), KeyboardLayoutKind.QWERTY26).filter { it in usable }
-        assertEquals(null, KeyboardMenuEntries.nextLayout(offered, KeyboardLayoutKind.QWERTY26))
-    }
-
-    private fun chips(
-        family: InputSchemeFamily,
-        main: String?,
-        offered: List<KeyboardLayoutKind> = KeyboardLayoutKind.entries,
-    ) = KeyboardMenuEntries.layoutChips(offered, InputLayoutPolicy.boardsOf(family), main)
-
-    @Test
-    fun japaneseOffersBothBoardsInPlaceOfTheIdentityShape() {
-        val shown = chips(InputSchemeFamily.JAPANESE, "kana12")
-        assertEquals(
-            listOf("romaji26", "kana12"),
-            shown.filter { it.kind == KeyboardLayoutKind.QWERTY26 }.map { it.boardId },
-        )
-        assertEquals(
-            listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
-            shown.filter { it.kind != KeyboardLayoutKind.QWERTY26 }.map { it.kind },
-        )
+        val shown = keyboards(listOf(KeyboardScheme("rime_ice", identity)), k("rime_ice:qwerty26#qwerty26"), stored)
+        assertEquals(listOf("rime_ice:qwerty26#qwerty26"), shown.of("rime_ice").map { it.id })
     }
 
     @Test
-    fun zhuyinKeepsOneChipNamedByItsBoard() {
+    fun theKeyboardInUseIsAmongItsInputMethodsEvenWhenTheListLacksIt() {
+        val stored = UserKeyboards.Stored(listOf(k("rime_ice:phone9#phone9")), setOf("rime_ice"))
+        val shown = keyboards(iceSchemes, k("rime_ice:qwerty26"), stored)
         assertEquals(
-            listOf(KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "zhuyin41")),
-            chips(InputSchemeFamily.ZHUYIN, "zhuyin41", listOf(KeyboardLayoutKind.QWERTY26)),
+            listOf("rime_ice:phone9#phone9", "rime_ice:qwerty26#qwerty26"),
+            shown.of("rime_ice").map { it.id },
         )
-    }
-
-    @Test
-    fun pinyinKeepsTheShapes() {
-        assertEquals(
-            KeyboardLayoutKind.entries.map { KeyboardMenuEntries.LayoutChip(it) },
-            chips(InputSchemeFamily.GENERIC, "qwerty26"),
-        )
-    }
-
-    @Test
-    fun aUsersOwnMainLayoutKeepsTheShapeChipAfterTheBoards() {
-        val shown = chips(InputSchemeFamily.JAPANESE, "my-keys", listOf(KeyboardLayoutKind.QWERTY26))
-        assertEquals(
-            listOf(
-                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "romaji26"),
-                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26, "kana12"),
-                KeyboardMenuEntries.LayoutChip(KeyboardLayoutKind.QWERTY26),
-            ),
-            shown,
-        )
-    }
-
-    @Test
-    fun aHiddenIdentityShapeLeavesNoBoardChips() {
-        val offered = KeyboardMenuEntries.layouts(setOf("qwerty26"), KeyboardLayoutKind.PHONE9)
-        assertEquals(
-            listOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.MERGED18, KeyboardLayoutKind.PHONE9),
-            chips(InputSchemeFamily.JAPANESE, "romaji26", offered).map { it.kind },
-        )
+        assertEquals(1, shown.all.count { it.schemaID == "rime_ice" })
     }
 
     private val kana = OtherInputMethod("scheme-kana", "kagiroi", "かな", "Kagiroi")

@@ -13,12 +13,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
-import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.LayoutDefinition
-import app.songyan.ime.layout.LayoutInput
 
 /**
  * The in-keyboard "输入方式 × 键盘布局" menu, opened by a long press on the language key.
@@ -51,22 +50,21 @@ internal class KeyboardSwitcherPanel(
     private val schemaNames = mutableMapOf<String, String>()
     private var otherChips: Map<String, OtherInputMethod> = emptyMap()
     private lateinit var schemaRow: LinearLayout
-    private val layoutChips = mutableListOf<Pair<KeyboardMenuEntries.LayoutChip, TextView>>()
+    private val keyboardChips = mutableListOf<Pair<KeyboardChip, TextView>>()
     private var layoutRow: LinearLayout
-    private var offeredLayouts: List<KeyboardLayoutKind> = KeyboardLayoutKind.entries
-    private var layoutBoards: List<String> = emptyList()
-    private var mainLayoutId: String? = null
     private var currentSchema = defaultSchemaId
-    private var currentLayout = defaultLayout
+    private var currentKeyboardId = PublishedKeyboard(defaultSchemaId, defaultLayout, defaultLayout.wire).id
 
-    /** The name each chip shows; a kind without one keeps the shape's own name. */
-    private var layoutNames: Map<KeyboardLayoutKind, String> = emptyMap()
+    /** One keyboard of the running input method, with the name of the layout it draws. */
+    data class KeyboardChip(
+        val keyboard: PublishedKeyboard,
+        val label: String,
+    )
 
     var onSchema: (String) -> Unit = {}
-    var onLayout: (KeyboardLayoutKind) -> Unit = {}
 
-    /** A physical board of the running input method was picked; the keyboard moves to its shape. */
-    var onBoard: (String) -> Unit = {}
+    /** A keyboard of the running input method was picked. */
+    var onKeyboard: (PublishedKeyboard) -> Unit = {}
     var onQuickContent: () -> Unit = {}
     var onKeyboardSettings: () -> Unit = {}
     var onEmoji: () -> Unit = {}
@@ -125,7 +123,11 @@ internal class KeyboardSwitcherPanel(
         val layoutScroll = chipRow(emptyList())
         layoutRow = layoutScroll.getChildAt(0) as LinearLayout
         body.addView(layoutScroll)
-        rebuildLayoutChips()
+        setKeyboards(
+            KeyboardLayoutKind.entries.map {
+                KeyboardChip(PublishedKeyboard(defaultSchemaId, it, it.wire), layoutName(context, it))
+            },
+        )
         // Extensions with their own panel sit right under the chip groups: the menu's height is the
         // fixed key surface, and the rows below (quick content, settings, input methods) are long
         // enough that anything put under them needs a scroll to be seen at all.
@@ -172,26 +174,26 @@ internal class KeyboardSwitcherPanel(
         switchRows = listOf(switchDivider, switchRow, pickRow)
         voiceRows = listOf(voiceDivider, voiceRow)
         setInputMethodOptions(InputMethodOptions())
-        update(defaultSchemaId, defaultLayout)
+        update(defaultSchemaId, currentKeyboardId)
     }
 
     /** Mirrors the running keyboard so the selected chips are always the live ones. */
     fun update(
         schemaId: String,
-        layout: KeyboardLayoutKind,
+        keyboardId: String,
     ) {
         currentSchema = schemaId
-        currentLayout = layout
+        currentKeyboardId = keyboardId
         for ((id, view) in schemaChips) {
             style(view, id == schemaId)
             view.contentDescription =
                 otherChips[id]?.let { context.getString(R.string.ime_menu_switch_package, it.packageName, it.name) }
                     ?: chipDescription(schemaLabel(id), id == schemaId)
         }
-        for ((entry, view) in layoutChips) {
-            val selected = isSelected(entry)
+        for ((entry, view) in keyboardChips) {
+            val selected = entry.keyboard.id == keyboardId
             style(view, selected)
-            view.contentDescription = chipDescription(layoutLabel(entry), selected)
+            view.contentDescription = chipDescription(entry.label, selected)
         }
     }
 
@@ -206,7 +208,7 @@ internal class KeyboardSwitcherPanel(
      */
     fun revealSelection() {
         reveal(schemaRow, schemaChips[currentSchema])
-        reveal(layoutRow, layoutChips.firstOrNull { isSelected(it.first) }?.second)
+        reveal(layoutRow, keyboardChip(currentKeyboardId))
     }
 
     private fun reveal(
@@ -227,12 +229,6 @@ internal class KeyboardSwitcherPanel(
     internal val schemaScroll: HorizontalScrollView get() = schemaRow.parent as HorizontalScrollView
 
     internal fun schemaChip(id: String): View? = schemaChips[id]
-
-    /** A board chip is on only while the keyboard is on the identity shape drawing that board. */
-    private fun isSelected(entry: KeyboardMenuEntries.LayoutChip): Boolean =
-        entry.kind == currentLayout && (entry.boardId == null || entry.boardId == mainLayoutId)
-
-    fun selectLayout(kind: KeyboardLayoutKind) = update(currentSchema, kind)
 
     /** The running input method as the menu names it. */
     fun currentSchemaLabel(): String = schemaLabel(currentSchema)
@@ -262,55 +258,34 @@ internal class KeyboardSwitcherPanel(
             schemaChips[id] = view
             schemaRow.addView(view)
         }
-        update(currentSchema, currentLayout)
+        update(currentSchema, currentKeyboardId)
     }
 
     /** The input methods the menu offers, in order. */
     internal val schemaIds: List<String> get() = schemaChips.keys.toList()
 
     /**
-     * The names of the layouts the menu offers, resolved for the running input method: a keyboard
-     * that draws a physical board names that board instead of the shape it shares.
+     * The keyboards of the running input method, in the order of the user's list; the chips are
+     * rebuilt only when the keyboards or their names change.
      */
-    fun setLayoutNames(names: Map<KeyboardLayoutKind, String>) {
-        layoutNames = names
-        for ((entry, view) in layoutChips) {
-            view.text = layoutLabel(entry)
-            view.contentDescription = chipDescription(layoutLabel(entry), isSelected(entry))
+    fun setKeyboards(entries: List<KeyboardChip>) {
+        if (entries != keyboardChips.map { it.first }) {
+            keyboardChips.clear()
+            layoutRow.removeAllViews()
+            for (entry in entries) {
+                val view = chip(entry.label) { onKeyboard(entry.keyboard) }
+                keyboardChips += entry to view
+                layoutRow.addView(view)
+            }
         }
+        update(currentSchema, currentKeyboardId)
     }
 
-    /**
-     * The layouts the menu offers, in shape order. When the input method types on several physical
-     * [boards] (they share the identity shape's slot) each gets its own chip, selected by the
-     * [mainLayoutId] the keyboard draws; the chips are rebuilt only when that list changes.
-     */
-    fun setLayouts(
-        kinds: Collection<KeyboardLayoutKind>,
-        boards: List<String> = emptyList(),
-        mainLayoutId: String? = null,
-    ) {
-        val offered = KeyboardLayoutKind.entries.filter { it in kinds }
-        this.mainLayoutId = mainLayoutId
-        if (offered != offeredLayouts || boards != layoutBoards) {
-            offeredLayouts = offered
-            layoutBoards = boards
-            rebuildLayoutChips()
-        }
-        update(currentSchema, currentLayout)
-    }
+    /** The keyboards the menu offers, in order. */
+    internal val keyboards: List<KeyboardChip> get() = keyboardChips.map { it.first }
 
-    private fun rebuildLayoutChips() {
-        layoutChips.clear()
-        layoutRow.removeAllViews()
-        for (entry in KeyboardMenuEntries.layoutChips(offeredLayouts, layoutBoards, mainLayoutId)) {
-            val boardId = entry.boardId
-            val view = chip(layoutLabel(entry)) { if (boardId != null) onBoard(boardId) else onLayout(entry.kind) }
-            layoutChips += entry to view
-            layoutRow.addView(view)
-        }
-        update(currentSchema, currentLayout)
-    }
+    /** The chip of the keyboard with this id, when the menu offers it. */
+    internal fun keyboardChip(id: String): View? = keyboardChips.firstOrNull { it.first.keyboard.id == id }?.second
 
     /**
      * The extensions with their own panel, as (package name, label). Rebuilt when the list changes;
@@ -407,7 +382,7 @@ internal class KeyboardSwitcherPanel(
         for (row in actionRows) row.background = pressedBackground()
         headerClose?.background = pressedBackground()
         for (divider in actionDividers) divider.setBackgroundColor(palette.divider)
-        update(currentSchema, currentLayout)
+        update(currentSchema, currentKeyboardId)
     }
 
     private fun style(
@@ -633,11 +608,6 @@ internal class KeyboardSwitcherPanel(
             else -> schemaNames[id]?.takeIf { it.isNotBlank() } ?: BuiltinTemplateSchemas.NAMES[id] ?: id
         }
 
-    private fun layoutLabel(kind: KeyboardLayoutKind): String = layoutNames[kind] ?: layoutName(context, kind)
-
-    private fun layoutLabel(entry: KeyboardMenuEntries.LayoutChip): String =
-        entry.boardId?.let(::bundledLayoutNameRes)?.let(context::getString) ?: layoutLabel(entry.kind)
-
     private fun padding(dp: Int): Int = (dp * density).toInt()
 
     private companion object {
@@ -688,24 +658,4 @@ internal fun layoutName(
         bundledLayoutNameRes(definition.id)?.let { return context.getString(it) }
     }
     return layoutName(context, kind)
-}
-
-/**
- * The name each layout chip shows for the running input method. The keyboard reads the same catalog,
- * so a chip names the board the keyboard behind it would draw, not just the shape it is paired with.
- */
-internal fun KeyboardController.layoutNamesByKind(): Map<KeyboardLayoutKind, String> {
-    val registry = KeyboardLayoutCatalog.snapshot.value.registry
-    val families = layoutFamilies()
-    return KeyboardLayoutKind.entries.associateWith { kind ->
-        val definition =
-            LayoutInput.Builtin
-                .fromWire(kind.wire)
-                ?.let { shape ->
-                    registry.resolvedLayout(
-                        registry.composition(KeyboardCompositionKey(schemaId, shape), families).mainLayoutID,
-                    )
-                }
-        layoutName(context, definition, kind)
-    }
 }

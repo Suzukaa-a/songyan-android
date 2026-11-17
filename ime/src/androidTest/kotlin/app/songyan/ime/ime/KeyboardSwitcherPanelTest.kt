@@ -73,11 +73,11 @@ class KeyboardSwitcherPanelTest {
 
         // Left at the end by an earlier visit, while the first one is selected.
         row.scrollTo(Int.MAX_VALUE / 2, 0)
-        panel.update(ids.first(), KeyboardLayoutKind.QWERTY26)
+        panel.update(ids.first(), "${ids.first()}:qwerty26#qwerty26")
         panel.revealSelection()
         assertEquals(0, row.scrollX)
 
-        panel.update(ids.last(), KeyboardLayoutKind.QWERTY26)
+        panel.update(ids.last(), "${ids.last()}:qwerty26#qwerty26")
         panel.revealSelection()
         val chip = panel.schemaChip(ids.last())!!
         assertTrue(

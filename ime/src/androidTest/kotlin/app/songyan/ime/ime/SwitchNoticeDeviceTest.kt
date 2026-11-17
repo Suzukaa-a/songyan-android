@@ -54,7 +54,7 @@ class SwitchNoticeDeviceTest {
             assertTrue(host.await { spaceFace(host) == usual })
 
             // A layout switch shows in its keys; the input method is not named again.
-            host.main { host.controller.menu.onLayout(KeyboardLayoutKind.MERGED14) }
+            host.main { host.controller.menu.onKeyboard(host.keyboardOf(KeyboardLayoutKind.MERGED14)) }
             assertTrue(host.await { host.main2 { host.controller.layoutKind } == KeyboardLayoutKind.MERGED14 })
             host.awaitIdle()
             assertTrue(spaceFace(host) != named)

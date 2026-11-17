@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
@@ -66,7 +67,15 @@ class KeyboardLayoutNamesTest {
     @Test
     fun theLayoutChipShowsTheBoardNameHandedToTheMenu() {
         val panel = KeyboardSwitcherPanel(context, BuiltinTemplateSchemas.QUANPIN, KeyboardLayoutKind.QWERTY26)
-        panel.setLayoutNames(mapOf(KeyboardLayoutKind.QWERTY26 to context.getString(R.string.ime_layout_zhuyin41)))
+        val board = PublishedKeyboard("bopomofo", KeyboardLayoutKind.QWERTY26, "zhuyin41")
+        panel.setKeyboards(
+            listOf(
+                KeyboardSwitcherPanel.KeyboardChip(
+                    board,
+                    layoutName(context, BuiltinLayouts.zhuyin41, KeyboardLayoutKind.QWERTY26),
+                ),
+            ),
+        )
         val labels = texts(panel)
         assertEquals(true, labels.contains(context.getString(R.string.ime_layout_zhuyin41)))
         assertEquals(false, labels.contains(context.getString(R.string.ime_layout_qwerty26)))

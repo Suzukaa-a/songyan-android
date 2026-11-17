@@ -69,14 +69,19 @@ internal class SchemeSourceDependencies(
 
     /**
      * What the tree lacks. [missing] stops the import; [optional] does not: files reached only
-     * through a schema's `dependencies` (a reverse-lookup scheme librime builds when present) or a
-     * dictionary's `use_preset_vocabulary`. librime deploys the input method without them and only
-     * that lookup, or the preset vocabulary, is absent; packages such as 薄荷 and 白霜 rely on the
-     * shared `luna_pinyin` and `essay` that a desktop Rime installs.
+     * through a schema's `dependencies` or a reverse-lookup dictionary (librime builds the lookup
+     * when present, and its translator yields nothing when not), or a dictionary's
+     * `use_preset_vocabulary`. librime deploys the input method without them and only that lookup,
+     * or the preset vocabulary, is absent; packages such as 薄荷, 白霜 and rime-wubi rely on the
+     * shared `luna_pinyin`, `pinyin_simp` and `essay` that a desktop Rime installs. [direct] are
+     * the [optional] paths the package's own files name (not those of a lookup's own lookup), and
+     * [lookups] the ones of them a reverse lookup needs.
      */
     class Closure(
         val missing: List<String>,
         val optional: List<String>,
+        val direct: List<String> = optional,
+        val lookups: List<String> = emptyList(),
     )
 
     /** Every referenced path the tree does not contain and the import cannot go without, sorted. */
@@ -85,6 +90,7 @@ internal class SchemeSourceDependencies(
     fun closure(): Closure {
         val missing = sortedSetOf<String>()
         val optional = sortedSetOf<String>()
+        val lookups = sortedSetOf<String>()
         val softPending = ArrayList<String>()
         var selected: Set<String>? = null
         val listed = listedSchemaIds()
@@ -135,6 +141,12 @@ internal class SchemeSourceDependencies(
             }
         }
 
+        fun requireLookup(name: String) {
+            // librime builds a lookup's dependencies one level deep; a lookup's own lookup is never built.
+            if (!soft) lookups += name
+            requireSoft(name)
+        }
+
         fun requireModule(module: String) {
             val base = "lua/" + module.replace('.', '/')
             val path =
@@ -166,7 +178,14 @@ internal class SchemeSourceDependencies(
                 yaml -> {
                     val source = if (path.endsWith(DICTIONARY_SUFFIX)) dictionaryHeader(text) else text
                     val root = parseYaml(path, source) ?: continue
-                    visitConfig(root, relaxedDictionaryNamespaces(path, root), ::require, ::requireSoft)
+                    visitConfig(
+                        root,
+                        relaxedDictionaryNamespaces(path, root),
+                        lookupNamespaces(path, root),
+                        ::require,
+                        ::requireSoft,
+                        ::requireLookup,
+                    )
                     luaReferences(root, ::require, ::requireModule)
                 }
 
@@ -187,7 +206,9 @@ internal class SchemeSourceDependencies(
                 }
             }
         }
-        return Closure(missing.toList(), (optional - missing).toList())
+        val absent = optional - missing
+        val direct = absent.filter { it in softPending }
+        return Closure(missing.toList(), absent.toList(), direct, lookups.filter { it in absent })
     }
 
     private fun parseConfig(
@@ -211,8 +232,10 @@ internal class SchemeSourceDependencies(
     private fun visitConfig(
         root: Any?,
         relaxed: Set<String>,
+        lookup: Set<String>,
         require: (String) -> Unit,
         requireOptional: (String) -> Unit,
+        requireLookup: (String) -> Unit,
     ) {
         var budget = MAX_NODES
         val stack = ArrayDeque<Pair<Any?, String?>>()
@@ -242,7 +265,9 @@ internal class SchemeSourceDependencies(
                                     if (name.isNotEmpty()) {
                                         // A namespace no engine entry claims is never loaded natively,
                                         // so its dictionary stays optional; a claimed one stays required.
-                                        if (top != null && top in relaxed) {
+                                        if (top != null && top in lookup) {
+                                            requireLookup(name + DICTIONARY_SUFFIX)
+                                        } else if (top != null && top in relaxed) {
                                             requireOptional(name + DICTIONARY_SUFFIX)
                                         } else {
                                             require(name + DICTIONARY_SUFFIX)
@@ -260,7 +285,7 @@ internal class SchemeSourceDependencies(
                                 (value as? List<*>)?.forEach { item ->
                                     scalar(
                                         item,
-                                    )?.takeIf { it.isNotEmpty() }?.let { requireOptional(it + SCHEMA_SUFFIX) }
+                                    )?.takeIf { it.isNotEmpty() }?.let { requireLookup(it + SCHEMA_SUFFIX) }
                                 }
                         }
                         if (value is Map<*, *> || value is List<*>) stack.addLast(value to childTop)
@@ -385,6 +410,38 @@ internal class SchemeSourceDependencies(
         return document.keys.mapNotNull { it as? String }.toSet() - active
     }
 
+    /**
+     * Root sections only a reverse lookup reads: `reverse_lookup` and the `@name` of a
+     * reverse_lookup_translator or reverse_lookup_filter. librime builds the lookup when its
+     * dictionary is there and the lookup yields nothing when it is not; the input method itself is
+     * unaffected. A section another component also names (a translator reading the same namespace)
+     * stays strict.
+     */
+    private fun lookupNamespaces(
+        schemaPath: String,
+        root: Any?,
+    ): Set<String> {
+        if (!schemaPath.endsWith(SCHEMA_SUFFIX)) return emptySet()
+        val document = root as? Map<*, *> ?: return emptySet()
+        val lookups = mutableSetOf(REVERSE_LOOKUP)
+        val claimed = mutableSetOf("translator")
+        val engine = document["engine"] as? Map<*, *>
+        for ((_, key) in ENGINE_LISTS) {
+            for (item in engine?.get(key) as? List<*> ?: continue) {
+                val name = scalar(item) ?: continue
+                val at = name.indexOf('@')
+                val klass = if (at < 0) name else name.substring(0, at)
+                val namespace = if (at < 0) null else name.substring(at + 1)
+                if (klass in LOOKUP_COMPONENTS) {
+                    namespace?.let { lookups += it }
+                } else if (namespace != null) {
+                    claimed += namespace
+                }
+            }
+        }
+        return lookups - claimed
+    }
+
     /** Only a literal patch that leaves engine alone keeps a custom file's effect provable. */
     private fun customPatchLeavesEngineAlone(
         customPath: String,
@@ -448,6 +505,8 @@ internal class SchemeSourceDependencies(
         const val DEFAULT_CONFIG = "default.yaml"
         const val DEFAULT_CUSTOM = "default.custom.yaml"
         private const val RIME_LUA = "rime.lua"
+        private const val REVERSE_LOOKUP = "reverse_lookup"
+        private val LOOKUP_COMPONENTS = setOf("reverse_lookup_translator", "reverse_lookup_filter")
         private const val PRESET_VOCABULARY = "essay.txt"
         private const val MAX_NODES = 4_000_000
         private val LUA_STANDARD_MODULES = setOf("math", "string", "table", "utf8", "rime")

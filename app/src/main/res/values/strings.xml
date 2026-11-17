@@ -55,6 +55,11 @@
     <string name="scheme_import_error_invalid_scheme">A configuration file of the input scheme is invalid. Check its contents.</string>
     <string name="scheme_import_error_encoding">A file of the input scheme is not UTF-8 text.</string>
     <string name="scheme_import_error_missing_dependency">The input scheme is missing these files: %s.</string>
+    <string name="scheme_import_missing_lookup">Reverse lookup is unavailable: %s is missing.</string>
+    <string name="scheme_import_missing_vocabulary">Preset vocabulary is unavailable: %s is missing.</string>
+    <string name="scheme_import_missing_other">Some features are unavailable: %s is missing.</string>
+    <string name="scheme_import_missing_hint">Add the input scheme that provides it, then add this input scheme again.</string>
+    <string name="scheme_import_missing_name_with_repository">%1$s (%2$s)</string>
     <string name="scheme_import_error_checksum">The downloaded file does not match the checksum this scheme was published with, so nothing was installed.</string>
     <string name="scheme_import_error_conflicting_files">Two archives in this scheme provide different versions of these files: %s. Keep only one of them.</string>
     <string name="scheme_import_error_invalid_model">The grammar model of the input scheme cannot be used.</string>

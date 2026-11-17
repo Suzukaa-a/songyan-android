@@ -55,6 +55,11 @@
     <string name="scheme_import_error_invalid_scheme">輸入方案裡的配置檔案有誤，請檢查檔案內容。</string>
     <string name="scheme_import_error_encoding">輸入方案裡有檔案不是 UTF-8 文字。</string>
     <string name="scheme_import_error_missing_dependency">輸入方案缺少這些檔案：%s。</string>
+    <string name="scheme_import_missing_lookup">反查用不了：缺少 %s。</string>
+    <string name="scheme_import_missing_vocabulary">預設詞彙用不了：缺少 %s。</string>
+    <string name="scheme_import_missing_other">部分功能用不了：缺少 %s。</string>
+    <string name="scheme_import_missing_hint">新增提供它的輸入方案後，再新增一次這個輸入方案即可補上。</string>
+    <string name="scheme_import_missing_name_with_repository">%1$s（%2$s）</string>
     <string name="scheme_import_error_checksum">下載的檔案與這個輸入方案記錄的校驗值不一致，沒有安裝。</string>
     <string name="scheme_import_error_conflicting_files">這個輸入方案的兩個壓縮包提供了同名但內容不同的檔案：%s。請只保留一個壓縮包。</string>
     <string name="scheme_import_error_invalid_model">輸入方案裡的語法模型檔案不可用。</string>

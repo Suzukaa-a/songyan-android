@@ -521,6 +521,150 @@ class SchemePackageImportTest {
         }
     }
 
+    // ---- Packages shaped like the rime/rime-* repositories, which lean on each other ----
+
+    @Test
+    fun aMissingReverseLookupDependencyOnlyCostsTheLookup() {
+        val prepared = prepareArchive(zip(*wrapped("rime-wubi-master", wubiFiles())))
+
+        assertEquals(listOf("wubi86", "wubi_pinyin"), prepared.schemaIds)
+        assertEquals("rime-wubi", prepared.displayName)
+        assertEquals(
+            listOf(MissingFeature(MissingFeature.Kind.REVERSE_LOOKUP, listOf("pinyin_simp"))),
+            prepared.missingFeatures,
+        )
+        assertEquals("rime/rime-pinyin-simp", MissingFeature.repositoryOf("pinyin_simp"))
+    }
+
+    @Test
+    fun aDependencyAnotherInstalledPackageProvidesIsCopiedIn() {
+        val installed = Files.createTempDirectory("installed").toFile().also { it.deleteOnExit() }
+        for ((path, data) in pinyinSimpFiles()) File(installed, path).writeBytes(data)
+
+        val prepared =
+            prepareArchive(zip(*wrapped("rime-wubi-master", wubiFiles()))) { path ->
+                File(installed, path).takeIf { it.isFile }
+            }
+
+        assertTrue(File(prepared.root, "pinyin_simp.dict.yaml").isFile)
+        assertTrue(File(prepared.root, "pinyin_simp.schema.yaml").isFile)
+        assertEquals(
+            "the borrowed schema is a lookup, not an input method",
+            listOf("wubi86", "wubi_pinyin"),
+            prepared.schemaIds,
+        )
+        // pinyin_simp's own stroke lookup is never built for wubi86, so it is not reported.
+        assertEquals(emptyList<MissingFeature>(), prepared.missingFeatures)
+    }
+
+    @Test
+    fun aDesktopFolderOffersOnlyTheSchemasNoOtherDependsOnAndIsNamedAfterThePackage() {
+        val files = wubiFiles() + pinyinSimpFiles() + strokeAndLunaFiles()
+
+        val prepared = prepareArchive(zip(*wrapped("rime-wubi-bundle", files)), packageName = "rime-wubi-bundle.zip")
+
+        assertEquals("wubi86", prepared.primarySchemaId)
+        assertEquals(listOf("wubi86", "wubi_pinyin", "luna_pinyin_simp"), prepared.schemaIds)
+        assertEquals("rime-wubi-bundle", prepared.displayName)
+        assertEquals(emptyList<MissingFeature>(), prepared.missingFeatures)
+    }
+
+    @Test
+    fun aPackageWithItsOwnConfigurationKeepsItsListAndName() {
+        val files =
+            wubiFiles() + pinyinSimpFiles() +
+                ("default.yaml" to "schema_list:\n  - schema: wubi_pinyin\n  - schema: pinyin_simp\n".toByteArray())
+
+        val prepared = prepareArchive(zip(*wrapped("rime-wubi-master", files)))
+
+        assertEquals(listOf("wubi_pinyin", "pinyin_simp"), prepared.schemaIds)
+        assertEquals("五筆·拼音", prepared.displayName)
+    }
+
+    @Test
+    fun aPackageNameDropsTheBranchAndExtension() {
+        assertEquals("rime-wubi", SchemePackageImportBuilder.cleanPackageName("rime-wubi-master.zip"))
+        assertEquals("rime-wubi", SchemePackageImportBuilder.cleanPackageName("rime-wubi-4f6b6e0c2a1d"))
+        assertEquals("我的方案", SchemePackageImportBuilder.cleanPackageName("我的方案.ZIP"))
+        assertEquals(null, SchemePackageImportBuilder.cleanPackageName(" .zip"))
+    }
+
+    private fun prepareArchive(
+        archive: ByteArray,
+        packageName: String? = null,
+        provide: (String) -> File? = { null },
+    ): PreparedSchemeImport {
+        val directory = Files.createTempDirectory("scheme-import").toFile()
+        directory.deleteOnExit()
+        val file = File(directory, "package.zip")
+        file.writeBytes(archive)
+        return SchemePackageImportBuilder.prepareArchives(
+            listOf(file),
+            File(directory, "out"),
+            packageName = packageName,
+            provide = provide,
+        )
+    }
+
+    /** rime-wubi as upstream ships it: a reverse lookup by pinyin_simp, which it does not include. */
+    private fun wubiFiles(): Map<String, ByteArray> {
+        val engine =
+            "engine:\n  translators:\n    - punct_translator\n" +
+                "    - reverse_lookup_translator\n    - table_translator\n" +
+                "abc_segmentor:\n  extra_tags:\n    - reverse_lookup\n"
+        val lookup = "reverse_lookup:\n  dictionary: pinyin_simp\n  prefix: \"z\"\n"
+        return mapOf(
+            "wubi86.schema.yaml" to
+                (
+                    "schema:\n  schema_id: wubi86\n  name: 五笔86\n  dependencies:\n    - pinyin_simp\n" + engine +
+                        "translator:\n  dictionary: wubi86\n" + lookup
+                ).toByteArray(),
+            "wubi_pinyin.schema.yaml" to
+                (
+                    "schema:\n  schema_id: wubi_pinyin\n  name: 五筆·拼音\n  dependencies:\n    - pinyin_simp\n" +
+                        engine + "translator:\n  dictionary: wubi86\n  prism: wubi_pinyin\n" + lookup
+                ).toByteArray(),
+            "wubi86.dict.yaml" to "---\nname: wubi86\nversion: '1'\n...\n我\ttrnt\n".toByteArray(),
+        )
+    }
+
+    /** rime-pinyin-simp: a pinyin scheme whose own reverse lookup is stroke. */
+    private fun pinyinSimpFiles(): Map<String, ByteArray> =
+        mapOf(
+            "pinyin_simp.schema.yaml" to
+                (
+                    "schema:\n  schema_id: pinyin_simp\n  name: 袖珍简化字拼音\n  dependencies:\n    - stroke\n" +
+                        "engine:\n  translators:\n    - script_translator\n    - reverse_lookup_translator\n" +
+                        "translator:\n  dictionary: pinyin_simp\nreverse_lookup:\n  dictionary: stroke\n"
+                ).toByteArray(),
+            "pinyin_simp.dict.yaml" to "---\nname: pinyin_simp\nversion: '1'\n...\n我\two\n".toByteArray(),
+        )
+
+    /** rime-stroke and rime-luna-pinyin, which name each other as their lookup, plus a luna variant. */
+    private fun strokeAndLunaFiles(): Map<String, ByteArray> =
+        mapOf(
+            "stroke.schema.yaml" to
+                (
+                    "schema:\n  schema_id: stroke\n  name: 五筆畫\n  dependencies:\n    - luna_pinyin\n" +
+                        "engine:\n  translators:\n    - reverse_lookup_translator\n    - table_translator\n" +
+                        "translator:\n  dictionary: stroke\nreverse_lookup:\n  dictionary: luna_pinyin\n"
+                ).toByteArray(),
+            "stroke.dict.yaml" to "---\nname: stroke\nversion: '1'\n...\n我\tpshpn\n".toByteArray(),
+            "luna_pinyin.schema.yaml" to
+                (
+                    "schema:\n  schema_id: luna_pinyin\n  name: 朙月拼音\n  dependencies:\n    - stroke\n" +
+                        "engine:\n  translators:\n    - script_translator\n    - reverse_lookup_translator\n" +
+                        "translator:\n  dictionary: luna_pinyin\nreverse_lookup:\n  dictionary: stroke\n"
+                ).toByteArray(),
+            "luna_pinyin.dict.yaml" to "---\nname: luna_pinyin\nversion: '1'\n...\n我\two\n".toByteArray(),
+            "luna_pinyin_simp.schema.yaml" to
+                (
+                    "schema:\n  schema_id: luna_pinyin_simp\n  name: 朙月拼音·简化字\n" +
+                        "engine:\n  translators:\n    - script_translator\n" +
+                        "translator:\n  dictionary: luna_pinyin\n  prism: luna_pinyin_simp\n"
+                ).toByteArray(),
+        )
+
     private fun prepare(
         archive: ByteArray,
         limits: SchemePackageLimits = SchemePackageLimits(),

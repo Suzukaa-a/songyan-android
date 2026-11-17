@@ -99,6 +99,8 @@ data class DeployRequest(
      * default.yaml lists; a package without one would otherwise offer every root schema it ships.
      */
     val advertisedSchemas: List<String> = emptyList(),
+    /** The picked file's name, which names a package that has no configuration of its own. */
+    val packageName: String? = null,
 ) {
     /**
      * Whether running this request right after [earlier] would redo the same work: identical
@@ -117,6 +119,7 @@ data class DeployRequest(
         private val SHA256 = Regex("[0-9a-f]{64}")
         private val SCHEMA_ID = Regex("[A-Za-z0-9_.-]+")
         private val PACKAGE_FILE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+        private const val MAX_PACKAGE_NAME = 255
 
         fun isValidRequestId(value: String?): Boolean = value != null && REQUEST_ID.matches(value)
 
@@ -174,7 +177,17 @@ data class DeployRequest(
                 DeployMode.IMPORT_SCHEME -> {
                     val packageFiles =
                         lines(stringExtra, DeployContract.EXTRA_PACKAGE_FILES, PACKAGE_FILE_NAME) ?: return null
-                    DeployRequest(id, parsed, packageFiles = packageFiles, advertisedSchemas = advertised)
+                    val name =
+                        stringExtra(DeployContract.EXTRA_PACKAGE_NAME)?.takeIf { name ->
+                            name.isNotBlank() && name.length <= MAX_PACKAGE_NAME && name.none { it.isISOControl() }
+                        }
+                    DeployRequest(
+                        id,
+                        parsed,
+                        packageFiles = packageFiles,
+                        advertisedSchemas = advertised,
+                        packageName = name,
+                    )
                 }
                 DeployMode.REDEPLOY_ACTIVE,
                 DeployMode.COMPLETE_COMPANIONS,

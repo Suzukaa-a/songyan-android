@@ -19,6 +19,7 @@ import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.PublicationRecord
 import app.songyan.ime.storage.SourceCatalog
 import app.songyan.ime.storage.SourceIds
+import app.songyan.ime.storage.SourceKind
 import app.songyan.ime.storage.SourceManifest
 import app.songyan.ime.userconfig.UserConfigStatus
 import kotlinx.coroutines.CancellationException
@@ -119,6 +120,7 @@ class DeployPipeline(
                         cancelled,
                         request.requestId,
                         advertisedSchemas = request.advertisedSchemas,
+                        packageName = request.packageName,
                     )
                 DeployMode.IMPORT_SCHEME_URL -> {
                     val update = request.sourceId
@@ -147,6 +149,7 @@ class DeployPipeline(
                             update,
                             origin,
                             request.advertisedSchemas,
+                            repositoryName(url),
                         )
                     } else {
                         val archives = downloadPinnedArchives(request.archives, incoming, cancelled, progress)
@@ -247,9 +250,19 @@ class DeployPipeline(
         update: String? = null,
         origin: String? = null,
         advertisedSchemas: List<String> = emptyList(),
+        packageName: String? = null,
     ): RequestStatus {
         if (archives.isEmpty() || archives.any { !it.isFile }) return failed(SchemeImportProblemKind.READ_FAILED.name)
         val checkStart = SystemClock.elapsedRealtime()
+        // Read once the package is extracted: a stored package with the same main input method is
+        // the one this import replaces, whose files must not paper over what the new version lacks.
+        val others by lazy {
+            catalog.list().filter {
+                it.kind == SourceKind.SCHEME &&
+                    it.sourceId != update &&
+                    !File(staged, it.primarySchemaId + ".schema.yaml").isFile
+            }
+        }
         val prepared =
             builder.buildScheme(
                 archives,
@@ -258,6 +271,8 @@ class DeployPipeline(
                 sourceId = update,
                 origin = origin,
                 advertisedSchemas = advertisedSchemas,
+                packageName = packageName,
+                provide = { path -> others.firstNotNullOfOrNull { storedFile(it.sourceId, path) } },
             )
         Log.i(DeployTimer.TAG, "scheme package checked in " + (SystemClock.elapsedRealtime() - checkStart) + " ms")
         // Learned-word snapshots only wait for the user's answer; the import never depends on them.
@@ -266,7 +281,19 @@ class DeployPipeline(
         archives.forEach { it.delete() }
         val status =
             try {
-                if (cancelled()) failed(CANCELLED) else installScheme(prepared, cancelled, update)
+                if (cancelled()) {
+                    failed(CANCELLED)
+                } else {
+                    installScheme(prepared, cancelled, update).let {
+                        if (it.state ==
+                            RequestState.SUCCEEDED
+                        ) {
+                            it.copy(missingFeatures = prepared.missingFeatures)
+                        } else {
+                            it
+                        }
+                    }
+                }
             } catch (e: Throwable) {
                 snapshots?.deleteRecursively()
                 throw e
@@ -345,6 +372,30 @@ class DeployPipeline(
             SchemeImportProblemKind.DEPLOY_FAILED.name,
             DeployMode.IMPORT_SCHEME,
         )
+    }
+
+    /** [path] of the stored package [sourceId], when it ships one inside its own tree. */
+    private fun storedFile(
+        sourceId: String,
+        path: String,
+    ): File? {
+        val root = storage.sourceDir(sourceId).canonicalFile
+        val file = File(root, path).canonicalFile
+        return file.takeIf { it.isFile && it.path.startsWith(root.path + File.separator) }
+    }
+
+    /**
+     * The repository a link downloads (`rime-wubi` for github.com/rime/rime-wubi and its codeload
+     * archives), else the link's file name; it names a package without its own configuration.
+     */
+    private fun repositoryName(url: String): String? {
+        val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return null
+        val segments =
+            uri.path
+                .orEmpty()
+                .split('/')
+                .filter { it.isNotEmpty() }
+        return if (uri.host in GITHUB_HOSTS && segments.size >= 2) segments[1] else segments.lastOrNull()
     }
 
     /** Every stored scheme package, and the one deleted last while it can still be restored. */
@@ -499,6 +550,7 @@ class DeployPipeline(
 
         /** Under a request's incoming directory: the picked scheme package. */
         const val PACKAGE_FILE = "package.zip"
+        private val GITHUB_HOSTS = setOf("github.com", "codeload.github.com")
 
         /** Under a request's incoming directory: the downloaded archives of a recommended entry. */
         private const val PINNED_PREFIX = "pinned-"

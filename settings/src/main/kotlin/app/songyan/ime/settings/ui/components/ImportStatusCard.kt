@@ -39,7 +39,7 @@ data class ImportCard(
     val retryable: Boolean = false,
     /** A download in flight: the bar fills as it arrives and a line says how much. */
     val transfer: TransferProgress? = null,
-    /** A line under the bar about what to expect, while running. */
+    /** A line under the bar about what to expect while running; after success, what the result lacks. */
     val note: String? = null,
     /** A question the user answers on the card itself; [ImportPhase.SUCCEEDED] only. */
     val offer: ImportOffer? = null,
@@ -101,6 +101,15 @@ fun ImportStatusContent(
 ) {
     Column(modifier = modifier) {
         Text(text = card.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
+        if (card.phase == ImportPhase.SUCCEEDED) {
+            card.note?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp, end = 8.dp),
+                )
+            }
+        }
         card.offer?.let { offer ->
             Text(
                 text = offer.question,
@@ -284,6 +293,7 @@ private fun schemeCard(state: SchemeImportUiState): ImportCard? =
                         }
                     stringResource(named, it.name)
                 } ?: stringResource(R.string.schemes_scheme_import_success),
+                note = state.info?.missingFeatures,
                 offer =
                     state.info?.takeIf { state.offersLearning }?.let {
                         ImportOffer(

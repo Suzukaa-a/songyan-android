@@ -168,6 +168,7 @@ class StringResourceParityTest {
                 // Pure symbols, numbers and format-only strings.
                 "app/import_path_separator",
                 "app/rime_config_error_detail",
+                "app/scheme_import_missing_name_with_repository",
                 "settings/candidate_bar_value",
                 "settings/features_list_separator",
                 "settings/voice_script_summary",

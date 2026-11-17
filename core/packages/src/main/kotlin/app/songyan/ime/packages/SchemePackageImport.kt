@@ -71,6 +71,76 @@ class SchemePackageImportError(
     }
 }
 
+/**
+ * Something a package's input methods go without because a file they refer to is neither in the
+ * package nor in another installed one: librime deploys them anyway, as on a desktop. [names] are
+ * the missing schemas or dictionaries by name (`pinyin_simp`), or file paths for [Kind.OTHER].
+ */
+data class MissingFeature(
+    val kind: Kind,
+    val names: List<String>,
+) {
+    enum class Kind {
+        /** Looking a character up by another input method's code. */
+        REVERSE_LOOKUP,
+
+        /** The shared word list (`essay.txt`) a dictionary adds to its own. */
+        PRESET_VOCABULARY,
+
+        /** A dictionary only a script component or an unused section names. */
+        OTHER,
+    }
+
+    companion object {
+        /** Where the well-known shared Rime packages live, for telling the user what to add. */
+        private val REPOSITORIES =
+            mapOf(
+                "stroke" to "rime/rime-stroke",
+                "luna_pinyin" to "rime/rime-luna-pinyin",
+                "pinyin_simp" to "rime/rime-pinyin-simp",
+                "terra_pinyin" to "rime/rime-terra-pinyin",
+                "cangjie5" to "rime/rime-cangjie",
+                "essay" to "rime/rime-essay",
+                "bopomofo" to "rime/rime-bopomofo",
+                "jyut6ping3" to "rime/rime-cantonese",
+                "wubi86" to "rime/rime-wubi",
+                "quick5" to "rime/rime-quick",
+                "double_pinyin" to "rime/rime-double-pinyin",
+            )
+
+        /** The upstream repository that provides [name], when it is one of the well-known ones. */
+        fun repositoryOf(name: String): String? = REPOSITORIES[name]
+
+        /** Groups a closure's optional gaps by what they cost the user. */
+        internal fun of(closure: SchemeSourceDependencies.Closure): List<MissingFeature> {
+            val lookup =
+                closure.lookups
+                    .map(::stem)
+                    .distinct()
+                    .sorted()
+            val vocabulary = closure.direct.filter { it == PRESET_VOCABULARY_FILE }.map(::stem)
+            val other =
+                closure.direct
+                    .filter { it !in closure.lookups && it != PRESET_VOCABULARY_FILE }
+                    .filter { stem(it) !in lookup }
+            return listOfNotNull(
+                lookup.takeIf { it.isNotEmpty() }?.let { MissingFeature(Kind.REVERSE_LOOKUP, it) },
+                vocabulary.takeIf { it.isNotEmpty() }?.let { MissingFeature(Kind.PRESET_VOCABULARY, it) },
+                other.takeIf { it.isNotEmpty() }?.let { MissingFeature(Kind.OTHER, it) },
+            )
+        }
+
+        private const val PRESET_VOCABULARY_FILE = "essay.txt"
+
+        private fun stem(path: String): String =
+            path
+                .substringAfterLast('/')
+                .removeSuffix(SchemeSourceDependencies.SCHEMA_SUFFIX)
+                .removeSuffix(SchemeSourceDependencies.DICTIONARY_SUFFIX)
+                .removeSuffix(".txt")
+    }
+}
+
 /** One input method the package enables, with the name its schema declares. */
 data class ImportedScheme(
     val schemaId: String,
@@ -95,6 +165,8 @@ data class PreparedSchemeImport(
     val revision: String,
     /** Package files that were not staged because Rime never reads them (images, scripts, docs). */
     val skippedFiles: List<String>,
+    /** What the package's input methods go without; see [MissingFeature]. */
+    val missingFeatures: List<MissingFeature> = emptyList(),
 ) {
     val schemaIds: List<String> get() = schemes.map { it.schemaId }
     val primarySchemaId: String get() = schemes.first().schemaId
@@ -147,6 +219,9 @@ object SchemePackageImportBuilder {
     private const val REVISION_HEX = 40
     private val SCHEMA_ID = Regex("[A-Za-z0-9_.-]+")
 
+    /** What a repository download appends to the repository's name: its branch or commit. */
+    private val BRANCH_SUFFIX = Regex("-(?:master|main|[0-9a-f]{7,40})$")
+
     /** The `schema_list` block the app's prelude supplement writes into a generated default.yaml. */
     private val SCHEMA_LIST_BLOCK = Regex("(?m)^schema_list:\n(?:  - schema: [^\n]+\n)*")
 
@@ -171,6 +246,7 @@ object SchemePackageImportBuilder {
         supplement: (File) -> Unit = {},
         limits: SchemePackageLimits = SchemePackageLimits(),
         cancelled: () -> Boolean = { false },
+        packageName: String? = null,
     ): PreparedSchemeImport =
         prepareArchives(
             archives = listOf(archive),
@@ -178,6 +254,7 @@ object SchemePackageImportBuilder {
             supplement = supplement,
             limits = limits,
             cancelled = cancelled,
+            packageName = packageName,
         )
 
     /**
@@ -191,6 +268,14 @@ object SchemePackageImportBuilder {
      * the declaration every one of them would be offered as an input method. The package's own
      * default.yaml and default.custom.yaml stay authoritative; when they select anything but the
      * advertised list the import is refused rather than silently overriding the catalogue.
+     *
+     * A package with neither its own default.yaml nor an advertised list (a desktop Rime folder, a
+     * repository with several schemas) offers the schemas no other schema of it depends on, the one
+     * its [packageName] names first, and is named after the package rather than a schema.
+     *
+     * [provide] returns another installed package's copy of a file this package refers to but lacks
+     * (`pinyin_simp.dict.yaml` for rime-wubi's reverse lookup), or null. Such files are copied in,
+     * as a desktop Rime shares one user folder between packages.
      */
     fun prepareArchives(
         archives: List<File>,
@@ -199,6 +284,8 @@ object SchemePackageImportBuilder {
         limits: SchemePackageLimits = SchemePackageLimits(),
         advertisedSchemas: List<String> = emptyList(),
         cancelled: () -> Boolean = { false },
+        packageName: String? = null,
+        provide: (String) -> File? = { null },
     ): PreparedSchemeImport {
         if (archives.isEmpty()) fail(SchemePackageImportError.Reason.INVALID_ZIP, "no archive")
         val extracted = extractArchives(archives, target, limits, cancelled)
@@ -210,10 +297,23 @@ object SchemePackageImportBuilder {
         // A package that ships its own default.yaml decides its input methods itself.
         val ownConfiguration = File(target, DEFAULT_CONFIG).isFile
         supplement(target)
-        if (advertisedSchemas.isNotEmpty() && !ownConfiguration) {
-            writeAdvertisedSchemas(target, advertisedSchemas)
+        borrow(target, provide, limits)
+        val name = cleanPackageName(packageName) ?: cleanPackageName(extracted.wrapper)
+        val inferred = !ownConfiguration && advertisedSchemas.isEmpty()
+        val offered = if (inferred) offeredSchemas(target, name) else advertisedSchemas
+        if (offered.isNotEmpty() && !ownConfiguration) {
+            writeAdvertisedSchemas(target, offered)
         }
-        val prepared = inspect(target, extracted)
+        val prepared =
+            inspect(target, extracted).let {
+                if (inferred &&
+                    name != null
+                ) {
+                    it.copy(displayName = name)
+                } else {
+                    it
+                }
+            }
         if (advertisedSchemas.isNotEmpty() && prepared.schemaIds != advertisedSchemas) {
             // An existing default.yaml or default.custom.yaml may patch the list the generation just
             // wrote. Deleting the author's patch would change the package; refusing keeps it visible.
@@ -229,6 +329,8 @@ object SchemePackageImportBuilder {
     private class Extracted(
         val identity: String,
         val skipped: List<String>,
+        /** The entry archive's enclosing directory, which names a repository download. */
+        val wrapper: String?,
     )
 
     private class Entry(
@@ -271,6 +373,7 @@ object SchemePackageImportBuilder {
         val claims = HashMap<String, Claim>()
         val identities = sortedMapOf<String, String>()
         val skipped = LinkedHashSet<String>()
+        var entryWrapper: String? = null
         val totals = longArrayOf(0L, 0L)
         val buffer = ByteArray(BUFFER_BYTES)
         val scratch = createScratch(canonicalTarget)
@@ -284,6 +387,7 @@ object SchemePackageImportBuilder {
                     // One enclosing directory (a GitHub "Download ZIP") is the package root;
                     // classification uses the package-relative path while subdirectories are kept.
                     val wrapper = wrapperOf(entries)
+                    if (index == 0) entryWrapper = wrapper
                     val label = archiveLabel(archive, wrapper, index)
                     for (entry in entries) {
                         if (cancelled()) throw InterruptedException("import cancelled")
@@ -361,6 +465,7 @@ object SchemePackageImportBuilder {
         return Extracted(
             identity = sha256Hex(identity.toByteArray(StandardCharsets.UTF_8)).take(IDENTITY_HEX),
             skipped = skipped.toList(),
+            wrapper = entryWrapper,
         )
     }
 
@@ -508,6 +613,92 @@ object SchemePackageImportBuilder {
     }
 
     /**
+     * Copies in what another installed package provides of the files this one refers to and lacks,
+     * until nothing more is found. Only runtime files at their package-relative path; a file the
+     * package ships is never replaced. Bounded by the package's own byte budget.
+     */
+    private fun borrow(
+        target: File,
+        provide: (String) -> File?,
+        limits: SchemePackageLimits,
+    ) {
+        val tried = HashSet<String>()
+        var added = 0L
+        while (true) {
+            val files = sortedMapOf<String, File>()
+            collectFiles(target, "", files)
+            val closure =
+                try {
+                    SchemeSourceDependencies(files.keys) { path -> files[path]?.let(::readConfig) }.closure()
+                } catch (_: SchemeSourceDependencies.Invalid) {
+                    return
+                }
+            var copied = false
+            for (path in closure.missing + closure.optional) {
+                if (!tried.add(path) || !SchemeSourceCheck.isRuntimeSourceFile(path)) continue
+                val source = provide(path)?.takeIf { it.isFile } ?: continue
+                added += source.length()
+                if (source.length() > limits.sourceFileBytes || added > limits.sourceTotalBytes) return
+                val destination = File(target, path)
+                if (destination.exists()) continue
+                destination.parentFile?.mkdirs()
+                source.copyTo(destination)
+                copied = true
+            }
+            if (!copied) return
+        }
+    }
+
+    /**
+     * The input methods a package without its own configuration offers: every root schema no other
+     * schema of the package lists in its `dependencies` (those are reverse lookups, built along with
+     * the schema that needs them). The one [packageName] names comes first, as the primary.
+     */
+    private fun offeredSchemas(
+        target: File,
+        packageName: String?,
+    ): List<String> {
+        val roots =
+            target
+                .listFiles()
+                .orEmpty()
+                .filter { it.isFile && it.name.endsWith(SCHEMA_SUFFIX) }
+                .map { it.name.removeSuffix(SCHEMA_SUFFIX) }
+                .filter { SCHEMA_ID.matches(it) }
+                .sorted()
+        val dependencies = HashSet<String>()
+        for (id in roots) {
+            val text = decodeUtf8(File(target, id + SCHEMA_SUFFIX).readBytes()) ?: continue
+            val schema = runCatching { BoundedYaml.load(text).asStringMap() }.getOrNull() ?: continue
+            val listed = schema["schema"].asStringMap()?.get("dependencies") as? List<*> ?: continue
+            listed.mapNotNull { it as? String }.filter { it != id }.forEach { dependencies += it }
+        }
+        // Schemas that only depend on each other (luna_pinyin and stroke) still leave something to type with.
+        val offered = roots.filter { it !in dependencies }.ifEmpty { roots }
+        val words =
+            packageName
+                ?.lowercase()
+                ?.split('-', '_', ' ', '.')
+                ?.filter { it.length >= 3 && it != "rime" }
+                .orEmpty()
+        val named = offered.filter { id -> words.any { id.lowercase().startsWith(it) } }
+        return named + (offered - named.toSet())
+    }
+
+    /**
+     * A package's name from its file or repository name: `rime-wubi-master.zip` is `rime-wubi`.
+     * Null when nothing usable is left.
+     */
+    internal fun cleanPackageName(raw: String?): String? {
+        var name = raw?.trim()?.substringAfterLast('/') ?: return null
+        if (name.endsWith(".zip", ignoreCase = true)) name = name.dropLast(".zip".length)
+        name = name.replace(BRANCH_SUFFIX, "").trim()
+        if (name.isEmpty() || name.any { Character.isISOControl(it) }) return null
+        if (name.codePointCount(0, name.length) > MAX_DISPLAY_NAME_CODE_POINTS) return null
+        return name
+    }
+
+    /**
      * Writes the input methods a catalogue entry offers into its configuration, when the package
      * ships none: the app's prelude supplement would otherwise list every root schema the merged
      * archives contain, offering reverse-lookup tables and dependency schemas as input methods.
@@ -522,7 +713,7 @@ object SchemePackageImportBuilder {
         val replaced = SCHEMA_LIST_BLOCK.replace(text) { block }
         val written =
             when {
-                replaced != text -> replaced
+                SCHEMA_LIST_BLOCK.containsMatchIn(text) -> replaced
                 text.isBlank() -> "config_version: \"1\"\n" + block
                 else -> fail(SchemePackageImportError.Reason.INVALID_SCHEMA, "$DEFAULT_CONFIG has no schema_list")
             }
@@ -675,12 +866,13 @@ object SchemePackageImportBuilder {
                 }
                 ImportedScheme(id, displayName(schemaField(schema, "name"), id))
             }
-        val missing =
+        val closure =
             try {
-                dependencies.missing()
+                dependencies.closure()
             } catch (error: SchemeSourceDependencies.Invalid) {
                 fail(invalidReason(error), error.message ?: error.path)
             }
+        val missing = closure.missing
         if (missing.isNotEmpty()) {
             throw SchemePackageImportError(
                 SchemePackageImportError.Reason.MISSING_DEPENDENCY,
@@ -696,6 +888,7 @@ object SchemePackageImportBuilder {
             packageId = SOURCE_PREFIX + extracted.identity,
             revision = sha256Hex(records.toByteArray(StandardCharsets.UTF_8)).take(REVISION_HEX),
             skippedFiles = extracted.skipped,
+            missingFeatures = MissingFeature.of(closure),
         )
     }
 

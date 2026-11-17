@@ -172,4 +172,49 @@ class DeployRequestTest {
         store.write("r1", RequestStatus(RequestState.SUCCEEDED))
         assertNull(store.read("r1")!!.downloadedBytes)
     }
+
+    @Test
+    fun aPickedPackageCarriesItsFileName() {
+        val request = DeployRequest("r1", DeployMode.IMPORT_SCHEME, packageName = "rime-wubi-bundle.zip")
+        val extras =
+            mapOf(
+                DeployContract.EXTRA_PACKAGE_NAME to "rime-wubi-bundle.zip",
+            )
+        assertEquals(
+            request,
+            DeployRequest.from("r1", DeployMode.IMPORT_SCHEME.wireName, false) { extras[it] },
+        )
+        assertNull(
+            "a name with control characters is dropped",
+            DeployRequest
+                .from("r1", DeployMode.IMPORT_SCHEME.wireName, false) {
+                    if (it ==
+                        DeployContract.EXTRA_PACKAGE_NAME
+                    ) {
+                        "a\u0000b"
+                    } else {
+                        null
+                    }
+                }?.packageName,
+        )
+    }
+
+    @Test
+    fun whatAnInstalledPackageLacksSurvivesTheStatusFile() {
+        val status =
+            RequestStatus(
+                RequestState.SUCCEEDED,
+                missingFeatures =
+                    listOf(
+                        app.songyan.ime.packages.MissingFeature(
+                            app.songyan.ime.packages.MissingFeature.Kind.REVERSE_LOOKUP,
+                            listOf("pinyin_simp"),
+                        ),
+                    ),
+            )
+        assertEquals(
+            status.missingFeatures,
+            DeployRequestStore.parse(DeployRequestStore.toJson(status))?.missingFeatures,
+        )
+    }
 }

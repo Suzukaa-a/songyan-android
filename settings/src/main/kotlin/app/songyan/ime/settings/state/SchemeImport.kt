@@ -12,6 +12,8 @@ data class ImportedSchemeInfo(
     val learningDictionaries: Int = 0,
     /** Grammar model files (`*.gram`) the package's configuration names but does not ship; empty when none. */
     val requiredModels: List<String> = emptyList(),
+    /** What the package's input methods go without and what would add it, already localized; null when nothing. */
+    val missingFeatures: String? = null,
 )
 
 /** How merging a package's learned words ended; [message] is already localized by the app module. */

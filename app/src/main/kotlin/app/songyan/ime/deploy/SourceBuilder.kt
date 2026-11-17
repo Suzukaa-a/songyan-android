@@ -2,6 +2,7 @@ package app.songyan.ime.deploy
 
 import app.songyan.ime.packages.DictionaryImportBuilder
 import app.songyan.ime.packages.DictionarySourceFile
+import app.songyan.ime.packages.MissingFeature
 import app.songyan.ime.packages.SchemePackageImportBuilder
 import app.songyan.ime.rime.AssetTree
 import app.songyan.ime.rime.BuiltinSourceInstaller
@@ -17,6 +18,8 @@ import java.io.File
 class BuiltSource(
     val directory: File,
     val manifest: SourceManifest,
+    /** What an imported scheme package's input methods go without. */
+    val missingFeatures: List<MissingFeature> = emptyList(),
 )
 
 /**
@@ -90,7 +93,8 @@ class SourceBuilder(
      * [archives] are the ZIPs of one package, the entry first. [sourceId] installs the package under
      * an existing id instead of its content hash: an update of that package, whose learning data is
      * keyed by the id. [origin] is the link it came from; [advertisedSchemas] narrows the input
-     * methods it offers to the ones a catalogue entry names.
+     * methods it offers to the ones a catalogue entry names. [packageName] is the picked file's or
+     * the repository's name; [provide] finds a file the package lacks in another installed package.
      */
     fun buildScheme(
         archives: List<File>,
@@ -99,6 +103,8 @@ class SourceBuilder(
         sourceId: String? = null,
         origin: String? = null,
         advertisedSchemas: List<String> = emptyList(),
+        packageName: String? = null,
+        provide: (String) -> File? = { null },
     ): BuiltSource {
         val prepared =
             SchemePackageImportBuilder.prepareArchives(
@@ -107,6 +113,8 @@ class SourceBuilder(
                 supplement = installer::supplementFrontendFiles,
                 advertisedSchemas = advertisedSchemas,
                 cancelled = cancelled,
+                packageName = packageName,
+                provide = provide,
             )
         return BuiltSource(
             directory = target,
@@ -119,6 +127,7 @@ class SourceBuilder(
                     revision = prepared.revision,
                     origin = origin,
                 ),
+            missingFeatures = prepared.missingFeatures,
         )
     }
 

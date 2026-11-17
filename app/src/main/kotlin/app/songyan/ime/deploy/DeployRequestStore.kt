@@ -1,5 +1,6 @@
 package app.songyan.ime.deploy
 
+import app.songyan.ime.packages.MissingFeature
 import app.songyan.ime.storage.AppStorage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -41,6 +42,8 @@ data class RequestStatus(
     val downloadedBytes: Long? = null,
     val totalBytes: Long? = null,
     val detail: String? = null,
+    /** What a scheme package that installed goes without; see [MissingFeature]. */
+    val missingFeatures: List<MissingFeature> = emptyList(),
 )
 
 /** Hears how much of a download has arrived; [update] runs on the downloading thread for every chunk. */
@@ -130,6 +133,19 @@ class DeployRequestStore(
                 status.sourceId?.let { put("sourceId", it) }
                 status.downloadedBytes?.let { put("downloaded", it) }
                 status.totalBytes?.let { put("total", it) }
+                if (status.missingFeatures.isNotEmpty()) {
+                    put(
+                        "missingFeatures",
+                        JsonArray(
+                            status.missingFeatures.map { feature ->
+                                buildJsonObject {
+                                    put("kind", feature.kind.name)
+                                    put("names", JsonArray(feature.names.map { JsonPrimitive(it) }))
+                                }
+                            },
+                        ),
+                    )
+                }
                 put("updatedAt", status.updatedAtEpochMs)
             }.toString()
 
@@ -149,6 +165,17 @@ class DeployRequestStore(
                 updatedAtEpochMs = (root["updatedAt"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 downloadedBytes = (root["downloaded"] as? JsonPrimitive)?.longOrNull,
                 totalBytes = (root["total"] as? JsonPrimitive)?.longOrNull,
+                missingFeatures =
+                    (root["missingFeatures"] as? JsonArray).orEmpty().mapNotNull { item ->
+                        val feature = item as? JsonObject ?: return@mapNotNull null
+                        val kind =
+                            (feature["kind"] as? JsonPrimitive)?.contentOrNull?.let { name ->
+                                MissingFeature.Kind.entries.firstOrNull { it.name == name }
+                            } ?: return@mapNotNull null
+                        val names =
+                            (feature["names"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                        names?.takeIf { it.isNotEmpty() }?.let { MissingFeature(kind, it) }
+                    },
             )
         }
     }

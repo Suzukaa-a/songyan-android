@@ -154,10 +154,20 @@ class InactiveNamespaceDependencyTest {
 
     @Test
     fun aComponentAliasMakesItsNamespaceDictionaryRequired() {
-        val subject = files(schema(translators = defaultTranslators + "reverse_lookup_translator@moran"))
+        val subject = files(schema(translators = defaultTranslators + "table_translator@moran"))
         val closure = dependencyClosure(subject)
         assertEquals(listOf(moranDictionary), closure.missing)
         assertEquals(listOf(mungyeongDictionary), closure.optional)
+    }
+
+    /** librime builds a reverse lookup only when its dictionary is there; the input method works either way. */
+    @Test
+    fun aReverseLookupAliasLeavesItsDictionaryOptional() {
+        val subject = files(schema(translators = defaultTranslators + "reverse_lookup_translator@moran"))
+        val closure = dependencyClosure(subject)
+        assertEquals(emptyList<String>(), closure.missing)
+        assertEquals(listOf(moranDictionary, mungyeongDictionary), closure.optional)
+        assertEquals(listOf(moranDictionary), closure.lookups)
     }
 
     // Unknown capability stays exactly as strict as before
@@ -185,11 +195,11 @@ class InactiveNamespaceDependencyTest {
     // Native default namespaces keep their dictionaries
 
     /**
-     * A bare reverse_lookup_translator reads reverse_lookup/ (librime remaps the component kind),
-     * so that root section stays a hard dependency.
+     * A bare reverse_lookup_translator reads reverse_lookup/ (librime remaps the component kind). As
+     * on a desktop, a missing lookup dictionary costs only the lookup (rime-wubi's pinyin_simp).
      */
     @Test
-    fun theDefaultReverseLookupSectionStaysRequiredForABareReverseLookupTranslator() {
+    fun theDefaultReverseLookupSectionIsOptionalForABareReverseLookupTranslator() {
         val subject =
             files(
                 schema(
@@ -198,8 +208,9 @@ class InactiveNamespaceDependencyTest {
                 ),
             )
         val closure = dependencyClosure(subject)
-        assertEquals(listOf("luna_lookup.dict.yaml"), closure.missing)
-        assertEquals(listOf(moranDictionary, mungyeongDictionary), closure.optional)
+        assertEquals(emptyList<String>(), closure.missing)
+        assertEquals(listOf("luna_lookup.dict.yaml", moranDictionary, mungyeongDictionary), closure.optional)
+        assertEquals(listOf("luna_lookup.dict.yaml"), closure.lookups)
     }
 
     // Only dictionary edges change; references stay hard

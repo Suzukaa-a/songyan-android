@@ -32,6 +32,9 @@ object DeployContract {
     /** Picked ZIPs already staged in the request's incoming directory, one name per line, entry first. */
     const val EXTRA_PACKAGE_FILES = "packageFiles"
 
+    /** The display name of a picked scheme package file. */
+    const val EXTRA_PACKAGE_NAME = "packageName"
+
     /** The input methods a recommended entry offers, one schema id per line. */
     const val EXTRA_SCHEMA_IDS = "schemaIds"
 
@@ -68,6 +71,7 @@ object DeployContract {
                 if (request.packageFiles.isNotEmpty()) {
                     putExtra(EXTRA_PACKAGE_FILES, request.packageFiles.joinToString("\n"))
                 }
+                request.packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
                 if (request.advertisedSchemas.isNotEmpty()) {
                     putExtra(EXTRA_SCHEMA_IDS, request.advertisedSchemas.joinToString("\n"))
                 }

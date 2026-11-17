@@ -2,6 +2,7 @@ package app.songyan.ime.packages
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -140,9 +141,10 @@ class SchemePackageMergeTest {
         )
 
         val plain = prepare(listOf(mainArchive(), dependency))
-        assertFalse(
-            "a dependency's default.yaml is never staged: " + stagedPaths(plain.root),
-            File(plain.root, "default.yaml").exists(),
+        assertNotEquals(
+            "a dependency's default.yaml is never staged",
+            defaultConfig("terra_pinyin"),
+            File(plain.root, "default.yaml").readText(),
         )
         assertEquals(listOf("bopomofo_tw", "terra_pinyin"), plain.schemaIds)
     }

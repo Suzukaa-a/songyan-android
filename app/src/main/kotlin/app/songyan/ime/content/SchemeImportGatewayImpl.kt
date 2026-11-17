@@ -56,10 +56,10 @@ internal class SchemeImportGatewayImpl(
     override val available: Boolean = true
 
     override suspend fun importFromUri(uri: Uri): SchemeImportResult =
-        stagedImport { target -> copyPackage(uri, target) }
+        stagedImport({ documentName(uri) }) { target -> copyPackage(uri, target) }
 
     override suspend fun importFromTree(uri: Uri): SchemeImportResult =
-        stagedImport { target -> zipFolder(uri, target) }
+        stagedImport({ DocumentFile.fromTreeUri(appContext, uri)?.name }) { target -> zipFolder(uri, target) }
 
     /** The download runs in :deploy; this process only hands the link over. */
     override suspend fun importFromLink(
@@ -123,11 +123,18 @@ internal class SchemeImportGatewayImpl(
             finish(client.await(request, progress))
         }
 
-    /** Copies the package into the request's incoming directory with [copy], then deploys it. */
-    private suspend fun stagedImport(copy: (File) -> Unit): SchemeImportResult =
+    /**
+     * Copies the package into the request's incoming directory with [copy], then deploys it. [name]
+     * reads the picked file's name, which names a package without a configuration of its own.
+     */
+    private suspend fun stagedImport(
+        name: () -> String?,
+        copy: (File) -> Unit,
+    ): SchemeImportResult =
         client.detached {
             val requestId = DeployContract.newRequestId()
             val incoming = storage.incomingDir(requestId)
+            val packageName = runCatching(name).getOrNull()
             try {
                 copy(File(incoming, DeployPipeline.PACKAGE_FILE))
             } catch (e: CancellationException) {
@@ -142,7 +149,7 @@ internal class SchemeImportGatewayImpl(
                 return@detached failure(SchemeImportProblemKind.READ_FAILED)
             }
             // From here on the incoming directory belongs to the deploy process.
-            finish(client.await(DeployRequest(requestId, DeployMode.IMPORT_SCHEME)))
+            finish(client.await(DeployRequest(requestId, DeployMode.IMPORT_SCHEME, packageName = packageName)))
         }
 
     private suspend fun finish(outcome: DeployWait): SchemeImportResult =
@@ -188,6 +195,7 @@ internal class SchemeImportGatewayImpl(
                                     it.sourceId,
                                     waiting.toSet().size,
                                     missingModels,
+                                    MissingFeatureMessages.format(appContext, status.missingFeatures),
                                 )
                             }
                         SchemeImportResult.Success(info, updated = status.problem == DeployPipeline.REPLACED)
@@ -250,6 +258,12 @@ internal class SchemeImportGatewayImpl(
             }
         }
     }
+
+    /** The name the document provider shows for [uri], or null. */
+    private fun documentName(uri: Uri): String? =
+        appContext.contentResolver
+            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
 
     /** The size the provider reports, or -1 when it does not know; only a fast-path rejection. */
     private fun reportedSize(uri: Uri): Long =

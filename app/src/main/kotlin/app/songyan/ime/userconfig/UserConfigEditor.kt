@@ -57,7 +57,7 @@ class UserConfigEditor(
         name: String,
         text: String,
     ): UserConfigException? {
-        val bytes = text.toByteArray(Charsets.UTF_8)
+        val bytes = normalized(text).toByteArray(Charsets.UTF_8)
         UserConfigFiles.check(name, bytes)?.let { return it }
         val dir = storage.userConfigDir(sourceId).also { it.mkdirs() }
         val target = File(dir, name)
@@ -68,6 +68,15 @@ class UserConfigEditor(
         }
         write(target, bytes)
         return null
+    }
+
+    /**
+     * Rime patches must use LF line endings and end with a newline, which a phone editor does not
+     * guarantee: the saved file always does, so applying it never fails over invisible characters.
+     */
+    internal fun normalized(text: String): String {
+        val lf = text.replace("\r\n", "\n").replace('\r', '\n')
+        return if (lf.isEmpty() || lf.endsWith("\n")) lf else lf + "\n"
     }
 
     private fun create(

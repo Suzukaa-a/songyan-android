@@ -43,6 +43,17 @@ class UserConfigEditorTest {
     }
 
     @Test
+    fun aSavedFileAlwaysUsesLfAndEndsWithANewline() {
+        val file = File(storage.userConfigDir("scheme-1"), "x.custom.yaml")
+        assertNull(editor.save("x.custom.yaml", "patch:\n  menu/page_size: 5"))
+        assertEquals("patch:\n  menu/page_size: 5\n", file.readText())
+        assertNull(editor.save("x.custom.yaml", "patch:\r\n  menu/page_size: 6\r\n"))
+        assertEquals("patch:\n  menu/page_size: 6\n", file.readText())
+        assertNull(editor.save("x.custom.yaml", "patch:\r  menu/page_size: 7"))
+        assertEquals("patch:\n  menu/page_size: 7\n", file.readText())
+    }
+
+    @Test
     fun generatedSettingsStayOutsideTheUsersEdits() {
         val block = "__patch:\n# Rx: songyan:typo {\n  - patch:\n      typo: true\n# }\n"
         File(source, "x.custom.yaml").writeText(block)

@@ -139,6 +139,8 @@
     <string name="scripts_error_unsupported_api">This script needs a newer version of Songyan.</string>
     <string name="scripts_error_capability">Not available on this device.</string>
     <string name="scripts_error_unavailable">Scripts can\'t run right now. Try again.</string>
-    <string name="scripts_error_generic">The script failed: %1$s</string>
+    <string name="scripts_error_download">The link couldn\'t be downloaded. Check the link and your connection, then try again.</string>
+    <string name="scripts_error_script">The script reported an error: %1$s</string>
+    <string name="scripts_error_generic">That didn\'t work. Try again.</string>
     <string name="scripts_error_at_line">%1$s (line %2$d)</string>
 </resources>

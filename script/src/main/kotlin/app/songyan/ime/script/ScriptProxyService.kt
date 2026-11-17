@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -105,7 +106,7 @@ class ScriptProxyService : Service() {
                     // never travel through the calling process.
                     val bytes =
                         if (source.isEmpty() && origin is ScriptSourceOrigin.Link) {
-                            ScriptFetcher.download(origin.url)
+                            download(origin.url) ?: return@reply downloadFailed()
                         } else {
                             source
                         }
@@ -113,8 +114,10 @@ class ScriptProxyService : Service() {
                         return@reply ScriptProxyProto.entry(store.entry(existing, hostCapabilities)!!)
                     }
                     val header =
-                        HeaderParser.parse(this@ScriptProxyService, bytes) as? ScriptHeader.Parsed
-                            ?: return@reply ScriptProxyProto.error("the header is refused")
+                        when (val parsed = HeaderParser.parse(this@ScriptProxyService, bytes)) {
+                            is ScriptHeader.Parsed -> parsed
+                            is ScriptHeader.Refused -> return@reply ScriptProxyProto.refused(parsed)
+                        }
                     ScriptProxyProto.entry(store.add(bytes, header, origin, hostCapabilities))
                 }
             }
@@ -189,10 +192,12 @@ class ScriptProxyService : Service() {
                     val origin =
                         store.originOf(id) as? ScriptSourceOrigin.Link
                             ?: return@reply ScriptProxyProto.error("the script did not come from a link")
-                    val fresh = ScriptFetcher.download(origin.updateUrl)
+                    val fresh = download(origin.updateUrl) ?: return@reply downloadFailed()
                     val header =
-                        HeaderParser.parse(this@ScriptProxyService, fresh) as? ScriptHeader.Parsed
-                            ?: return@reply ScriptProxyProto.error("the updated header is refused")
+                        when (val parsed = HeaderParser.parse(this@ScriptProxyService, fresh)) {
+                            is ScriptHeader.Parsed -> parsed
+                            is ScriptHeader.Refused -> return@reply ScriptProxyProto.refused(parsed)
+                        }
                     store.replaceSource(id, fresh, header)
                     ScriptProxyProto.entry(store.entry(id, hostCapabilities)!!)
                 }
@@ -205,8 +210,10 @@ class ScriptProxyService : Service() {
             ) {
                 reply(reply) {
                     val header =
-                        HeaderParser.parse(this@ScriptProxyService, source) as? ScriptHeader.Parsed
-                            ?: return@reply ScriptProxyProto.error("the header is refused")
+                        when (val parsed = HeaderParser.parse(this@ScriptProxyService, source)) {
+                            is ScriptHeader.Parsed -> parsed
+                            is ScriptHeader.Refused -> return@reply ScriptProxyProto.refused(parsed)
+                        }
                     // An edited script no longer matches its link, so a later update must not undo the edit.
                     store.replaceSource(id, source, header, ScriptSourceOrigin.Edited)
                     ScriptProxyProto.entry(store.entry(id, hostCapabilities)!!)
@@ -264,8 +271,10 @@ class ScriptProxyService : Service() {
         val entry = store.entry(id) ?: return ScriptProxyProto.unavailable("no script " + id)
         val source = store.source(id) ?: return ScriptProxyProto.unavailable("no source for " + id)
         val header =
-            HeaderParser.parse(this, source) as? ScriptHeader.Parsed
-                ?: return ScriptProxyProto.error("the stored header is refused")
+            when (val parsed = HeaderParser.parse(this, source)) {
+                is ScriptHeader.Parsed -> parsed
+                is ScriptHeader.Refused -> return ScriptProxyProto.refused(parsed)
+            }
         // Only the keys the form actually sent travel: an omitted key keeps what is stored, and
         // a blank secret is not mistaken for an explicit clear.
         val values = mutableMapOf<String, String>()
@@ -287,12 +296,29 @@ class ScriptProxyService : Service() {
                 try {
                     body()
                 } catch (error: Throwable) {
+                    Log.w(TAG, "script proxy call failed", error)
                     ScriptProxyProto.error(error.message ?: error.javaClass.simpleName)
                 }
             // A run changes nothing the catalog shows; only store work refreshes the snapshot.
             if (on === executor) runCatching { refreshSnapshot() }
             callback.onResult(true, payload)
         }
+    }
+
+    /** The link's bytes, or null with the reason in logcat when the download failed. */
+    private fun download(url: String): ByteArray? =
+        try {
+            ScriptFetcher.download(url)
+        } catch (error: Exception) {
+            Log.w(TAG, "script download failed", error)
+            null
+        }
+
+    private fun downloadFailed(): String =
+        ScriptProxyProto.refused("downloadFailed", "the link could not be downloaded")
+
+    private companion object {
+        const val TAG = "SongyanScript"
     }
 
     override fun onDestroy() {

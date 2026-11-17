@@ -104,7 +104,7 @@ fun ScriptDetailScreen(
     // notice it belongs to is the current one.
     val actionFailureText =
         (state.notice as? ScriptsNotice.ActionFailed)?.let {
-            scriptFailureText(it.failure.code, it.failure.message)
+            scriptFailureText(it.failure.code, null, it.failure.line)
         }
     LaunchedEffect(state.notice) {
         val text =

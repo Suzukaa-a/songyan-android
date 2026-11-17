@@ -137,6 +137,8 @@
     <string name="scripts_error_unsupported_api">這個指令碼需要更新版本的松煙輸入法。</string>
     <string name="scripts_error_capability">這臺裝置上不可用。</string>
     <string name="scripts_error_unavailable">指令碼暫時無法執行，請重試。</string>
-    <string name="scripts_error_generic">指令碼失敗：%1$s</string>
+    <string name="scripts_error_download">連結沒有下載成功。請檢查連結和網路，再試一次。</string>
+    <string name="scripts_error_script">指令碼報錯：%1$s</string>
+    <string name="scripts_error_generic">這一步沒有完成。請再試一次。</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

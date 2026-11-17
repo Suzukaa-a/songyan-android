@@ -105,6 +105,16 @@ sealed interface ScriptHeader {
     ) : ScriptHeader
 }
 
+/** A store operation the script host refused. [code] is the shared contract's machine name
+ *  (`badHeader`, `unsupportedApiVersion`, ...) or a host one (`downloadFailed`, `unavailable`,
+ *  `failed`); [line] is the source line a header refusal names, or 0. The message is an English
+ *  diagnostic for logcat: screens word the [code] themselves. */
+class ScriptRefusedException(
+    val code: String,
+    val line: Int,
+    message: String,
+) : IllegalStateException(message)
+
 /** How a run ended, for the preview and the sandbox page. */
 sealed interface ScriptRunOutcome {
     data class Success(

@@ -7,6 +7,8 @@ android {
     namespace = "app.songyan.ime.settings"
     buildFeatures { compose = true }
     defaultConfig { testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner" }
+    // View models log the diagnostics they keep from the user; android.util.Log is a stub on the JVM.
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 dependencies {

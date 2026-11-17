@@ -5,16 +5,20 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.script.ScriptEntry
+import app.songyan.ime.script.ScriptRefusedException
 import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.script.ScriptRegistryHolder
 import app.songyan.ime.script.ScriptRegistryUnavailable
 import app.songyan.ime.script.ScriptRunOutcome
 import app.songyan.ime.script.ScriptSourceOrigin
+import app.songyan.ime.settings.R
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,12 +48,73 @@ data class ScriptsUiState(
     val notice: ScriptsNotice? = null,
 )
 
-/** A refusal the importer surfaces: the machine [code], its line and the engine's own message. */
+/**
+ * What a failed store call means for the user. A refusal the host classified keeps its code and
+ * line; anything else (a dead proxy, an unreadable file, a protocol error) is "failed" with no
+ * message, because exception text is an English diagnostic and goes to logcat instead.
+ */
+internal fun scriptFailureOf(e: Exception): ScriptFailure =
+    when (e) {
+        is ScriptRegistryUnavailable -> ScriptFailure("unavailable", 0)
+        is ScriptRefusedException -> {
+            Log.w("SongyanScript", "script action refused: " + e.code, e)
+            ScriptFailure(e.code, e.line)
+        }
+        else -> {
+            Log.w("SongyanScript", "script action failed", e)
+            ScriptFailure("failed", 0)
+        }
+    }
+
+/** A refusal the importer surfaces: the machine [code] and the source line it names, or 0. */
 data class ScriptFailure(
     val code: String,
     val line: Int,
-    val message: String?,
 )
+
+/** How a failure is worded: the fixed sentence [text], filled with [scriptWords] when the words
+ *  are the script's own, and the source [line] to append, or 0. */
+internal data class ScriptFailureCopy(
+    @param:StringRes val text: Int,
+    val scriptWords: String? = null,
+    val line: Int = 0,
+)
+
+/**
+ * Known codes have their own sentence. The only free text that reaches the user is what a script
+ * itself threw (code "script"); every other message is an English diagnostic from the engine or the
+ * host and stays in logcat, so an unknown code gets the generic sentence without it.
+ */
+internal fun scriptFailureCopy(
+    code: String,
+    message: String?,
+    line: Int,
+): ScriptFailureCopy {
+    val text =
+        when (code) {
+            "timeout" -> R.string.scripts_error_timeout
+            "outOfMemory" -> R.string.scripts_error_out_of_memory
+            "addressNotAllowed" -> R.string.scripts_error_address_not_allowed
+            "networkFailure" -> R.string.scripts_error_network_failure
+            "badHeader" -> R.string.scripts_error_bad_header
+            "unsupportedApiVersion" -> R.string.scripts_error_unsupported_api
+            "capabilityUnavailable" -> R.string.scripts_error_capability
+            "unavailable" -> R.string.scripts_error_unavailable
+            "downloadFailed" -> R.string.scripts_error_download
+            "script" -> null
+            else -> R.string.scripts_error_generic
+        }
+    if (text != null) {
+        // Only a header refusal names a line the user can look for; a run's line is the script's.
+        return ScriptFailureCopy(text, line = if (code == "badHeader") line else 0)
+    }
+    val words = message?.trim()?.takeIf { it.isNotEmpty() }
+    return if (words != null) {
+        ScriptFailureCopy(R.string.scripts_error_script, words, line)
+    } else {
+        ScriptFailureCopy(R.string.scripts_error_generic)
+    }
+}
 
 /** One-off messages of the list actions. */
 sealed interface ScriptsNotice {
@@ -460,7 +525,7 @@ class ScriptsViewModel(
                 try {
                     registry.runTrial(entryId, current.input)
                 } catch (e: Exception) {
-                    ScriptRunOutcome.Failed(failureOf(e).code, e.message ?: "", 0)
+                    ScriptRunOutcome.Failed(failureOf(e).code, "", 0)
                 }
             mutableTest.update { state ->
                 state?.takeIf { it.entryId == entryId }?.copy(running = false, outcome = outcome)
@@ -476,11 +541,7 @@ class ScriptsViewModel(
         }
     }
 
-    private fun failureOf(e: Exception): ScriptFailure =
-        when (e) {
-            is ScriptRegistryUnavailable -> ScriptFailure("unavailable", 0, null)
-            else -> ScriptFailure("script", 0, e.message)
-        }
+    private fun failureOf(e: Exception): ScriptFailure = scriptFailureOf(e)
 
     private suspend fun readAiGuide(context: Context): String? =
         withContext(ioDispatcher) {

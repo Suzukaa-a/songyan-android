@@ -137,6 +137,8 @@
     <string name="scripts_error_unsupported_api">このスクリプトには新しいバージョンの松煙が必要です。</string>
     <string name="scripts_error_capability">この端末では使えません。</string>
     <string name="scripts_error_unavailable">スクリプトを今は実行できません。もう一度お試しください。</string>
-    <string name="scripts_error_generic">スクリプトが失敗しました：%1$s</string>
+    <string name="scripts_error_download">リンクからダウンロードできませんでした。リンクと接続を確認して、もう一度お試しください。</string>
+    <string name="scripts_error_script">スクリプトがエラーを返しました：%1$s</string>
+    <string name="scripts_error_generic">完了できませんでした。もう一度お試しください。</string>
     <string name="scripts_error_at_line">%1$s（%2$d 行目）</string>
 </resources>

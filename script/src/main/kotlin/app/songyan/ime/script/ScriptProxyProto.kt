@@ -34,6 +34,20 @@ internal object ScriptProxyProto {
             put("message", what)
         }.toString()
 
+    /** A refusal with a machine [code] the client turns into [ScriptRefusedException]. */
+    fun refused(
+        code: String,
+        message: String,
+        line: Int = 0,
+    ): String =
+        buildJsonObject {
+            put("error", code)
+            put("message", message)
+            put("line", line)
+        }.toString()
+
+    fun refused(header: ScriptHeader.Refused): String = refused(header.code, header.message, header.line)
+
     fun negotiation(
         serverVersion: Int,
         commonVersion: Int,
@@ -89,7 +103,12 @@ internal object ScriptProxyProto {
 
     fun parseEntry(payload: String): ScriptEntry {
         val node = json.parseToJsonElement(payload).jsonObject
-        val entry = requireNotNull(node["entry"]?.jsonObject) { "the proxy returned no entry: " + payload }
+        val entry =
+            node["entry"]?.jsonObject ?: throw ScriptRefusedException(
+                code = node["error"]?.jsonPrimitive?.contentOrNull ?: "failed",
+                line = node["line"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 0,
+                message = node["message"]?.jsonPrimitive?.contentOrNull ?: ("no entry in " + payload),
+            )
         return entry.toEntry()
     }
 

@@ -63,6 +63,7 @@ import app.songyan.ime.settings.ui.components.ImeDialog
 import app.songyan.ime.settings.ui.components.LoadingScreen
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
+import app.songyan.ime.settings.ui.scriptFailureCopy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -111,7 +112,7 @@ fun ScriptsScreen(
     // notice it belongs to is the current one.
     val actionFailureText =
         (state.notice as? ScriptsNotice.ActionFailed)?.let {
-            scriptFailureText(it.failure.code, it.failure.message)
+            scriptFailureText(it.failure.code, null, it.failure.line)
         }
     LaunchedEffect(state.guideCopied, state.guideFailed) {
         when {
@@ -303,7 +304,7 @@ fun ScriptsScreen(
             AlertDialog(
                 onDismissRequest = viewModel::consumeImportFailure,
                 title = { Text(stringResource(R.string.scripts_import_failed_title)) },
-                text = { ScriptFailureText(failure.code, failure.message, failure.line) },
+                text = { ScriptFailureText(failure.code, null, failure.line) },
                 confirmButton = {
                     TextButton(onClick = viewModel::consumeImportFailure) { Text(stringResource(R.string.scripts_ok)) }
                 },
@@ -564,43 +565,40 @@ private fun MinimalExamplePreview(
     }
 }
 
-/** The user copy of an engine refusal: known codes carry their own wording, anything else falls
- *  back to the engine's message. The line the parser names is appended when there is one. */
+/** The user copy of a script failure; see [scriptFailureCopy] for which words can appear. */
 @Composable
 internal fun scriptFailureText(
     code: String,
     message: String?,
     line: Int = 0,
 ): String {
-    val named =
-        when (code) {
-            "timeout" -> stringResource(R.string.scripts_error_timeout)
-            "outOfMemory" -> stringResource(R.string.scripts_error_out_of_memory)
-            "addressNotAllowed" -> stringResource(R.string.scripts_error_address_not_allowed)
-            "networkFailure" -> stringResource(R.string.scripts_error_network_failure)
-            "badHeader" -> stringResource(R.string.scripts_error_bad_header)
-            "unsupportedApiVersion" -> stringResource(R.string.scripts_error_unsupported_api)
-            "capabilityUnavailable" -> stringResource(R.string.scripts_error_capability)
-            "unavailable" -> stringResource(R.string.scripts_error_unavailable)
-            else -> null
+    val copy = scriptFailureCopy(code, message, line)
+    val sentence =
+        if (copy.scriptWords != null) {
+            stringResource(copy.text, copy.scriptWords)
+        } else {
+            stringResource(copy.text)
         }
-    return when {
-        named != null && line > 0 -> stringResource(R.string.scripts_error_at_line, named, line)
-        named != null -> named
-        else -> stringResource(R.string.scripts_error_generic, message ?: code)
-    }
+    return if (copy.line > 0) stringResource(R.string.scripts_error_at_line, sentence, copy.line) else sentence
 }
 
-/** Monospace failure text for a dialog body, with the line when the parser names one. */
+/** A failure for a dialog body or the trial box. Only a script's own words are set in monospace:
+ *  they are often code-like, while the fixed sentences are ordinary prose. */
 @Composable
 internal fun ScriptFailureText(
     code: String,
     message: String?,
     line: Int,
 ) {
+    val words = scriptFailureCopy(code, message, line).scriptWords != null
     Text(
         text = scriptFailureText(code, message, line),
-        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        style =
+            if (words) {
+                MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+            } else {
+                MaterialTheme.typography.bodyMedium
+            },
         color = MaterialTheme.colorScheme.error,
     )
 }

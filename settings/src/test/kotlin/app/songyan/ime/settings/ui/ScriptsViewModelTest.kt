@@ -2,6 +2,7 @@ package app.songyan.ime.settings.ui
 
 import app.songyan.ime.script.ScriptEntry
 import app.songyan.ime.script.ScriptHeader
+import app.songyan.ime.script.ScriptRefusedException
 import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.script.ScriptRegistryUnavailable
 import app.songyan.ime.script.ScriptRunOutcome
@@ -154,7 +155,7 @@ class ScriptsViewModelTest {
         }
 
     @Test
-    fun aFileThatCannotBeReadFailsWithItsMessage() =
+    fun aFileThatCannotBeReadFailsWithoutTheExceptionText() =
         runTest(dispatcher) {
             val viewModel = viewModel()
             advanceUntilIdle()
@@ -163,7 +164,7 @@ class ScriptsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(emptyList<ByteArray>(), registry.adds.map { it.first })
-            assertEquals(ScriptFailure("script", 0, "gone"), viewModel.uiState.value.importFailure)
+            assertEquals(ScriptFailure("failed", 0), viewModel.uiState.value.importFailure)
             assertEquals(false, viewModel.uiState.value.busy)
         }
 
@@ -209,12 +210,12 @@ class ScriptsViewModelTest {
         runTest(dispatcher) {
             val viewModel = viewModel()
             advanceUntilIdle()
-            registry.failure = IllegalStateException("HTTP 404")
+            registry.failure = ScriptRefusedException("downloadFailed", 0, "HTTP 404")
 
             viewModel.addFromLink("https://example.com/missing.js")
             advanceUntilIdle()
 
-            assertEquals(ScriptFailure("script", 0, "HTTP 404"), viewModel.uiState.value.importFailure)
+            assertEquals(ScriptFailure("downloadFailed", 0), viewModel.uiState.value.importFailure)
             assertNull(viewModel.uiState.value.pendingConfirmation)
             assertEquals(false, viewModel.uiState.value.busy)
         }
@@ -309,7 +310,7 @@ class ScriptsViewModelTest {
             viewModel.applyEdit("old-1", "not a script")
             advanceUntilIdle()
 
-            assertEquals(ScriptFailure("script", 0, "the header is refused"), viewModel.uiState.value.importFailure)
+            assertEquals(ScriptFailure("failed", 0), viewModel.uiState.value.importFailure)
             assertEquals(emptyList<String>(), registry.deletes)
             assertEquals(
                 listOf("old-1"),
@@ -355,7 +356,7 @@ class ScriptsViewModelTest {
             viewModel.confirm("script-1", emptyMap())
             advanceUntilIdle()
 
-            assertEquals(ScriptFailure("script", 0, "the proxy did not answer"), viewModel.uiState.value.importFailure)
+            assertEquals(ScriptFailure("failed", 0), viewModel.uiState.value.importFailure)
             assertEquals(
                 "script-1",
                 viewModel.uiState.value.pendingConfirmation
@@ -430,7 +431,7 @@ class ScriptsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(
-                ScriptsNotice.ActionFailed(ScriptFailure("script", 0, "the new header is refused")),
+                ScriptsNotice.ActionFailed(ScriptFailure("failed", 0)),
                 viewModel.uiState.value.notice,
             )
             assertEquals(false, viewModel.uiState.value.busy)
@@ -447,7 +448,7 @@ class ScriptsViewModelTest {
 
             viewModel.addFromPaste("// @api 1")
             advanceUntilIdle()
-            assertEquals(ScriptFailure("unavailable", 0, null), viewModel.uiState.value.importFailure)
+            assertEquals(ScriptFailure("unavailable", 0), viewModel.uiState.value.importFailure)
             viewModel.consumeImportFailure()
             assertNull(viewModel.uiState.value.importFailure)
 
@@ -457,7 +458,7 @@ class ScriptsViewModelTest {
             viewModel.checkUpdate("script-1")
             advanceUntilIdle()
             assertEquals(
-                ScriptsNotice.ActionFailed(ScriptFailure("unavailable", 0, null)),
+                ScriptsNotice.ActionFailed(ScriptFailure("unavailable", 0)),
                 viewModel.uiState.value.notice,
             )
         }
@@ -519,7 +520,7 @@ class ScriptsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(
-                ScriptsNotice.ActionFailed(ScriptFailure("script", 0, "the store is read-only")),
+                ScriptsNotice.ActionFailed(ScriptFailure("failed", 0)),
                 viewModel.uiState.value.notice,
             )
             viewModel.consumeNotice()
@@ -603,7 +604,35 @@ class ScriptsViewModelTest {
         }
 
     @Test
-    fun aFailedTrialRunKeepsTheEngineMessage() =
+    fun aHeaderRefusalKeepsItsCodeAndLine() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            registry.failure = ScriptRefusedException("badHeader", 3, "unknown declaration @foo")
+
+            viewModel.importSource(ScriptSourceOrigin.Pasted) { "// @foo".toByteArray() }
+            advanceUntilIdle()
+
+            assertEquals(ScriptFailure("badHeader", 3), viewModel.uiState.value.importFailure)
+        }
+
+    /** The bundled example once failed with the proxy's protocol text in the dialog. */
+    @Test
+    fun aProtocolErrorNeverReachesTheDialog() =
+        runTest(dispatcher) {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+            registry.failure =
+                ScriptRefusedException("failed", 0, "Cannot read Json element because of unexpected end of the input")
+
+            viewModel.importSource(ScriptSourceOrigin.Pasted) { "// @name x".toByteArray() }
+            advanceUntilIdle()
+
+            assertEquals(ScriptFailure("failed", 0), viewModel.uiState.value.importFailure)
+        }
+
+    @Test
+    fun aFailedTrialRunHidesTheExceptionText() =
         runTest(dispatcher) {
             registry.store(entry("script-1"))
             val viewModel = viewModel()
@@ -613,7 +642,7 @@ class ScriptsViewModelTest {
             viewModel.runTest("script-1")
             advanceUntilIdle()
 
-            assertEquals(ScriptRunOutcome.Failed("script", "the engine is gone", 0), viewModel.test.value?.outcome)
+            assertEquals(ScriptRunOutcome.Failed("failed", "", 0), viewModel.test.value?.outcome)
             assertEquals(false, viewModel.test.value?.running)
         }
 

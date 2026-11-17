@@ -137,6 +137,8 @@
     <string name="scripts_error_unsupported_api">这个脚本需要更新版本的松烟输入法。</string>
     <string name="scripts_error_capability">这台设备上不可用。</string>
     <string name="scripts_error_unavailable">脚本暂时无法运行，请重试。</string>
-    <string name="scripts_error_generic">脚本失败：%1$s</string>
+    <string name="scripts_error_download">链接没有下载成功。请检查链接和网络，再试一次。</string>
+    <string name="scripts_error_script">脚本报错：%1$s</string>
+    <string name="scripts_error_generic">这一步没有完成。请再试一次。</string>
     <string name="scripts_error_at_line">%1$s（第 %2$d 行）</string>
 </resources>

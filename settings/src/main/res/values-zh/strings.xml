@@ -382,6 +382,7 @@
     <string name="extensions_rescan">重新扫描</string>
     <string name="extensions_scan_failed">无法读取已安装的扩展。</string>
     <string name="extensions_incompatible">不兼容</string>
+    <string name="extensions_incompatible_hint">这个扩展无法在当前版本的松烟里使用。请更新扩展或松烟。</string>
     <string name="extensions_unknown">尚未检查</string>
     <string name="extensions_version">版本 %1$s</string>
     <string name="extensions_signer">签名指纹 %1$s</string>
@@ -390,7 +391,7 @@
     <string name="extensions_panel">提供自带面板</string>
     <string name="extensions_voice">提供语音输入</string>
     <string name="extensions_last_call">最近使用：%1$s · %2$s 秒</string>
-    <string name="extensions_last_call_error">最近使用：%1$s · %2$s 秒 · %3$s</string>
+    <string name="extensions_last_call_error">最近使用：%1$s · %2$s 秒 · 未完成</string>
     <string name="extensions_call_kind_text">文字工具</string>
     <string name="extensions_call_kind_voice">语音输入</string>
     <string name="extensions_call_kind_panel">自带面板</string>

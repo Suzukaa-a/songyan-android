@@ -22,4 +22,7 @@ object ExtensionsUiModel {
         tools: List<AddonToolInfo>,
         releaseHost: Boolean,
     ): List<AddonToolInfo> = if (releaseHost) tools.filterNot { isDebugOnlyTool(it.title) } else tools
+
+    /** Whether a reported reason or error exists; its text is a diagnostic and is never shown. */
+    fun hasProblem(detail: String?): Boolean = !detail.isNullOrBlank()
 }

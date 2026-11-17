@@ -257,9 +257,9 @@ private fun ExtensionCard(
                 Spacer(modifier = Modifier.height(10.dp))
                 CompatibilityBadge(addon)
             }
-            addon.incompatibleReason?.takeIf { it.isNotBlank() }?.let { reason ->
+            if (ExtensionsUiModel.hasProblem(addon.incompatibleReason)) {
                 Text(
-                    text = reason,
+                    text = stringResource(R.string.extensions_incompatible_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 4.dp),
@@ -480,10 +480,11 @@ private fun lastCallText(call: AddonCallInfo): String {
         )
     val locale = LocalConfiguration.current.locales[0]
     val seconds = String.format(locale, "%.1f", call.durationMs / 1000.0)
-    return if (call.error.isNullOrBlank()) {
+    return if (!ExtensionsUiModel.hasProblem(call.error)) {
         stringResource(R.string.extensions_last_call, kind, seconds)
     } else {
-        stringResource(R.string.extensions_last_call_error, kind, seconds, call.error)
+        // The error text is an English diagnostic or the extension's own words; it stays in the call log.
+        stringResource(R.string.extensions_last_call_error, kind, seconds)
     }
 }
 

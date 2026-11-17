@@ -39,4 +39,11 @@ class ExtensionsUiModelTest {
         assertTrue(ExtensionsUiModel.isDebugOnlyTool("Crash the addon (DEBUG ONLY)"))
         assertFalse(ExtensionsUiModel.isDebugOnlyTool("Uppercase"))
     }
+
+    @Test
+    fun aBlankDiagnosticIsNoProblemAndAnyTextIsOne() {
+        assertFalse(ExtensionsUiModel.hasProblem(null))
+        assertFalse(ExtensionsUiModel.hasProblem("  "))
+        assertTrue(ExtensionsUiModel.hasProblem("the extension process went away"))
+    }
 }

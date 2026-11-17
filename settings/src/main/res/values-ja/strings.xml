@@ -381,6 +381,7 @@
     <string name="extensions_rescan">再スキャン</string>
     <string name="extensions_scan_failed">インストール済みの拡張機能を読み取れませんでした。</string>
     <string name="extensions_incompatible">非互換</string>
+    <string name="extensions_incompatible_hint">この拡張機能は現在のバージョンの松煙では使えません。拡張機能か松煙を更新してください。</string>
     <string name="extensions_unknown">未確認</string>
     <string name="extensions_version">バージョン %1$s</string>
     <string name="extensions_signer">署名フィンガープリント %1$s</string>
@@ -389,7 +390,7 @@
     <string name="extensions_panel">独自パネルを提供</string>
     <string name="extensions_voice">音声入力を提供</string>
     <string name="extensions_last_call">最終使用：%1$s · %2$s 秒</string>
-    <string name="extensions_last_call_error">最終使用：%1$s · %2$s 秒 · %3$s</string>
+    <string name="extensions_last_call_error">最終使用：%1$s · %2$s 秒 · 完了しませんでした</string>
     <string name="extensions_call_kind_text">テキストツール</string>
     <string name="extensions_call_kind_voice">音声入力</string>
     <string name="extensions_call_kind_panel">独自パネル</string>

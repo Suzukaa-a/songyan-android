@@ -1,6 +1,9 @@
 package app.songyan.ime.deploy
 
 import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.storage.EngineFeatureStore
 import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.PublicationRecord
@@ -101,6 +104,17 @@ class CompanionOrderTest {
         )
     }
 
+    /** The folded keyboards the user ticked: every fold of each of [ids], as the mirrored list would say. */
+    private fun ask(vararg ids: String) {
+        val keyboards =
+            ids.flatMap { id ->
+                KeyboardLayoutKind.entries.filter { it.compactFold != null }.map { PublishedKeyboard(id, it, it.wire) }
+            }
+        storage.keyboardCompanionsFile.writeText(
+            CompanionRequests(UserKeyboards.Stored(keyboards, ids.toSet())).encode(),
+        )
+    }
+
     private fun layoutSources(record: PublicationRecord): Set<String> {
         val build = File(storage.generationDir(record.generation), "build")
         return EncodingAdapterRegistry.read(build, record.schemaIds.toSet()).map { it.sourceSchemaID }.toSet()
@@ -109,6 +123,7 @@ class CompanionOrderTest {
     @Test
     fun theInputMethodInUseGetsItsLayoutsFirstAndTheRestFollow() =
         runTest {
+            ask("alpha", "beta", "gamma")
             storage.keyboardSchemaFile.writeText("beta")
 
             val first = coordinator.installSource(staged("alpha", "beta", "gamma")).getOrThrow()
@@ -134,6 +149,7 @@ class CompanionOrderTest {
     @Test
     fun completingTheLayoutsContinuesWhereTheFirstPartStopped() =
         runTest {
+            ask("alpha", "beta", "gamma")
             storage.keyboardSchemaFile.writeText("beta")
             val first = coordinator.installSource(staged("alpha", "beta", "gamma")).getOrThrow()
             val workDir = storage.deployWorkDir(first.sourceId)
@@ -156,6 +172,7 @@ class CompanionOrderTest {
     @Test
     fun aCancelledCompletionStopsAtOnceAndTheNextOneStillResumes() =
         runTest {
+            ask("alpha", "beta", "gamma")
             storage.keyboardSchemaFile.writeText("beta")
             val first = coordinator.installSource(staged("alpha", "beta", "gamma")).getOrThrow()
             val workDir = storage.deployWorkDir(first.sourceId)
@@ -179,6 +196,7 @@ class CompanionOrderTest {
     @Test
     fun changedFeatureSettingsCompleteTheLayoutsFromScratch() =
         runTest {
+            ask("alpha", "beta", "gamma")
             storage.keyboardSchemaFile.writeText("beta")
             coordinator.installSource(staged("alpha", "beta", "gamma")).getOrThrow()
             val features = EngineFeatureStore(storage)
@@ -193,6 +211,7 @@ class CompanionOrderTest {
     @Test
     fun withoutAKnownInputMethodThePackagesFirstGoesFirst() =
         runTest {
+            ask("alpha", "beta")
             storage.keyboardSchemaFile.writeText("songyan_quanpin")
 
             val first = coordinator.installSource(staged("alpha", "beta")).getOrThrow()
@@ -203,10 +222,35 @@ class CompanionOrderTest {
     @Test
     fun aPackageWithOneInputMethodIsCompleteAtOnce() =
         runTest {
+            ask("alpha")
             val record = coordinator.installSource(staged("alpha")).getOrThrow()
 
             assertFalse(record.companionsPending)
             assertEquals(setOf("alpha"), layoutSources(record))
+        }
+
+    @Test
+    fun aFreshPackageBuildsNoFoldsUntilTheUserPicksSome() =
+        runTest {
+            val first = coordinator.installSource(staged("alpha", "beta")).getOrThrow()
+
+            assertFalse(first.companionsPending)
+            assertTrue(layoutSources(first).isEmpty())
+            assertEquals(0, runner.compiled.count { it.startsWith("keyboard_") })
+            assertFalse(coordinator.companionsPending())
+
+            // The user ticks the 14-key keyboard of beta: the next completion builds just that one.
+            val ask = PublishedKeyboard("beta", KeyboardLayoutKind.MERGED14, "merged14")
+            storage.keyboardCompanionsFile.writeText(
+                CompanionRequests(UserKeyboards.Stored(listOf(ask), setOf("alpha", "beta"))).encode(),
+            )
+            assertTrue(coordinator.companionsPending())
+
+            val complete = coordinator.completeCompanions().getOrThrow()!!
+
+            assertEquals(setOf("beta"), layoutSources(complete))
+            assertEquals(1, runner.compiled.count { it.startsWith("keyboard_") })
+            assertFalse(coordinator.companionsPending())
         }
 
     @Test

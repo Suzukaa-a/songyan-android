@@ -59,6 +59,12 @@ class AppStorage(
     val keyboardSchemaFile: File = File(rimeRoot, "keyboard-schema")
 
     /**
+     * The keyboard list and the two hidden sets, mirrored from the preferences for the deploy process
+     * (`CompanionRequests`): a folded keyboard is built only when the list asks for it.
+     */
+    val keyboardCompanionsFile: File = File(rimeRoot, "keyboard-companions")
+
+    /**
      * The input methods the user took out of the keyboard menu, one id per line, mirrored from the
      * preferences for the deploy process: it keeps a ready generation only for packages that still
      * offer an input method there.

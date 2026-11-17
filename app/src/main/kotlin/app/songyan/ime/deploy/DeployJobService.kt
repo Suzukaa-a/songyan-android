@@ -9,7 +9,6 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import app.songyan.ime.SongyanApplication
-import app.songyan.ime.storage.GenerationPublisher
 import app.songyan.ime.storage.InputSchemeSetup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +73,7 @@ class DeployJobService : JobService() {
                     ready = DeploymentStarter.isReady(app),
                     needsDownload = InputSchemeSetup.needsDownload(app.storage),
                     followUpPending =
-                        runCatching { GenerationPublisher(app.storage).usablePublication()?.companionsPending == true }
+                        runCatching { CompanionWork.pending(app.storage) }
                             .getOrDefault(false),
                 )
             if (work == null) {

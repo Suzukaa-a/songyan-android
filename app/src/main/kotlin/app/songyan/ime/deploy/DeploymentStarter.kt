@@ -144,7 +144,7 @@ object DeploymentStarter {
 
     private fun companionsPending(context: Context): Boolean {
         val app = context as? SongyanApplication ?: return false
-        return runCatching { GenerationPublisher(app.storage).usablePublication()?.companionsPending == true }
+        return runCatching { CompanionWork.pending(app.storage) }
             .getOrDefault(false)
     }
 }

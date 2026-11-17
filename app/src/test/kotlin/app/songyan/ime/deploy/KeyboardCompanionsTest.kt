@@ -106,6 +106,76 @@ class KeyboardCompanionsTest {
         }
 
     @Test
+    fun onlyTheRequestedFoldsAreBuilt() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp()
+
+            KeyboardCompanions(
+                sourceDir,
+                workDir,
+                listOf(source),
+                requested = mapOf(source to setOf(KeyboardLayoutKind.MERGED18)),
+            ).generate(engine)
+
+            assertEquals(
+                listOf(KeyboardLayoutKind.MERGED18),
+                EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)).map { it.layout },
+            )
+            assertEquals(1, engine.deployed.size)
+            assertTrue(CompanionStatus.readUnavailable(engine.compiledDir).isEmpty())
+        }
+
+    @Test
+    fun aRefusedPairIsRecordedAndNotAskedForAgain() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp()
+            engine.projectionBytes = null
+            val asked = mapOf(source to setOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.PHONE9))
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
+
+            val unavailable = CompanionStatus.readUnavailable(engine.compiledDir)
+            assertEquals(asked, unavailable)
+            val adapters = EncodingAdapterRegistry.read(engine.compiledDir, setOf(source))
+            assertTrue(CompanionStatus.missing(asked, adapters, unavailable).isEmpty())
+        }
+
+    @Test
+    fun aRequestedFoldOfANonSyllabicSchemeIsRefused() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp(compiled = schemaText.replace("- speller", "- lua_processor"))
+            val asked = mapOf(source to setOf(KeyboardLayoutKind.PHONE9))
+
+            KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
+
+            assertEquals(asked, CompanionStatus.readUnavailable(engine.compiledDir))
+            assertTrue(engine.deployed.isEmpty())
+        }
+
+    @Test
+    fun aSourceKeptFromTheFirstPhaseKeepsItsCompanionsAndRefusals() =
+        runBlocking {
+            val (sourceDir, workDir, engine) = setUp()
+            val asked = mapOf(source to setOf(KeyboardLayoutKind.MERGED14))
+            KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
+            val before = engine.deployed.size
+
+            KeyboardCompanions(
+                sourceDir,
+                workDir,
+                listOf(source),
+                reuse = setOf(source),
+                requested = asked,
+            ).generate(engine)
+
+            assertEquals(before, engine.deployed.size)
+            assertEquals(
+                listOf(KeyboardLayoutKind.MERGED14),
+                EncodingAdapterRegistry.read(engine.compiledDir, setOf(source)).map { it.layout },
+            )
+        }
+
+    @Test
     fun aRomanizationSchemeFoldsLikePinyin() =
         runBlocking {
             val schemaId = "jyut6ping3"

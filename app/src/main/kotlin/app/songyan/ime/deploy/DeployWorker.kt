@@ -159,7 +159,7 @@ class DeployWorker private constructor(
      */
     private fun queueCompanionsIfPending(finished: DeployRequest) {
         if (finished.mode == DeployMode.COMPLETE_COMPANIONS) return
-        val pending = runCatching { GenerationPublisher(app.storage).usablePublication()?.companionsPending == true }
+        val pending = runCatching { CompanionWork.pending(app.storage) }
         if (pending.getOrDefault(false)) {
             synchronized(lock) {
                 queue.offer(DeployRequest(DeployContract.newRequestId(), DeployMode.COMPLETE_COMPANIONS))

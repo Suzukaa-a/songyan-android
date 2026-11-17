@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.util.Log
 import app.songyan.ime.ServiceLocale
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.EngineFeatureSettings
 import app.songyan.ime.packages.SchemaKeyProfiles
@@ -127,7 +128,7 @@ class DeploymentCoordinator(
     suspend fun redeployActive(): Result<PublicationRecord> = locked { redeployActiveLocked() }
 
     /** Whether the active generation still lacks the layouts of input methods other than the one in use. */
-    fun companionsPending(): Boolean = publisher.usablePublication()?.companionsPending == true
+    fun companionsPending(): Boolean = CompanionWork.pending(storage, publisher.usablePublication(), catalog)
 
     /**
      * Rebuilds the active scheme package with the layouts of every input method, after a deployment
@@ -136,9 +137,14 @@ class DeploymentCoordinator(
     suspend fun completeCompanions(): Result<PublicationRecord?> =
         locked {
             val active = publisher.usablePublication()
-            if (active == null || !active.companionsPending) return@locked active
+            if (active == null) return@locked active
             val manifest = catalog.read(active.sourceId)
             if (manifest?.kind != SourceKind.SCHEME) return@locked active
+            if (!active.companionsPending &&
+                !CompanionWork.requestedMissing(storage, active, manifest)
+            ) {
+                return@locked active
+            }
             deployTree(storage.sourceDir(active.sourceId), manifest, allCompanions = true, resume = active)
         }
 
@@ -506,6 +512,8 @@ class DeploymentCoordinator(
         val previous = supersedeSource(target, manifest.sourceId)
         try {
             moveDirectory(staged.directory, target)
+            // A package seen for the first time has no keyboards yet: the folds are built for the ones the user picks.
+            if (previous == null) CompanionRequests.cover(storage.keyboardCompanionsFile, manifest.schemaIds)
             val record = deployTree(target, manifest)
             previous?.deleteRecursively()
             return record
@@ -604,13 +612,20 @@ class DeploymentCoordinator(
                     .filterValues { it.isFile }
             val revision = effectiveRevision(manifest, features.settings, config)
             requireIdentifier("revision", revision, REVISION_PATTERN)
-            val companionSchemas =
-                if (allCompanions || manifest.kind != SourceKind.SCHEME) {
-                    manifest.schemaIds
+            // A scheme package gets the folded keyboards the user asked for, not every layout of every input method.
+            val requested =
+                if (manifest.kind == SourceKind.SCHEME) {
+                    CompanionRequests.read(storage.keyboardCompanionsFile).requested(manifest.schemaIds)
                 } else {
-                    listOf(schemaInUse(manifest))
+                    null
                 }
-            val companionsPending = companionSchemas.toSet() != manifest.schemaIds.toSet()
+            val companionSchemas =
+                when {
+                    requested == null -> manifest.schemaIds
+                    allCompanions -> requested.keys.toList()
+                    else -> listOf(schemaInUse(manifest)).filter { it in requested }
+                }
+            val companionsPending = requested != null && requested.keys.any { it !in companionSchemas }
             val engineStart = SystemClock.elapsedRealtime()
             var afterDeployStart = 0L
             // Native maintenance and engine teardown must finish before rollback can remove their files.
@@ -626,7 +641,7 @@ class DeploymentCoordinator(
                             timer.add("engine", afterDeployStart - engineStart)
                             afterDeploy(
                                 engine,
-                                DeployScope(sourceDir, workDir, manifest, features, companionSchemas, timer),
+                                DeployScope(sourceDir, workDir, manifest, features, companionSchemas, timer, requested),
                                 reuseCompanions = if (resumed) done.orEmpty() else null,
                             )
                         },
@@ -751,6 +766,8 @@ class DeploymentCoordinator(
         val features: LinkedFeatures,
         val companionSchemas: List<String>,
         val timer: DeployTimer,
+        /** The folded shapes asked for per input method; null for a source that ships its own. */
+        val requested: Map<String, Set<KeyboardLayoutKind>>?,
     )
 
     /** The feature settings of one deployment and the feature files linked into its work directory. */
@@ -849,6 +866,7 @@ class DeploymentCoordinator(
                 packageSchemaIds = manifest.schemaIds,
                 timer = scope.timer,
                 reuse = reuseCompanions.orEmpty().toSet(),
+                requested = scope.requested,
             ).generate(engine)
             return
         }

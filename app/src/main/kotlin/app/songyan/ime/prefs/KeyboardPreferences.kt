@@ -17,6 +17,8 @@ import app.songyan.ime.appearance.font.FontOrderWire
 import app.songyan.ime.appearance.font.FontRole
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.NineKeyCandidateSide
+import app.songyan.ime.deploy.CompanionRequests
+import app.songyan.ime.deploy.DeploymentStarter
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
@@ -30,6 +32,7 @@ import app.songyan.ime.storage.AppStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -216,6 +219,7 @@ class KeyboardPreferences(
     suspend fun setMenuHiddenSchemas(ids: Set<String>) {
         appContext.keyboardDataStore.edit { it[KEY_MENU_HIDDEN_SCHEMAS] = ids }
         withContext(Dispatchers.IO) { mirrorMenuHiddenSchemas(ids) }
+        mirrorCompanionRequests()
     }
 
     /** The deploy process cannot read the preferences; see [AppStorage.menuHiddenSchemasFile]. Off the main thread. */
@@ -233,6 +237,37 @@ class KeyboardPreferences(
 
     suspend fun setMenuHiddenLayouts(ids: Set<String>) {
         appContext.keyboardDataStore.edit { it[KEY_MENU_HIDDEN_LAYOUTS] = ids }
+        mirrorCompanionRequests()
+    }
+
+    /**
+     * The deploy process builds a folded keyboard only when the list asks for it, and cannot read the
+     * preferences; see [AppStorage.keyboardCompanionsFile]. A change that asks for more starts the
+     * deployment that builds it.
+     */
+    private suspend fun mirrorCompanionRequests() {
+        val data = appContext.keyboardDataStore.data.first()
+        val requests =
+            CompanionRequests(
+                UserKeyboards.Stored(
+                    UserKeyboards.decode(data[KEY_MY_KEYBOARDS]),
+                    data[KEY_MY_KEYBOARD_SCHEMES].orEmpty(),
+                ),
+                data[KEY_MENU_HIDDEN_SCHEMAS].orEmpty(),
+                data[KEY_MENU_HIDDEN_LAYOUTS].orEmpty(),
+            )
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val file = AppStorage(appContext.filesDir).keyboardCompanionsFile
+                val text = requests.encode()
+                if (file.isFile && file.readText() == text) return@withContext
+                file.parentFile?.mkdirs()
+                val temp = File(file.parentFile, file.name + ".tmp")
+                temp.writeText(text)
+                if (!temp.renameTo(file)) temp.delete()
+            }.onFailure { Log.w(TAG, "cannot mirror the keyboard list", it) }
+        }
+        DeploymentStarter.completeCompanionsIfPending(appContext)
     }
 
     /** The shuangpin hint settings document (the iOS hints.json format); null until the user changes them. */
@@ -629,6 +664,7 @@ class KeyboardPreferences(
             it[KEY_MY_KEYBOARDS] = UserKeyboards.encode(value.keyboards)
             it[KEY_MY_KEYBOARD_SCHEMES] = value.schemes
         }
+        mirrorCompanionRequests()
     }
 
     suspend fun setActiveSchemaId(value: String) {

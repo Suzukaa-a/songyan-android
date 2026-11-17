@@ -265,6 +265,7 @@
 | `core/layout/src/main/resources/layouts/retired/builtin-layouts.json` | 内置布局的历史版本（同步自 iOS，由 iOS 的 `Tools/Layouts/gen_retired_layouts.py` 从 git 历史生成）；解码已存的布局目录时，等于某个历史版本的内置布局换成当前版本 |
 | `core/rime/src/androidTest/assets/engine-fixtures/traditional/playback_cases.json`、`japanese/playback_cases.json` | 从 iOS 同步的真实引擎回放：繁体方案与日语的候选顺序、预编辑、原生命名按键、开关与上屏期望 |
 | `core/appearance/src/test/resources/ios-interop/`、`core/layout/src/test/resources/ios-interop/` | iOS 自己的编码器写出的外观、皮肤、候选栏、布局（注音 41 键、仓颉 26 键、罗马字 26 键、自定义 26 键、带自己拆分排列的 26 键与自定义九键）与目录样本（生成物，不是同步文件；`scripts/ios-interop.sh <ios 仓库> export <目录>` 重新生成，Swift 驱动在 `scripts/ios-interop/`） |
+| `scripts/check-layout-interop.sh` | 布局文件语义互通检查：用两端各自的解码器解码每个布局（两端内置布局、iOS 样本、额外文件），逐行逐键比对 `rows / action / width / 拆分 / 侧栏 / 顶层字段`，并跑 Android→iOS→Android 与 iOS→Android→iOS 两条往返；差异写入报告，退出码 1。Android 端是 `core/layout` 的 `LayoutInteropCheckTest`（仅在设置 `SONGYAN_LAYOUT_INTEROP_DIR` 时运行），iOS 端是 `scripts/ios-interop` 的 `dump` 模式，比对在 `scripts/check-layout-interop.py`。用法见脚本开头 |
 | `core/content/src/main/resources/default-symbols.json` | 默认符号库（同步自 iOS） |
 | `ime/src/main/assets/emoji/` | 表情目录 `emoji-data.tsv`（Unicode emoji-test 与 CLDR 中英注释，由 [generate-emoji-data.py](../scripts/generate-emoji-data.py) 生成，输入与用法见脚本头）、`NOTICE.md` 与 Unicode-3.0 许可文本；许可屏经 `LicenseCatalog` 读取 |
 | `filesDir/content/`、`filesDir/content/symbols/`、`filesDir/content/emoji/` | 常用语、剪贴板历史、符号库与最近使用的表情数据（`core:content` 的 store 读写；运行时目录） |

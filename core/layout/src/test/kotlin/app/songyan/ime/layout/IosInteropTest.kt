@@ -184,51 +184,6 @@ class IosInteropTest {
         return BuiltinLayouts.qwerty26.copyWithId("android-split-keys", "拆分键").withSplit(split.copy(halves = halves))
     }
 
-    /** A catalog the way the Android editors leave it: a user layout with a manual split, authored pages and a pairing. */
-    private fun androidAuthoredCatalog(): LayoutRegistry {
-        val mine =
-            BuiltinLayouts.qwerty26
-                .copyWithId("android-mine", "我的 26 键")
-                .withSplit(
-                    LayoutSplitConfiguration.of(
-                        LayoutSplitConfiguration.Activation.ALWAYS,
-                        rowBreaks = listOf(5, 5, 4, 3),
-                        gapFraction = 0.2,
-                    ),
-                )
-        val numeric = KeyboardPagePresets.numericAutomatic.duplicated("android-digits", "我的数字页")
-        val symbols = KeyboardPagePresets.symbolRowsPage(true).duplicated("android-symbols", "我的符号页")
-        val english =
-            KeyboardPagePresets.englishQwerty
-                .duplicated("android-abc", "我的 ABC")
-                .withSplit(LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF))
-        // A nine-key copy the way the editor leaves it: its rails declared as data, the control row as it was.
-        val nine =
-            PhoneKeypadRailPolicy.withDeclaredRails(
-                BuiltinLayouts.phone9.copyWithId("android-nine", "我的九键").copy(
-                    t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS,
-                    t9QuickSymbols = "，。？",
-                ),
-            )
-        return LayoutRegistry
-            .create()
-            .install(mine.encoded())
-            .install(nine.encoded())
-            .withPage(numeric)
-            .withPage(symbols)
-            .withPage(english)
-            .withPage(KeyboardPagePresets.symbolsCategorized.duplicated("android-categories", "我的分类符号"))
-            .withComposition(
-                KeyboardComposition(
-                    mainLayoutID = "android-mine",
-                    symbolPageID = "android-symbols",
-                    numericPageID = "android-digits",
-                    englishPageID = "android-abc",
-                ),
-                "songyan_quanpin:qwerty26",
-            )
-    }
-
     @Test
     fun anAndroidAuthoredCatalogSurvivesAStoreRoundTrip() {
         val registry = androidAuthoredCatalog()
@@ -254,4 +209,49 @@ class IosInteropTest {
             LayoutStore.CATALOG_FILE_NAME,
         ).copyTo(File(out, "catalog-android-authored.json"), overwrite = true)
     }
+}
+
+/** A catalog the way the Android editors leave it: a user layout with a manual split, authored pages and a pairing. */
+internal fun androidAuthoredCatalog(): LayoutRegistry {
+    val mine =
+        BuiltinLayouts.qwerty26
+            .copyWithId("android-mine", "我的 26 键")
+            .withSplit(
+                LayoutSplitConfiguration.of(
+                    LayoutSplitConfiguration.Activation.ALWAYS,
+                    rowBreaks = listOf(5, 5, 4, 3),
+                    gapFraction = 0.2,
+                ),
+            )
+    val numeric = KeyboardPagePresets.numericAutomatic.duplicated("android-digits", "我的数字页")
+    val symbols = KeyboardPagePresets.symbolRowsPage(true).duplicated("android-symbols", "我的符号页")
+    val english =
+        KeyboardPagePresets.englishQwerty
+            .duplicated("android-abc", "我的 ABC")
+            .withSplit(LayoutSplitConfiguration(activation = LayoutSplitConfiguration.Activation.OFF))
+    // A nine-key copy the way the editor leaves it: its rails declared as data, the control row as it was.
+    val nine =
+        PhoneKeypadRailPolicy.withDeclaredRails(
+            BuiltinLayouts.phone9.copyWithId("android-nine", "我的九键").copy(
+                t9FirstKeyBehavior = T9FirstKeyBehavior.QUICK_SYMBOLS,
+                t9QuickSymbols = "，。？",
+            ),
+        )
+    return LayoutRegistry
+        .create()
+        .install(mine.encoded())
+        .install(nine.encoded())
+        .withPage(numeric)
+        .withPage(symbols)
+        .withPage(english)
+        .withPage(KeyboardPagePresets.symbolsCategorized.duplicated("android-categories", "我的分类符号"))
+        .withComposition(
+            KeyboardComposition(
+                mainLayoutID = "android-mine",
+                symbolPageID = "android-symbols",
+                numericPageID = "android-digits",
+                englishPageID = "android-abc",
+            ),
+            "songyan_quanpin:qwerty26",
+        )
 }

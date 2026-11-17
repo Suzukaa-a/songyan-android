@@ -144,6 +144,24 @@ class ScriptIsolatedService : Service() {
                 }
             }
 
+            override fun parseHeader(
+                source: ByteArray,
+                callback: ScriptIsolatedCallback,
+            ) {
+                executor.execute {
+                    try {
+                        val report = ScriptNative.parseHeader(source)
+                        if (report == null) {
+                            callback.finished(-1, "", "the header parse ran out of memory")
+                        } else {
+                            callback.finished(0, String(report, StandardCharsets.UTF_8), "")
+                        }
+                    } catch (error: Throwable) {
+                        callback.finished(-1, "", error.toString())
+                    }
+                }
+            }
+
             override fun cancelRun() {
                 cancelRequested = true
                 waitingFetch?.cancel()

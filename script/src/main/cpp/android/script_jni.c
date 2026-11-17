@@ -501,6 +501,118 @@ Java_app_songyan_ime_script_ScriptNative_takeResultJson(JNIEnv *env, jclass type
     return report;
 }
 
+static void buffer_json_string(jstring_buffer *buffer, const char *text) {
+    buffer_push(buffer, "\"", 1);
+    if (text != NULL) buffer_json_escape(buffer, text, strlen(text));
+    buffer_push(buffer, "\"", 1);
+}
+
+static void buffer_json_strings(jstring_buffer *buffer, const char *const *items, size_t count) {
+    buffer_push(buffer, "[", 1);
+    for (size_t index = 0; index < count; index++) {
+        if (index > 0) buffer_push(buffer, ",", 1);
+        buffer_json_string(buffer, items[index]);
+    }
+    buffer_push(buffer, "]", 1);
+}
+
+/* The production header parse. It reports the same keys as the CLI's `header` command, which
+ * only Debug libraries contain, so the proxy decodes both with one reader. Returns NULL when
+ * memory runs out. */
+JNIEXPORT jbyteArray JNICALL
+Java_app_songyan_ime_script_ScriptNative_parseHeader(JNIEnv *env, jclass type, jbyteArray source) {
+    (void)type;
+    if (!guard_ok(env)) return NULL;
+    jsize length = (*env)->GetArrayLength(env, source);
+    char *bytes = malloc((size_t)length + 1);
+    if (bytes == NULL) return NULL;
+    (*env)->GetByteArrayRegion(env, source, 0, length, (jbyte *)bytes);
+    bytes[length] = '\0';
+    songyan_script_header header;
+    songyan_script_header_error error;
+    memset(&error, 0, sizeof(error));
+    songyan_script_error code = songyan_script_header_parse(bytes, (size_t)length, &header, &error);
+    free(bytes);
+    if (code == SONGYAN_SCRIPT_ERROR_OUT_OF_MEMORY) return NULL;
+    jstring_buffer buffer = {0};
+    char number[24];
+    if (code == SONGYAN_SCRIPT_OK) {
+        buffer_push(&buffer, BUFFER_LITERAL("{\"ok\":true,\"error\":\"ok\",\"line\":0,\"header\":{\"api\":"));
+        snprintf(number, sizeof(number), "%u", header.api);
+        buffer_push(&buffer, number, strlen(number));
+        buffer_push(&buffer, BUFFER_LITERAL(",\"name\":"));
+        buffer_json_string(&buffer, header.name);
+        buffer_push(&buffer, BUFFER_LITERAL(",\"description\":"));
+        if (header.description == NULL) {
+            buffer_push(&buffer, BUFFER_LITERAL("null"));
+        } else {
+            buffer_json_string(&buffer, header.description);
+        }
+        buffer_push(&buffer, BUFFER_LITERAL(",\"connects\":"));
+        buffer_json_strings(&buffer, (const char *const *)header.connects, header.connect_count);
+        buffer_push(&buffer, BUFFER_LITERAL(",\"settings\":["));
+        for (size_t index = 0; index < header.setting_count; index++) {
+            const songyan_script_setting *setting = &header.settings[index];
+            buffer_push(&buffer, index > 0 ? ",{\"key\":" : "{\"key\":", index > 0 ? 8 : 7);
+            buffer_json_string(&buffer, setting->key);
+            buffer_push(&buffer, BUFFER_LITERAL(",\"kind\":"));
+            buffer_json_string(&buffer, songyan_script_setting_kind_name(setting->kind));
+            buffer_push(&buffer, BUFFER_LITERAL(",\"label\":"));
+            buffer_json_string(&buffer, setting->label);
+            if (setting->kind == SONGYAN_SCRIPT_SETTING_CHOICE) {
+                buffer_push(&buffer, BUFFER_LITERAL(",\"options\":"));
+                buffer_json_strings(&buffer, (const char *const *)setting->options,
+                                    setting->option_count);
+            }
+            buffer_push(&buffer, "}", 1);
+        }
+        buffer_push(&buffer, BUFFER_LITERAL("],\"secrets\":["));
+        for (size_t index = 0; index < header.secret_count; index++) {
+            const songyan_script_secret *secret = &header.secrets[index];
+            buffer_push(&buffer, index > 0 ? ",{\"key\":" : "{\"key\":", index > 0 ? 8 : 7);
+            buffer_json_string(&buffer, secret->key);
+            buffer_push(&buffer, BUFFER_LITERAL(",\"label\":"));
+            buffer_json_string(&buffer, secret->label);
+            buffer_push(&buffer, "}", 1);
+        }
+        const char *needs[2];
+        size_t need_count = 0;
+        if ((header.needs & SONGYAN_SCRIPT_CAPABILITY_TEXT) != 0) {
+            needs[need_count++] = songyan_script_capability_name(SONGYAN_SCRIPT_CAPABILITY_TEXT);
+        }
+        if ((header.needs & SONGYAN_SCRIPT_CAPABILITY_AUDIO) != 0) {
+            needs[need_count++] = songyan_script_capability_name(SONGYAN_SCRIPT_CAPABILITY_AUDIO);
+        }
+        buffer_push(&buffer, BUFFER_LITERAL("],\"needs\":"));
+        buffer_json_strings(&buffer, needs, need_count);
+        if (header.timeout_seconds != 0) {
+            buffer_push(&buffer, BUFFER_LITERAL(",\"timeoutSeconds\":"));
+            snprintf(number, sizeof(number), "%u", header.timeout_seconds);
+            buffer_push(&buffer, number, strlen(number));
+        }
+        buffer_push(&buffer, BUFFER_LITERAL("}}"));
+        songyan_script_header_free(&header);
+    } else {
+        buffer_push(&buffer, BUFFER_LITERAL("{\"ok\":false,\"error\":"));
+        buffer_json_string(&buffer, songyan_script_error_name(code));
+        buffer_push(&buffer, BUFFER_LITERAL(",\"line\":"));
+        snprintf(number, sizeof(number), "%zu", error.line);
+        buffer_push(&buffer, number, strlen(number));
+        buffer_push(&buffer, BUFFER_LITERAL(",\"message\":"));
+        buffer_json_string(&buffer, error.message);
+        if (error.message_truncated) {
+            buffer_push(&buffer, BUFFER_LITERAL(",\"messageTruncated\":true"));
+        }
+        buffer_push(&buffer, "}", 1);
+    }
+    jbyteArray report = (*env)->NewByteArray(env, (jsize)buffer.length);
+    if (report != NULL) {
+        (*env)->SetByteArrayRegion(env, report, 0, (jsize)buffer.length, (const jbyte *)buffer.data);
+    }
+    free(buffer.data);
+    return report;
+}
+
 #ifdef SONGYAN_SCRIPT_CLI
 /* Declared in the synced main.c, compiled into the Debug library with
  * -Dmain=songyan_script_cli_main so the shared parsing and the canonical JSON serialization run

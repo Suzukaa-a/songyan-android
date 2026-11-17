@@ -3,6 +3,7 @@ package app.songyan.ime.script
 import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.system.Os
+import android.util.Log
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -97,8 +98,10 @@ internal class ScriptRunner(
                 0,
             )
         val header =
-            HeaderParser.parse(context, source) as? ScriptHeader.Parsed
-                ?: return ScriptRunOutcome.Failed("header", "the stored header is refused", 0)
+            when (val parsed = HeaderParser.parse(context, source)) {
+                is ScriptHeader.Parsed -> parsed
+                is ScriptHeader.Refused -> return ScriptRunOutcome.Failed(parsed.code, parsed.message, parsed.line)
+            }
         if (audio != null) {
             ScriptAudioInput.refusal(header.needsAudio, audioSize)?.let { return it }
         }
@@ -187,6 +190,9 @@ internal class ScriptRunner(
         if (run.cancelled || answer.first == 125) {
             return ScriptRunOutcome.Cancelled
         }
+        if (answer.second.isEmpty()) {
+            Log.w(TAG, "script run exited " + answer.first + " without a report: " + answer.third)
+        }
         return outcomeFromReport(answer.second)
     }
 
@@ -236,6 +242,8 @@ internal class ScriptRunner(
     companion object {
         /** Room for binding the isolated process and starting the engine beyond the run's duration. */
         private const val ISOLATED_SLACK_MS = 30_000L
+
+        private const val TAG = "SongyanScript"
 
         /** Maps the run report: ok -> outputs/logs, ok:false -> the contract error code. */
         fun outcomeFromReport(report: String): ScriptRunOutcome {

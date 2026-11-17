@@ -1,4 +1,5 @@
-// Runs shared script cases in the isolated process. The host (a normal process that can read
+// The script engine's Binder surface in the isolated process. `run` drives the shared CLI, which
+// only Debug libraries contain; it serves the device case runner. The host (a normal process that can read
 // the case assets) sends the command line plus the case files as open descriptors: the isolated
 // process cannot read the app's assets, so the bytes travel over Binder as memfds. Each
 // placeholder in the command line ("@fd0", "@fd1", ...) is replaced with the isolated process's
@@ -10,6 +11,10 @@ import app.songyan.ime.script.ScriptTransport;
 
 oneway interface ScriptIsolatedProcess {
     void run(in List<String> arguments, in List<android.os.ParcelFileDescriptor> files, ScriptIsolatedCallback callback);
+
+    // Parses a script's header with the production entry point (present in every build type) and
+    // answers exit 0 with the header report on stdout, or a non-zero exit with the reason on stderr.
+    void parseHeader(in byte[] source, ScriptIsolatedCallback callback);
 
     // The production run: fetch travels back to the caller over the [transport] binder, because an
     // isolated process may not bind services itself. The caller applies the address policy too;

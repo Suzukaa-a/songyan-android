@@ -561,8 +561,9 @@ class RimeConfigProvider : DocumentsProvider() {
         scope: String,
     ): Node {
         if (file.isDirectory) return Node(documentId, file.name, file, true)
-        val path = segments.joinToString("/")
-        if (!UserConfigFiles.isAllowedPath(path)) return Node(documentId, file.name, file, false)
+        val sourcePath = segments.joinToString("/")
+        if (!UserConfigFiles.isAllowedPath(sourcePath)) return Node(documentId, file.name, file, false)
+        val path = UserConfigFiles.editedPath(sourcePath)
         return Node(
             documentId,
             file.name,

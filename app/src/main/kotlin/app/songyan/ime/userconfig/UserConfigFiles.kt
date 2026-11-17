@@ -90,6 +90,17 @@ object UserConfigFiles {
     /** A name a new file may be made with: the Files app creates `.yaml` / `.txt` here, never a script. */
     fun isCreatableName(name: String): Boolean = isAllowedName(name) && !name.endsWith(".lua")
 
+    /**
+     * The user's file for the source file at [path]. Rime reads `<id>.custom.yaml` only at the top of
+     * the user folder; a source's copy in a subfolder (rime-wanxiang's `custom/`) is a template to copy
+     * up, so a write to it lands in the top-level file.
+     */
+    fun editedPath(path: String): String {
+        if ('/' !in path || !path.endsWith(".custom.yaml")) return path
+        val name = path.substringAfterLast('/')
+        return if (isCreatableName(name)) name else path
+    }
+
     private fun isAllowedFolder(name: String): Boolean = NAME.matches(name) && !name.contains("..") && name != BUILD_DIR
 
     /**

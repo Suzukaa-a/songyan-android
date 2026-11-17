@@ -48,6 +48,26 @@ class UserOverridesTest {
         assertEquals(copy.canonicalFile, overrides.overrideFile("lua/date.lua")?.canonicalFile)
     }
 
+    /**
+     * rime-wanxiang ships `custom/wanxiang.custom.yaml` for the user to copy up; Rime never reads it there.
+     * A write to it through the Files app used to make a copy at that path, which changed nothing.
+     */
+    @Test
+    fun aCustomTemplateInASubfolderIsEditedAsTheTopLevelFile() {
+        val template = packaged("custom/wanxiang.custom.yaml", "patch:\n  menu/page_size: 6\n")
+        val path = UserConfigFiles.editedPath("custom/wanxiang.custom.yaml")
+
+        val target = overrides.target(template, path)
+
+        assertEquals("wanxiang.custom.yaml", path)
+        assertEquals(
+            File(storage.userConfigDir("scheme-1"), "wanxiang.custom.yaml").canonicalFile,
+            target.canonicalFile,
+        )
+        assertEquals("lua/date.lua", UserConfigFiles.editedPath("lua/date.lua"))
+        assertEquals("custom/notes.yaml", UserConfigFiles.editedPath("custom/notes.yaml"))
+    }
+
     @Test
     fun anExistingCopyIsReusedNotOverwritten() {
         val original = packaged("a.schema.yaml", "x: 1\n")

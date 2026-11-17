@@ -75,10 +75,38 @@ class LayoutRegistry private constructor(
      * The saved pairing, or the default one built on [defaultMainLayoutId]. A saved pairing whose
      * main layout the scheme's family (or the shape binding) no longer allows reads as the default
      * one instead; the stored entry itself is left alone so the user's data survives.
+     *
+     * A keyboard that names its layout draws that layout. Its pages are its own once saved; until
+     * then they are the pages of its shape's pairing, which every layout of that shape shared before
+     * keyboards named theirs. A named layout that is gone, or that the family or the shape no longer
+     * allows, reads as the shape's pairing; nothing stored is rewritten.
      */
     fun composition(
         key: KeyboardCompositionKey,
         families: LayoutFamilyContext = LayoutFamilyContext.UNKNOWN,
+    ): KeyboardComposition {
+        val shape = shapeComposition(key.shapeKey, families)
+        val layoutId = key.layoutId ?: return shape
+        if (!allowsNamedLayout(key, layoutId, families)) return shape
+        val pages = compositions[key.rawValue] ?: compositions[key.shapeRawValue] ?: shape
+        return pages.copy(mainLayoutID = layoutId)
+    }
+
+    /** Whether [layoutId] can be the layout of the keyboard [key] names it for. */
+    private fun allowsNamedLayout(
+        key: KeyboardCompositionKey,
+        layoutId: String,
+        families: LayoutFamilyContext,
+    ): Boolean {
+        val family = families.familyOf(key.inputMethodId)
+        if (kindOf(key.layout)?.let { !InputLayoutPolicy.allows(it, family) } == true) return false
+        if (!InputLayoutPolicy.allows(layoutId, family)) return false
+        return resolvedLayout(layoutId)?.supportsComposition(key.inputMethodId, key.layout) == true
+    }
+
+    private fun shapeComposition(
+        key: KeyboardCompositionKey,
+        families: LayoutFamilyContext,
     ): KeyboardComposition {
         val family = families.familyOf(key.inputMethodId)
         val saved = compositions[key.rawValue]
@@ -164,15 +192,22 @@ class LayoutRegistry private constructor(
         return create(candidateLayouts, pages, compositions)
     }
 
+    /**
+     * Drops a user layout. [keyboardLayoutIds] are the layouts the user's keyboards name; that list
+     * lives with the preferences, so the caller passes it in.
+     */
     @Throws(LayoutException::class)
-    fun remove(id: String): LayoutRegistry {
+    fun remove(
+        id: String,
+        keyboardLayoutIds: Set<String> = emptySet(),
+    ): LayoutRegistry {
         if (layout(id) == null) throw LayoutException.UnknownId(id)
         // Built-ins ship with the app and are the default main layouts, so they stay: the user
         // copies one and edits the copy, the same rule the page library applies to its presets.
         if (BuiltinLayouts.all.any { it.id == id }) {
             throw LayoutException.Invalid(LayoutInvalidCode.LAYOUT_PRESET_IS_READ_ONLY, id)
         }
-        if (compositions.values.any { it.mainLayoutID == id }) {
+        if (id in keyboardLayoutIds || compositions.values.any { it.mainLayoutID == id }) {
             throw LayoutException.Invalid(LayoutInvalidCode.LAYOUT_IN_USE, id)
         }
         return create(layouts.filterNot { it.id == id }, pages, compositions)
@@ -205,15 +240,25 @@ class LayoutRegistry private constructor(
         return create(layouts, pages.filterNot { it.id == id }, compositions)
     }
 
-    /** Saves one keyboard pairing; an incompatible layout or a missing page is rejected. */
+    /**
+     * Saves one keyboard pairing; an incompatible layout or a missing page is rejected. The pairing
+     * of a keyboard that names its layout is stored with that layout as its main one.
+     */
     @Throws(LayoutException::class)
     fun withComposition(
         composition: KeyboardComposition,
         keyboardId: String,
     ): LayoutRegistry {
-        refuseFamilyIncompatiblePairing(composition, keyboardId)
-        return create(layouts, pages, compositions + (keyboardId to composition))
+        val named = KeyboardCompositionKey.parse(keyboardId)?.layoutId
+        val stored = if (named == null) composition else composition.copy(mainLayoutID = named)
+        refuseFamilyIncompatiblePairing(stored, keyboardId)
+        return create(layouts, pages, compositions + (keyboardId to stored))
     }
+
+    /** Forgets the pages a keyboard saved for itself; its shape's pairing stays. */
+    @Throws(LayoutException::class)
+    fun withoutComposition(keyboardId: String): LayoutRegistry =
+        if (keyboardId in compositions) create(layouts, pages, compositions - keyboardId) else this
 
     /** The shipped shape a stored builtin layout names, or null for an unknown wire. */
     private fun kindOf(layout: LayoutInput.Builtin): KeyboardLayoutKind? = KeyboardLayoutKind.fromWire(layout.wire)
@@ -252,12 +297,10 @@ class LayoutRegistry private constructor(
         composition: KeyboardComposition,
         keyboardId: String,
     ) {
-        val separator = keyboardId.lastIndexOf(':')
-        val inputMethodId = if (separator > 0) keyboardId.substring(0, separator) else keyboardId
-        val family = familyOf(inputMethodId)
-        val kind = if (separator > 0) LayoutInput.Builtin.fromWire(keyboardId.substring(separator + 1)) else null
+        val key = KeyboardCompositionKey.parse(keyboardId)
+        val family = familyOf(key?.inputMethodId ?: keyboardId)
         val forbidden =
-            (kind != null && kindOf(kind)?.let { !InputLayoutPolicy.allows(it, family) } == true) ||
+            (key != null && kindOf(key.layout)?.let { !InputLayoutPolicy.allows(it, family) } == true) ||
                 !InputLayoutPolicy.allows(composition.mainLayoutID, family)
         if (forbidden) {
             throw LayoutException.Invalid(LayoutInvalidCode.COMPOSITION_INPUT_METHOD_INCOMPATIBLE, keyboardId)
@@ -273,8 +316,8 @@ class LayoutRegistry private constructor(
     fun withPrunedCompositions(isObsoleteInputMethod: (String) -> Boolean): Pair<LayoutRegistry, Int> {
         val obsolete =
             compositions.keys.filter { keyboardId ->
-                val separator = keyboardId.lastIndexOf(':')
-                separator >= 0 && isObsoleteInputMethod(keyboardId.substring(0, separator))
+                val inputMethodId = KeyboardCompositionKey.parse(keyboardId)?.inputMethodId
+                inputMethodId != null && isObsoleteInputMethod(inputMethodId)
             }
         if (obsolete.isEmpty()) return this to 0
         val remaining = compositions.filterKeys { it !in obsolete }
@@ -333,12 +376,12 @@ class LayoutRegistry private constructor(
         if (keyboardId.isEmpty() || keyboardId.encodeToByteArray().size > 512) {
             throw LayoutException.Invalid(LayoutInvalidCode.COMPOSITION_KEYBOARD_ID_INVALID, keyboardId)
         }
-        val separator = keyboardId.lastIndexOf(':')
-        val kind = if (separator > 0) LayoutInput.Builtin.fromWire(keyboardId.substring(separator + 1)) else null
+        val key = KeyboardCompositionKey.parse(keyboardId)
         val main = resolvedLayout(composition.mainLayoutID)
-        if (kind == null ||
+        if (key == null ||
             main == null ||
-            !main.supportsComposition(keyboardId.substring(0, separator), kind)
+            !main.supportsComposition(key.inputMethodId, key.layout) ||
+            (key.layoutId != null && key.layoutId != composition.mainLayoutID)
         ) {
             throw LayoutException.Invalid(
                 LayoutInvalidCode.COMPOSITION_INPUT_METHOD_INCOMPATIBLE,

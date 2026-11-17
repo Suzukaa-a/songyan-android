@@ -1,0 +1,3572 @@
+{
+  "layouts": [
+    {
+      "id": "qwerty26",
+      "name": "26 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "q",
+              "secondaryLabel": "1",
+              "action": {
+                "type": "code",
+                "value": "q"
+              },
+              "longPress": [
+                {
+                  "label": "1",
+                  "action": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "w",
+              "secondaryLabel": "2",
+              "action": {
+                "type": "code",
+                "value": "w"
+              },
+              "longPress": [
+                {
+                  "label": "2",
+                  "action": {
+                    "type": "literal",
+                    "value": "2"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "e",
+              "secondaryLabel": "3",
+              "action": {
+                "type": "code",
+                "value": "e"
+              },
+              "longPress": [
+                {
+                  "label": "3",
+                  "action": {
+                    "type": "literal",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "r",
+              "secondaryLabel": "4",
+              "action": {
+                "type": "code",
+                "value": "r"
+              },
+              "longPress": [
+                {
+                  "label": "4",
+                  "action": {
+                    "type": "literal",
+                    "value": "4"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "t",
+              "secondaryLabel": "5",
+              "action": {
+                "type": "code",
+                "value": "t"
+              },
+              "longPress": [
+                {
+                  "label": "5",
+                  "action": {
+                    "type": "literal",
+                    "value": "5"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "y",
+              "secondaryLabel": "6",
+              "action": {
+                "type": "code",
+                "value": "y"
+              },
+              "longPress": [
+                {
+                  "label": "6",
+                  "action": {
+                    "type": "literal",
+                    "value": "6"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "u",
+              "secondaryLabel": "7",
+              "action": {
+                "type": "code",
+                "value": "u"
+              },
+              "longPress": [
+                {
+                  "label": "7",
+                  "action": {
+                    "type": "literal",
+                    "value": "7"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "i",
+              "secondaryLabel": "8",
+              "action": {
+                "type": "code",
+                "value": "i"
+              },
+              "longPress": [
+                {
+                  "label": "8",
+                  "action": {
+                    "type": "literal",
+                    "value": "8"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "o",
+              "secondaryLabel": "9",
+              "action": {
+                "type": "code",
+                "value": "o"
+              },
+              "longPress": [
+                {
+                  "label": "9",
+                  "action": {
+                    "type": "literal",
+                    "value": "9"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "p",
+              "secondaryLabel": "0",
+              "action": {
+                "type": "code",
+                "value": "p"
+              },
+              "longPress": [
+                {
+                  "label": "0",
+                  "action": {
+                    "type": "literal",
+                    "value": "0"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "a",
+              "action": {
+                "type": "code",
+                "value": "a"
+              },
+              "longPress": [
+                {
+                  "label": "，",
+                  "action": {
+                    "type": "literal",
+                    "value": "，"
+                  }
+                },
+                {
+                  "label": ",",
+                  "action": {
+                    "type": "literal",
+                    "value": ","
+                  }
+                }
+              ]
+            },
+            {
+              "label": "s",
+              "action": {
+                "type": "code",
+                "value": "s"
+              },
+              "longPress": [
+                {
+                  "label": "。",
+                  "action": {
+                    "type": "literal",
+                    "value": "。"
+                  }
+                },
+                {
+                  "label": ".",
+                  "action": {
+                    "type": "literal",
+                    "value": "."
+                  }
+                },
+                {
+                  "label": "…",
+                  "action": {
+                    "type": "literal",
+                    "value": "…"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "d",
+              "action": {
+                "type": "code",
+                "value": "d"
+              },
+              "longPress": [
+                {
+                  "label": "？",
+                  "action": {
+                    "type": "literal",
+                    "value": "？"
+                  }
+                },
+                {
+                  "label": "?",
+                  "action": {
+                    "type": "literal",
+                    "value": "?"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "f",
+              "action": {
+                "type": "code",
+                "value": "f"
+              },
+              "longPress": [
+                {
+                  "label": "！",
+                  "action": {
+                    "type": "literal",
+                    "value": "！"
+                  }
+                },
+                {
+                  "label": "!",
+                  "action": {
+                    "type": "literal",
+                    "value": "!"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "g",
+              "action": {
+                "type": "code",
+                "value": "g"
+              },
+              "longPress": [
+                {
+                  "label": "、",
+                  "action": {
+                    "type": "literal",
+                    "value": "、"
+                  }
+                },
+                {
+                  "label": "\\",
+                  "action": {
+                    "type": "literal",
+                    "value": "\\"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "h",
+              "action": {
+                "type": "code",
+                "value": "h"
+              },
+              "longPress": [
+                {
+                  "label": "：",
+                  "action": {
+                    "type": "literal",
+                    "value": "："
+                  }
+                },
+                {
+                  "label": ":",
+                  "action": {
+                    "type": "literal",
+                    "value": ":"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "j",
+              "action": {
+                "type": "code",
+                "value": "j"
+              },
+              "longPress": [
+                {
+                  "label": "；",
+                  "action": {
+                    "type": "literal",
+                    "value": "；"
+                  }
+                },
+                {
+                  "label": ";",
+                  "action": {
+                    "type": "literal",
+                    "value": ";"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "k",
+              "action": {
+                "type": "code",
+                "value": "k"
+              },
+              "longPress": [
+                {
+                  "label": "（",
+                  "action": {
+                    "type": "literal",
+                    "value": "（"
+                  }
+                },
+                {
+                  "label": "(",
+                  "action": {
+                    "type": "literal",
+                    "value": "("
+                  }
+                }
+              ]
+            },
+            {
+              "label": "l",
+              "action": {
+                "type": "code",
+                "value": "l"
+              },
+              "longPress": [
+                {
+                  "label": "）",
+                  "action": {
+                    "type": "literal",
+                    "value": "）"
+                  }
+                },
+                {
+                  "label": ")",
+                  "action": {
+                    "type": "literal",
+                    "value": ")"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "z",
+              "action": {
+                "type": "code",
+                "value": "z"
+              },
+              "longPress": [
+                {
+                  "label": "@",
+                  "action": {
+                    "type": "literal",
+                    "value": "@"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "x",
+              "action": {
+                "type": "code",
+                "value": "x"
+              },
+              "longPress": [
+                {
+                  "label": "-",
+                  "action": {
+                    "type": "literal",
+                    "value": "-"
+                  }
+                },
+                {
+                  "label": "_",
+                  "action": {
+                    "type": "literal",
+                    "value": "_"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "c",
+              "action": {
+                "type": "code",
+                "value": "c"
+              },
+              "longPress": [
+                {
+                  "label": "“",
+                  "action": {
+                    "type": "literal",
+                    "value": "“"
+                  }
+                },
+                {
+                  "label": "”",
+                  "action": {
+                    "type": "literal",
+                    "value": "”"
+                  }
+                },
+                {
+                  "label": "\"",
+                  "action": {
+                    "type": "literal",
+                    "value": "\""
+                  }
+                }
+              ]
+            },
+            {
+              "label": "v",
+              "action": {
+                "type": "code",
+                "value": "v"
+              },
+              "longPress": [
+                {
+                  "label": "‘",
+                  "action": {
+                    "type": "literal",
+                    "value": "‘"
+                  }
+                },
+                {
+                  "label": "’",
+                  "action": {
+                    "type": "literal",
+                    "value": "’"
+                  }
+                },
+                {
+                  "label": "'",
+                  "action": {
+                    "type": "literal",
+                    "value": "'"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "b",
+              "action": {
+                "type": "code",
+                "value": "b"
+              },
+              "longPress": [
+                {
+                  "label": "【",
+                  "action": {
+                    "type": "literal",
+                    "value": "【"
+                  }
+                },
+                {
+                  "label": "[",
+                  "action": {
+                    "type": "literal",
+                    "value": "["
+                  }
+                },
+                {
+                  "label": "《",
+                  "action": {
+                    "type": "literal",
+                    "value": "《"
+                  }
+                },
+                {
+                  "label": "<",
+                  "action": {
+                    "type": "literal",
+                    "value": "<"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "n",
+              "action": {
+                "type": "code",
+                "value": "n"
+              },
+              "longPress": [
+                {
+                  "label": "】",
+                  "action": {
+                    "type": "literal",
+                    "value": "】"
+                  }
+                },
+                {
+                  "label": "]",
+                  "action": {
+                    "type": "literal",
+                    "value": "]"
+                  }
+                },
+                {
+                  "label": "》",
+                  "action": {
+                    "type": "literal",
+                    "value": "》"
+                  }
+                },
+                {
+                  "label": ">",
+                  "action": {
+                    "type": "literal",
+                    "value": ">"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "m",
+              "action": {
+                "type": "code",
+                "value": "m"
+              },
+              "longPress": [
+                {
+                  "label": "/",
+                  "action": {
+                    "type": "literal",
+                    "value": "/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "merged14",
+      "name": "14 键",
+      "input": {
+        "builtinLayout": "merged14"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "QW",
+              "secondaryLabel": "1 !",
+              "action": {
+                "type": "code",
+                "value": "q"
+              },
+              "longPress": [
+                {
+                  "label": "w",
+                  "action": {
+                    "type": "literal",
+                    "value": "w"
+                  }
+                },
+                {
+                  "label": "1",
+                  "action": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                },
+                {
+                  "label": "!",
+                  "action": {
+                    "type": "literal",
+                    "value": "!"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "ER",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "e"
+              },
+              "longPress": [
+                {
+                  "label": "r",
+                  "action": {
+                    "type": "literal",
+                    "value": "r"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "TY",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "t"
+              },
+              "longPress": [
+                {
+                  "label": "y",
+                  "action": {
+                    "type": "literal",
+                    "value": "y"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "UI",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "u"
+              },
+              "longPress": [
+                {
+                  "label": "i",
+                  "action": {
+                    "type": "literal",
+                    "value": "i"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "OP",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "o"
+              },
+              "longPress": [
+                {
+                  "label": "p",
+                  "action": {
+                    "type": "literal",
+                    "value": "p"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "AS",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "a"
+              },
+              "longPress": [
+                {
+                  "label": "s",
+                  "action": {
+                    "type": "literal",
+                    "value": "s"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "DF",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "d"
+              },
+              "longPress": [
+                {
+                  "label": "f",
+                  "action": {
+                    "type": "literal",
+                    "value": "f"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "GH",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "g"
+              },
+              "longPress": [
+                {
+                  "label": "h",
+                  "action": {
+                    "type": "literal",
+                    "value": "h"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "JK",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "j"
+              },
+              "longPress": [
+                {
+                  "label": "k",
+                  "action": {
+                    "type": "literal",
+                    "value": "k"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "L",
+              "action": {
+                "type": "code",
+                "value": "l"
+              },
+              "longPress": [
+                {
+                  "label": "，",
+                  "action": {
+                    "type": "literal",
+                    "value": "，"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "ZX",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "z"
+              },
+              "longPress": [
+                {
+                  "label": "x",
+                  "action": {
+                    "type": "literal",
+                    "value": "x"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "CV",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "c"
+              },
+              "longPress": [
+                {
+                  "label": "v",
+                  "action": {
+                    "type": "literal",
+                    "value": "v"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "BN",
+              "secondaryLabel": "合并键",
+              "action": {
+                "type": "code",
+                "value": "b"
+              },
+              "longPress": [
+                {
+                  "label": "n",
+                  "action": {
+                    "type": "literal",
+                    "value": "n"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "M",
+              "action": {
+                "type": "code",
+                "value": "m"
+              },
+              "longPress": [
+                {
+                  "label": "。",
+                  "action": {
+                    "type": "literal",
+                    "value": "。"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ],
+      "split": {
+        "activation": "off",
+        "rowBreaks": [],
+        "gapFraction": 0.32,
+        "automaticGap": true
+      },
+      "note": "两个字母合用一个键，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。"
+    },
+    {
+      "id": "merged18",
+      "name": "18 键",
+      "input": {
+        "builtinLayout": "merged18"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "Q",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "q"
+              }
+            },
+            {
+              "label": "WE",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "w"
+              },
+              "longPress": [
+                {
+                  "label": "e",
+                  "action": {
+                    "type": "literal",
+                    "value": "e"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "RT",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "r"
+              },
+              "longPress": [
+                {
+                  "label": "t",
+                  "action": {
+                    "type": "literal",
+                    "value": "t"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "Y",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "y"
+              }
+            },
+            {
+              "label": "U",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "u"
+              }
+            },
+            {
+              "label": "IO",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "i"
+              },
+              "longPress": [
+                {
+                  "label": "o",
+                  "action": {
+                    "type": "literal",
+                    "value": "o"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "P",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "p"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "A",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "a"
+              }
+            },
+            {
+              "label": "SD",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "s"
+              },
+              "longPress": [
+                {
+                  "label": "d",
+                  "action": {
+                    "type": "literal",
+                    "value": "d"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "FG",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "f"
+              },
+              "longPress": [
+                {
+                  "label": "g",
+                  "action": {
+                    "type": "literal",
+                    "value": "g"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "H",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "h"
+              }
+            },
+            {
+              "label": "JK",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "j"
+              },
+              "longPress": [
+                {
+                  "label": "k",
+                  "action": {
+                    "type": "literal",
+                    "value": "k"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "L",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "l"
+              },
+              "longPress": [
+                {
+                  "label": "，",
+                  "action": {
+                    "type": "literal",
+                    "value": "，"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "Z",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "z"
+              }
+            },
+            {
+              "label": "XC",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "x"
+              },
+              "longPress": [
+                {
+                  "label": "c",
+                  "action": {
+                    "type": "literal",
+                    "value": "c"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "V",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "v"
+              }
+            },
+            {
+              "label": "BN",
+              "secondaryLabel": "合并键",
+              "width": 1.7,
+              "action": {
+                "type": "code",
+                "value": "b"
+              },
+              "longPress": [
+                {
+                  "label": "n",
+                  "action": {
+                    "type": "literal",
+                    "value": "n"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "M",
+              "width": 1.3,
+              "action": {
+                "type": "code",
+                "value": "m"
+              },
+              "longPress": [
+                {
+                  "label": "。",
+                  "action": {
+                    "type": "literal",
+                    "value": "。"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ],
+      "split": {
+        "activation": "automatic",
+        "rowBreaks": [],
+        "gapFraction": 0.32,
+        "automaticGap": true
+      },
+      "note": "部分键由两个字母合用，轻点输入。输入方案支持时，向左或向右滑动可只输入左边或右边的字母。"
+    },
+    {
+      "id": "phone9",
+      "name": "9 键",
+      "input": {
+        "builtinLayout": "phone9"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "，。？",
+              "secondaryLabel": "1",
+              "action": {
+                "type": "literal",
+                "value": "，"
+              },
+              "longPress": [
+                {
+                  "label": "1",
+                  "action": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "ABC",
+              "secondaryLabel": "2",
+              "action": {
+                "type": "code",
+                "value": "2"
+              },
+              "longPress": [
+                {
+                  "label": "2",
+                  "action": {
+                    "type": "literal",
+                    "value": "2"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "DEF",
+              "secondaryLabel": "3",
+              "action": {
+                "type": "code",
+                "value": "3"
+              },
+              "longPress": [
+                {
+                  "label": "3",
+                  "action": {
+                    "type": "literal",
+                    "value": "3"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "GHI",
+              "secondaryLabel": "4",
+              "action": {
+                "type": "code",
+                "value": "4"
+              },
+              "longPress": [
+                {
+                  "label": "4",
+                  "action": {
+                    "type": "literal",
+                    "value": "4"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "JKL",
+              "secondaryLabel": "5",
+              "action": {
+                "type": "code",
+                "value": "5"
+              },
+              "longPress": [
+                {
+                  "label": "5",
+                  "action": {
+                    "type": "literal",
+                    "value": "5"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "MNO",
+              "secondaryLabel": "6",
+              "action": {
+                "type": "code",
+                "value": "6"
+              },
+              "longPress": [
+                {
+                  "label": "6",
+                  "action": {
+                    "type": "literal",
+                    "value": "6"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "PQRS",
+              "secondaryLabel": "7",
+              "action": {
+                "type": "code",
+                "value": "7"
+              },
+              "longPress": [
+                {
+                  "label": "7",
+                  "action": {
+                    "type": "literal",
+                    "value": "7"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "TUV",
+              "secondaryLabel": "8",
+              "action": {
+                "type": "code",
+                "value": "8"
+              },
+              "longPress": [
+                {
+                  "label": "8",
+                  "action": {
+                    "type": "literal",
+                    "value": "8"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "WXYZ",
+              "secondaryLabel": "9",
+              "action": {
+                "type": "code",
+                "value": "9"
+              },
+              "longPress": [
+                {
+                  "label": "9",
+                  "action": {
+                    "type": "literal",
+                    "value": "9"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            }
+          ]
+        }
+      ],
+      "auxiliaryAreas": [
+        {
+          "position": "trailing",
+          "role": "editing",
+          "keys": [
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "分词",
+              "action": {
+                "type": "code",
+                "value": "'"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        },
+        {
+          "position": "leading",
+          "role": "disambiguation",
+          "keys": []
+        }
+      ],
+      "note": "2–9 键按所选的输入方案输入。输入中轻点首键可分词；未输入时，左栏前三个符号可直接输入，连续点按首键可轮换其余符号。长按首键输入 1，长按 2–9 输入对应数字。"
+    },
+    {
+      "id": "zhuyin41",
+      "name": "注音 41 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "ㄅ",
+              "action": {
+                "type": "code",
+                "value": "1"
+              }
+            },
+            {
+              "label": "ㄉ",
+              "action": {
+                "type": "code",
+                "value": "2"
+              }
+            },
+            {
+              "label": "ˇ",
+              "action": {
+                "type": "code",
+                "value": "3"
+              }
+            },
+            {
+              "label": "ˋ",
+              "action": {
+                "type": "code",
+                "value": "4"
+              }
+            },
+            {
+              "label": "ㄓ",
+              "action": {
+                "type": "code",
+                "value": "5"
+              }
+            },
+            {
+              "label": "ˊ",
+              "action": {
+                "type": "code",
+                "value": "6"
+              }
+            },
+            {
+              "label": "˙",
+              "action": {
+                "type": "code",
+                "value": "7"
+              }
+            },
+            {
+              "label": "ㄚ",
+              "action": {
+                "type": "code",
+                "value": "8"
+              }
+            },
+            {
+              "label": "ㄞ",
+              "action": {
+                "type": "code",
+                "value": "9"
+              }
+            },
+            {
+              "label": "ㄢ",
+              "action": {
+                "type": "code",
+                "value": "0"
+              }
+            },
+            {
+              "label": "ㄦ",
+              "action": {
+                "type": "code",
+                "value": "-"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "ㄆ",
+              "action": {
+                "type": "code",
+                "value": "q"
+              }
+            },
+            {
+              "label": "ㄊ",
+              "action": {
+                "type": "code",
+                "value": "w"
+              }
+            },
+            {
+              "label": "ㄍ",
+              "action": {
+                "type": "code",
+                "value": "e"
+              }
+            },
+            {
+              "label": "ㄐ",
+              "action": {
+                "type": "code",
+                "value": "r"
+              }
+            },
+            {
+              "label": "ㄔ",
+              "action": {
+                "type": "code",
+                "value": "t"
+              }
+            },
+            {
+              "label": "ㄗ",
+              "action": {
+                "type": "code",
+                "value": "y"
+              }
+            },
+            {
+              "label": "ㄧ",
+              "action": {
+                "type": "code",
+                "value": "u"
+              }
+            },
+            {
+              "label": "ㄛ",
+              "action": {
+                "type": "code",
+                "value": "i"
+              }
+            },
+            {
+              "label": "ㄟ",
+              "action": {
+                "type": "code",
+                "value": "o"
+              }
+            },
+            {
+              "label": "ㄣ",
+              "action": {
+                "type": "code",
+                "value": "p"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "ㄇ",
+              "action": {
+                "type": "code",
+                "value": "a"
+              }
+            },
+            {
+              "label": "ㄋ",
+              "action": {
+                "type": "code",
+                "value": "s"
+              }
+            },
+            {
+              "label": "ㄎ",
+              "action": {
+                "type": "code",
+                "value": "d"
+              }
+            },
+            {
+              "label": "ㄑ",
+              "action": {
+                "type": "code",
+                "value": "f"
+              }
+            },
+            {
+              "label": "ㄕ",
+              "action": {
+                "type": "code",
+                "value": "g"
+              }
+            },
+            {
+              "label": "ㄘ",
+              "action": {
+                "type": "code",
+                "value": "h"
+              }
+            },
+            {
+              "label": "ㄨ",
+              "action": {
+                "type": "code",
+                "value": "j"
+              }
+            },
+            {
+              "label": "ㄜ",
+              "action": {
+                "type": "code",
+                "value": "k"
+              }
+            },
+            {
+              "label": "ㄠ",
+              "action": {
+                "type": "code",
+                "value": "l"
+              }
+            },
+            {
+              "label": "ㄤ",
+              "action": {
+                "type": "code",
+                "value": ";"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "ㄈ",
+              "action": {
+                "type": "code",
+                "value": "z"
+              }
+            },
+            {
+              "label": "ㄌ",
+              "action": {
+                "type": "code",
+                "value": "x"
+              }
+            },
+            {
+              "label": "ㄏ",
+              "action": {
+                "type": "code",
+                "value": "c"
+              }
+            },
+            {
+              "label": "ㄒ",
+              "action": {
+                "type": "code",
+                "value": "v"
+              }
+            },
+            {
+              "label": "ㄖ",
+              "action": {
+                "type": "code",
+                "value": "b"
+              }
+            },
+            {
+              "label": "ㄙ",
+              "action": {
+                "type": "code",
+                "value": "n"
+              }
+            },
+            {
+              "label": "ㄩ",
+              "action": {
+                "type": "code",
+                "value": "m"
+              }
+            },
+            {
+              "label": "ㄝ",
+              "action": {
+                "type": "code",
+                "value": ","
+              }
+            },
+            {
+              "label": "ㄡ",
+              "action": {
+                "type": "code",
+                "value": "."
+              }
+            },
+            {
+              "label": "ㄥ",
+              "action": {
+                "type": "code",
+                "value": "/"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              },
+              "titleMode": "automatic"
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cangjie26",
+      "name": "仓颉 26 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "手",
+              "secondaryLabel": "Q",
+              "action": {
+                "type": "code",
+                "value": "q"
+              }
+            },
+            {
+              "label": "田",
+              "secondaryLabel": "W",
+              "action": {
+                "type": "code",
+                "value": "w"
+              }
+            },
+            {
+              "label": "水",
+              "secondaryLabel": "E",
+              "action": {
+                "type": "code",
+                "value": "e"
+              }
+            },
+            {
+              "label": "口",
+              "secondaryLabel": "R",
+              "action": {
+                "type": "code",
+                "value": "r"
+              }
+            },
+            {
+              "label": "廿",
+              "secondaryLabel": "T",
+              "action": {
+                "type": "code",
+                "value": "t"
+              }
+            },
+            {
+              "label": "卜",
+              "secondaryLabel": "Y",
+              "action": {
+                "type": "code",
+                "value": "y"
+              }
+            },
+            {
+              "label": "山",
+              "secondaryLabel": "U",
+              "action": {
+                "type": "code",
+                "value": "u"
+              }
+            },
+            {
+              "label": "戈",
+              "secondaryLabel": "I",
+              "action": {
+                "type": "code",
+                "value": "i"
+              }
+            },
+            {
+              "label": "人",
+              "secondaryLabel": "O",
+              "action": {
+                "type": "code",
+                "value": "o"
+              }
+            },
+            {
+              "label": "心",
+              "secondaryLabel": "P",
+              "action": {
+                "type": "code",
+                "value": "p"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "日",
+              "secondaryLabel": "A",
+              "action": {
+                "type": "code",
+                "value": "a"
+              }
+            },
+            {
+              "label": "尸",
+              "secondaryLabel": "S",
+              "action": {
+                "type": "code",
+                "value": "s"
+              }
+            },
+            {
+              "label": "木",
+              "secondaryLabel": "D",
+              "action": {
+                "type": "code",
+                "value": "d"
+              }
+            },
+            {
+              "label": "火",
+              "secondaryLabel": "F",
+              "action": {
+                "type": "code",
+                "value": "f"
+              }
+            },
+            {
+              "label": "土",
+              "secondaryLabel": "G",
+              "action": {
+                "type": "code",
+                "value": "g"
+              }
+            },
+            {
+              "label": "竹",
+              "secondaryLabel": "H",
+              "action": {
+                "type": "code",
+                "value": "h"
+              }
+            },
+            {
+              "label": "十",
+              "secondaryLabel": "J",
+              "action": {
+                "type": "code",
+                "value": "j"
+              }
+            },
+            {
+              "label": "大",
+              "secondaryLabel": "K",
+              "action": {
+                "type": "code",
+                "value": "k"
+              }
+            },
+            {
+              "label": "中",
+              "secondaryLabel": "L",
+              "action": {
+                "type": "code",
+                "value": "l"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "重",
+              "secondaryLabel": "Z",
+              "action": {
+                "type": "code",
+                "value": "z"
+              }
+            },
+            {
+              "label": "難",
+              "secondaryLabel": "X",
+              "action": {
+                "type": "code",
+                "value": "x"
+              }
+            },
+            {
+              "label": "金",
+              "secondaryLabel": "C",
+              "action": {
+                "type": "code",
+                "value": "c"
+              }
+            },
+            {
+              "label": "女",
+              "secondaryLabel": "V",
+              "action": {
+                "type": "code",
+                "value": "v"
+              }
+            },
+            {
+              "label": "月",
+              "secondaryLabel": "B",
+              "action": {
+                "type": "code",
+                "value": "b"
+              }
+            },
+            {
+              "label": "弓",
+              "secondaryLabel": "N",
+              "action": {
+                "type": "code",
+                "value": "n"
+              }
+            },
+            {
+              "label": "一",
+              "secondaryLabel": "M",
+              "action": {
+                "type": "code",
+                "value": "m"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "romaji26",
+      "name": "罗马字 26 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "q",
+              "secondaryLabel": "1",
+              "action": {
+                "type": "code",
+                "value": "q"
+              },
+              "longPress": [
+                {
+                  "label": "1",
+                  "action": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "w",
+              "secondaryLabel": "2",
+              "action": {
+                "type": "code",
+                "value": "w"
+              },
+              "longPress": [
+                {
+                  "label": "2",
+                  "action": {
+                    "type": "literal",
+                    "value": "2"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "e",
+              "secondaryLabel": "3",
+              "action": {
+                "type": "code",
+                "value": "e"
+              },
+              "longPress": [
+                {
+                  "label": "3",
+                  "action": {
+                    "type": "literal",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "r",
+              "secondaryLabel": "4",
+              "action": {
+                "type": "code",
+                "value": "r"
+              },
+              "longPress": [
+                {
+                  "label": "4",
+                  "action": {
+                    "type": "literal",
+                    "value": "4"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "t",
+              "secondaryLabel": "5",
+              "action": {
+                "type": "code",
+                "value": "t"
+              },
+              "longPress": [
+                {
+                  "label": "5",
+                  "action": {
+                    "type": "literal",
+                    "value": "5"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "y",
+              "secondaryLabel": "6",
+              "action": {
+                "type": "code",
+                "value": "y"
+              },
+              "longPress": [
+                {
+                  "label": "6",
+                  "action": {
+                    "type": "literal",
+                    "value": "6"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "u",
+              "secondaryLabel": "7",
+              "action": {
+                "type": "code",
+                "value": "u"
+              },
+              "longPress": [
+                {
+                  "label": "7",
+                  "action": {
+                    "type": "literal",
+                    "value": "7"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "i",
+              "secondaryLabel": "8",
+              "action": {
+                "type": "code",
+                "value": "i"
+              },
+              "longPress": [
+                {
+                  "label": "8",
+                  "action": {
+                    "type": "literal",
+                    "value": "8"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "o",
+              "secondaryLabel": "9",
+              "action": {
+                "type": "code",
+                "value": "o"
+              },
+              "longPress": [
+                {
+                  "label": "9",
+                  "action": {
+                    "type": "literal",
+                    "value": "9"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "p",
+              "secondaryLabel": "0",
+              "action": {
+                "type": "code",
+                "value": "p"
+              },
+              "longPress": [
+                {
+                  "label": "0",
+                  "action": {
+                    "type": "literal",
+                    "value": "0"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "a",
+              "action": {
+                "type": "code",
+                "value": "a"
+              },
+              "longPress": [
+                {
+                  "label": "，",
+                  "action": {
+                    "type": "literal",
+                    "value": "，"
+                  }
+                },
+                {
+                  "label": ",",
+                  "action": {
+                    "type": "literal",
+                    "value": ","
+                  }
+                }
+              ]
+            },
+            {
+              "label": "s",
+              "action": {
+                "type": "code",
+                "value": "s"
+              },
+              "longPress": [
+                {
+                  "label": "。",
+                  "action": {
+                    "type": "literal",
+                    "value": "。"
+                  }
+                },
+                {
+                  "label": ".",
+                  "action": {
+                    "type": "literal",
+                    "value": "."
+                  }
+                },
+                {
+                  "label": "…",
+                  "action": {
+                    "type": "literal",
+                    "value": "…"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "d",
+              "action": {
+                "type": "code",
+                "value": "d"
+              },
+              "longPress": [
+                {
+                  "label": "？",
+                  "action": {
+                    "type": "literal",
+                    "value": "？"
+                  }
+                },
+                {
+                  "label": "?",
+                  "action": {
+                    "type": "literal",
+                    "value": "?"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "f",
+              "action": {
+                "type": "code",
+                "value": "f"
+              },
+              "longPress": [
+                {
+                  "label": "！",
+                  "action": {
+                    "type": "literal",
+                    "value": "！"
+                  }
+                },
+                {
+                  "label": "!",
+                  "action": {
+                    "type": "literal",
+                    "value": "!"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "g",
+              "action": {
+                "type": "code",
+                "value": "g"
+              },
+              "longPress": [
+                {
+                  "label": "、",
+                  "action": {
+                    "type": "literal",
+                    "value": "、"
+                  }
+                },
+                {
+                  "label": "\\",
+                  "action": {
+                    "type": "literal",
+                    "value": "\\"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "h",
+              "action": {
+                "type": "code",
+                "value": "h"
+              },
+              "longPress": [
+                {
+                  "label": "：",
+                  "action": {
+                    "type": "literal",
+                    "value": "："
+                  }
+                },
+                {
+                  "label": ":",
+                  "action": {
+                    "type": "literal",
+                    "value": ":"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "j",
+              "action": {
+                "type": "code",
+                "value": "j"
+              },
+              "longPress": [
+                {
+                  "label": "；",
+                  "action": {
+                    "type": "literal",
+                    "value": "；"
+                  }
+                },
+                {
+                  "label": ";",
+                  "action": {
+                    "type": "literal",
+                    "value": ";"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "k",
+              "action": {
+                "type": "code",
+                "value": "k"
+              },
+              "longPress": [
+                {
+                  "label": "（",
+                  "action": {
+                    "type": "literal",
+                    "value": "（"
+                  }
+                },
+                {
+                  "label": "(",
+                  "action": {
+                    "type": "literal",
+                    "value": "("
+                  }
+                }
+              ]
+            },
+            {
+              "label": "l",
+              "action": {
+                "type": "code",
+                "value": "l"
+              },
+              "longPress": [
+                {
+                  "label": "）",
+                  "action": {
+                    "type": "literal",
+                    "value": "）"
+                  }
+                },
+                {
+                  "label": ")",
+                  "action": {
+                    "type": "literal",
+                    "value": ")"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "ー",
+              "action": {
+                "type": "code",
+                "value": "-"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "z",
+              "action": {
+                "type": "code",
+                "value": "z"
+              },
+              "longPress": [
+                {
+                  "label": "@",
+                  "action": {
+                    "type": "literal",
+                    "value": "@"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "x",
+              "action": {
+                "type": "code",
+                "value": "x"
+              },
+              "longPress": [
+                {
+                  "label": "-",
+                  "action": {
+                    "type": "literal",
+                    "value": "-"
+                  }
+                },
+                {
+                  "label": "_",
+                  "action": {
+                    "type": "literal",
+                    "value": "_"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "c",
+              "action": {
+                "type": "code",
+                "value": "c"
+              },
+              "longPress": [
+                {
+                  "label": "“",
+                  "action": {
+                    "type": "literal",
+                    "value": "“"
+                  }
+                },
+                {
+                  "label": "”",
+                  "action": {
+                    "type": "literal",
+                    "value": "”"
+                  }
+                },
+                {
+                  "label": "\"",
+                  "action": {
+                    "type": "literal",
+                    "value": "\""
+                  }
+                }
+              ]
+            },
+            {
+              "label": "v",
+              "action": {
+                "type": "code",
+                "value": "v"
+              },
+              "longPress": [
+                {
+                  "label": "‘",
+                  "action": {
+                    "type": "literal",
+                    "value": "‘"
+                  }
+                },
+                {
+                  "label": "’",
+                  "action": {
+                    "type": "literal",
+                    "value": "’"
+                  }
+                },
+                {
+                  "label": "'",
+                  "action": {
+                    "type": "literal",
+                    "value": "'"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "b",
+              "action": {
+                "type": "code",
+                "value": "b"
+              },
+              "longPress": [
+                {
+                  "label": "【",
+                  "action": {
+                    "type": "literal",
+                    "value": "【"
+                  }
+                },
+                {
+                  "label": "[",
+                  "action": {
+                    "type": "literal",
+                    "value": "["
+                  }
+                },
+                {
+                  "label": "《",
+                  "action": {
+                    "type": "literal",
+                    "value": "《"
+                  }
+                },
+                {
+                  "label": "<",
+                  "action": {
+                    "type": "literal",
+                    "value": "<"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "n",
+              "action": {
+                "type": "code",
+                "value": "n"
+              },
+              "longPress": [
+                {
+                  "label": "】",
+                  "action": {
+                    "type": "literal",
+                    "value": "】"
+                  }
+                },
+                {
+                  "label": "]",
+                  "action": {
+                    "type": "literal",
+                    "value": "]"
+                  }
+                },
+                {
+                  "label": "》",
+                  "action": {
+                    "type": "literal",
+                    "value": "》"
+                  }
+                },
+                {
+                  "label": ">",
+                  "action": {
+                    "type": "literal",
+                    "value": ">"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "m",
+              "action": {
+                "type": "code",
+                "value": "m"
+              },
+              "longPress": [
+                {
+                  "label": "/",
+                  "action": {
+                    "type": "literal",
+                    "value": "/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kana12",
+      "name": "假名 12 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "あ",
+              "action": {
+                "type": "kana",
+                "value": "a"
+              }
+            },
+            {
+              "label": "か",
+              "action": {
+                "type": "kana",
+                "value": "ka"
+              }
+            },
+            {
+              "label": "さ",
+              "action": {
+                "type": "kana",
+                "value": "sa"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "た",
+              "action": {
+                "type": "kana",
+                "value": "ta"
+              }
+            },
+            {
+              "label": "な",
+              "action": {
+                "type": "kana",
+                "value": "na"
+              }
+            },
+            {
+              "label": "は",
+              "action": {
+                "type": "kana",
+                "value": "ha"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "ま",
+              "action": {
+                "type": "kana",
+                "value": "ma"
+              }
+            },
+            {
+              "label": "や",
+              "action": {
+                "type": "kana",
+                "value": "ya"
+              }
+            },
+            {
+              "label": "ら",
+              "action": {
+                "type": "kana",
+                "value": "ra"
+              }
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "小゛゜",
+              "action": {
+                "type": "kanaModifier"
+              }
+            },
+            {
+              "label": "わ",
+              "action": {
+                "type": "kana",
+                "value": "wa"
+              }
+            },
+            {
+              "label": "、。?!",
+              "action": {
+                "type": "literal",
+                "value": "、"
+              }
+            }
+          ]
+        }
+      ],
+      "auxiliaryAreas": [
+        {
+          "position": "leading",
+          "role": "editing",
+          "keys": [
+            {
+              "label": "←",
+              "action": {
+                "type": "cursorLeft"
+              }
+            },
+            {
+              "label": "記号",
+              "action": {
+                "type": "pageSwitch",
+                "value": "symbols"
+              },
+              "titleMode": "automatic"
+            },
+            {
+              "label": "あ/A",
+              "action": {
+                "type": "languageSwitch"
+              },
+              "titleMode": "automatic"
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              },
+              "titleMode": "automatic"
+            }
+          ]
+        },
+        {
+          "position": "trailing",
+          "role": "editing",
+          "keys": [
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              },
+              "titleMode": "automatic"
+            },
+            {
+              "label": "空格",
+              "action": {
+                "type": "space"
+              },
+              "titleMode": "automatic"
+            },
+            {
+              "label": "⏎",
+              "width": 2.0,
+              "action": {
+                "type": "enter"
+              },
+              "titleMode": "automatic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "my-26",
+      "name": "我的 26 键",
+      "input": {
+        "builtinLayout": "qwerty26"
+      },
+      "rows": [
+        {
+          "keys": [
+            {
+              "label": "q",
+              "secondaryLabel": "1",
+              "action": {
+                "type": "code",
+                "value": "q"
+              },
+              "longPress": [
+                {
+                  "label": "1",
+                  "action": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "w",
+              "secondaryLabel": "2",
+              "action": {
+                "type": "code",
+                "value": "w"
+              },
+              "longPress": [
+                {
+                  "label": "2",
+                  "action": {
+                    "type": "literal",
+                    "value": "2"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "e",
+              "secondaryLabel": "3",
+              "action": {
+                "type": "code",
+                "value": "e"
+              },
+              "longPress": [
+                {
+                  "label": "3",
+                  "action": {
+                    "type": "literal",
+                    "value": "3"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "r",
+              "secondaryLabel": "4",
+              "action": {
+                "type": "code",
+                "value": "r"
+              },
+              "longPress": [
+                {
+                  "label": "4",
+                  "action": {
+                    "type": "literal",
+                    "value": "4"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "t",
+              "secondaryLabel": "5",
+              "action": {
+                "type": "code",
+                "value": "t"
+              },
+              "longPress": [
+                {
+                  "label": "5",
+                  "action": {
+                    "type": "literal",
+                    "value": "5"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "y",
+              "secondaryLabel": "6",
+              "action": {
+                "type": "code",
+                "value": "y"
+              },
+              "longPress": [
+                {
+                  "label": "6",
+                  "action": {
+                    "type": "literal",
+                    "value": "6"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "u",
+              "secondaryLabel": "7",
+              "action": {
+                "type": "code",
+                "value": "u"
+              },
+              "longPress": [
+                {
+                  "label": "7",
+                  "action": {
+                    "type": "literal",
+                    "value": "7"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "i",
+              "secondaryLabel": "8",
+              "action": {
+                "type": "code",
+                "value": "i"
+              },
+              "longPress": [
+                {
+                  "label": "8",
+                  "action": {
+                    "type": "literal",
+                    "value": "8"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "o",
+              "secondaryLabel": "9",
+              "action": {
+                "type": "code",
+                "value": "o"
+              },
+              "longPress": [
+                {
+                  "label": "9",
+                  "action": {
+                    "type": "literal",
+                    "value": "9"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "p",
+              "secondaryLabel": "0",
+              "action": {
+                "type": "code",
+                "value": "p"
+              },
+              "longPress": [
+                {
+                  "label": "0",
+                  "action": {
+                    "type": "literal",
+                    "value": "0"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "a",
+              "action": {
+                "type": "code",
+                "value": "a"
+              },
+              "longPress": [
+                {
+                  "label": "，",
+                  "action": {
+                    "type": "literal",
+                    "value": "，"
+                  }
+                },
+                {
+                  "label": ",",
+                  "action": {
+                    "type": "literal",
+                    "value": ","
+                  }
+                }
+              ]
+            },
+            {
+              "label": "s",
+              "action": {
+                "type": "code",
+                "value": "s"
+              },
+              "longPress": [
+                {
+                  "label": "。",
+                  "action": {
+                    "type": "literal",
+                    "value": "。"
+                  }
+                },
+                {
+                  "label": ".",
+                  "action": {
+                    "type": "literal",
+                    "value": "."
+                  }
+                },
+                {
+                  "label": "…",
+                  "action": {
+                    "type": "literal",
+                    "value": "…"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "d",
+              "action": {
+                "type": "code",
+                "value": "d"
+              },
+              "longPress": [
+                {
+                  "label": "？",
+                  "action": {
+                    "type": "literal",
+                    "value": "？"
+                  }
+                },
+                {
+                  "label": "?",
+                  "action": {
+                    "type": "literal",
+                    "value": "?"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "f",
+              "action": {
+                "type": "code",
+                "value": "f"
+              },
+              "longPress": [
+                {
+                  "label": "！",
+                  "action": {
+                    "type": "literal",
+                    "value": "！"
+                  }
+                },
+                {
+                  "label": "!",
+                  "action": {
+                    "type": "literal",
+                    "value": "!"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "g",
+              "action": {
+                "type": "code",
+                "value": "g"
+              },
+              "longPress": [
+                {
+                  "label": "、",
+                  "action": {
+                    "type": "literal",
+                    "value": "、"
+                  }
+                },
+                {
+                  "label": "\\",
+                  "action": {
+                    "type": "literal",
+                    "value": "\\"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "h",
+              "action": {
+                "type": "code",
+                "value": "h"
+              },
+              "longPress": [
+                {
+                  "label": "：",
+                  "action": {
+                    "type": "literal",
+                    "value": "："
+                  }
+                },
+                {
+                  "label": ":",
+                  "action": {
+                    "type": "literal",
+                    "value": ":"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "j",
+              "action": {
+                "type": "code",
+                "value": "j"
+              },
+              "longPress": [
+                {
+                  "label": "；",
+                  "action": {
+                    "type": "literal",
+                    "value": "；"
+                  }
+                },
+                {
+                  "label": ";",
+                  "action": {
+                    "type": "literal",
+                    "value": ";"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "k",
+              "action": {
+                "type": "code",
+                "value": "k"
+              },
+              "longPress": [
+                {
+                  "label": "（",
+                  "action": {
+                    "type": "literal",
+                    "value": "（"
+                  }
+                },
+                {
+                  "label": "(",
+                  "action": {
+                    "type": "literal",
+                    "value": "("
+                  }
+                }
+              ]
+            },
+            {
+              "label": "l",
+              "action": {
+                "type": "code",
+                "value": "l"
+              },
+              "longPress": [
+                {
+                  "label": "）",
+                  "action": {
+                    "type": "literal",
+                    "value": "）"
+                  }
+                },
+                {
+                  "label": ")",
+                  "action": {
+                    "type": "literal",
+                    "value": ")"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "z",
+              "action": {
+                "type": "code",
+                "value": "z"
+              },
+              "longPress": [
+                {
+                  "label": "@",
+                  "action": {
+                    "type": "literal",
+                    "value": "@"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "x",
+              "action": {
+                "type": "code",
+                "value": "x"
+              },
+              "longPress": [
+                {
+                  "label": "-",
+                  "action": {
+                    "type": "literal",
+                    "value": "-"
+                  }
+                },
+                {
+                  "label": "_",
+                  "action": {
+                    "type": "literal",
+                    "value": "_"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "c",
+              "action": {
+                "type": "code",
+                "value": "c"
+              },
+              "longPress": [
+                {
+                  "label": "“",
+                  "action": {
+                    "type": "literal",
+                    "value": "“"
+                  }
+                },
+                {
+                  "label": "”",
+                  "action": {
+                    "type": "literal",
+                    "value": "”"
+                  }
+                },
+                {
+                  "label": "\"",
+                  "action": {
+                    "type": "literal",
+                    "value": "\""
+                  }
+                }
+              ]
+            },
+            {
+              "label": "v",
+              "action": {
+                "type": "code",
+                "value": "v"
+              },
+              "longPress": [
+                {
+                  "label": "‘",
+                  "action": {
+                    "type": "literal",
+                    "value": "‘"
+                  }
+                },
+                {
+                  "label": "’",
+                  "action": {
+                    "type": "literal",
+                    "value": "’"
+                  }
+                },
+                {
+                  "label": "'",
+                  "action": {
+                    "type": "literal",
+                    "value": "'"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "b",
+              "action": {
+                "type": "code",
+                "value": "b"
+              },
+              "longPress": [
+                {
+                  "label": "【",
+                  "action": {
+                    "type": "literal",
+                    "value": "【"
+                  }
+                },
+                {
+                  "label": "[",
+                  "action": {
+                    "type": "literal",
+                    "value": "["
+                  }
+                },
+                {
+                  "label": "《",
+                  "action": {
+                    "type": "literal",
+                    "value": "《"
+                  }
+                },
+                {
+                  "label": "<",
+                  "action": {
+                    "type": "literal",
+                    "value": "<"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "n",
+              "action": {
+                "type": "code",
+                "value": "n"
+              },
+              "longPress": [
+                {
+                  "label": "】",
+                  "action": {
+                    "type": "literal",
+                    "value": "】"
+                  }
+                },
+                {
+                  "label": "]",
+                  "action": {
+                    "type": "literal",
+                    "value": "]"
+                  }
+                },
+                {
+                  "label": "》",
+                  "action": {
+                    "type": "literal",
+                    "value": "》"
+                  }
+                },
+                {
+                  "label": ">",
+                  "action": {
+                    "type": "literal",
+                    "value": ">"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "m",
+              "action": {
+                "type": "code",
+                "value": "m"
+              },
+              "longPress": [
+                {
+                  "label": "/",
+                  "action": {
+                    "type": "literal",
+                    "value": "/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "keys": [
+            {
+              "label": "布局",
+              "action": {
+                "type": "modeSwitch",
+                "value": "nextLayout"
+              }
+            },
+            {
+              "label": "🌐",
+              "action": {
+                "type": "globe"
+              }
+            },
+            {
+              "label": "空格",
+              "width": 4.0,
+              "action": {
+                "type": "space"
+              }
+            },
+            {
+              "label": "⌫",
+              "action": {
+                "type": "backspace"
+              }
+            },
+            {
+              "label": "⏎",
+              "action": {
+                "type": "enter"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pages": [],
+  "pageOrder": [
+    "page.symbols.system",
+    "page.symbols.categorized",
+    "page.numeric.automatic",
+    "page.numeric.keypad",
+    "page.english.qwerty"
+  ],
+  "compositions": {
+    "rime_ice:qwerty26": {
+      "mainLayoutID": "my-26",
+      "symbolPageID": "page.symbols.system",
+      "numericPageID": "page.numeric.keypad",
+      "englishPageID": "page.english.qwerty"
+    },
+    "kagiroi:qwerty26": {
+      "mainLayoutID": "kana12",
+      "symbolPageID": "page.symbols.system",
+      "numericPageID": "page.numeric.automatic",
+      "englishPageID": "page.english.qwerty"
+    },
+    "double_pinyin_flypy:phone9": {
+      "mainLayoutID": "phone9",
+      "symbolPageID": "page.symbols.categorized",
+      "numericPageID": "page.numeric.automatic",
+      "englishPageID": "page.english.qwerty"
+    }
+  }
+}

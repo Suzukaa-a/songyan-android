@@ -9,20 +9,46 @@ import kotlinx.serialization.Serializable
 /**
  * A user keyboard added in the settings app: one "input method (schema) x layout" combination.
  *
- * This type is identity only (verbatim schema id + layout); human names are resolved at projection
- * time from the current scheme descriptors, so renames follow automatically.
+ * [layout] is the encoding shape, which decides whether the engine runs the source scheme or a
+ * folded companion. [board] is the layout definition the keyboard draws: a bundled shape, a bundled
+ * physical board, a generated layout or one of the user's. A record without one predates per-layout
+ * keyboards and keeps reading as it always did: the saved pairing's main layout, then the physical
+ * board of the scheme's family, then the shape's own layout.
+ *
+ * This type is identity only; human names are resolved at projection time from the current scheme
+ * descriptors, so renames follow automatically.
  */
 @Serializable
 data class PublishedKeyboard(
     @SerialName("schemaID") val schemaID: String,
     @SerialName("layout") val layout: KeyboardLayoutKind,
+    @SerialName("board") val board: String? = null,
 ) {
-    val id: String get() = "$schemaID:${layout.wire}"
+    /** `<schema>:<shape>` plus `#<layout id>` when the record names its layout. */
+    val id: String get() = if (board == null) combinationID else "$combinationID#$board"
+
+    /** The engine route: every keyboard of one input method and shape shares it. */
+    val combinationID: String get() = "$schemaID:${layout.wire}"
 
     /** Whether the combination needs a generated adapter companion (14/9-key layouts). */
     val needsGeneratedAdapter: Boolean get() = layout.requiresSpellingDisplay
 
     companion object {
+        /**
+         * Reads a keyboard id. The layout id may hold any character, so the id is cut at its first
+         * "#"; the part before it is cut at its last ":", because an input method id may hold one.
+         * Null for a malformed id: no separator, an empty part or an unknown shape.
+         */
+        fun parse(id: String): PublishedKeyboard? {
+            val mark = id.indexOf('#')
+            val head = if (mark < 0) id else id.substring(0, mark)
+            val board = if (mark < 0) null else id.substring(mark + 1)
+            val separator = head.lastIndexOf(':')
+            if (separator <= 0 || board?.isEmpty() == true) return null
+            val layout = KeyboardLayoutKind.fromWire(head.substring(separator + 1)) ?: return null
+            return PublishedKeyboard(head.substring(0, separator), layout, board)
+        }
+
         /** The added-keyboard list of a publication record, duplicates dropped, order kept. */
         fun resolve(published: List<PublishedKeyboard>?): List<PublishedKeyboard> {
             val seen = LinkedHashSet<PublishedKeyboard>()
@@ -49,8 +75,11 @@ data class PublishedKeyboard(
 
         /** Adapter generation tasks (deduplicated, ordered): compact-layout combinations only. */
         fun generationTasks(forRequested: List<PublishedKeyboard>): List<PublishedKeyboard> {
-            val seen = LinkedHashSet<PublishedKeyboard>()
-            return forRequested.filter { it.needsGeneratedAdapter && seen.add(it) }
+            // Several keyboards of one input method and shape run on the same companion.
+            val seen = LinkedHashSet<String>()
+            return forRequested
+                .filter { it.needsGeneratedAdapter && seen.add(it.combinationID) }
+                .map { it.copy(board = null) }
         }
 
         fun display(
@@ -203,7 +232,8 @@ data class KeyboardResourceSet(
                     if (publishedKeyboards != null) {
                         val published = publishedKeyboards
                         val engine = structurallyRunnableEngineSchema(source, layout)
-                        if (PublishedKeyboard(source, layout) !in published || engine == null) continue
+                        val added = published.any { it.schemaID == source && it.layout == layout }
+                        if (!added || engine == null) continue
                         result += Combination(source, engine, layout, sourceName)
                         continue
                     }

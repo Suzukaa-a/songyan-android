@@ -1,8 +1,10 @@
 package app.songyan.ime.settings.state
 
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.UserKeyboards
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +17,14 @@ interface SettingsPreferences {
     /** Engine schema the keyboard activates. */
     val activeSchemaId: Flow<String>
 
-    /** Built-in keyboard layout id: qwerty26, merged14, merged18 or phone9. */
+    /** The shape of the keyboard in use: qwerty26, merged14, merged18 or phone9. */
     val layoutId: Flow<String>
+
+    /** The layout the keyboard in use names; null for a selection that follows its shape's pairing. */
+    val layoutDefinitionId: Flow<String?>
+
+    /** The keyboards the user edited and the input methods they speak for. */
+    val myKeyboards: Flow<UserKeyboards.Stored>
 
     /** Portrait key row pitch: compact (52 dp), standard (56 dp) or tall (60 dp). */
     val keyHeight: Flow<String>
@@ -194,6 +202,11 @@ interface SettingsPreferences {
 
     suspend fun setLayoutId(value: String)
 
+    /** Switches the keyboard to [keyboard]: its input method, shape and layout in one write. */
+    suspend fun setKeyboard(keyboard: PublishedKeyboard)
+
+    suspend fun setMyKeyboards(value: UserKeyboards.Stored)
+
     suspend fun setCandidateTextSize(value: String)
 
     suspend fun setShowCandidateComments(value: Boolean)
@@ -267,6 +280,8 @@ class InMemorySettingsPreferences(
 ) : SettingsPreferences {
     private val schema = MutableStateFlow(schemaId)
     private val layout = MutableStateFlow(layoutId)
+    private val definition = MutableStateFlow<String?>(null)
+    private val keyboards = MutableStateFlow(UserKeyboards.Stored())
     private val textSize = MutableStateFlow(CandidateTextSize.DEFAULT.id)
     private val showComments = MutableStateFlow(true)
     private val collapsedComments = MutableStateFlow(true)
@@ -276,6 +291,8 @@ class InMemorySettingsPreferences(
 
     override val activeSchemaId: Flow<String> = schema.asStateFlow()
     override val layoutId: Flow<String> = layout.asStateFlow()
+    override val layoutDefinitionId: Flow<String?> = definition.asStateFlow()
+    override val myKeyboards: Flow<UserKeyboards.Stored> = keyboards.asStateFlow()
     private val height = MutableStateFlow(SettingsPreferences.DEFAULT_KEY_HEIGHT)
     private val preview = MutableStateFlow(true)
     private val flick = MutableStateFlow(SettingsPreferences.DEFAULT_FLICK_DIRECTION)
@@ -529,6 +546,17 @@ class InMemorySettingsPreferences(
 
     override suspend fun setLayoutId(value: String) {
         layout.value = value
+        definition.value = null
+    }
+
+    override suspend fun setKeyboard(keyboard: PublishedKeyboard) {
+        schema.value = keyboard.schemaID
+        layout.value = keyboard.layout.wire
+        definition.value = keyboard.board
+    }
+
+    override suspend fun setMyKeyboards(value: UserKeyboards.Stored) {
+        keyboards.value = value
     }
 
     override suspend fun setShowCandidateComments(value: Boolean) {

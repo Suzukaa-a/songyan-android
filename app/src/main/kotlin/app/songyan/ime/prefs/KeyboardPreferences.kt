@@ -17,10 +17,12 @@ import app.songyan.ime.appearance.font.FontOrderWire
 import app.songyan.ime.appearance.font.FontRole
 import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.NineKeyCandidateSide
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ShuangpinHintSnapshot
 import app.songyan.ime.layout.T9QuickSymbolStore
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.layout.WideMiddleGap
 import app.songyan.ime.learning.LearningSnapshotInterval
 import app.songyan.ime.settings.state.SettingsPreferences
@@ -575,8 +577,58 @@ class KeyboardPreferences(
         appContext.keyboardDataStore.edit { it[KEY_RELEASE_HAPTIC] = value }
     }
 
+    /** Switches to a shape without naming a layout: the keyboard draws what that shape's pairing says. */
     suspend fun setLayoutId(value: String) {
-        appContext.keyboardDataStore.edit { it[KEY_LAYOUT_ID] = value }
+        appContext.keyboardDataStore.edit {
+            it[KEY_LAYOUT_ID] = value
+            it.remove(KEY_LAYOUT_DEFINITION_ID)
+        }
+    }
+
+    /**
+     * The layout the keyboard in use names; null for a selection stored before keyboards named
+     * theirs, which keeps drawing the main layout of its shape's pairing.
+     */
+    val layoutDefinitionId: Flow<String?> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_LAYOUT_DEFINITION_ID] }
+            .distinctUntilChanged()
+
+    /** The input method, shape and layout of the keyboard in use, stored in one write. */
+    suspend fun setKeyboard(keyboard: PublishedKeyboard) {
+        appContext.keyboardDataStore.edit {
+            it[KEY_ACTIVE_SCHEMA] = keyboard.schemaID
+            it[KEY_LAYOUT_ID] = keyboard.layout.wire
+            val board = keyboard.board
+            if (board == null) it.remove(KEY_LAYOUT_DEFINITION_ID) else it[KEY_LAYOUT_DEFINITION_ID] = board
+        }
+        mirrorActiveSchema(keyboard.schemaID)
+    }
+
+    /**
+     * The keyboards the user edited, with the input methods they speak for; every other input
+     * method keeps the keyboards derived from the two hidden sets ([UserKeyboards.effective]).
+     */
+    val myKeyboards: Flow<UserKeyboards.Stored> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map {
+                UserKeyboards.Stored(
+                    UserKeyboards.decode(it[KEY_MY_KEYBOARDS]),
+                    it[KEY_MY_KEYBOARD_SCHEMES].orEmpty(),
+                )
+            }.distinctUntilChanged()
+
+    /**
+     * The one place the keyboard list is written. The deploy process cannot read the preferences, so
+     * whatever it needs from the list (which folded keyboards to prepare) is mirrored from here.
+     */
+    suspend fun setMyKeyboards(value: UserKeyboards.Stored) {
+        appContext.keyboardDataStore.edit {
+            it[KEY_MY_KEYBOARDS] = UserKeyboards.encode(value.keyboards)
+            it[KEY_MY_KEYBOARD_SCHEMES] = value.schemes
+        }
     }
 
     suspend fun setActiveSchemaId(value: String) {
@@ -759,6 +811,9 @@ class KeyboardPreferences(
         private val KEY_MENU_HIDDEN_LAYOUTS = stringSetPreferencesKey("menu_hidden_layouts")
         private val KEY_READING_PLACEMENT = stringPreferencesKey("reading_placement")
         private val KEY_LAYOUT_ID = stringPreferencesKey("layout_id")
+        private val KEY_LAYOUT_DEFINITION_ID = stringPreferencesKey("layout_definition_id")
+        private val KEY_MY_KEYBOARDS = stringPreferencesKey("my_keyboards")
+        private val KEY_MY_KEYBOARD_SCHEMES = stringSetPreferencesKey("my_keyboard_schemes")
         private val KEY_SYMBOL_LOCK = booleanPreferencesKey("symbol_lock")
         private val KEY_KANA12_FLICK_ONLY = booleanPreferencesKey("kana12_flick_only")
         private val KEY_HEIGHT = stringPreferencesKey("key_height")

@@ -214,3 +214,28 @@ object UserKeyboards {
         return raw.mapNotNull { PublishedKeyboard.parse(it) }.distinctBy { it.id }
     }
 }
+
+/**
+ * Which layouts an input method can be given a keyboard on. Every place that offers a keyboard to
+ * add asks here, so the rule lives in one function.
+ */
+object ApplicableLayouts {
+    /**
+     * The keyboards [scheme] could have, each naming its layout, in the order they are offered: per
+     * shape its engine data can run, the physical boards of its family, the shape's own layout, then
+     * the user's layouts that fit the input method and shape.
+     */
+    fun of(
+        scheme: KeyboardScheme,
+        registry: LayoutRegistry,
+        families: LayoutFamilyContext,
+    ): List<PublishedKeyboard> {
+        val boards = InputLayoutPolicy.boardsOf(families.familyOf(scheme.id))
+        return KeyboardLayoutKind.entries.filter { it in scheme.shapes }.flatMap { kind ->
+            val shape = PublishedKeyboard(scheme.id, kind)
+            val candidates = registry.mainLayoutCandidates(shape.compositionKey(), families).map { it.id }
+            val ordered = boards.filter { it in candidates } + candidates.filter { it !in boards }
+            ordered.map { shape.copy(board = it) }
+        }
+    }
+}

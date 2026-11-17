@@ -5,8 +5,10 @@ import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.UserKeyboards
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -17,6 +19,12 @@ import kotlinx.coroutines.flow.flowOf
 interface KeyboardPreferencesSource {
     val layoutId: Flow<String>
     val activeSchemaId: Flow<String>
+
+    /** The layout the keyboard in use names; null follows the pairing of its shape. */
+    val layoutDefinitionId: Flow<String?> get() = flowOf(null)
+
+    /** The keyboards the user edited and the input methods they speak for. */
+    val myKeyboards: Flow<UserKeyboards.Stored> get() = flowOf(UserKeyboards.Stored())
 
     /** [KeyHeight.wire]: the portrait key row pitch. */
     val keyHeight: Flow<String> get() = flowOf(KeyHeight.DEFAULT.wire)
@@ -128,6 +136,12 @@ interface KeyboardPreferencesSource {
         families: LayoutFamilyContext,
         boardId: String,
     ): Boolean = false
+
+    /** Stores the keyboard in use: its input method, shape and layout together. */
+    suspend fun setKeyboard(keyboard: PublishedKeyboard) {
+        setActiveSchemaId(keyboard.schemaID)
+        setLayoutId(keyboard.layout.wire)
+    }
 
     suspend fun setOneHand(value: String) = Unit
 

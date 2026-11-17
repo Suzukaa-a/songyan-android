@@ -1,7 +1,9 @@
 package app.songyan.ime.state
 
 import android.content.Context
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.settings.state.SettingsPreferences
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +21,8 @@ class AppSettingsPreferences(
 
     override val activeSchemaId: Flow<String> = preferences.activeSchemaId
     override val layoutId: Flow<String> = preferences.layoutId
+    override val layoutDefinitionId: Flow<String?> = preferences.layoutDefinitionId
+    override val myKeyboards: Flow<UserKeyboards.Stored> = preferences.myKeyboards
 
     override val keyHeight: Flow<String> = preferences.keyHeight
     override val bottomGapDp: Flow<Int> = preferences.bottomGapDp
@@ -156,5 +160,13 @@ class AppSettingsPreferences(
 
     override suspend fun setLayoutId(value: String) {
         preferences.setLayoutId(value)
+    }
+
+    override suspend fun setKeyboard(keyboard: PublishedKeyboard) {
+        preferences.setKeyboard(keyboard)
+    }
+
+    override suspend fun setMyKeyboards(value: UserKeyboards.Stored) {
+        preferences.setMyKeyboards(value)
     }
 }

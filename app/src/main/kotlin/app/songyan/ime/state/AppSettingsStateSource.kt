@@ -139,6 +139,7 @@ class AppSettingsStateSource(
                 inputMethodId = inUseSchemeId,
                 shapeId = preferences.layoutId.first(),
                 family = inUseScheme?.family,
+                layoutDefinitionId = preferences.layoutDefinitionId.first(),
             )
         return SettingsAppState(
             engine = engine,
@@ -216,13 +217,15 @@ class AppSettingsStateSource(
 
     /**
      * The name of the layout the keyboard in use draws: a physical board this build words by id, the
-     * user's own layout under the name it was saved with, else the shape's existing name. The saved
-     * pairing is read from the catalog the keyboard itself reads, never guessed from the UI language.
+     * user's own layout under the name it was saved with, else the shape's existing name. The layout
+     * the keyboard names, or its shape's saved pairing, is read from the catalog the keyboard itself
+     * reads, never guessed from the UI language.
      */
     private fun currentLayoutName(
         inputMethodId: String?,
         shapeId: String,
         family: InputSchemeFamily?,
+        layoutDefinitionId: String?,
     ): String {
         val shape = LayoutInput.Builtin.fromWire(shapeId)
         val registry = LayoutLibraryHolder.current.registry.value
@@ -231,7 +234,9 @@ class AppSettingsStateSource(
                 val families =
                     family?.let { LayoutFamilyContext.of(inputMethodId to it) } ?: LayoutFamilyContext.UNKNOWN
                 registry.resolvedLayout(
-                    registry.composition(KeyboardCompositionKey(inputMethodId, shape), families).mainLayoutID,
+                    registry
+                        .composition(KeyboardCompositionKey(inputMethodId, shape, layoutDefinitionId), families)
+                        .mainLayoutID,
                 )
             } else {
                 null

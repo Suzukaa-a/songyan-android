@@ -75,6 +75,7 @@ import app.songyan.ime.ime.panels.QuickInsertState
 import app.songyan.ime.keyboard.engine.EngineBackend
 import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.keyboard.support.SettingsTarget
 import app.songyan.ime.layout.KeyboardCompositionKey
@@ -230,6 +231,11 @@ class SongyanInputMethodService : InputMethodService() {
                         )
                     } is LayoutEditResult.Saved
                 }
+
+            override val layoutDefinitionId = store.layoutDefinitionId
+            override val myKeyboards = store.myKeyboards
+
+            override suspend fun setKeyboard(keyboard: PublishedKeyboard) = store.setKeyboard(keyboard)
         }
     }
 

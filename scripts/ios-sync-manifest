@@ -59,3 +59,4 @@ Packages/PackageManager/Tests/PackageManagerTests/Fixtures/songyan_quanpin.proje
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/songyan_flypy.projection.json core/packages/src/test/resources/package-fixtures/songyan_flypy.projection.json
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_flypy.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_flypy.projection.json
 Packages/PackageManager/Tests/PackageManagerTests/Fixtures/double_pinyin_mspy_test.projection.json core/packages/src/test/resources/package-fixtures/double_pinyin_mspy_test.projection.json
+Packages/PackageManager/Tests/PackageManagerTests/Fixtures/KeyProfiles/ core/packages/src/test/resources/package-fixtures/key-profiles/

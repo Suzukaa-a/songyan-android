@@ -2,6 +2,7 @@ package app.songyan.ime.settings.ui
 
 import androidx.lifecycle.SavedStateHandle
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.FooterKeys
 import app.songyan.ime.layout.KeyboardPagePresets
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
@@ -194,7 +195,12 @@ class EditorDraftsTest {
             BuiltinLayouts.phone9,
         )) {
             val draft = LayoutDraft(layout)
-            val footer = listOf(key("常用"), LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE)))
+            val footer =
+                listOf(
+                    key("常用"),
+                    FooterKeys.LANGUAGE,
+                    LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE)),
+                )
             val edited = draft.withBottomKeys(footer)
             assertTrue(edited.hasChanges)
             assertEquals(footer, edited.bottomKeys)
@@ -206,6 +212,13 @@ class EditorDraftsTest {
                     .keys,
             )
         }
+    }
+
+    @Test
+    fun aBottomRowWithoutALanguageKeyIsShownWithOneBecauseTheKeyboardMenuOpensFromIt() {
+        val footer = listOf(key("常用"), LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE)))
+        val edited = LayoutDraft(BuiltinLayouts.qwerty26).withBottomKeys(footer)
+        assertEquals(listOf(FooterKeys.LANGUAGE) + footer, edited.bottomKeys)
     }
 
     @Test

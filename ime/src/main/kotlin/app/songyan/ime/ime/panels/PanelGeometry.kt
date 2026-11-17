@@ -127,6 +127,16 @@ object PanelGeometry {
         return maxOf(0.0, gridRows(itemCount, columns, sectionStart) * cellHeightDp + header - contentHeightDp)
     }
 
+    /**
+     * Whether a section's heading is drawn: only while the section's first cell shows at least in part.
+     * The heading sits in the gap above that cell, so a grid scrolled or cut off above it would
+     * otherwise show a heading with nothing under it.
+     */
+    fun sectionTitleVisible(
+        firstCellTopDp: Double,
+        contentBottomDp: Double,
+    ): Boolean = firstCellTopDp < contentBottomDp
+
     /** Rows of a grid whose cells from [sectionStart] on begin a new row (no break when out of range). */
     fun gridRows(
         itemCount: Int,

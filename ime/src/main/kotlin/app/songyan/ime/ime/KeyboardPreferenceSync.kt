@@ -5,6 +5,7 @@ import app.songyan.ime.candidate.KeyboardOneHandMode
 import app.songyan.ime.candidate.ToolbarLayout
 import app.songyan.ime.ime.panels.QuickSettingChange
 import app.songyan.ime.keyboard.engine.EngineOptionKind
+import app.songyan.ime.keyboard.engine.EngineOptionState
 import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
@@ -377,34 +378,57 @@ internal fun KeyboardController.syncMenu() {
     menu.update(schemaId, keyboards.current.id)
 }
 
-/** The running input method's own schema switches, worded by the labels its schema declares. */
+/**
+ * The running input method's own schema switches, worded by the labels its schema declares: every
+ * switch and option group it declares except the 中/英 key's `ascii_mode` (which the engine never lists).
+ */
 internal fun KeyboardController.menuSwitches(): List<KeyboardSwitcherPanel.SwitchEntry> {
     val declared =
         session
             ?.takeIf { ready }
             ?.options
             .orEmpty()
-            .filter { it.descriptor.kind == EngineOptionKind.DECLARED }
-    val seen = HashSet<String>()
-    return declared.mapNotNull { state ->
-        val descriptor = state.descriptor
-        if (descriptor.choiceGroup.isEmpty()) {
-            val labels = descriptor.stateLabels
-            if (labels.size != 2) return@mapNotNull null
-            KeyboardSwitcherPanel.SwitchEntry.Toggle(descriptor.name, labels[if (state.value) 1 else 0], state.value)
-        } else if (seen.add(descriptor.choiceGroup.first())) {
-            val members = descriptor.choiceGroup.mapNotNull { name -> declared.find { it.descriptor.name == name } }
-            KeyboardSwitcherPanel.SwitchEntry.Group(
-                members.map {
-                    KeyboardSwitcherPanel.SwitchEntry.Group.Option(
-                        it.descriptor.name,
-                        it.descriptor.choiceLabel ?: it.descriptor.name,
-                        it.value,
-                    )
-                },
-            )
-        } else {
-            null
+    return MenuSwitches.entries(declared) { kind -> context.getString(MenuSwitches.fallbackLabel(kind)) }
+}
+
+/** What the keyboard menu lists for the engine's switches; pure so the rule is tested without a keyboard. */
+internal object MenuSwitches {
+    @androidx.annotation.StringRes
+    fun fallbackLabel(kind: EngineOptionKind): Int =
+        when (kind) {
+            EngineOptionKind.TRADITIONAL -> R.string.ime_qs_engine_traditional
+            EngineOptionKind.SIMPLIFIED -> R.string.ime_qs_engine_simplified
+            EngineOptionKind.EMOJI -> R.string.ime_qs_engine_emoji
+            EngineOptionKind.FULL_SHAPE -> R.string.ime_qs_engine_full_shape
+            EngineOptionKind.DECLARED -> R.string.ime_qs_engine_character_form
+        }
+
+    fun entries(
+        declared: List<EngineOptionState>,
+        fallback: (EngineOptionKind) -> String,
+    ): List<KeyboardSwitcherPanel.SwitchEntry> {
+        val seen = HashSet<String>()
+        return declared.mapNotNull { state ->
+            val descriptor = state.descriptor
+            if (descriptor.choiceGroup.isEmpty()) {
+                val labels = descriptor.stateLabels
+                // A switch that words neither state is named by its kind rather than shown as a code.
+                val label = if (labels.size == 2) labels[if (state.value) 1 else 0] else fallback(descriptor.kind)
+                KeyboardSwitcherPanel.SwitchEntry.Toggle(descriptor.name, label, state.value)
+            } else if (seen.add(descriptor.choiceGroup.first())) {
+                val members = descriptor.choiceGroup.mapNotNull { name -> declared.find { it.descriptor.name == name } }
+                KeyboardSwitcherPanel.SwitchEntry.Group(
+                    members.map {
+                        KeyboardSwitcherPanel.SwitchEntry.Group.Option(
+                            it.descriptor.name,
+                            it.descriptor.choiceLabel ?: it.descriptor.name,
+                            it.value,
+                        )
+                    },
+                )
+            } else {
+                null
+            }
         }
     }
 }

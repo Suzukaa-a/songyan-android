@@ -506,7 +506,10 @@ abstract class QuickContentPanelView(
             if (cell.bottom <= contentTopDp() || cell.top >= bottomDp) continue
             drawCell(canvas, cell, index)
         }
-        cells.getOrNull(sectionStart())?.takeIf { sectionTitleDp() > 0.0 }?.let { drawSectionTitle(canvas, it) }
+        cells
+            .getOrNull(sectionStart())
+            ?.takeIf { sectionTitleDp() > 0.0 && PanelGeometry.sectionTitleVisible(it.top, bottomDp) }
+            ?.let { drawSectionTitle(canvas, it) }
         canvas.restore()
         drawScrollMasks(canvas)
         drawBottomBar(canvas)

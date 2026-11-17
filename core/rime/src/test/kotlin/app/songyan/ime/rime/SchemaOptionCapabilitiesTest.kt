@@ -125,6 +125,52 @@ class SchemaOptionCapabilitiesTest {
     }
 
     @Test
+    fun rimeBopomofoDeclaresFullShapeAndAFourStateScriptGroupAndBothAreOffered() {
+        val yaml =
+            """
+            switches:
+              - name: ascii_mode
+                reset: 0
+                states: [ 中文, 西文 ]
+              - name: full_shape
+                states: [ 半角, 全角 ]
+              - options:
+                  - zh_hant
+                  - zh_hans
+                  - zh_hant_hk
+                  - zh_hant_tw
+                states:
+                  - 傳統漢字
+                  - 简化字
+                  - 香港字形
+                  - 臺灣字形
+              - name: ascii_punct
+                states: [ 。，, ．， ]
+            engine:
+              filters:
+                - simplifier@zh_hans
+                - simplifier@zh_hant_hk
+                - simplifier@zh_hant_tw
+                - uniquifier
+            zh_hans:
+              option_name: zh_hans
+              opencc_config: t2s.json
+            zh_hant_hk:
+              option_name: zh_hant_hk
+              opencc_config: t2hk.json
+            zh_hant_tw:
+              option_name: zh_hant_tw
+              opencc_config: t2tw.json
+            """.trimIndent()
+        val found =
+            parseAll(yaml, setOf("t2s.json", "t2hk.json", "t2tw.json")).map { it.name }
+        assertEquals(
+            listOf("full_shape", "zh_hant", "zh_hans", "zh_hant_hk", "zh_hant_tw", "ascii_punct"),
+            found,
+        )
+    }
+
+    @Test
     fun theFullShapeSwitchIsOfferedWithoutAFilterBecauseLibrimeAlwaysShapes() {
         val yaml = traditional.replace("  - name: ascii_punct", "  - name: full_shape")
         val found = parse(yaml).last()

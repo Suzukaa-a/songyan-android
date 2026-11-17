@@ -233,4 +233,12 @@ class PanelGeometryTest {
         assertEquals(144.0, PanelGeometry.railScrollRevealing(3, 48.0, 200.0, 100.0), 0.001)
         assertEquals(30.0, PanelGeometry.railScrollRevealing(1, 48.0, 30.0, 96.0), 0.001)
     }
+
+    @Test
+    fun aSectionHeadingIsDrawnOnlyWhileItsFirstCellShows() {
+        assertTrue(PanelGeometry.sectionTitleVisible(firstCellTopDp = 120.0, contentBottomDp = 200.0))
+        // The first cell starts at the bottom edge: only the gap above it is in view.
+        assertFalse(PanelGeometry.sectionTitleVisible(firstCellTopDp = 200.0, contentBottomDp = 200.0))
+        assertFalse(PanelGeometry.sectionTitleVisible(firstCellTopDp = 260.0, contentBottomDp = 200.0))
+    }
 }

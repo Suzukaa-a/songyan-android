@@ -136,6 +136,11 @@ sealed interface ScriptRunOutcome {
 /** The public registry hosts use. All functions are safe to call from any process; the impl
  *  forwards to the proxy process over Binder and starts it on demand. */
 interface ScriptRegistry {
+    /** What this host can offer a run; decides which scripts are available and which AI guide
+     *  sections apply. */
+    val hostCapabilities: Set<ScriptHostCapability>
+        get() = ScriptHostCapability.DEFAULT
+
     /** Cached metadata; does not start the proxy process. Callers refresh with [reload]. */
     val entries: List<ScriptEntry>
 

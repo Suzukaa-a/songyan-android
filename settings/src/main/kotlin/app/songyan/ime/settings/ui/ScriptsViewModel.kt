@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.script.ScriptEntry
+import app.songyan.ime.script.ScriptGuide
 import app.songyan.ime.script.ScriptRefusedException
 import app.songyan.ime.script.ScriptRegistry
 import app.songyan.ime.script.ScriptRegistryHolder
@@ -546,10 +547,7 @@ class ScriptsViewModel(
     private suspend fun readAiGuide(context: Context): String? =
         withContext(ioDispatcher) {
             try {
-                context.assets
-                    .open(AI_GUIDE_ASSET)
-                    .bufferedReader()
-                    .use { it.readText() }
+                ScriptGuide.read(context.assets, registry.hostCapabilities)
             } catch (e: IOException) {
                 null
             }
@@ -565,9 +563,5 @@ class ScriptsViewModel(
             @Suppress("UNCHECKED_CAST")
             return ScriptsViewModel(registry) as T
         }
-    }
-
-    private companion object {
-        const val AI_GUIDE_ASSET = "script/ai-guide.txt"
     }
 }

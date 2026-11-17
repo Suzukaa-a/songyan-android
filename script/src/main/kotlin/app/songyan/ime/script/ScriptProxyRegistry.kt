@@ -27,7 +27,7 @@ import kotlinx.serialization.json.put
  */
 class ScriptProxyRegistry(
     context: Context,
-    private val hostCapabilities: Set<ScriptHostCapability> = ScriptHostCapability.DEFAULT,
+    override val hostCapabilities: Set<ScriptHostCapability> = ScriptHostCapability.DEFAULT,
 ) : ScriptRegistry {
     private val appContext = context.applicationContext
 

@@ -37,6 +37,7 @@ Tools/Script/tests/cases/ script/src/androidTest/assets/script-cases/
 Tools/Script/tests/execution/ script/src/androidTest/assets/script-execution/
 Tools/Script/tests/address-cases.txt script/src/androidTest/assets/script-address-cases.txt
 Tools/Script/resources/ai-guide.txt script/src/main/assets/script/ai-guide.txt
+Tools/Script/resources/ai-guide-audio.txt script/src/main/assets/script/ai-guide-audio.txt
 Tools/Script/examples/ script/src/main/assets/script/examples/
 Tools/BuildRimeIOS/QUICKJS-VERSIONS.env script/src/main/cpp/QUICKJS-VERSIONS.env
 

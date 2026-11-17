@@ -614,11 +614,10 @@ class KeyboardPageDefinitionTest {
     }
 
     @Test
-    fun unknownPageFieldsAreRejected() {
+    fun unknownPageFieldsAreDropped() {
         val json = "{\"id\":\"p\",\"name\":\"n\",\"kind\":\"numeric\",\"newField\":1}"
-        assertThrows(IllegalArgumentException::class.java) {
-            LayoutJson.format.decodeFromString(KeyboardPageDefinition.serializer(), json)
-        }
+        val page = LayoutJson.format.decodeFromString(KeyboardPageDefinition.serializer(), json)
+        assertEquals("p", page.id)
     }
 
     @Test

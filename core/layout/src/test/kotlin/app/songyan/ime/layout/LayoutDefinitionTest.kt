@@ -80,13 +80,30 @@ class LayoutDefinitionTest {
     }
 
     @Test
-    fun unknownFieldsAreRejected() {
+    fun unknownFieldsAreDroppedButInvalidValuesStayRejected() {
+        val original = LayoutFixtures.readText(LayoutFixtures.QWERTY26)
         val json =
-            LayoutFixtures.readText(LayoutFixtures.QWERTY26).replaceFirst(
+            original.replaceFirst(
                 "\"id\": \"qwerty26\",",
-                "\"id\": \"qwerty26\", \"unknownField\": 1,",
+                "\"id\": \"qwerty26\", \"unknownField\": 1, \"nested\": {\"a\": [1]},",
             )
-        assertThrows(LayoutException::class.java) { LayoutJson.decode(json) }
+        assertEquals(LayoutJson.decode(original), LayoutJson.decode(json))
+
+        val zeroWidth =
+            LayoutJson.decode(original).let {
+                it.copy(
+                    rows =
+                        listOf(
+                            LayoutRow(
+                                it.rows
+                                    .first()
+                                    .keys
+                                    .map { key -> key.copy(width = 0.0) },
+                            ),
+                        ),
+                )
+            }
+        assertThrows(LayoutException::class.java) { LayoutJson.decode(zeroWidth.encoded()) }
     }
 
     @Test

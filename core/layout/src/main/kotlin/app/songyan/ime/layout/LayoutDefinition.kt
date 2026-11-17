@@ -741,7 +741,7 @@ sealed class LayoutKeyPath {
     ) : LayoutKeyPath()
 }
 
-/** The single JSON configuration for layout data. Unknown fields are rejected, like iOS. */
+/** The single JSON configuration for layout data. Unknown fields are dropped, like iOS; invalid values are rejected. */
 object LayoutJson {
     val format: Json =
         Json {
@@ -749,7 +749,7 @@ object LayoutJson {
             prettyPrintIndent = "  "
             explicitNulls = false
             encodeDefaults = false
-            ignoreUnknownKeys = false
+            ignoreUnknownKeys = true
         }
 
     /** Compact form used for canonical identity encodings. */
@@ -758,7 +758,7 @@ object LayoutJson {
             prettyPrint = false
             explicitNulls = false
             encodeDefaults = false
-            ignoreUnknownKeys = false
+            ignoreUnknownKeys = true
         }
 
     @Throws(LayoutException::class)

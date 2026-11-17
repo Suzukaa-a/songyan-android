@@ -4,6 +4,7 @@ import app.songyan.ime.tools.ToolCapability
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolFailure
 import app.songyan.ime.tools.ToolPhase
+import app.songyan.ime.tools.ToolRunException
 import app.songyan.ime.tools.UnavailableReason
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -73,5 +74,22 @@ class ToolFailureCopyTest {
         assertNull(state(ToolFailure.NoResult).failedToolCopy())
         assertNull(state(ToolFailure.Cancelled).failedToolCopy())
         assertNull(state(ToolFailure.Unavailable(UnavailableReason.NO_TEXT)).failedToolCopy())
+    }
+
+    /** A host failure without a classified code once reached the panel as English text. */
+    @Test
+    fun anInternalExceptionCarriesNoWords() {
+        val recorded = toolErrorOf(IllegalStateException("the extension did not answer in time"))
+
+        assertEquals(ToolFailure.ToolError(null), recorded)
+        assertEquals(FailedToolCopy(title = "加书名号", message = null), state(recorded).failedToolCopy())
+    }
+
+    @Test
+    fun aClassifiedExceptionKeepsItsCodeAndWords() {
+        assertEquals(
+            ToolFailure.ToolError("401 密钥无效", "script", 7),
+            toolErrorOf(ToolRunException("script", "401 密钥无效", 7)),
+        )
     }
 }

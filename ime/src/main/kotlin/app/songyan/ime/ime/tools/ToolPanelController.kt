@@ -1,5 +1,6 @@
 package app.songyan.ime.ime.tools
 
+import android.util.Log
 import app.songyan.ime.tools.TextScope
 import app.songyan.ime.tools.ToolDescriptor
 import app.songyan.ime.tools.ToolFailure
@@ -102,8 +103,9 @@ class ToolPanelController(
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (error: Throwable) {
-                        val coded = error as? ToolRunException
-                        started.fail(started.runId, error.message, code = coded?.code, line = coded?.line ?: 0)
+                        if (error !is ToolRunException) Log.w(TAG, "tool run failed", error)
+                        val failed = toolErrorOf(error)
+                        started.fail(started.runId, failed.message, code = failed.code, line = failed.line)
                         publish()
                         return@launch
                     }
@@ -201,5 +203,7 @@ class ToolPanelController(
     private companion object {
         /** The model decides the deadline; the panel only stops waiting a moment after it. */
         const val TIMEOUT_SLACK_MS = 1_000L
+
+        const val TAG = "SongyanTools"
     }
 }

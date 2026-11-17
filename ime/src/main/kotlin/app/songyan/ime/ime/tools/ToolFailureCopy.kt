@@ -31,3 +31,15 @@ fun ToolPanelController.State.failedToolCopy(): FailedToolCopy? {
     if (message == null && title == null && code == null) return null
     return FailedToolCopy(title = title, message = message, code = code, line = error.line)
 }
+
+/**
+ * What a failed run records. Only a [ToolRunException] carries words or a classified code: any
+ * other throwable is a host diagnostic (a dead process, a protocol error) in English, so the panel
+ * words it with its generic line and the detail goes to logcat.
+ */
+fun toolErrorOf(error: Throwable): ToolFailure.ToolError =
+    if (error is ToolRunException) {
+        ToolFailure.ToolError(error.message, error.code, error.line)
+    } else {
+        ToolFailure.ToolError(null)
+    }

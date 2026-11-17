@@ -101,7 +101,7 @@
     <string name="page_name_symbols_system">默认符号页</string>
     <string name="page_name_symbols_categorized">分类符号</string>
     <string name="page_name_numeric_automatic">自动 123</string>
-    <string name="page_name_numeric_keypad">数字盘 123</string>
+    <string name="page_name_numeric_keypad">数字九宫格</string>
     <string name="page_name_english_qwerty">英文 QWERTY</string>
     <string name="layout_unavailable_note">键盘暂时还不能用这个布局。</string>
 

@@ -101,7 +101,7 @@
     <string name="page_name_symbols_system">預設符號頁</string>
     <string name="page_name_symbols_categorized">分類符號</string>
     <string name="page_name_numeric_automatic">自動 123</string>
-    <string name="page_name_numeric_keypad">數字盤 123</string>
+    <string name="page_name_numeric_keypad">數字九宮格</string>
     <string name="page_name_english_qwerty">英文 QWERTY</string>
     <string name="layout_unavailable_note">鍵盤暫時還不能用這個佈局。</string>
 

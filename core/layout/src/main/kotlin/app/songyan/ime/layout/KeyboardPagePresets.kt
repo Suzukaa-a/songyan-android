@@ -234,7 +234,7 @@ object KeyboardPagePresets {
     private fun buildKeypadPreset(): KeyboardPageDefinition {
         val materialised =
             numericAutomatic.materialized(numericForm = KeyboardNumericForm.PHONE_DIGIT_PAD)
-        return materialised.copy(id = NUMERIC_KEYPAD_ID, name = "数字盘 123")
+        return materialised.copy(id = NUMERIC_KEYPAD_ID, name = "数字九宫格")
     }
 
     /** English letter rows: fixed letters with their long-press alternates and corner hints. */

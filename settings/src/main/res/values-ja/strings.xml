@@ -100,7 +100,7 @@
     <string name="page_name_symbols_system">標準の記号</string>
     <string name="page_name_symbols_categorized">カテゴリ別記号</string>
     <string name="page_name_numeric_automatic">自動 123</string>
-    <string name="page_name_numeric_keypad">テンキー 123</string>
+    <string name="page_name_numeric_keypad">数字キーパッド</string>
     <string name="page_name_english_qwerty">英語 QWERTY</string>
     <string name="layout_unavailable_note">このキー配列はまだキーボードで使えません。</string>
 

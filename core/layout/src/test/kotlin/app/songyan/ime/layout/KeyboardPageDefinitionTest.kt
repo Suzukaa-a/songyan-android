@@ -302,7 +302,7 @@ class KeyboardPageDefinitionTest {
 
         val preset = KeyboardPagePresets.numericKeypad
         assertEquals(KeyboardNumericPresentation.KEYPAD, preset.numericPresentation)
-        assertEquals("数字盘 123", preset.name)
+        assertEquals("数字九宫格", preset.name)
         preset.validate()
         assertTrue(KeyboardPagePresets.codeOwnedIds.contains(preset.id))
         assertEquals(1, KeyboardPagePresets.mergingInto(emptyList()).count { it.id == preset.id })

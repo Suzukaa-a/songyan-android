@@ -101,7 +101,7 @@
     <string name="page_name_symbols_system">Default symbols</string>
     <string name="page_name_symbols_categorized">Symbols by category</string>
     <string name="page_name_numeric_automatic">Automatic 123</string>
-    <string name="page_name_numeric_keypad">Number pad 123</string>
+    <string name="page_name_numeric_keypad">Number pad</string>
     <string name="page_name_english_qwerty">English QWERTY</string>
     <string name="layout_unavailable_note">This layout is not supported by the keyboard yet.</string>
 

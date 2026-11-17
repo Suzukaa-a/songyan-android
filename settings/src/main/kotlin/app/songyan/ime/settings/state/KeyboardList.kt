@@ -1,6 +1,8 @@
 package app.songyan.ime.settings.state
 
+import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
+import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -23,7 +25,19 @@ data class KeyboardRow(
     val missingCodes: List<String> = emptyList(),
     /** Set while the layout is yet to be made from the key profile; adding the keyboard installs it. */
     val generated: ApplicableLayouts.Generated? = null,
+    val status: KeyboardStatus = KeyboardStatus.READY,
 )
+
+/** Whether a keyboard in the list can be used now. */
+enum class KeyboardStatus {
+    READY,
+
+    /** Its folded engine data is still being made. */
+    PREPARING,
+
+    /** The generator refused it for this input method; it is never retried. */
+    UNAVAILABLE,
+}
 
 /** The keyboards of one input method, and the ones it could still be given. */
 data class KeyboardGroup(
@@ -80,6 +94,25 @@ private fun generatedNameRes(kind: ApplicableLayouts.Generated): Int =
         ApplicableLayouts.Generated.STROKES -> R.string.layout_name_strokes
     }
 
+/**
+ * The shapes [this] input method could be given a keyboard on, built or not: the identity shape
+ * always, a folded one only when its speller is spelled syllable by syllable, the family allows it
+ * and the generator did not refuse it. A keyboard on one that is not built yet is made on request.
+ */
+fun InstalledScheme.possibleScheme(families: LayoutFamilyContext): KeyboardScheme =
+    KeyboardScheme(
+        id,
+        KeyboardLayoutKind.entries.filterTo(LinkedHashSet()) { kind ->
+            kind == KeyboardLayoutKind.QWERTY26 ||
+                (
+                    profile?.allowsFolding != false &&
+                        InputLayoutPolicy.allows(kind, families.familyOf(id)) &&
+                        kind.wire !in unavailableLayouts
+                )
+        },
+        profile,
+    )
+
 /** The shapes the app state says [this] input method's engine data can run. */
 fun InstalledScheme.keyboardScheme(): KeyboardScheme =
     KeyboardScheme(id, supportedLayouts.mapNotNullTo(LinkedHashSet()) { KeyboardLayoutKind.fromWire(it) }, profile)
@@ -101,6 +134,7 @@ fun keyboardList(
 ): KeyboardList {
     val listed = schemes.filterNot { KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }
     val families = familiesOfSchemes(listed)
+    val possible = listed.associate { it.id to it.possibleScheme(families) }
     val keyboardSchemes = listed.map { it.keyboardScheme() }
     val shape = KeyboardLayoutKind.fromWire(layoutId)
     val selected =
@@ -120,6 +154,7 @@ fun keyboardList(
         keyboard: PublishedKeyboard,
         entry: ApplicableLayouts.Entry? = null,
         profile: SchemaKeyProfile? = null,
+        status: KeyboardStatus = KeyboardStatus.READY,
     ): KeyboardRow {
         val layout = keyboard.board?.let(registry::resolvedLayout)
         val generated = entry?.generated
@@ -139,24 +174,119 @@ fun keyboardList(
                 } else {
                     emptyList()
                 }
-        return KeyboardRow(keyboard, name, keyboard.id == current?.id, missing, generated)
+        return KeyboardRow(keyboard, name, keyboard.id == current?.id, missing, generated, status)
     }
     val groups =
         listed.map { scheme ->
             val own = runnable.filter { it.schemaID == scheme.id }
+            val ready = own.mapTo(HashSet()) { it.id }
+            val allowed = possible.getValue(scheme.id)
+            // A keyboard of the list on a fold that is not built yet, or that was refused, stays listed with its state.
+            val waiting =
+                effective
+                    .filter {
+                        it.schemaID == scheme.id &&
+                            it.id !in ready &&
+                            UserKeyboards.drawsItsLayout(it, registry, families)
+                    }.filter { it.layout in allowed.shapes || it.layout.wire in scheme.unavailableLayouts }
+                    .map { UserKeyboards.named(it, registry, families) }
+            val rank = effective.filter { it.schemaID == scheme.id }.map { it.id }
+            val shownOwn =
+                (own + waiting)
+                    .distinctBy { it.id }
+                    .sortedBy { k -> rank.indexOf(k.id).let { if (it < 0) Int.MAX_VALUE else it } }
             // The keyboard in use is listed even when the list does not hold it, as in the menu.
-            val shown = if (current?.schemaID == scheme.id && own.none { it.id == current.id }) own + current else own
+            val shown =
+                if (current?.schemaID == scheme.id &&
+                    shownOwn.none { it.id == current.id }
+                ) {
+                    shownOwn + current
+                } else {
+                    shownOwn
+                }
             val ids = shown.mapTo(HashSet()) { it.id }
-            val entries = ApplicableLayouts.entries(scheme.keyboardScheme(), registry, families)
+            val entries = ApplicableLayouts.entries(allowed, registry, families)
             val byId = entries.associateBy { it.keyboard.id }
             KeyboardGroup(
                 schemeId = scheme.id,
                 schemeName = scheme.name,
-                keyboards = shown.map { row(it, byId[it.id], scheme.profile) },
+                keyboards =
+                    shown.map {
+                        val state =
+                            when {
+                                it.id in ready || it.id == current?.id -> KeyboardStatus.READY
+                                it.layout.wire in scheme.unavailableLayouts -> KeyboardStatus.UNAVAILABLE
+                                else -> KeyboardStatus.PREPARING
+                            }
+                        row(it, byId[it.id], scheme.profile, state)
+                    },
                 addable = entries.filter { it.keyboard.id !in ids }.map { row(it.keyboard, it, scheme.profile) },
                 unknownCodes = scheme.profile?.kind == SchemaKeyProfile.Kind.UNKNOWN,
                 profile = scheme.profile,
             )
         }
     return KeyboardList(groups, current, stored, legacy)
+}
+
+/**
+ * What the install picker offers a package whose install just finished: for each of its input
+ * methods every layout it could have a keyboard on (a group's [KeyboardGroup.keyboards]). [checked]
+ * holds the ticked keyboards' ids; the default for each input method is its first layout.
+ */
+data class InstallPicker(
+    val groups: List<KeyboardGroup>,
+    val checked: Set<String>,
+) {
+    /** The ticked keyboards, in the order the picker lists them. */
+    val chosen: List<KeyboardRow> get() = groups.flatMap { it.keyboards }.filter { it.keyboard.id in checked }
+}
+
+/**
+ * The picker for the input methods [schemaIds] of a package, read from [schemes] (the package must
+ * be the one in use for its data to be known). [checked] null means the defaults. Null when none of
+ * its input methods is known yet.
+ */
+fun installPicker(
+    schemes: List<InstalledScheme>,
+    schemaIds: List<String>,
+    registry: LayoutRegistry,
+    checked: Set<String>?,
+): InstallPicker? {
+    val listed = schemes.filter { it.id in schemaIds && !KeyboardResourceSet.EncodingAdapter.isGeneratedID(it.id) }
+    if (listed.isEmpty()) return null
+    val families = familiesOfSchemes(listed)
+    val groups =
+        listed.map { scheme ->
+            val entries = ApplicableLayouts.entries(scheme.possibleScheme(families), registry, families)
+            KeyboardGroup(
+                schemeId = scheme.id,
+                schemeName = scheme.name,
+                keyboards =
+                    entries.map { entry ->
+                        val layout = entry.keyboard.board?.let(registry::resolvedLayout)
+                        val name =
+                            when {
+                                layout == null && entry.generated != null ->
+                                    LayoutDisplayName.Worded(generatedNameRes(entry.generated!!))
+                                else ->
+                                    layoutDisplayName(
+                                        layout,
+                                        KeyboardLayoutOption.fromId(entry.keyboard.layout.wire),
+                                    )
+                            }
+                        KeyboardRow(entry.keyboard, name, false, entry.missingCodes, entry.generated)
+                    },
+                addable = emptyList(),
+                unknownCodes = scheme.profile?.kind == SchemaKeyProfile.Kind.UNKNOWN,
+                profile = scheme.profile,
+            )
+        }
+    val defaults =
+        groups.mapNotNullTo(LinkedHashSet()) {
+            it.keyboards
+                .firstOrNull()
+                ?.keyboard
+                ?.id
+        }
+    return InstallPicker(groups, checked ?: defaults)
 }

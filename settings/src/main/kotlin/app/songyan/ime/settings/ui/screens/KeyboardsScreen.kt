@@ -32,6 +32,7 @@ import app.songyan.ime.settings.R
 import app.songyan.ime.settings.state.KeyboardGroup
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.KeyboardList
+import app.songyan.ime.settings.state.KeyboardStatus
 import app.songyan.ime.settings.state.SettingsPreferences
 import app.songyan.ime.settings.state.SettingsPreferencesHolder
 import app.songyan.ime.settings.state.StoredSourceInfo
@@ -109,11 +110,19 @@ fun KeyboardsScreen(
                             } else {
                                 stringResource(R.string.keyboards_missing_codes, row.missingCodes.joinToString(" "))
                             }
+                        val state =
+                            when (row.status) {
+                                KeyboardStatus.READY -> null
+                                KeyboardStatus.PREPARING -> stringResource(R.string.keyboards_preparing)
+                                KeyboardStatus.UNAVAILABLE -> stringResource(R.string.keyboards_unavailable)
+                            }
                         RadioRow(
                             title = name,
+                            enabled = row.status == KeyboardStatus.READY,
                             subtitle =
                                 listOfNotNull(
                                     inUse.takeIf { row.inUse },
+                                    state,
                                     missing,
                                 ).joinToString("\n").ifEmpty { null },
                             selected = row.inUse,
@@ -206,7 +215,7 @@ fun KeyboardsScreen(
 
 /** The layouts an input method can still be given a keyboard on; picking one adds it. */
 @Composable
-private fun AddKeyboardDialog(
+internal fun AddKeyboardDialog(
     group: KeyboardGroup,
     onAdd: (PublishedKeyboard, LayoutDefinition?) -> Unit,
     onDismiss: () -> Unit,

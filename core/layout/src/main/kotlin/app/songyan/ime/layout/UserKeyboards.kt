@@ -132,6 +132,21 @@ object UserKeyboards {
         return base.copy(keyboards = base.keyboards + keyboard)
     }
 
+    /**
+     * [stored] with exactly [keyboards] for [scheme] (possibly none), spoken for from now on; the other
+     * input methods keep what they had. The install picker writes a new package's choice this way.
+     */
+    fun setting(
+        scheme: String,
+        keyboards: List<PublishedKeyboard>,
+        stored: Stored,
+    ): Stored =
+        Stored(
+            stored.keyboards.filter { it.schemaID != scheme } +
+                keyboards.filter { it.schemaID == scheme }.distinctBy { it.id },
+            stored.schemes + scheme,
+        )
+
     fun removing(
         keyboard: PublishedKeyboard,
         stored: Stored,
@@ -256,8 +271,11 @@ object ApplicableLayouts {
         val boards = InputLayoutPolicy.boardsOf(families.familyOf(scheme.id))
         val profile = scheme.profile
         return KeyboardLayoutKind.entries
-            .filter { it in scheme.shapes && (it == KeyboardLayoutKind.QWERTY26 || profile?.allowsFolding != false) }
-            .flatMap { kind ->
+            .filter {
+                it in scheme.shapes &&
+                    (it == KeyboardLayoutKind.QWERTY26 || profile?.allowsFolding != false) &&
+                    InputLayoutPolicy.allows(it, families.familyOf(scheme.id))
+            }.flatMap { kind ->
                 val shape = PublishedKeyboard(scheme.id, kind)
                 val candidates = registry.mainLayoutCandidates(shape.compositionKey(), families).map { it.id }
                 val ordered = boards.filter { it in candidates } + candidates.filter { it !in boards }

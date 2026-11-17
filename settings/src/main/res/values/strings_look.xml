@@ -283,6 +283,8 @@
     <string name="keyboards_unknown_codes">Some codes are not on the keyboard. You can add them in Keyboard layouts.</string>
     <string name="keyboards_preparing">Preparing…</string>
     <string name="keyboards_unavailable">This input method can’t use this keyboard</string>
+    <string name="install_picker_title">Choose keyboards</string>
+    <string name="install_picker_start">Start using</string>
     <string name="keyboard_menu_in_use">In use</string>
     <string name="t9_symbols_title">9-key quick symbols</string>
     <string name="t9_symbols_field">Symbols</string>

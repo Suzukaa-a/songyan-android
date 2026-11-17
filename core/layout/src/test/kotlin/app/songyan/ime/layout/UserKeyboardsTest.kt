@@ -137,4 +137,21 @@ class UserKeyboardsTest {
         )
         assertEquals(setOf("my:lay#out", "phone9"), UserKeyboards.layoutIds(list))
     }
+
+    @Test
+    fun settingAnInputMethodReplacesItsKeyboardsAndKeepsTheOthers() {
+        val stored =
+            UserKeyboards.Stored(listOf(k("a:qwerty26#qwerty26"), k("b:merged14#merged14")), setOf("a", "b"))
+        val result =
+            UserKeyboards.setting(
+                "a",
+                listOf(k("a:phone9#phone9"), k("x:qwerty26#q"), k("a:phone9#phone9")),
+                stored,
+            )
+        assertEquals(listOf(k("b:merged14#merged14"), k("a:phone9#phone9")), result.keyboards)
+        assertEquals(setOf("a", "b"), result.schemes)
+        val none = UserKeyboards.setting("new", emptyList(), result)
+        assertEquals(result.keyboards, none.keyboards)
+        assertEquals(setOf("a", "b", "new"), none.schemes)
+    }
 }

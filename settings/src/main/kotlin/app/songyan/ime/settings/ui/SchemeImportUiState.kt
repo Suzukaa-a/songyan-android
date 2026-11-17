@@ -18,7 +18,14 @@ sealed interface SchemeImportUiState {
         val info: ImportedSchemeInfo?,
         /** True when a stored package was updated rather than a new one added. */
         val updated: Boolean = false,
+        /** The user has chosen the keyboards of a new package (or the picker was not offered). */
+        val keyboardsChosen: Boolean = false,
+        /** The keyboards ticked in the picker; null while the user has not touched it (the defaults). */
+        val checked: Set<String>? = null,
     ) : SchemeImportUiState {
+        /** A package seen for the first time asks which keyboards to start with; an update keeps what is there. */
+        val offersKeyboards: Boolean get() = info != null && info.sourceId != null && !updated && !keyboardsChosen
+
         /** The package came with learned words and the user has not answered yet. */
         val offersLearning: Boolean get() = info != null && info.sourceId != null && info.learningDictionaries > 0
     }

@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import app.songyan.ime.R
 import app.songyan.ime.content.ImportedDictionaryMetadataReader
+import app.songyan.ime.deploy.CompanionStatus
 import app.songyan.ime.deploy.DeployContract
 import app.songyan.ime.deploy.DeployState
 import app.songyan.ime.deploy.DeployStatusStore
@@ -204,10 +205,12 @@ class AppSettingsStateSource(
                 KeyboardSchemaDescriptor(it, it, SchemaOptionCapabilities.spellerAlphabet(build, it))
             }
         val profiles = SchemaKeyProfiles.read(build, ids)
+        val unavailable = CompanionStatus.readUnavailable(build)
         val resources = KeyboardResourceSets.forEngineSchemas(schemas, adapters, profiles)
         return schemesNamed(manifest, ids).map { scheme ->
             scheme.copy(
                 profile = profiles[scheme.id],
+                unavailableLayouts = unavailable[scheme.id].orEmpty().mapTo(HashSet()) { it.wire },
                 supportedLayouts =
                     KeyboardLayoutKind.entries
                         .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }

@@ -283,6 +283,8 @@
     <string name="keyboards_unknown_codes">有些編碼鍵盤上沒有，可在鍵盤配置裡補上</string>
     <string name="keyboards_preparing">正在準備…</string>
     <string name="keyboards_unavailable">這個輸入方式用不了這種鍵盤</string>
+    <string name="install_picker_title">選擇鍵盤</string>
+    <string name="install_picker_start">開始使用</string>
     <string name="keyboard_menu_in_use">使用中</string>
     <string name="t9_symbols_title">九鍵快捷符號</string>
     <string name="t9_symbols_field">符號</string>

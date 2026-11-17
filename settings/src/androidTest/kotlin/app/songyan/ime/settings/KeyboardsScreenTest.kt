@@ -226,4 +226,26 @@ class KeyboardsScreenTest {
         show(listOf(lua), k("lua_only:qwerty26"))
         compose.onNodeWithText(str(R.string.keyboards_unknown_codes)).assertExists()
     }
+
+    @Test
+    fun aFoldBeingMadeAndOneTheGeneratorRefusedShowTheirState() {
+        val ice =
+            InstalledScheme(
+                "quanpin",
+                "全拼",
+                setOf("qwerty26"),
+                profile = SchemaKeyProfile(SchemaKeyProfile.Kind.SYLLABIC, listOf("a")),
+                unavailableLayouts = setOf("phone9"),
+            )
+        stored =
+            UserKeyboards.Stored(
+                listOf(k("quanpin:qwerty26#qwerty26"), k("quanpin:merged14#merged14"), k("quanpin:phone9#phone9")),
+                setOf("quanpin"),
+            )
+        show(listOf(ice), k("quanpin:qwerty26"))
+        compose.onNodeWithText(str(R.string.keyboards_preparing), substring = true).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.keyboards_unavailable), substring = true).performScrollTo().assertExists()
+        compose.onNodeWithText(str(R.string.layout_name_14)).performClick()
+        assertEquals(emptyList<String>(), used)
+    }
 }

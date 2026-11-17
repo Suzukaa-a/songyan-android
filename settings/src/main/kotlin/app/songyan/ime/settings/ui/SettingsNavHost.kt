@@ -74,7 +74,9 @@ import app.songyan.ime.settings.state.EngineRecoveryNotice
 import app.songyan.ime.settings.state.familiesOfSchemes
 import app.songyan.ime.settings.ui.components.GrammarModelActions
 import app.songyan.ime.settings.ui.components.ImportKind
+import app.songyan.ime.settings.ui.components.InstallPickerUi
 import app.songyan.ime.settings.ui.components.LoadingScreen
+import app.songyan.ime.settings.ui.components.LocalInstallPicker
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.screens.AboutScreen
 import app.songyan.ime.settings.ui.screens.AddSchemeScreen
@@ -432,6 +434,9 @@ private fun NavGraphBuilder.settingsGraph(
             onSelectMethod = viewModel::useScheme,
             onImportScheme = viewModel::importScheme,
             grammarModel = grammarModelInput(navController),
+            keyboardList = state.value.keyboardList,
+            onAddKeyboard = viewModel::addKeyboard,
+            onRemoveKeyboard = viewModel::removeKeyboard,
             onUpdate = viewModel::updateScheme,
             onDelete = viewModel::deleteSource,
             onDismissSourceAction = viewModel::dismissSourceAction,
@@ -1118,7 +1123,15 @@ fun SettingsHost(
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle()
     val editorNavigation = remember { EditorNavigationController() }
-    CompositionLocalProvider(LocalEditorNavigationGuard provides editorNavigation) {
+    val picker =
+        remember(state.value.installPicker) {
+            InstallPickerUi(
+                state.value.installPicker,
+                viewModel::togglePickedKeyboard,
+                viewModel::confirmInstalledKeyboards,
+            )
+        }
+    CompositionLocalProvider(LocalEditorNavigationGuard provides editorNavigation, LocalInstallPicker provides picker) {
         SettingsEffects(viewModel, state.value, navController, target, onTargetHandled)
         SettingsPanes(viewModel, state, versionName, adaptiveInfo, navController, scriptsViewModel)
         EditorNavigationConfirmation(editorNavigation)

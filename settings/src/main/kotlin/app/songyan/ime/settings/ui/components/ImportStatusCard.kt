@@ -6,25 +6,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.songyan.ime.layout.ApplicableLayouts
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.state.InstallPicker
 import app.songyan.ime.settings.state.TransferProgress
 import app.songyan.ime.settings.ui.DictionaryImportAction
 import app.songyan.ime.settings.ui.DictionaryImportFailure
 import app.songyan.ime.settings.ui.DictionaryImportUiState
 import app.songyan.ime.settings.ui.SchemeImportUiState
+import app.songyan.ime.settings.ui.text
 
 /** Which import the card reports, so the buttons reach the right request. */
 enum class ImportKind { DICTIONARY, SCHEME }
@@ -45,7 +52,21 @@ data class ImportCard(
     val offer: ImportOffer? = null,
     /** False for work that cannot be stopped halfway, which shows no cancel button. */
     val cancellable: Boolean = true,
+    /** A new package just installed: the card asks which keyboards to start with. */
+    val pickable: Boolean = false,
 )
+
+/**
+ * The install picker's data and answers. Provided once at the top of the settings so the screens
+ * that show an import card (home, input schemes, a package's page, first-run) need no plumbing.
+ */
+class InstallPickerUi(
+    val picker: InstallPicker?,
+    val onToggle: (String) -> Unit,
+    val onConfirm: ((ApplicableLayouts.Generated) -> String) -> Unit,
+)
+
+val LocalInstallPicker = staticCompositionLocalOf<InstallPickerUi?> { null }
 
 /** A yes or no question under a finished import: the learned words a package came with. */
 data class ImportOffer(
@@ -110,6 +131,8 @@ fun ImportStatusContent(
                 )
             }
         }
+        val pickerUi = LocalInstallPicker.current?.takeIf { card.pickable && card.phase == ImportPhase.SUCCEEDED }
+        pickerUi?.picker?.let { InstallPickerContent(it, pickerUi.onToggle) }
         card.offer?.let { offer ->
             Text(
                 text = offer.question,
@@ -145,12 +168,73 @@ fun ImportStatusContent(
                 }
 
                 ImportPhase.SUCCEEDED ->
-                    if (card.offer != null) {
+                    if (pickerUi?.picker != null) {
+                        val keys = stringResource(R.string.layout_name_keys26)
+                        val strokes = stringResource(R.string.layout_name_strokes)
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
+                        TextButton(
+                            onClick = {
+                                pickerUi.onConfirm {
+                                    when (it) {
+                                        ApplicableLayouts.Generated.KEYS26 -> keys
+                                        ApplicableLayouts.Generated.STROKES -> strokes
+                                    }
+                                }
+                            },
+                            enabled = pickerUi.picker.checked.isNotEmpty(),
+                        ) { Text(stringResource(R.string.install_picker_start)) }
+                    } else if (card.offer != null) {
                         TextButton(onClick = { onAnswerOffer(false) }) { Text(card.offer.decline) }
                         TextButton(onClick = { onAnswerOffer(true) }) { Text(card.offer.accept) }
                     } else {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
                     }
+            }
+        }
+    }
+}
+
+/** 选择键盘: every input method of the package with the layouts it can have, the default ticked. */
+@Composable
+private fun InstallPickerContent(
+    picker: InstallPicker,
+    onToggle: (String) -> Unit,
+) {
+    Column(modifier = Modifier.padding(top = 12.dp, end = 8.dp)) {
+        Text(stringResource(R.string.install_picker_title), style = MaterialTheme.typography.titleSmall)
+        for (group in picker.groups) {
+            Text(
+                text = group.schemeName.ifEmpty { group.schemeId },
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            if (group.unknownCodes) {
+                Text(stringResource(R.string.keyboards_unknown_codes), style = MaterialTheme.typography.bodySmall)
+            }
+            for (row in group.keyboards) {
+                val checked = row.keyboard.id in picker.checked
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = checked,
+                                role = Role.Checkbox,
+                                onValueChange = { onToggle(row.keyboard.id) },
+                            ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = checked, onCheckedChange = null)
+                    Column(modifier = Modifier.padding(start = 8.dp, top = 6.dp, bottom = 6.dp)) {
+                        Text(row.layoutName.text(), style = MaterialTheme.typography.bodyMedium)
+                        if (row.missingCodes.isNotEmpty()) {
+                            Text(
+                                stringResource(R.string.keyboards_missing_codes, row.missingCodes.joinToString(" ")),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -294,6 +378,7 @@ private fun schemeCard(state: SchemeImportUiState): ImportCard? =
                     stringResource(named, it.name)
                 } ?: stringResource(R.string.schemes_scheme_import_success),
                 note = state.info?.missingFeatures,
+                pickable = state.offersKeyboards,
                 offer =
                     state.info?.takeIf { state.offersLearning }?.let {
                         ImportOffer(

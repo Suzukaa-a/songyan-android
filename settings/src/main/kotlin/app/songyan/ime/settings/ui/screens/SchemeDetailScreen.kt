@@ -3,6 +3,7 @@ package app.songyan.ime.settings.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,9 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -32,7 +37,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.settings.R
+import app.songyan.ime.settings.state.KeyboardGroup
+import app.songyan.ime.settings.state.KeyboardList
+import app.songyan.ime.settings.state.KeyboardStatus
 import app.songyan.ime.settings.state.StoredSourceInfo
 import app.songyan.ime.settings.state.StoredSourceKind
 import app.songyan.ime.settings.state.StoredSourceStatus
@@ -47,6 +57,7 @@ import app.songyan.ime.settings.ui.components.SectionHeader
 import app.songyan.ime.settings.ui.components.SettingsScaffold
 import app.songyan.ime.settings.ui.components.StateMessage
 import app.songyan.ime.settings.ui.components.importCardOf
+import app.songyan.ime.settings.ui.text
 
 /**
  * One stored input scheme: its status, the input methods it contains, where it came from and how to
@@ -73,7 +84,12 @@ fun SchemeDetailScreen(
     onSelectMethod: (String) -> Unit = {},
     onImportScheme: (Uri) -> Unit = {},
     grammarModel: GrammarModelCardInput? = null,
+    /** The keyboards of the input methods of the package in use, with the layouts they could still get. */
+    keyboardList: KeyboardList? = null,
+    onAddKeyboard: (PublishedKeyboard, LayoutDefinition?) -> Unit = { _, _ -> },
+    onRemoveKeyboard: (PublishedKeyboard) -> Unit = {},
 ) {
+    var addingTo by rememberSaveable { mutableStateOf<String?>(null) }
     val schemePicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) onImportScheme(uri)
@@ -143,7 +159,14 @@ fun SchemeDetailScreen(
                     }
                 }
                 statusItems(source, working, idle, onUse)
-                methodItems(source, idle, onSelectMethod)
+                methodItems(
+                    source,
+                    idle,
+                    onSelectMethod,
+                    keyboardList,
+                    onAdd = { addingTo = it },
+                    onRemove = onRemoveKeyboard,
+                )
                 if (source.kind == StoredSourceKind.SCHEME && source.usable) {
                     updateItems(source, idle, onUpdate) { schemePicker.launch(arrayOf("*/*")) }
                 }
@@ -178,6 +201,17 @@ fun SchemeDetailScreen(
                 manageItems(source, sources, idle, onUse, onDelete = { confirmDelete = true })
             }
         }
+    }
+
+    keyboardList?.groups?.firstOrNull { it.schemeId == addingTo }?.let { group ->
+        AddKeyboardDialog(
+            group = group,
+            onAdd = { keyboard, layout ->
+                onAddKeyboard(keyboard, layout)
+                addingTo = null
+            },
+            onDismiss = { addingTo = null },
+        )
     }
 
     if (confirmDelete && source != null) {
@@ -270,18 +304,26 @@ private fun LazyListScope.methodItems(
     source: StoredSourceInfo,
     idle: Boolean,
     onSelect: (String) -> Unit,
+    keyboardList: KeyboardList?,
+    onAdd: (String) -> Unit,
+    onRemove: (PublishedKeyboard) -> Unit,
 ) {
     if (source.schemes.isEmpty()) return
     item { SectionHeader(stringResource(R.string.schemes_methods_section)) }
     items(source.schemes.size, key = { "method_" + source.schemes[it].id }) { index ->
         val method = source.schemes[index]
         if (source.inUse) {
-            RadioRow(
-                title = method.name,
-                selected = method.id == source.inUseSchemeId,
-                enabled = idle,
-                onClick = { onSelect(method.id) },
-            )
+            Column {
+                RadioRow(
+                    title = method.name,
+                    selected = method.id == source.inUseSchemeId,
+                    enabled = idle,
+                    onClick = { onSelect(method.id) },
+                )
+                keyboardList?.groups?.firstOrNull { it.schemeId == method.id }?.let { group ->
+                    MethodKeyboards(method.name, group, onAdd = { onAdd(group.schemeId) }, onRemove = onRemove)
+                }
+            }
         } else {
             ListItem(
                 headlineContent = { Text(method.name) },
@@ -296,6 +338,57 @@ private fun LazyListScope.methodItems(
                 },
             )
         }
+    }
+}
+
+/** The keyboards of one input method under its row, and the way to add more. */
+@Composable
+private fun MethodKeyboards(
+    methodName: String,
+    group: KeyboardGroup,
+    onAdd: () -> Unit,
+    onRemove: (PublishedKeyboard) -> Unit,
+) {
+    for (row in group.keyboards) {
+        val name = row.layoutName.text()
+        ListItem(
+            headlineContent = { Text(name) },
+            modifier = Modifier.padding(start = 24.dp),
+            supportingContent =
+                when (row.status) {
+                    KeyboardStatus.PREPARING -> {
+                        { Text(stringResource(R.string.keyboards_preparing)) }
+                    }
+                    KeyboardStatus.UNAVAILABLE -> {
+                        { Text(stringResource(R.string.keyboards_unavailable)) }
+                    }
+                    KeyboardStatus.READY -> null
+                },
+            trailingContent =
+                if (row.inUse) {
+                    null
+                } else {
+                    {
+                        IconButton(onClick = { onRemove(row.keyboard) }) {
+                            Icon(
+                                Icons.Outlined.Close,
+                                contentDescription =
+                                    stringResource(
+                                        R.string.keyboards_remove,
+                                        stringResource(R.string.keyboard_title, methodName, name),
+                                    ),
+                            )
+                        }
+                    }
+                },
+        )
+    }
+    if (group.addable.isNotEmpty()) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.keyboards_add)) },
+            leadingContent = { Icon(Icons.Outlined.Add, contentDescription = null) },
+            modifier = Modifier.padding(start = 24.dp).clickable(onClick = onAdd),
+        )
     }
 }
 

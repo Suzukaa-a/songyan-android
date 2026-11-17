@@ -1,6 +1,7 @@
 package app.songyan.ime.settings.state
 
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.LayoutRegistry
@@ -72,6 +73,39 @@ class KeyboardListTest {
                 it.keyboard.board == "copy" &&
                     it.keyboard.layout == KeyboardLayoutKind.QWERTY26
             },
+        )
+    }
+
+    @Test
+    fun aKeyboardOnAFoldNotBuiltYetIsPreparingAndARefusedOneIsUnavailable() {
+        val ice =
+            InstalledScheme(
+                "quanpin",
+                "全拼",
+                setOf("qwerty26"),
+                profile = SchemaKeyProfile(SchemaKeyProfile.Kind.SYLLABIC, listOf("a")),
+                unavailableLayouts = setOf("phone9"),
+            )
+
+        fun k(id: String) = requireNotNull(PublishedKeyboard.parse(id))
+        val stored =
+            UserKeyboards.Stored(
+                listOf(k("quanpin:qwerty26#qwerty26"), k("quanpin:merged14#merged14"), k("quanpin:phone9#phone9")),
+                setOf("quanpin"),
+            )
+        val list = keyboardList(listOf(ice), "quanpin", "qwerty26", null, stored, emptySet(), emptySet(), registry)
+        val rows = list.groups.single().keyboards
+        assertEquals(
+            listOf(KeyboardStatus.READY, KeyboardStatus.PREPARING, KeyboardStatus.UNAVAILABLE),
+            rows.map { it.status },
+        )
+        // What can still be added leaves out the refused fold and what is listed.
+        assertEquals(
+            listOf(KeyboardLayoutKind.MERGED18),
+            list.groups
+                .single()
+                .addable
+                .map { it.keyboard.layout },
         )
     }
 }

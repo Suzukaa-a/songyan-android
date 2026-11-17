@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.ApplicableLayouts
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.layout.WideMiddleGap
@@ -23,6 +24,7 @@ import app.songyan.ime.settings.state.ImeStatus
 import app.songyan.ime.settings.state.ImeStatusSource
 import app.songyan.ime.settings.state.ImportedDictionaryInfo
 import app.songyan.ime.settings.state.IncomingPackageHolder
+import app.songyan.ime.settings.state.InstallPicker
 import app.songyan.ime.settings.state.InstalledScheme
 import app.songyan.ime.settings.state.KeyboardLayoutOption
 import app.songyan.ime.settings.state.KeyboardList
@@ -44,6 +46,8 @@ import app.songyan.ime.settings.state.StoredSourcesGateway
 import app.songyan.ime.settings.state.StoredSourcesHolder
 import app.songyan.ime.settings.state.TransferProgress
 import app.songyan.ime.settings.state.currentMainLayout
+import app.songyan.ime.settings.state.generatedLayout
+import app.songyan.ime.settings.state.installPicker
 import app.songyan.ime.settings.state.keyboardList
 import app.songyan.ime.settings.state.onboardingProgress
 import app.songyan.ime.settings.ui.screens.KeyboardFeelState
@@ -56,6 +60,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -75,6 +83,8 @@ data class SettingsUiState(
     val mainLayout: CurrentMainLayout? = null,
     /** 我的键盘, once the layout catalog is read; null until then. */
     val keyboardList: KeyboardList? = null,
+    /** The keyboards offered after a new package installed; null when nothing is to be chosen. */
+    val installPicker: InstallPicker? = null,
     val candidateTextSize: CandidateTextSize = CandidateTextSize.DEFAULT,
     val showCandidateComments: Boolean = true,
     val collapsedCandidateComments: Boolean = true,
@@ -190,6 +200,23 @@ class SettingsViewModel(
         )
 
     init {
+        // A package seen for the first time starts with no keyboards: the picker offers them, and until
+        // the user answers the deployment builds no folded layout for its input methods.
+        viewModelScope.launch {
+            schemeImport
+                .mapNotNull {
+                    (it as? SchemeImportUiState.Succeeded)?.takeIf { s ->
+                        s.offersKeyboards &&
+                            s.checked == null
+                    }
+                }.map { it.info?.sourceId to it.info?.schemaIds.orEmpty() }
+                .distinctUntilChanged()
+                .collect { (_, ids) ->
+                    var list = preferences.myKeyboards.first()
+                    for (id in ids.filter { it !in list.schemes }) list = UserKeyboards.setting(id, emptyList(), list)
+                    preferences.setMyKeyboards(list)
+                }
+        }
         collectPreference(preferences.layoutId) { copy(layoutId = it) }
         collectPreference(preferences.layoutDefinitionId) { copy(layoutDefinitionId = it) }
         collectPreference(preferences.myKeyboards) { copy(myKeyboards = it) }
@@ -355,6 +382,14 @@ class SettingsViewModel(
                 dictionaryImportAvailable = dictionaryGateway.available,
                 schemeImport = scheme,
                 schemeImportAvailable = schemeGateway.available,
+                installPicker =
+                    (scheme as? SchemeImportUiState.Succeeded)
+                        ?.takeIf { it.offersKeyboards }
+                        ?.let { succeeded ->
+                            layoutLibrary.registry.value?.let {
+                                installPicker(state.schemes, succeeded.info?.schemaIds.orEmpty(), it, succeeded.checked)
+                            }
+                        },
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, initialState)
 
@@ -552,6 +587,49 @@ class SettingsViewModel(
         val listed = UserKeyboards.effective(list.stored, listOf(keyboard.schemaID), list.legacy)
         if (listed.any { it.id == keyboard.id }) return
         preferences.setMyKeyboards(UserKeyboards.adding(keyboard, list.stored, list.legacy))
+    }
+
+    /** Ticks or unticks a keyboard in the install picker. */
+    fun togglePickedKeyboard(id: String) {
+        val current = schemeImport.value as? SchemeImportUiState.Succeeded ?: return
+        val picker = uiState.value.installPicker ?: return
+        val base = current.checked ?: picker.checked
+        val next = if (id in base) base - id else base + id
+        schemeImport.value = current.copy(checked = next)
+    }
+
+    /**
+     * 开始使用: the ticked keyboards become the package's keyboards, the layouts made for them are
+     * installed, and the keyboard switches to the first one ticked. Folded keyboards are built by the
+     * deployment the new list asks for; [generatedName] words the layouts made from the key profile.
+     */
+    fun confirmInstalledKeyboards(generatedName: (ApplicableLayouts.Generated) -> String) {
+        val current = schemeImport.value as? SchemeImportUiState.Succeeded ?: return
+        val picker = uiState.value.installPicker ?: return
+        val chosen = picker.chosen
+        if (chosen.isEmpty()) return
+        viewModelScope.launch {
+            for (group in picker.groups) {
+                for (row in group.keyboards.filter { it.keyboard.id in picker.checked }) {
+                    val layout = row.generated?.let { group.generatedLayout(row, generatedName(it)) } ?: continue
+                    if (layoutLibrary.registry.value?.layout(layout.id) == null) {
+                        layoutLibrary.edit { it.install(layout.encoded()) }
+                    }
+                }
+            }
+            var list = preferences.myKeyboards.first()
+            for (group in picker.groups) {
+                val own = group.keyboards.filter { it.keyboard.id in picker.checked }.map { it.keyboard }
+                list = UserKeyboards.setting(group.schemeId, own, list)
+            }
+            preferences.setMyKeyboards(list)
+            val first =
+                picker.groups.firstNotNullOfOrNull { group -> chosen.firstOrNull { it in group.keyboards } }
+                    ?: chosen.first()
+            preferences.setKeyboard(first.keyboard)
+            appStateSource.refresh()
+            schemeImport.value = current.copy(keyboardsChosen = true)
+        }
     }
 
     /** Takes a keyboard out of 我的键盘; the one in use stays until the user switches away. */

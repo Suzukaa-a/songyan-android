@@ -282,6 +282,8 @@
     <string name="keyboards_unknown_codes">キーボードにないコードがあります。キーボードレイアウトで追加できます。</string>
     <string name="keyboards_preparing">準備しています…</string>
     <string name="keyboards_unavailable">この入力方式ではこのキーボードを使えません</string>
+    <string name="install_picker_title">キーボードを選ぶ</string>
+    <string name="install_picker_start">使い始める</string>
     <string name="keyboard_menu_in_use">使用中</string>
     <string name="t9_symbols_title">9 キーのクイック記号</string>
     <string name="t9_symbols_field">記号</string>

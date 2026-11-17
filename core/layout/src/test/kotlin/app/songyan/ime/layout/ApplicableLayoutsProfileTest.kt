@@ -1,5 +1,6 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.engine.SchemaKeyProfile.Kind
@@ -70,6 +71,25 @@ class ApplicableLayoutsProfileTest {
         assertEquals("qwerty26#qwerty26", boards(entries("rime_ice", ice)).first())
         val plain = SchemaKeyProfile(Kind.SYLLABIC, letters)
         assertEquals(4, entries("pinyin", plain).size)
+    }
+
+    @Test
+    fun aLayoutWithoutKeysForTheSpellerAlphabetIsNotOffered() {
+        val alphabet = "1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-".map { it.toString() }
+        val zhuyin = SchemaKeyProfile(Kind.SYLLABIC, alphabet + "'", optionalCodes = listOf("'"))
+        val family = LayoutFamilyContext.of("bopomofo" to InputSchemeFamily.ZHUYIN)
+        val offered =
+            ApplicableLayouts.entries(
+                KeyboardScheme("bopomofo", setOf(KeyboardLayoutKind.QWERTY26), zhuyin),
+                registry,
+                family,
+            )
+        assertEquals(listOf("zhuyin41"), offered.map { it.keyboard.board })
+
+        // Only the delimiter missing: still offered, with the missing-codes line.
+        val pinyin = SchemaKeyProfile(Kind.SYLLABIC, letters + "'", optionalCodes = listOf("'"))
+        val plain = entries("pinyin", pinyin).first { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }
+        assertEquals(listOf("'"), plain.missingCodes)
     }
 
     @Test

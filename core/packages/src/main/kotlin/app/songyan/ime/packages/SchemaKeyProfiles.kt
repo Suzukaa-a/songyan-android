@@ -33,6 +33,7 @@ object SchemaKeyProfiles {
         }
         add(alphabet)
         add(speller["initials"] as? String)
+        val required = codes.toSet()
         add((speller["delimiter"] as? String) ?: DEFAULT_DELIMITER)
 
         val namespaces = namespacesOf(translators)
@@ -62,13 +63,16 @@ object SchemaKeyProfiles {
         }
 
         if (primary.klass == CompactSchemaAdapter.ProducerClass.SCRIPT) {
-            return SchemaKeyProfile(Kind.SYLLABIC, codes.toList())
+            return SchemaKeyProfile(Kind.SYLLABIC, codes.toList(), optionalCodes = codes.filter { it !in required })
         }
         val strokes = strokeCaptions(root[primary.namespace].asStringMap(), alphabet)
-        if (strokes.isEmpty()) return SchemaKeyProfile(Kind.SHAPE_CODE, codes.toList())
+        if (strokes.isEmpty()) {
+            return SchemaKeyProfile(Kind.SHAPE_CODE, codes.toList(), optionalCodes = codes.filter { it !in required })
+        }
         val strokeCodes = strokes.map { it.code }
         val rest = codes.filter { it !in strokeCodes && !it[0].isLetter() }
-        return SchemaKeyProfile(Kind.STROKES, strokeCodes + rest, strokes)
+        val all = strokeCodes + rest
+        return SchemaKeyProfile(Kind.STROKES, all, strokes, optionalCodes = all.filter { it !in required })
     }
 
     /** The profiles of every `<id>.schema.yaml` in [buildDir] that [ids] names; unreadable ones are unknown. */
@@ -105,8 +109,17 @@ object SchemaKeyProfiles {
             } else {
                 emptyMap()
             }
-        val missing = ids.filter { it !in written }
-        return written.filterKeys { it in ids } + computeAll(buildDir, missing)
+        // A profile written before the optional codes were told apart is read again from the schema.
+        val current =
+            written.filter { (id, profile) ->
+                id in ids &&
+                    (profile.optionalCodes != null || profile.kind == Kind.UNKNOWN)
+            }
+        val computed =
+            computeAll(buildDir, ids.filter { it !in current }).mapValues { (id, profile) ->
+                profile.copy(language = written[id]?.language)
+            }
+        return current + computed
     }
 
     /**

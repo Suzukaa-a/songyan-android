@@ -30,6 +30,12 @@ data class SchemaKeyProfile(
      * (Chinese in both scripts: the system's decides) or `none` (nothing to force); null when not read.
      */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val language: String? = null,
+    /**
+     * The part of [codes] that only a delimiter, a translator's prefix or suffix, or a recognizer
+     * pattern names: a layout may go without them. The rest (speller alphabet and initials) a layout
+     * must send to type the scheme at all. Null when the profile predates the split.
+     */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val optionalCodes: List<String>? = null,
 ) {
     @Serializable(with = KindSerializer::class)
     enum class Kind(

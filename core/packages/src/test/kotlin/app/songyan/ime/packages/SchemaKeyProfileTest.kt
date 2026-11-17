@@ -18,7 +18,12 @@ class SchemaKeyProfileTest {
     fun everyFixtureSchemaGetsItsExpectedProfile() {
         for (name in FIXTURES) {
             val expected = requireNotNull(SchemaKeyProfile.decodeOne(resource("$name.profile.json"))) { name }
-            assertEquals(name, expected, SchemaKeyProfiles.compute(resource("$name.schema.yaml")))
+            // optionalCodes is Android's own addition to the shared profile; see optionalCodesAreTheOnesOnlyADelimiterOrAPrefixNames.
+            assertEquals(
+                name,
+                expected,
+                SchemaKeyProfiles.compute(resource("$name.schema.yaml")).copy(optionalCodes = null),
+            )
         }
     }
 
@@ -28,6 +33,16 @@ class SchemaKeyProfileTest {
         assertEquals(Kind.STROKES, SchemaKeyProfiles.compute(resource("stroke.schema.yaml")).kind)
         assertEquals(Kind.SYLLABIC, SchemaKeyProfiles.compute(resource("rime_ice.schema.yaml")).kind)
         assertEquals(Kind.UNKNOWN, SchemaKeyProfiles.compute(resource("lua_only.schema.yaml")).kind)
+    }
+
+    @Test
+    fun optionalCodesAreTheOnesOnlyADelimiterOrAPrefixNames() {
+        val bopomofo = SchemaKeyProfiles.compute(resource("bopomofo.schema.yaml"))
+        // The digits and punctuation of the zhuyin alphabet are required; the delimiter is not.
+        assertEquals(false, "1" in bopomofo.optionalCodes.orEmpty())
+        assertEquals(false, "," in bopomofo.optionalCodes.orEmpty())
+        assertEquals(true, "'" in bopomofo.optionalCodes.orEmpty())
+        assertEquals(true, bopomofo.optionalCodes.orEmpty().all { it in bopomofo.codes })
     }
 
     @Test

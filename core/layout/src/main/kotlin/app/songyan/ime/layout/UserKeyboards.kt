@@ -279,7 +279,10 @@ object ApplicableLayouts {
                 val shape = PublishedKeyboard(scheme.id, kind)
                 val candidates = registry.mainLayoutCandidates(shape.compositionKey(), families).map { it.id }
                 val ordered = boards.filter { it in candidates } + candidates.filter { it !in boards }
-                val entries = ordered.map { id -> entry(shape.copy(board = id), registry, profile, kind) }
+                val entries =
+                    ordered
+                        .map { id -> entry(shape.copy(board = id), registry, profile, kind) }
+                        .filter { !lacksRequiredCodes(it, registry, profile) }
                 // A family with physical boards of its own keeps them; nothing is generated beside them.
                 if (kind == KeyboardLayoutKind.QWERTY26 && profile != null && boards.isEmpty()) {
                     withGenerated(scheme.id, shape, entries, profile)
@@ -287,6 +290,25 @@ object ApplicableLayouts {
                     entries
                 }
             }
+    }
+
+    /**
+     * A 26-key layout that has no key for a code the speller needs cannot type the scheme: it is not
+     * offered. Missing only a delimiter or a reverse-lookup prefix or suffix is fine.
+     */
+    private fun lacksRequiredCodes(
+        entry: Entry,
+        registry: LayoutRegistry,
+        profile: SchemaKeyProfile?,
+    ): Boolean {
+        if (profile == null ||
+            entry.generated != null ||
+            entry.keyboard.layout != KeyboardLayoutKind.QWERTY26
+        ) {
+            return false
+        }
+        val layout = entry.keyboard.board?.let(registry::resolvedLayout) ?: return false
+        return LayoutCodeCoverage.missingRequired(layout, profile).isNotEmpty()
     }
 
     private fun entry(

@@ -44,6 +44,7 @@ class GlobeHoldPickerDeviceTest {
 
     @Before
     fun setUp() {
+        ensureAnInputMethod(context)
         showedSwitchKey = runBlocking { preferences.showSwitchKey.first() }
         runBlocking { preferences.setShowSwitchKey(true) }
         previousIme = shell("settings get secure default_input_method")

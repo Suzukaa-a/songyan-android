@@ -45,6 +45,7 @@ class AppLocaleDeviceTest {
         previousAccessibilityFlags = serviceInfo.flags
         serviceInfo.flags = serviceInfo.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         instrumentation.uiAutomation.serviceInfo = serviceInfo
+        ensureAnInputMethod(context)
         previousLocales = localeManager.applicationLocales
         previousIme = shell("settings get secure default_input_method")
         wasEnabled = shell("ime list -s").lines().contains(KEYBOARD_ID)

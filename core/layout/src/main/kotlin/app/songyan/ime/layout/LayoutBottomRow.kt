@@ -51,9 +51,10 @@ object LayoutBottomRow {
     /**
      * [layout] as it is exported: a bottom row that stands in for the bundled one is written out as
      * the row the keyboard draws, so a file made from the export keeps 123, 中/英 and the marks
-     * however the user edits it.
+     * however the user edits it. The nine-key shell keeps its rails and its row, as on iOS.
      */
     fun exportable(layout: LayoutDefinition): LayoutDefinition {
+        if (PhoneKeypadStructure.matches(layout)) return layout
         val index = index(layout) ?: return layout
         if (!standsIn(layout)) return layout
         val rows = layout.rows.toMutableList()

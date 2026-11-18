@@ -19,6 +19,11 @@ class LayoutBottomRowExportTest {
     }
 
     @Test
+    fun theNineKeyShellIsExportedAsStoredAsOnIos() {
+        assertEquals(BuiltinLayouts.phone9, LayoutBottomRow.exportable(BuiltinLayouts.phone9))
+    }
+
+    @Test
     fun theExportCarriesTheRowTheKeyboardDrawsNotTheStandIn() {
         val exported = LayoutBottomRow.exportable(BuiltinLayouts.zhuyin41)
         val labels =

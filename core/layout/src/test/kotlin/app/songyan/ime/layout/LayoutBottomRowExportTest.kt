@@ -40,7 +40,7 @@ class LayoutBottomRowExportTest {
         keys[2] = keys[2].copy(label = "'", action = LayoutAction.literal("'"))
         val edited = exported.copy(id = "mine", rows = exported.rows.dropLast(1) + LayoutRow(keys))
 
-        val drawn = LayoutBottomRow.authored(edited)
+        val drawn = LayoutBottomRow.authored(edited)?.let { LayoutBottomRow.reachable(edited, it) }
         assertNotNull(drawn)
         assertTrue(drawn!!.any { it.action.type == LayoutActionKind.LANGUAGE_SWITCH })
         assertTrue(drawn.any { it.action.type == LayoutActionKind.PAGE_SWITCH })
@@ -60,13 +60,8 @@ class LayoutBottomRowExportTest {
                     )
                 base.copy(id = "mine", rows = base.rows.dropLast(1) + row)
             }
-        assertEquals(
-            LayoutActionKind.LANGUAGE_SWITCH,
-            LayoutBottomRow
-                .authored(stripped)!!
-                .first()
-                .action.type,
-        )
+        val drawn = LayoutBottomRow.reachable(stripped, LayoutBottomRow.authored(stripped)!!)
+        assertEquals(LayoutActionKind.LANGUAGE_SWITCH, drawn.first().action.type)
     }
 
     @Test

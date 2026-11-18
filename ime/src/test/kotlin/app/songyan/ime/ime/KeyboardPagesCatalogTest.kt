@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.InputLanguage
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.AlternateKeyPolicy
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.FooterKeys
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardPageCategory
 import app.songyan.ime.layout.KeyboardPageKind
@@ -60,7 +61,9 @@ class KeyboardPagesCatalogTest {
         val pairing = KeyboardComposition(mainLayoutID = "mine")
         val definition = KeyboardPages.definition(null, config(pairing))
         assertEquals(4, definition.rows.size)
-        assertEquals(footer, definition.rows.last().keys)
+        // The footer is drawn as written, with the 中/英 key in front because the layout has none:
+        // the keyboard menu opens from it.
+        assertEquals(listOf(FooterKeys.LANGUAGE) + footer, definition.rows.last().keys)
         assertEquals(
             "q",
             definition.rows

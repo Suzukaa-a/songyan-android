@@ -21,17 +21,22 @@ object LayoutBottomRow {
         return layout.rows[index].keys == bundled?.rows?.lastOrNull()?.keys
     }
 
-    /**
-     * The bottom row the layout writes itself, or null when it leaves it to the keyboard. A row
-     * without any 中/英 key gets one: the keyboard menu opens from that key, so a layout can never
-     * take the way to it away.
-     */
+    /** The bottom row the layout writes itself, or null when it leaves it to the keyboard. */
     fun authored(layout: LayoutDefinition): List<LayoutKey>? {
         val index = index(layout) ?: return null
         if (standsIn(layout)) return null
-        val keys = layout.rows[index].keys
-        return if (hasLanguageSwitch(layout)) keys else listOf(FooterKeys.LANGUAGE) + keys
+        return layout.rows[index].keys
     }
+
+    /**
+     * [keys], the authored bottom row [layout] draws in a text field, with a 中/英 key added in front
+     * when the layout has none anywhere: the keyboard menu opens from that key, so a layout can
+     * never take the way to it away.
+     */
+    fun reachable(
+        layout: LayoutDefinition,
+        keys: List<LayoutKey>,
+    ): List<LayoutKey> = if (hasLanguageSwitch(layout)) keys else listOf(FooterKeys.LANGUAGE) + keys
 
     private fun hasLanguageSwitch(layout: LayoutDefinition): Boolean =
         (
@@ -61,7 +66,7 @@ object LayoutBottomRow {
      * edits: the layout's own row, the nine-key shell's row, or the generated letters footer.
      */
     fun preview(layout: LayoutDefinition): List<LayoutKey> {
-        authored(layout)?.let { return it }
+        authored(layout)?.let { return reachable(layout, it) }
         if (PhoneKeypadStructure.matches(layout) && PhoneKeypadRailPolicy.usesBundledRails(layout)) {
             return listOf(
                 LayoutKey("123", action = LayoutAction.pageSwitch(LayoutPageTarget.NUMERIC)),

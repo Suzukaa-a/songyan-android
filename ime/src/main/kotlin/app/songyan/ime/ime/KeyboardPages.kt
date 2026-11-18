@@ -491,7 +491,12 @@ internal object KeyboardPages {
                 authoredEnglish != null ->
                     authoredEnglish.chrome?.bottom?.filter { jumpDrawn(it, config) } ?: lettersFooter(config)
                 !config.englishDirectInput && config.field == FieldKind.TEXT ->
-                    LayoutBottomRow.authored(main)?.filter { railKeyDrawn(it, config) } ?: lettersFooter(config)
+                    LayoutBottomRow
+                        .authored(
+                            main,
+                        )?.let { LayoutBottomRow.reachable(main, it) }
+                        ?.filter { railKeyDrawn(it, config) }
+                        ?: lettersFooter(config)
                 else -> lettersFooter(config)
             }
         // The footer is known before the rows: a pad that edits through it keeps the shell's keys out.

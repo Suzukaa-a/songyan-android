@@ -375,7 +375,7 @@ emoji:
         withHost(declared, File(declared.root, "options-declared").also { it.mkdirs() }) { host ->
             host.start()
             host.awaitIdle()
-            // The panel keeps to the switches it words itself; the menu owns the schema's own.
+            // The menu lists every switch the schema declares, the ones the panel words included.
             val states = host.main2 { host.controller.session!!.options }
             assertEquals(
                 listOf("traditionalize", "extended_charset"),
@@ -387,7 +387,13 @@ emoji:
                     host.controller.menu.switches
                         .filterIsInstance<KeyboardSwitcherPanel.SwitchEntry.Toggle>()
                 }
-            assertEquals(listOf(KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "常用", false)), toggles)
+            assertEquals(
+                listOf(
+                    KeyboardSwitcherPanel.SwitchEntry.Toggle("traditionalize", "简", false),
+                    KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "常用", false),
+                ),
+                toggles,
+            )
 
             host.main { host.controller.menu.onSwitch("extended_charset", true) }
             assertTrue(
@@ -398,7 +404,10 @@ emoji:
                             .options
                             .any { it.descriptor.name == "extended_charset" && it.value } &&
                             host.controller.menu.switches ==
-                            listOf(KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "增廣", true))
+                            listOf(
+                                KeyboardSwitcherPanel.SwitchEntry.Toggle("traditionalize", "简", false),
+                                KeyboardSwitcherPanel.SwitchEntry.Toggle("extended_charset", "增廣", true),
+                            )
                     }
                 },
             )

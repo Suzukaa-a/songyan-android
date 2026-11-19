@@ -256,6 +256,7 @@ class LargeFontTest {
                 state =
                     SettingsUiState(
                         engine = EngineStatus.Ready,
+                        sourcesLoaded = true,
                         ime = ImeStatus(enabled = false, selected = false),
                     ),
                 onOpen = {},

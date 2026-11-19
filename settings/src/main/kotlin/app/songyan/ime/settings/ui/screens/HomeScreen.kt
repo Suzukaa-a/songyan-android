@@ -311,6 +311,10 @@ private fun HomeStatus(
                     icon = Icons.Outlined.ErrorOutline,
                 )
 
+            // Until the installed schemes are read, an empty list means "not read yet", not "nothing
+            // installed": a cold start would otherwise flash the download card and an unready engine.
+            !state.sourcesLoaded -> Unit
+
             !state.progress.schemeDone ->
                 StatusCard(
                     headline = stringResource(R.string.onboarding_step_download_title),
@@ -339,6 +343,7 @@ private fun HomeStatus(
                 )
         }
 
+        if (!state.sourcesLoaded) return@Column
         when (val engine = state.engine) {
             // "Ready" is only said when nothing above asks the user to act; next to a card that says
             // the keyboard is not set up it would contradict it.
@@ -379,7 +384,8 @@ private fun HomeStatus(
 }
 
 @Composable
-private fun schemesSummary(state: SettingsUiState): String {
+private fun schemesSummary(state: SettingsUiState): String? {
+    if (!state.sourcesLoaded) return null
     val count = state.schemes.size
     if (count == 0) return stringResource(R.string.home_summary_schemes_none)
     val inUse = state.inUseScheme?.name
@@ -396,7 +402,8 @@ private fun schemesSummary(state: SettingsUiState): String {
  * its input-method label cannot follow a scheme switch.
  */
 @Composable
-private fun keyboardSummary(state: SettingsUiState): String {
+private fun keyboardSummary(state: SettingsUiState): String? {
+    if (!state.sourcesLoaded) return null
     val layoutName = state.mainLayout?.displayName?.text() ?: stringResource(state.currentLayout.nameRes)
     val schemeName = state.inUseScheme?.name.orEmpty()
     val combination = listOfNotNull(schemeName.takeIf { it.isNotEmpty() }, layoutName).joinToString(" · ")

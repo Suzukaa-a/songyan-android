@@ -39,7 +39,7 @@ class HomeScreenLargeFontTest {
             SongyanTheme(dynamicColor = false) {
                 CompositionLocalProvider(LocalDensity provides Density(1f, fontScale)) {
                     HomeScreen(
-                        state = SettingsUiState(),
+                        state = SettingsUiState(sourcesLoaded = true),
                         onOpen = {},
                         onRetryImeStatus = {},
                         onCancelImport = {},

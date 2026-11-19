@@ -77,6 +77,8 @@ fun OnboardingScreen(
     onRetryDownload: () -> Unit = {},
     onDismissDownload: () -> Unit = {},
     onAnswerSchemeLearning: (Boolean) -> Unit = {},
+    /** False until the installed schemes are read; the steps would otherwise show the download as not done. */
+    loaded: Boolean = true,
 ) {
     val nextStep = progress.nextStep
     var showWarning by rememberSaveable { mutableStateOf(false) }
@@ -122,6 +124,7 @@ fun OnboardingScreen(
                 }
                 return@Column
             }
+            if (!loaded) return@Column
 
             if (importCard != null && !inlineProgress) {
                 ImportStatusCard(

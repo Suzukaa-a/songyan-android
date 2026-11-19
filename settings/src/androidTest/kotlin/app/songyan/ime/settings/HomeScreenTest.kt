@@ -39,7 +39,7 @@ class HomeScreenTest {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 HomeScreen(
-                    state = state,
+                    state = state.copy(sourcesLoaded = true),
                     onOpen = {},
                     onRetryImeStatus = {},
                     onCancelImport = { cancelled = it },
@@ -57,7 +57,12 @@ class HomeScreenTest {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
                 HomeScreen(
-                    state = SettingsUiState(engine = EngineStatus.Ready, ime = ImeStatus(true, true)),
+                    state =
+                        SettingsUiState(
+                            engine = EngineStatus.Ready,
+                            sourcesLoaded = true,
+                            ime = ImeStatus(true, true),
+                        ),
                     onOpen = { opened += it },
                     onRetryImeStatus = {},
                     onCancelImport = {},
@@ -211,5 +216,27 @@ class HomeScreenTest {
         compose.onNodeWithContentDescription(str(R.string.search_clear)).performClick()
         compose.onNodeWithText(str(R.string.row_schemes_title)).assertExists()
         assertEquals(0, count(str(R.string.search_empty_title)))
+    }
+
+    @Test
+    fun beforeTheSchemesAreReadNothingClaimsTheyAreMissing() {
+        compose.setContent {
+            SongyanTheme(dynamicColor = false) {
+                HomeScreen(
+                    state = SettingsUiState(ime = ImeStatus(enabled = true, selected = true)),
+                    onOpen = {},
+                    onRetryImeStatus = {},
+                    onCancelImport = {},
+                    onRetryImport = {},
+                    onDismissDictionaryImport = {},
+                    onDismissSchemeImport = {},
+                )
+            }
+        }
+        compose.onNodeWithText(str(R.string.row_schemes_title)).assertExists()
+        assertEquals(0, count(str(R.string.onboarding_step_download_title)))
+        assertEquals(0, count(str(R.string.home_engine_unknown)))
+        assertEquals(0, count(str(R.string.home_summary_schemes_none)))
+        assertEquals(0, count(str(R.string.layout_name_26)))
     }
 }

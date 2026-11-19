@@ -47,6 +47,7 @@ class OnboardingScreenTest {
         status: ImeStatus,
         typed: Boolean = false,
         schemeReady: Boolean = true,
+        loaded: Boolean = true,
     ) {
         compose.setContent {
             SongyanTheme(dynamicColor = false) {
@@ -61,9 +62,18 @@ class OnboardingScreenTest {
                     onDownload = { downloads += it.id },
                     schemeImport = importState.value,
                     onCancelDownload = { cancelledDownloads++ },
+                    loaded = loaded,
                 )
             }
         }
+    }
+
+    @Test
+    fun beforeTheSchemesAreReadNoStepIsShown() {
+        show(ImeStatus(enabled = true, selected = true), schemeReady = false, loaded = false)
+        compose.onNodeWithText(str(R.string.onboarding_intro)).assertExists()
+        compose.onNodeWithText(str(R.string.onboarding_step_download_title)).assertDoesNotExist()
+        compose.onNodeWithText(str(R.string.schemes_recommended_confirm)).assertDoesNotExist()
     }
 
     @Test

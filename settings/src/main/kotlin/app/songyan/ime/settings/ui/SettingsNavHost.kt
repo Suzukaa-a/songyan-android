@@ -299,6 +299,7 @@ private fun NavGraphBuilder.settingsGraph(
         val openFailed = stringResource(R.string.settings_open_failed)
         OnboardingScreen(
             progress = state.value.progress,
+            loaded = state.value.sourcesLoaded,
             onOpenInputMethodSettings = {
                 if (openInputMethodSettings(context) == SystemAction.FAILED) {
                     Toast.makeText(context, openFailed, Toast.LENGTH_SHORT).show()

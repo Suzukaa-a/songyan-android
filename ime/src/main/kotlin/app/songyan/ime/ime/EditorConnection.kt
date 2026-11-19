@@ -58,6 +58,17 @@ class EditorConnection(
     /** Where an extended selection of the edit panel is anchored; -1 when no extension is under way. */
     internal var selectionAnchor = -1
 
+    /** A Delete swipe in progress: where it began, the text it can reach, and how much it selects now. */
+    internal var swipeAnchor = -1
+    internal var swipeBefore = ""
+    internal var swipeUnits = 0
+
+    /** What a swipe that just ended did, so the editor's late reports of it are not taken for the user. */
+    internal var swipeEchoAnchor = -1
+    internal var swipeEchoReach = 0
+    internal var swipeEchoFinal = -1
+    internal var swipeEchoUntil = 0L
+
     /** The last selection report was not the keyboard's own edit: the user or the host moved the caret. */
     var selectionMovedExternally = false
         private set
@@ -182,6 +193,7 @@ class EditorConnection(
      */
     fun abandon() {
         if (!composing) return
+        swipeSelectAbandon()
         val ic = connection()
         val written = composingText
         val removed = written.length
@@ -236,6 +248,7 @@ class EditorConnection(
             EditorPolicy.effectiveInputType(info.inputType) and InputType.TYPE_MASK_CLASS == InputType.TYPE_NULL
         BackspaceTrace.editorPackage = info?.packageName
         forgetText()
+        swipeSelectAbandon()
         // The input method restarts its own input for a configuration change with the EditorInfo it
         // already holds (`InputMethodService.resetStateForNewConfiguration`): the editor was not
         // restarted and still shows the composition, but that EditorInfo's selection is the one from
@@ -290,6 +303,7 @@ class EditorConnection(
                     at = SystemClock.uptimeMillis(),
                 )
         }
+        swipeSelectAbandon()
         abandon()
     }
 
@@ -336,10 +350,13 @@ class EditorConnection(
         candidatesStart: Int,
         candidatesEnd: Int,
     ): Boolean {
-        val expected = selection.isExpected(oldStart, oldEnd, newStart, newEnd)
+        val expected = selection.isExpected(oldStart, oldEnd, newStart, newEnd) || isSwipeEcho(newStart, newEnd)
         selectionMovedExternally = !expected
         // Whoever moved the cursor may also have changed the text before it.
-        if (!expected) forgetText()
+        if (!expected) {
+            forgetText()
+            swipeSelectAbandon()
+        }
         if (expected) {
             if (composing) {
                 selection.reportedComposing(candidatesStart, candidatesEnd)
@@ -815,4 +832,8 @@ fun EditorConnection.keyboardCallbacks(
         inputMethods = inputMethods,
         engineNoticeAction = engineNoticeAction,
         switchSource = switchSource,
+        swipeSelectAvailable = { swipeSelectAvailable() },
+        swipeSelectBegin = { swipeSelectBegin() },
+        swipeSelectTo = { swipeSelectTo(it) },
+        swipeSelectEnd = { swipeSelectEnd(it) },
     )

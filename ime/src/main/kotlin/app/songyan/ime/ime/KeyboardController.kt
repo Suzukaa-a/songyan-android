@@ -136,6 +136,14 @@ class KeyboardController(
         val engineNoticeAction: (EngineNoticeAction) -> Unit = {},
         /** The user picked an input method of another installed package from the menu; the composition is settled. */
         val switchSource: (sourceId: String, schemaId: String) -> Unit = { _, _ -> },
+        /** Whether a Delete swipe could select before the caret now; asked on every move, so it must not block. */
+        val swipeSelectAvailable: () -> Boolean = { false },
+        /** Starts a swipe at the caret; false when there is nothing to select. */
+        val swipeSelectBegin: () -> Boolean = { false },
+        /** The swipe now selects this many characters before the caret (clamped to the text). */
+        val swipeSelectTo: (Int) -> Unit = {},
+        /** Ends the swipe: delete the selection, or give the caret back. */
+        val swipeSelectEnd: (delete: Boolean) -> Unit = {},
     )
 
     /**

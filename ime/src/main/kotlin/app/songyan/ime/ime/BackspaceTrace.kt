@@ -20,6 +20,8 @@ object BackspaceTrace {
         TOUCH_LEFT_KEY,
         TOUCH_CANCELLED,
         TOUCH_ENDED_BY_SECOND_FINGER,
+        TOUCH_SWIPE_SELECT,
+        TOUCH_SWIPE_CANCELLED,
         ACCESSIBILITY_DELETE,
         CANDIDATE_BAR_DELETE,
 
@@ -38,6 +40,7 @@ object BackspaceTrace {
         EDITOR_SELECTION_REMOVED,
         EDITOR_DELETED_BEFORE_CURSOR,
         EDITOR_KEY_EVENT_NO_TEXT_BEFORE,
+        EDITOR_SWIPE_DELETED,
     }
 
     const val CAPACITY = 128

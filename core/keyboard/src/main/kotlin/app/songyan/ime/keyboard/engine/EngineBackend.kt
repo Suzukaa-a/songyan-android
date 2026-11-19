@@ -56,6 +56,18 @@ interface EngineBackend {
     suspend fun processKey(keyValue: String): EngineSnapshot
 
     /**
+     * Feeds one raw engine key (keysym plus modifier mask, a release carries the release bit) from a
+     * hardware keyboard, with no front-end adaptation: the input scheme's own bindings decide.
+     *
+     * Null — the default — means this backend cannot take raw keys; the caller then leaves the key
+     * to the app instead of guessing.
+     */
+    suspend fun processRawKey(
+        keycode: Int,
+        modifiers: Int,
+    ): RawKeyResult? = null
+
+    /**
      * Moves the engine's own composition caret by [offset] characters (negative = left) without
      * confirming or rewriting the composition, and returns the state afterwards.
      *

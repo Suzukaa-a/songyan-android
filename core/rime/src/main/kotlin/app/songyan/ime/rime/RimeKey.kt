@@ -51,6 +51,12 @@ object RimeModifier {
     /** kMod1Mask. */
     const val ALT: Int = 1 shl 3
     const val META: Int = 1 shl 28
+
+    /** kSuperMask. */
+    const val SUPER: Int = 1 shl 26
+
+    /** kReleaseMask: the event is a key release. */
+    const val RELEASE: Int = 1 shl 30
 }
 
 /** One key press delivered to the engine. */

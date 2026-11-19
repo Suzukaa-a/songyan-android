@@ -491,6 +491,29 @@ class InputSession(
     }
 
     /**
+     * Feeds one hardware key to the engine as it is (keysym plus modifier mask) and applies what
+     * the engine did. Returns whether the engine took the key, or null when it could not be asked
+     * (no input available, or a backend without raw keys), so the caller leaves the key to the app.
+     */
+    suspend fun rawKey(
+        keycode: Int,
+        modifiers: Int,
+    ): Boolean? {
+        if (!inputAvailable()) return null
+        val result =
+            try {
+                engine.processRawKey(keycode, modifiers)
+            } catch (error: EngineBackendError) {
+                onError?.invoke(error)
+                return snapshot.isComposing
+            } ?: return null
+        // A release nothing reacted to must not render again.
+        if (!result.consumed && result.snapshot.copy(committed = "") == snapshot) return result.consumed
+        apply(result.snapshot)
+        return result.consumed
+    }
+
+    /**
      * Commits one text key (a literal or a letter variant) in English direct input.
      *
      * A single letter is uppercased while Shift is active and consumes a one-shot Shift; digits and

@@ -18,6 +18,7 @@ import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.KeyboardSchemaDescriptor
+import app.songyan.ime.keyboard.engine.RawKeyResult
 import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.ReadingRailRead
 import app.songyan.ime.keyboard.engine.ReadingRailRequest
@@ -222,6 +223,25 @@ class RimeEngineBackend(
         } catch (e: RimeException) {
             throw e.asBackendError()
         }
+    }
+
+    override suspend fun processRawKey(
+        keycode: Int,
+        modifiers: Int,
+    ): RawKeyResult {
+        val isModifier = keycode in 0xFFE1..0xFFEE
+        val isPress = modifiers and RimeModifier.RELEASE == 0
+        // A post-commit prediction is only ever chosen by a tap, never by a key.
+        if (isPress && !isModifier && keycode != RimeKeyCode.ESCAPE && engine.snapshot.value.hasPredictionComposition) {
+            dismissPrediction()
+        }
+        val result =
+            try {
+                engine.processKey(RimeKey(keycode, modifiers))
+            } catch (e: RimeException) {
+                throw e.asBackendError()
+            }
+        return RawKeyResult(result.consumed, publish(result.snapshot))
     }
 
     override suspend fun dismissPrediction(): EngineSnapshot {

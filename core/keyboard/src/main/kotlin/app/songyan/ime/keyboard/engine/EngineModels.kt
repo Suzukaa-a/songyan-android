@@ -43,6 +43,7 @@ data class EngineStatusFlags(
  * [preedit], exactly as librime reports them; [preeditSelection] is the same selection converted to
  * UTF-16 for host marked text.
  */
+
 data class EngineSnapshot(
     val schemaID: String = "",
     val commitTextPreview: String = "",
@@ -303,3 +304,9 @@ enum class AmbiguityApplyOutcome {
 
     val isSuccess: Boolean get() = this == APPLIED
 }
+
+/** The outcome of one raw hardware key: whether the engine took it, and the state afterwards. */
+data class RawKeyResult(
+    val consumed: Boolean,
+    val snapshot: EngineSnapshot,
+)

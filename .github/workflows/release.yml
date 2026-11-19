@@ -6,6 +6,10 @@ name: Release
 # (it is not run a second time), then builds the signed release APKs (one per ABI plus a universal
 # one) and publishes a GitHub Release. The version code is always the commit count.
 #
+# The release notes are the changelog: for a release, the body of the signed tag's message (first line
+# the version, a blank line, then the notes); for a pre-release, the `notes` input. A release without
+# notes fails before anything is built.
+#
 # Repository secrets: SONGYAN_KEYSTORE_BASE64 (the keystore file, base64), SONGYAN_KEYSTORE_PASSWORD,
 # SONGYAN_KEY_ALIAS, SONGYAN_KEY_PASSWORD. Without all four the run fails before anything is built,
 # so a release is never signed with a debug key.
@@ -14,6 +18,11 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      notes:
+        description: 更新日志（自上一次发布以来的变化）
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -40,6 +49,7 @@ jobs:
         id: version
         env:
           REF: ${{ github.ref_name }}
+          NOTES: ${{ inputs.notes }}
         run: |
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main \
             || { echo "::error::${REF} is not on main"; exit 1; }
@@ -51,10 +61,17 @@ jobs:
               || { echo "::error::no vX.Y.Z release tag on main yet"; exit 1; }
             base="${release#v}"
             full="${base} (${code})" tag="v${base}-${code}" files="${base}-${code}" prerelease=true
+            [[ -n "${NOTES//[[:space:]]/}" ]] || { echo "::error::write the changelog in the notes input"; exit 1; }
           else
             [[ "${REF}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]] \
               || { echo "::error::tag ${REF} is not vX.Y.Z"; exit 1; }
             full="${REF#v}" tag="${REF}" files="${REF#v}" prerelease=false
+            # Checkout may leave a lightweight copy of the tag; fetch the annotated one to read its message.
+            git fetch --quiet --force origin "refs/tags/${REF}:refs/tags/${REF}"
+            [[ "$(git cat-file -t "${REF}")" == tag ]] || { echo "::error::${REF} is not an annotated tag"; exit 1; }
+            body="$(git for-each-ref --format='%(contents:body)' "refs/tags/${REF}")"
+            [[ -n "${body//[[:space:]]/}" ]] \
+              || { echo "::error::${REF} has no changelog in its message (version line, blank line, notes)"; exit 1; }
           fi
           {
             echo "full=${full}"
@@ -186,13 +203,15 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
         # A pre-release has no pushed tag: the release creates it on the commit that was built.
         run: |
-          flags=(--generate-notes --title "松烟 ${VERSION}")
+          flags=(--title "松烟 ${VERSION}")
           if [[ "${PRERELEASE}" == true ]]; then
-            flags+=(--prerelease --target "${GITHUB_SHA}")
+            flags+=(--prerelease --target "${GITHUB_SHA}" --notes "${NOTES}")
           else
-            flags+=(--verify-tag)
+            git fetch --quiet --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+            flags+=(--verify-tag --notes "$(git for-each-ref --format='%(contents:body)' "refs/tags/${TAG}")")
           fi
           gh release create "${TAG}" dist/* "${flags[@]}"
       - name: Remove the keystore

@@ -322,7 +322,9 @@ object ApplicableLayouts {
             if (profile == null || layout == null || kind != KeyboardLayoutKind.QWERTY26) {
                 emptyList()
             } else {
-                LayoutCodeCoverage.missing(layout, profile)
+                // Only keys the scheme cannot go without are worth a warning; a missing delimiter or
+                // auxiliary key is normal on a plain board.
+                LayoutCodeCoverage.missingToReport(layout, profile)
             }
         val generated =
             when (keyboard.board) {

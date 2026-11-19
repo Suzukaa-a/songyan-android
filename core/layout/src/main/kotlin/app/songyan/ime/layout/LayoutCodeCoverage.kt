@@ -38,6 +38,15 @@ object LayoutCodeCoverage {
     }
 
     /**
+     * The missing codes worth telling the user about: the required ones, or every missing code when
+     * the profile does not tell required from optional (an older profile), so nothing is hidden.
+     */
+    fun missingToReport(
+        layout: LayoutDefinition,
+        profile: SchemaKeyProfile,
+    ): List<String> = if (profile.optionalCodes == null) missing(layout, profile) else missingRequired(layout, profile)
+
+    /**
      * The codes [profile] needs to type the scheme that [layout] cannot send: its speller alphabet
      * and initials, without the delimiter and the prefix or suffix codes of reverse lookups, which a
      * layout can go without. Empty when the profile does not tell them apart.

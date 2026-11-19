@@ -175,7 +175,7 @@ fun keyboardList(
                     keyboard.layout == KeyboardLayoutKind.QWERTY26 &&
                     generatedOf(keyboard) == null
                 ) {
-                    LayoutCodeCoverage.missing(layout, profile)
+                    LayoutCodeCoverage.missingToReport(layout, profile)
                 } else {
                     emptyList()
                 }

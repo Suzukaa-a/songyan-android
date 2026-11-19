@@ -7,7 +7,6 @@ import app.songyan.ime.keyboard.engine.SchemaKeyProfile.Kind
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Layouts offered by what the scheme's speller needs, with the shapes the wubi, stroke and pinyin fixtures stand for. */
@@ -45,14 +44,21 @@ class ApplicableLayoutsProfileTest {
             listOf("h", "s", "p", "n", "z").zip(listOf("⼀", "⼁", "⼃", "⼂", "⼄")).map {
                 SchemaKeyProfile.Stroke(it.first, it.second)
             }
-        val profile = SchemaKeyProfile(Kind.STROKES, strokes.map { it.code } + listOf("'", "`"), strokes)
+        val profile =
+            SchemaKeyProfile(
+                Kind.STROKES,
+                strokes.map { it.code } + listOf("'", "`"),
+                strokes,
+                optionalCodes = listOf("'", "`"),
+            )
         val list = entries("stroke", profile)
         assertEquals(
             listOf("qwerty26#auto.stroke.strokes", "qwerty26#qwerty26", "qwerty26#auto.stroke.keys26"),
             boards(list),
         )
         assertEquals(ApplicableLayouts.Generated.STROKES, list[0].generated)
-        assertTrue("`" in list[1].missingCodes)
+        // Only keys the scheme can go without are missing, so the plain board carries no warning.
+        assertEquals(emptyList<String>(), list[1].missingCodes)
     }
 
     @Test
@@ -86,10 +92,10 @@ class ApplicableLayoutsProfileTest {
             )
         assertEquals(listOf("zhuyin41"), offered.map { it.keyboard.board })
 
-        // Only the delimiter missing: still offered, with the missing-codes line.
+        // Only the delimiter missing: still offered, and nothing to warn about.
         val pinyin = SchemaKeyProfile(Kind.SYLLABIC, letters + "'", optionalCodes = listOf("'"))
         val plain = entries("pinyin", pinyin).first { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }
-        assertEquals(listOf("'"), plain.missingCodes)
+        assertEquals(emptyList<String>(), plain.missingCodes)
     }
 
     @Test
@@ -97,6 +103,7 @@ class ApplicableLayoutsProfileTest {
         val ice = SchemaKeyProfile(Kind.SYLLABIC, letters + listOf("`", "'"), optionalCodes = listOf("`", "'"))
         val list = entries("rime_ice", ice).filter { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }
         assertEquals(listOf("qwerty26#qwerty26", "qwerty26#auto.rime_ice.keys26"), boards(list))
+        assertEquals(emptyList<String>(), list[0].missingCodes)
     }
 
     @Test

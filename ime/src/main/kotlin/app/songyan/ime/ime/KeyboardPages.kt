@@ -18,6 +18,7 @@ import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutKeyTitleMode
@@ -842,26 +843,44 @@ class MergedSwipeConfig(
 ) {
     /** The two codes a sideways swipe sends, left then right; null when this key has no swipe. */
     fun codesFor(key: LayoutKey): List<String>? {
-        if (key.action.type != LayoutActionKind.CODE) return null
-        val group = key.label.lowercase()
-        if (group.length != 2 || group.any { it !in 'a'..'z' }) return null
-        if (fold.map[group[0]] != group[0] || fold.map[group[1]] != group[0]) return null
-        if (group.any { it !in alphabet }) return null
-        // The leader letter is the tap code itself; the published exact token only replaces it when
+        val (group, sent) = swipeGroup(key) ?: return null
+        // The code the key sends is the tap itself; the published exact token only replaces it when
         // the running schema declares the token in its alphabet, so a scheme that cannot read a
-        // token never receives one.
-        val left =
-            if (useExactTokens) {
-                fold.exactTokens[group[0]]?.toString() ?: group[0].toString()
+        // token never receives one. The other code is typed as itself.
+        return group.map { code ->
+            if (code == sent &&
+                useExactTokens
+            ) {
+                fold.exactTokens[code]?.toString() ?: code.toString()
             } else {
-                group[0].toString()
+                code.toString()
             }
-        return listOf(left, group[1].toString())
+        }
     }
 
     /** The letters the two swipe directions type, for the press preview. */
-    fun lettersFor(key: LayoutKey): List<String>? {
-        if (codesFor(key) == null) return null
-        return key.label.lowercase().map { it.toString() }
+    fun lettersFor(key: LayoutKey): List<String>? = swipeGroup(key)?.first?.map { it.toString() }
+
+    /**
+     * The two codes a key covers, left to right, with the one it sends: as written on the key, else
+     * the bundled grouping's in the order the key's title shows them. Null for a key without a swipe.
+     */
+    private fun swipeGroup(key: LayoutKey): Pair<List<Char>, Char>? {
+        if (key.action.type != LayoutActionKind.CODE) return null
+        val sent =
+            key.action.value
+                ?.takeIf { it.length == 1 }
+                ?.get(0) ?: return null
+        val written = LayoutFold.codesOf(key.codes)
+        val group =
+            written.ifEmpty {
+                val title = key.label.lowercase()
+                fold.map
+                    .filterValues { it == sent }
+                    .keys
+                    .sortedBy { title.indexOf(it).let { at -> if (at < 0) Int.MAX_VALUE else at } }
+            }
+        if (group.size != 2 || sent !in group || group.any { fold.map[it] != sent || it !in alphabet }) return null
+        return group to sent
     }
 }

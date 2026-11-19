@@ -275,7 +275,7 @@ class KeyboardPreferences(
                 LayoutFold
                     .of(registry, keyboard.layout, keyboard.board)
                     ?.takeUnless { it.isBuiltin }
-                    ?.let { keyboard.id to LayoutFold.targets(it) }
+                    ?.let { keyboard.id to LayoutFold.encode(it) }
             }.toMap()
     }
 

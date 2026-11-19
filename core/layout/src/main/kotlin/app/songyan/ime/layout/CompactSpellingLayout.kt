@@ -9,8 +9,8 @@ package app.songyan.ime.layout
  * shape from the definition own rows/keys and rejects everything except two provable shapes:
  *
  *  - standard phone 9-key, delegated to [PhoneKeypadStructure];
- *  - merged letter keys (14-key, 18-key, ...), where the key labels split a-z into groups, each key
- *    sends its group first letter, and at least one key carries more than one letter.
+ *  - merged letter keys (14-key, 18-key, ...), where the keys' codes ([LetterGroupLayout]) split
+ *    a-z into groups, each key sends a letter of its group, and at least one key covers more than one.
  *
  * A 26-key layout never matches: every group has one letter.
  */
@@ -34,24 +34,12 @@ object CompactSpellingLayout {
     }
 
     /**
-     * Letter to key code sent by a compact encoding key, derived from the key own label (ABC -> 2,
-     * QW -> q). Ambiguous or non-compact definitions return an empty map.
+     * Code to the key code it is typed with on a compact layout (QW -> q, ABC -> 2), read with
+     * [LayoutFold]'s rule; empty for a definition that is not a compact layout or does not fold.
      */
     fun readingKeyMap(definition: LayoutDefinition?): Map<Char, Char> {
         if (definition == null || !matches(definition)) return emptyMap()
-        val map = mutableMapOf<Char, Char>()
-        for (key in mainRows(definition).flatMap { it.keys }) {
-            if (key.action.type != LayoutActionKind.CODE) continue
-            val value = key.action.value ?: continue
-            if (value.length != 1) continue
-            val code = value.lowercase()[0]
-            val letters = (key.label + value).lowercase().filter { it in LetterGroupLayout.ALPHABET }
-            for (letter in letters.toSet()) {
-                val existing = map[letter]
-                if (existing != null && existing != code) return emptyMap()
-                map[letter] = code
-            }
-        }
-        return map
+        val kind = LayoutFold.kindOf(definition) ?: return emptyMap()
+        return LayoutFold.of(definition, kind)?.map.orEmpty()
     }
 }

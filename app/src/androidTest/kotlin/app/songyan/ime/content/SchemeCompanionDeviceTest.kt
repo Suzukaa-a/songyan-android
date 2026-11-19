@@ -9,7 +9,6 @@ import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
-import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutRow
@@ -136,7 +135,7 @@ class SchemeCompanionDeviceTest {
         }
 
     /**
-     * A 14-key layout that moves y from the TY key to the UI key (T | YUI, YUI sending y) is a
+     * A 14-key layout that moves y from the TY key to the UI key (codes t | yui, the UI key sending u) is a
      * grouping of its own: picking it builds a companion for that grouping, which types the word with
      * the keys this layout sends, while the bundled 14-key companion keeps typing it the bundled way.
      */
@@ -146,16 +145,20 @@ class SchemeCompanionDeviceTest {
             val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage()))
             assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
             scheme = requireNotNull(publisher.readActive()).sourceId
-            val base = BuiltinLayouts.merged14.copyWithId(OWN_LAYOUT, "自分组 14 键")
+            val base =
+                LayoutFold.writtenOut(
+                    BuiltinLayouts.merged14.copyWithId(OWN_LAYOUT, "自分组 14 键"),
+                    KeyboardLayoutKind.MERGED14,
+                )
             val own =
                 base.copy(
                     rows =
                         base.rows.map { row ->
                             LayoutRow(
                                 row.keys.map { key ->
-                                    when (key.label.lowercase()) {
-                                        "ty" -> key.copy(label = "T", action = LayoutAction.code("t"))
-                                        "ui" -> key.copy(label = "YUI", action = LayoutAction.code("y"))
+                                    when (key.action.value.takeIf { key.action.type == LayoutActionKind.CODE }) {
+                                        "t" -> LayoutFold.keyCovering(key, "t")
+                                        "u" -> LayoutFold.keyCovering(key, "yui")
                                         else -> key
                                     }
                                 },
@@ -177,7 +180,7 @@ class SchemeCompanionDeviceTest {
             val companions = companionsOf(picked)
             val ownCompanion = companions.single { it.layout == KeyboardLayoutKind.MERGED14 && it.fold == fold.id }
             val bundled = companions.single { it.layout == KeyboardLayoutKind.MERGED14 && it.fold == null }
-            assertTrue(candidates(picked, ownCompanion.schemaID, "yabagy").contains(WORD))
+            assertTrue(candidates(picked, ownCompanion.schemaID, "uabagu").contains(WORD))
             assertTrue(candidates(picked, bundled.schemaID, "tabagu").contains(WORD))
         }
 
@@ -188,7 +191,11 @@ class SchemeCompanionDeviceTest {
             val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage()))
             assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
             scheme = requireNotNull(publisher.readActive()).sourceId
-            val base = BuiltinLayouts.phone9.copyWithId(OWN_LAYOUT, "自分组 9 键")
+            val base =
+                LayoutFold.writtenOut(
+                    BuiltinLayouts.phone9.copyWithId(OWN_LAYOUT, "自分组 9 键"),
+                    KeyboardLayoutKind.PHONE9,
+                )
             val own =
                 base.copy(
                     rows =
@@ -196,8 +203,8 @@ class SchemeCompanionDeviceTest {
                             LayoutRow(
                                 row.keys.map { key ->
                                     when (key.action.value.takeIf { key.action.type == LayoutActionKind.CODE }) {
-                                        "8" -> key.copy(label = "TUVY")
-                                        "9" -> key.copy(label = "WXZ")
+                                        "8" -> LayoutFold.keyCovering(key, "tuvy")
+                                        "9" -> LayoutFold.keyCovering(key, "wxz")
                                         else -> key
                                     }
                                 },

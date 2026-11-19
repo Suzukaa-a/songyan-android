@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
-import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutKeyTitleMode
@@ -202,25 +201,11 @@ private val CONTROL_KINDS =
         LayoutActionKind.CLEAR_INPUT,
     )
 
-/**
- * A title typed by hand wins over the automatic one, or the field would not change what the key shows.
- * On a letter key the title's letters are the letters the key covers, so a key whose letter left its
- * title sends the title's first letter instead: the key always sends a letter of its own group.
- */
+/** A title typed by hand wins over the automatic one, or the field would not change what the key shows. */
 internal fun keyWithTypedLabel(
     key: LayoutKey,
     label: String,
-): LayoutKey {
-    val labelled = if (key.titleMode == LayoutKeyTitleMode.AUTOMATIC) key.withLabel(label) else key.copy(label = label)
-    val sent =
-        key.action.value
-            ?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
-            ?.lowercase()
-            ?.first()
-    val letters = LayoutFold.lettersOf(label)
-    if (sent == null || sent !in 'a'..'z' || letters.isEmpty() || sent in letters) return labelled
-    return labelled.copy(action = LayoutAction.code(letters.first().toString()))
-}
+): LayoutKey = if (key.titleMode == LayoutKeyTitleMode.AUTOMATIC) key.withLabel(label) else key.copy(label = label)
 
 /** A key with two variants shows the one it types in the current branch, until its title is typed by hand. */
 internal fun keyWithAsciiText(
@@ -346,6 +331,8 @@ fun KeyFields(
     /** The key may jump to another layout's page (a page's key, not a main layout's). */
     allowJump: Boolean = false,
     editPrimaryAction: Boolean = true,
+    /** On a merged layout, the codes the key covers; null hides the field. */
+    codes: KeyCodesField? = null,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
@@ -363,6 +350,15 @@ fun KeyFields(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (codes != null) {
+            OutlinedTextField(
+                value = codes.value,
+                onValueChange = codes.onChange,
+                label = { Text(stringResource(R.string.layout_editor_key_codes)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         WidthField(key.width, span) { onChange(key.copy(width = it)) }
         if (editPrimaryAction) ActionFields(key, allowCode, literalOnly, allowJump, onChange)
         LongPressFields(key, onChange)
@@ -1080,3 +1076,9 @@ private fun RailRow(
         }
     }
 }
+
+/** The codes a merged key covers, as the key editor shows and changes them. */
+class KeyCodesField(
+    val value: String,
+    val onChange: (String) -> Unit,
+)

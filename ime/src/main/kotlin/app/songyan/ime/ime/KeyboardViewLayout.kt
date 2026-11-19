@@ -25,6 +25,7 @@ import app.songyan.ime.layout.LayoutLanguageSwitchBehavior
 import app.songyan.ime.layout.LayoutPageTarget
 import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.LayoutSplitConfiguration
+import app.songyan.ime.layout.LetterGroupLayout
 import app.songyan.ime.layout.ShuangpinHintOverlay
 import kotlin.math.max
 
@@ -1040,7 +1041,8 @@ internal fun KeyboardView.solveSyllableHint(
 ): SyllableHintLine? {
     if (syllableHints.isEmpty()) return null
     // A letter without a hint still gets an (empty) line, so every letter in a row shares one baseline.
-    val columns = ShuangpinHintOverlay.hints(key, syllableHints, preservingSecondaryLabel = false)
+    val group = layout?.let { LetterGroupLayout.groupOf(it, key) }
+    val columns = ShuangpinHintOverlay.hints(key, group, syllableHints, preservingSecondaryLabel = false)
     if (columns.isEmpty()) return null
     val room = capWidth / columns.size - 2 * density
     val breaks = IntArray(columns.size) { -1 }

@@ -4,11 +4,11 @@
 
 ### 新增
 
-- 「键盘布局」里可以自己决定 14 键、18 键和 9 键哪几个字母合用一个键：改按键的标题即可，导入的布局也一样。缺少或重复的字母会标出来，改好之前不能保存。
+- 「键盘布局」里可以自己决定 14 键、18 键和 9 键哪几个编码合用一个键：在按键的「编码」里填写，标题只管显示；导入的布局也一样。重复的编码和缺少的字母会标出来，改好之前不能保存。
 
 ### New
 
-- In Keyboard layouts you can choose which letters share a key on 14-, 18- and 9-key layouts: edit the key titles, or import a layout written that way. Missing or repeated letters are named, and the layout can't be saved until they're fixed.
+- In Keyboard layouts you can choose which codes share a key on 14-, 18- and 9-key layouts: fill in a key's Codes, while its title only sets what it shows; imported layouts work the same way. Repeated codes and missing letters are named, and the layout can't be saved until they're fixed.
 
 ## 0.2.0 (2026-11-20)
 

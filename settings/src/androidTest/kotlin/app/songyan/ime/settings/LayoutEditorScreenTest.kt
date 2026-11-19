@@ -89,16 +89,12 @@ class LayoutEditorScreenTest {
     }
 
     @Test
-    fun aMergedLayoutNamesTheLettersItMissesAndKeepsEachKeySendingItsOwnLetter() {
+    fun aMergedKeysCodesAreEditedApartFromItsTitle() {
         show("merged14")
         keyNode(1, 2, "ER").performClick()
         compose
-            .onAllNodes(
-                hasSetTextAction() and
-                    androidx.compose.ui.test
-                        .hasText("ER"),
-            ).onFirst()
-            .performTextReplacement("WR")
+            .onNode(hasSetTextAction() and hasText(str(R.string.layout_editor_key_codes)))
+            .performTextReplacement("wr")
         // e is on no key and w on two: the layout says which and is not saved.
         val missing = str(R.string.layout_editor_letters_missing, "E")
         compose.waitUntil(
@@ -108,15 +104,21 @@ class LayoutEditorScreenTest {
 
         keyNode(1, 1, "QW").performClick()
         compose
-            .onAllNodes(
-                hasSetTextAction() and
-                    androidx.compose.ui.test
-                        .hasText("QW"),
-            ).onFirst()
-            .performTextReplacement("QE")
+            .onNode(hasSetTextAction() and hasText(str(R.string.layout_editor_key_codes)))
+            .performTextReplacement("qe")
         compose.waitUntil(
             5_000,
         ) { compose.onAllNodesWithText(missing, substring = true).fetchSemanticsNodes().isEmpty() }
+        val save = str(R.string.layout_editor_save)
+        compose.waitUntil(5_000) {
+            compose
+                .onAllNodes(
+                    hasText(save) and
+                        androidx.compose.ui.test
+                            .isEnabled(),
+                ).fetchSemanticsNodes()
+                .isNotEmpty()
+        }
         compose.onNodeWithText(str(R.string.layout_editor_save)).assertIsEnabled().performClick()
         compose.waitForIdle()
         val keys =
@@ -124,9 +126,12 @@ class LayoutEditorScreenTest {
                 .layout("merged14")!!
                 .rows[0]
                 .keys
-        // QE still sends q; ER became WR, whose letters no longer hold e, so it sends w, its first.
-        assertEquals("q", keys[0].action.value)
-        assertEquals("w", keys[1].action.value)
+        // The titles are untouched; the codes are written, and ER, whose e left its codes, sends w.
+        assertEquals(listOf("QW", "ER"), keys.take(2).map { it.label })
+        assertEquals(listOf("qe", "wr"), keys.take(2).map { it.codes })
+        assertEquals(listOf("q", "w"), keys.take(2).map { it.action.value })
+        // The other keys got their codes written out, so their grouping stays.
+        assertEquals("ty", keys[2].codes)
     }
 
     @Test

@@ -265,13 +265,14 @@ class KeyboardPagesTest {
         assertEquals(listOf("!", "w"), config.codesFor(key))
         assertEquals(listOf("q", "w"), config.lettersFor(key))
         assertNull(MergedSwipeConfig(CompactFold.MERGED14, "q", useExactTokens = true).codesFor(key))
+        // L is alone on its key: there is nothing to swipe to.
         assertNull(
             config.codesFor(
                 LayoutKey(
-                    "q",
+                    "L",
                     action =
                         app.songyan.ime.layout.LayoutAction
-                            .code("q"),
+                            .code("l"),
                 ),
             ),
         )

@@ -128,7 +128,8 @@
     <string name="page_editor_title">Edit page</string>
     <string name="layout_editor_name">Name</string>
     <string name="layout_editor_letters_missing">Missing letters: %1$s</string>
-    <string name="layout_editor_letters_repeated">Letters on more than one key: %1$s</string>
+    <string name="layout_editor_letters_repeated">Codes on more than one key: %1$s</string>
+    <string name="layout_editor_codes_unsent">Some keys type a character outside their codes.</string>
     <string name="layout_editor_keys_section">Keys</string>
     <string name="layout_editor_key_description">Row %1$d, key %2$d: %3$s</string>
     <string name="layout_editor_move_left">Move the key left</string>
@@ -140,6 +141,7 @@
     <string name="layout_editor_add_row">Add a row</string>
     <string name="layout_editor_selected_section">Selected key: %1$s</string>
     <string name="layout_editor_key_label">Title</string>
+    <string name="layout_editor_key_codes">Codes</string>
     <string name="layout_editor_key_hint">Corner hint</string>
     <string name="layout_editor_key_width">Width</string>
     <string name="layout_editor_key_width_hint">Relative to a standard key. Leave empty for the standard width.</string>

@@ -162,17 +162,17 @@ class UserKeyboardsTest {
             first: String,
             second: String,
         ): LayoutDefinition {
-            val base = BuiltinLayouts.merged14.copyWithId(id, id)
+            val base = LayoutFold.writtenOut(BuiltinLayouts.merged14.copyWithId(id, id), KeyboardLayoutKind.MERGED14)
             val row = base.rows[0]
             val keys =
                 row.keys.toMutableList().also {
-                    it[0] = it[0].copy(label = first, action = LayoutAction.code(first.take(1).lowercase()))
-                    it[1] = it[1].copy(label = second, action = LayoutAction.code(second.take(1).lowercase()))
+                    it[0] = LayoutFold.keyCovering(it[0], first)
+                    it[1] = LayoutFold.keyCovering(it[1], second)
                 }
             return base.copy(rows = listOf(LayoutRow(keys)) + base.rows.drop(1))
         }
-        val mine = regrouped("mine", "Q", "WER")
-        val broken = regrouped("broken", "QWE", "RE")
+        val mine = regrouped("mine", "q", "wer")
+        val broken = regrouped("broken", "qwe", "er")
         val registry = LayoutRegistry.create().install(mine.encoded()).install(broken.encoded())
         val fold = requireNotNull(LayoutFold.of(mine, KeyboardLayoutKind.MERGED14))
         val all = listOf(k("rime_ice:merged14#mine"), k("rime_ice:merged14#broken"), k("rime_ice:merged14#merged14"))

@@ -39,6 +39,7 @@ import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.LayoutFold
@@ -55,6 +56,7 @@ import app.songyan.ime.settings.ui.EditorNavigationGuard
 import app.songyan.ime.settings.ui.GridEdit
 import app.songyan.ime.settings.ui.KeyGridEditing
 import app.songyan.ime.settings.ui.KeySelection
+import app.songyan.ime.settings.ui.LayoutDraft
 import app.songyan.ime.settings.ui.LayoutEditorViewModel
 import app.songyan.ime.settings.ui.LayoutPreviewRequest
 import app.songyan.ime.settings.ui.LocalEditorNavigationGuard
@@ -188,6 +190,10 @@ fun LayoutEditorScreen(
             onEdit = { edit -> viewModel.update { it.apply(edit) } },
             onKey = { key -> viewModel.update { it.replaceSelectedKey(key) } },
             onSplit = { split -> viewModel.update { it.withSplit(split) } },
+            codes =
+                selectedKeyCodes(
+                    current,
+                ) { kind, codes -> viewModel.update { it.withSelectedKeyCodes(kind, codes) } },
             // A nine-key layout is a fixed 3x3 grid with side columns instead of rows to rearrange.
             fixedStructure = current.isNineKey,
             selectionToken = current.rail ?: current.bottom ?: current.selection,
@@ -657,6 +663,8 @@ private fun GridSections(
     beforeFields: @Composable () -> Unit = {},
     /** Keys may jump to another layout's page: a page's keys may, a main layout's may not. */
     allowJump: Boolean = false,
+    /** The selected key's codes on a merged layout; null hides the field. */
+    codes: KeyCodesField? = null,
     /** A page with Chinese and English marks draws the branch being previewed; null draws the saved labels. */
     asciiPreview: Boolean? = null,
     /** The gap and the cuts are edited elsewhere (a main layout's split view); only the activation shows here. */
@@ -708,6 +716,7 @@ private fun GridSections(
                 span = spanKey,
                 allowJump = allowJump || footerSelected != null,
                 editPrimaryAction = editPrimaryAction,
+                codes = codes,
             )
         }
     }
@@ -858,18 +867,31 @@ private fun BottomRowEditor(
     }
 }
 
+/** The codes field of the selected key on a merged layout: a grid key that sends a code. */
+private fun selectedKeyCodes(
+    draft: LayoutDraft,
+    onChange: (KeyboardLayoutKind, String) -> Unit,
+): KeyCodesField? {
+    val kind = LayoutFold.kindOf(draft.layout) ?: return null
+    if (draft.rail != null || draft.bottom != null) return null
+    val key = draft.selectedKey ?: return null
+    if (key.action.type != LayoutActionKind.CODE) return null
+    return KeyCodesField(LayoutFold.codesOn(draft.layout, kind, key).joinToString("")) { onChange(kind, it) }
+}
+
 /**
- * On a merged layout (14, 18 or 9 keys) whose titles write its grouping, or that folds no way at all,
- * the letters its keys leave out or repeat: it is not saved until each letter is on exactly one key.
- * Titles that only change what the keys show stay saveable.
+ * On a merged layout (14, 18 or 9 keys) that writes its own codes, or that folds no way at all, the
+ * codes its keys repeat and the letters they leave out: it is not saved until each is on one key.
  */
 @Composable
 private fun mergedLetterProblems(layout: LayoutDefinition): String? {
-    val kind = layout.input.builtinLayout?.let { KeyboardLayoutKind.fromWire(it.wire) } ?: return null
-    if (kind.compactFold == null) return null
-    if (LayoutFold.of(layout, kind) != null && !LayoutFold.titlesWriteGroups(layout)) return null
-    val problems = LayoutFold.problems(layout)
-    if (problems.isEmpty) return null
+    val kind = LayoutFold.kindOf(layout) ?: return null
+    if (LayoutFold.of(layout, kind) != null && !LayoutFold.writesGroups(layout)) return null
+    val problems = LayoutFold.problems(layout, kind)
+    if (problems.isEmpty) {
+        // Every code is on one key, yet the layout does not fold: a key types something outside its codes.
+        return if (LayoutFold.of(layout, kind) == null) stringResource(R.string.layout_editor_codes_unsent) else null
+    }
 
     fun letters(chars: List<Char>) = chars.joinToString(" ") { it.uppercase() }
     return listOfNotNull(

@@ -172,11 +172,20 @@ class ShuangpinHintsTest {
     fun aMergedKeyGetsOneHintPerLetterAndAnAuthoredCornerLabelWins() {
         val qw = LayoutKey("QW", secondaryLabel = "1", action = LayoutAction.code("q"))
         val labels = ShuangpinHintPresets.builtinXiaohe.hints
-        assertEquals(listOf("iu", "ei"), ShuangpinHintOverlay.hints(qw, labels, preservingSecondaryLabel = false))
-        assertEquals(listOf(null, null), ShuangpinHintOverlay.hints(qw, labels, preservingSecondaryLabel = true))
+        assertEquals(
+            listOf("iu", "ei"),
+            ShuangpinHintOverlay.hints(qw, listOf('q', 'w'), labels, preservingSecondaryLabel = false),
+        )
+        assertEquals(
+            listOf(null, null),
+            ShuangpinHintOverlay.hints(qw, listOf('q', 'w'), labels, preservingSecondaryLabel = true),
+        )
         val a = LayoutKey("a", action = LayoutAction.code("a"))
-        assertEquals(listOf<String?>(null), ShuangpinHintOverlay.hints(a, labels, preservingSecondaryLabel = false))
+        assertEquals(
+            listOf<String?>(null),
+            ShuangpinHintOverlay.hints(a, listOf('a'), labels, preservingSecondaryLabel = false),
+        )
         val space = LayoutKey("空格", action = LayoutAction(LayoutActionKind.SPACE))
-        assertTrue(ShuangpinHintOverlay.hints(space, labels, preservingSecondaryLabel = false).isEmpty())
+        assertTrue(ShuangpinHintOverlay.hints(space, null, labels, preservingSecondaryLabel = false).isEmpty())
     }
 }

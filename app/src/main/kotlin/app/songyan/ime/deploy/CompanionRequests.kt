@@ -5,6 +5,7 @@ import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.storage.AppStorage
 import app.songyan.ime.storage.GenerationPublisher
@@ -34,9 +35,9 @@ internal data class CompanionRequests(
     val hiddenSchemas: Set<String> = emptySet(),
     val hiddenLayouts: Set<String> = emptySet(),
     /**
-     * The grouping of each listed keyboard whose layout folds its own way, by keyboard id: the 26
-     * letters' targets in a-z order (see [CompactFold.of]). A keyboard on a bundled grouping is not
-     * listed, so an older mirror reads the same.
+     * The grouping of each listed keyboard whose layout folds its own way, by keyboard id, as
+     * [LayoutFold.encode] writes it. A keyboard on a bundled grouping is not listed, so an older
+     * mirror reads the same.
      */
     val folds: Map<String, String> = emptyMap(),
 ) {
@@ -59,10 +60,7 @@ internal data class CompanionRequests(
         schemas.associateWith { shapes(it) }.filterValues { it.isNotEmpty() }
 
     private fun shapeOf(keyboard: PublishedKeyboard): CompanionShape? {
-        val own =
-            folds[keyboard.id]?.takeIf { it.length == CompanionShape.ALPHABET.length }?.let { target ->
-                CompactFold.of(keyboard.layout, CompanionShape.ALPHABET.zip(target).toMap())
-            }
+        val own = folds[keyboard.id]?.let(LayoutFold::decode)?.let { CompactFold.of(keyboard.layout, it) }
         return if (own != null) CompanionShape(keyboard.layout, own) else CompanionShape.builtin(keyboard.layout)
     }
 
@@ -235,8 +233,6 @@ internal data class CompanionShape(
         adapter.layout == layout && adapter.fold == fold.id.takeUnless { fold.isBuiltin }
 
     companion object {
-        const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
-
         /** The bundled fold of [layout]; null for a layout that does not fold. */
         fun builtin(layout: KeyboardLayoutKind): CompanionShape? =
             layout.compactFold?.let { CompanionShape(layout, it) }

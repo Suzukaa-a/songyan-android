@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.UserKeyboards
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -108,7 +109,7 @@ class CompanionRequestsTest {
                 .toMutableMap()
                 .apply { put('w', 'e') }
         val fold = requireNotNull(CompactFold.of(KeyboardLayoutKind.MERGED14, custom))
-        val targets = CompanionShape.ALPHABET.map { custom.getValue(it) }.joinToString("")
+        val targets = LayoutFold.encode(fold)
         val keyboard = k("a:merged14#mine")
         val requests =
             CompanionRequests(

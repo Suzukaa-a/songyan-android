@@ -127,7 +127,8 @@
     <string name="page_editor_title">ページを編集</string>
     <string name="layout_editor_name">名前</string>
     <string name="layout_editor_letters_missing">足りない文字：%1$s</string>
-    <string name="layout_editor_letters_repeated">重複している文字：%1$s</string>
+    <string name="layout_editor_letters_repeated">複数のキーにあるコード：%1$s</string>
+    <string name="layout_editor_codes_unsent">コードにない文字を入力するキーがあります。</string>
     <string name="layout_editor_keys_section">キー</string>
     <string name="layout_editor_key_description">%1$d 行目の %2$d 番目のキー：%3$s</string>
     <string name="layout_editor_move_left">キーを左へ移動</string>
@@ -139,6 +140,7 @@
     <string name="layout_editor_add_row">行を追加</string>
     <string name="layout_editor_selected_section">選択中のキー：%1$s</string>
     <string name="layout_editor_key_label">タイトル</string>
+    <string name="layout_editor_key_codes">コード</string>
     <string name="layout_editor_key_hint">角のヒント</string>
     <string name="layout_editor_key_width">幅</string>
     <string name="layout_editor_key_width_hint">標準のキーに対する比率です。空欄にすると標準の幅になります。</string>

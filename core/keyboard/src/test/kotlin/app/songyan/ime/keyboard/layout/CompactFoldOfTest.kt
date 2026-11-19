@@ -59,13 +59,21 @@ class CompactFoldOfTest {
 
     @Test
     fun aGroupingThatCannotFoldIsRefused() {
-        // A letter missing.
-        assertNull(CompactFold.of(KeyboardLayoutKind.MERGED14, bundled14 - 'm'))
         // A key that sends a letter outside its group.
         assertNull(CompactFold.of(KeyboardLayoutKind.MERGED14, bundled14 + ('w' to 'x')))
         // A 9-key letter on 1.
         assertNull(CompactFold.of(KeyboardLayoutKind.PHONE9, CompactFold.PHONE9.map + ('a' to '1')))
         // 26 keys do not fold.
         assertNull(CompactFold.of(KeyboardLayoutKind.QWERTY26, bundled14))
+    }
+
+    @Test
+    fun codesOtherThanLettersFoldTheSameWay() {
+        // A stroke layout of three keys: 横竖 on one, 撇点 on another, 折 alone.
+        val strokes = mapOf('h' to 'h', 's' to 'h', 'p' to 'p', 'n' to 'p', 'z' to 'z')
+        val fold = requireNotNull(CompactFold.of(KeyboardLayoutKind.MERGED14, strokes))
+        assertFalse(fold.isBuiltin)
+        assertEquals('h', fold.map['s'])
+        assertEquals(setOf('h', 'p', 'z'), fold.keysSent)
     }
 }

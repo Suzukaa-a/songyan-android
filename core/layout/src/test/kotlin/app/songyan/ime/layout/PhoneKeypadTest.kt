@@ -363,7 +363,8 @@ class CompactSpellingLayoutTest {
             LayoutRow(row.map { code(it.toString()) })
         } + listOf(controls())
 
-    private fun group(letters: String) = LayoutKey(letters.uppercase(), action = LayoutAction.code(letters.take(1)))
+    private fun group(letters: String) =
+        LayoutKey(letters.uppercase(), action = LayoutAction.code(letters.take(1)), codes = letters)
 
     private fun merged14Rows(trailingControls: Boolean = true): List<LayoutRow> {
         val groups =
@@ -386,7 +387,7 @@ class CompactSpellingLayoutTest {
     }
 
     @Test
-    fun letterGroupsAreReadFromLabels() {
+    fun letterGroupsAreReadFromTheKeysCodes() {
         val rows =
             listOf(
                 LayoutRow(listOf("qwe", "rty", "uio", "p").map { group(it) }),

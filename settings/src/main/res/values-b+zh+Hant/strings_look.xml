@@ -128,7 +128,8 @@
     <string name="page_editor_title">編輯頁面</string>
     <string name="layout_editor_name">名稱</string>
     <string name="layout_editor_letters_missing">缺少字母：%1$s</string>
-    <string name="layout_editor_letters_repeated">重複的字母：%1$s</string>
+    <string name="layout_editor_letters_repeated">重複的編碼：%1$s</string>
+    <string name="layout_editor_codes_unsent">有的鍵輸入的字元不在它的編碼裡。</string>
     <string name="layout_editor_keys_section">按鍵</string>
     <string name="layout_editor_key_description">第 %1$d 行第 %2$d 個鍵：%3$s</string>
     <string name="layout_editor_move_left">把按鍵左移</string>
@@ -140,6 +141,7 @@
     <string name="layout_editor_add_row">新增一行</string>
     <string name="layout_editor_selected_section">所選按鍵：%1$s</string>
     <string name="layout_editor_key_label">標題</string>
+    <string name="layout_editor_key_codes">編碼</string>
     <string name="layout_editor_key_hint">角標</string>
     <string name="layout_editor_key_width">寬度</string>
     <string name="layout_editor_key_width_hint">相對標準按鍵的比例，留空為標準寬度。</string>

@@ -138,32 +138,32 @@ class CompactFold(
 
     companion object {
         private const val EXACT_TOKEN_POOL = "!#%*+<>@^_|~"
-        private const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 
         /**
-         * The fold of a layout that sends [map] (each of the 26 letters to the character its key
-         * sends) on a [kind] layout. Every merged layout follows one rule, 9-key included: a key
-         * sends either a letter of its own group or a digit 2-9, and all keys send the same sort.
-         * The bundled mapping gives the bundled fold, so existing companions keep their names;
-         * any other gives a fold of its own. Null when the mapping breaks the rule.
+         * The fold of a layout whose keys send [map] (each code a key covers, letter, stroke or mark,
+         * to the character its key sends) on a [kind] layout. Every merged layout follows one rule,
+         * 9-key included: a key sends either one of its own codes or a digit 2-9, and all keys send the
+         * same sort. Whether the codes cover what an input method spells with is the companion
+         * generator's question. The bundled mapping gives the bundled fold, so existing companions
+         * keep their names; any other gives a fold of its own. Null when the mapping breaks the rule.
          */
         fun of(
             kind: KeyboardLayoutKind,
             map: Map<Char, Char>,
         ): CompactFold? {
             val builtin = kind.compactFold ?: return null
-            if (ALPHABET.any { it !in map } || map.keys.any { it !in ALPHABET }) return null
+            if (map.isEmpty()) return null
             val sent = map.values.toSet()
             val digits = sent.all { it in '2'..'9' }
-            val letters = sent.all { it in ALPHABET && map[it] == it }
-            if (!digits && !letters) return null
+            val own = sent.all { map[it] == it }
+            if (!digits && !own) return null
             if (map == builtin.map) return builtin
-            val source = ALPHABET
+            val source = map.keys.sorted().joinToString("")
             val target = source.map { map.getValue(it) }.joinToString("")
             val hash =
                 java.util.zip
                     .CRC32()
-                    .apply { update(target.toByteArray(Charsets.US_ASCII)) }
+                    .apply { update((source + "\u0000" + target).toByteArray(Charsets.UTF_8)) }
                     .value
             return CompactFold(builtin.id + "u" + "%08x".format(hash), source, target)
         }

@@ -5,69 +5,105 @@ import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 
 /**
- * The letters each key of a merged layout covers, and what the layout folds them into. One rule for
- * every merged layout, 14, 18 and 9 keys alike, bundled or written by hand: an encoding key covers
- * the latin letters of its label and sends its one-character code.
+ * The codes each key of a merged layout covers, and what the layout folds them into. One rule for
+ * every merged layout, 14, 18 and 9 keys alike, bundled or written by hand: a key covers the codes
+ * written on it ([LayoutKey.codes]: letters, strokes, marks) and sends its one-character code. A key's
+ * title is only what it shows. A layout that writes no codes keeps the bundled grouping of its kind.
  */
 object LayoutFold {
-    private const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+    private const val LETTERS = "abcdefghijklmnopqrstuvwxyz"
 
-    /** One merged key: the letters on it, in label order, and what it sends. */
+    /** One merged key: the codes it covers, the one it sends first, and what it sends. */
     data class Group(
-        val letters: List<Char>,
+        val codes: List<Char>,
         val sends: Char,
     )
 
-    /** The merged keys of [definition] in row order: every one-character code key with letters on its label. */
-    fun groups(definition: LayoutDefinition): List<Group> =
-        definition.rows.flatMap { it.keys }.mapNotNull { key ->
-            val code = key.action.value?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
-            val letters = lettersOf(key.label)
-            if (code == null || letters.isEmpty()) null else Group(letters, code.lowercase()[0])
+    /**
+     * The kind of merged layout [definition] is: the layout it is based on, else the bundled merged
+     * layout whose keys send exactly what its keys send (an imported layout that names none); null for
+     * a layout that is not merged.
+     */
+    fun kindOf(definition: LayoutDefinition): KeyboardLayoutKind? {
+        val declared = definition.input.builtinLayout?.let { KeyboardLayoutKind.fromWire(it.wire) }
+        if (declared != null) return declared.takeIf { it.compactFold != null }
+        val sent = sentCharacters(definition)
+        return KeyboardLayoutKind.entries.firstOrNull { it.compactFold?.keysSent == sent }
+    }
+
+    /** Whether [definition] writes its own grouping: some key carries [LayoutKey.codes]. */
+    fun writesGroups(definition: LayoutDefinition): Boolean =
+        definition.rows.any { row ->
+            row.keys.any {
+                it.codes !=
+                    null
+            }
         }
 
-    /** The latin letters of a label, lowercased, each once, in order. */
-    fun lettersOf(label: String): List<Char> =
-        label
-            .lowercase()
-            .filter { it in ALPHABET }
+    /** The codes written in a key's [LayoutKey.codes], each once, in order. */
+    fun codesOf(text: String?): List<Char> =
+        text
+            .orEmpty()
             .toList()
+            .filterNot { it.isWhitespace() }
             .distinct()
 
     /**
-     * What [definition] folds into on a [kind] layout. Labels whose letters cover the 26 letters once
-     * make the layout's own grouping. Labels that do not, on keys that still send exactly what the
-     * bundled layout's keys send, are only what the keys show (a 9-key JKL key titled 我的 still
-     * types 5): the bundled grouping applies, as it always did. Anything else does not fold: null.
+     * The merged keys of [definition] on a [kind] layout, in row order: each one-character code key
+     * with the codes it covers. Written codes win; without any, each key covers the codes the bundled
+     * grouping sends to its code.
+     */
+    fun groups(
+        definition: LayoutDefinition,
+        kind: KeyboardLayoutKind,
+    ): List<Group> =
+        definition.rows.flatMap { it.keys }.mapNotNull { key ->
+            val sends = sentCode(key) ?: return@mapNotNull null
+            codesOn(definition, kind, key).takeIf { it.isNotEmpty() }?.let { Group(it, sends) }
+        }
+
+    /** The codes [key] covers on [definition], the one it sends first; empty for a key that covers none. */
+    fun codesOn(
+        definition: LayoutDefinition,
+        kind: KeyboardLayoutKind,
+        key: LayoutKey,
+    ): List<Char> {
+        val sends = sentCode(key) ?: return emptyList()
+        val covered =
+            when {
+                key.codes != null -> codesOf(key.codes)
+                writesGroups(definition) -> emptyList()
+                else ->
+                    kind.compactFold
+                        ?.map
+                        ?.filterValues { it == sends }
+                        ?.keys
+                        ?.sorted()
+                        .orEmpty()
+            }
+        return listOf(sends).filter { it in covered } + (covered - sends)
+    }
+
+    /**
+     * What [definition] folds into on a [kind] layout: its written grouping, or the bundled one when it
+     * writes none and its keys send what the bundled layout's keys send. Null when it does not fold: a
+     * code on two keys, keys sending something the fold rule refuses (see [CompactFold.of]), or keys
+     * of a layout without written codes that send other characters than the bundled ones.
      */
     fun of(
         definition: LayoutDefinition,
         kind: KeyboardLayoutKind,
     ): CompactFold? {
         val builtin = kind.compactFold ?: return null
-        labelled(definition)?.let { map -> CompactFold.of(kind, map)?.let { return it } }
-        return builtin.takeIf { sentCharacters(definition) == builtin.keysSent }
-    }
-
-    /** The letter-to-key mapping the labels describe; null when a letter is on two keys. */
-    private fun labelled(definition: LayoutDefinition): Map<Char, Char>? {
+        if (!writesGroups(definition)) return builtin.takeIf { sentCharacters(definition) == builtin.keysSent }
         val map = HashMap<Char, Char>()
-        for (group in groups(definition)) {
-            for (letter in group.letters) {
-                if (map.put(letter, group.sends) != null) return null
+        for (group in groups(definition, kind)) {
+            for (code in group.codes) {
+                if (map.put(code, group.sends) != null) return null
             }
         }
-        return map
+        return CompactFold.of(kind, map)
     }
-
-    /** The letters and digits 2-9 the layout's one-character code keys send. */
-    private fun sentCharacters(definition: LayoutDefinition): Set<Char> =
-        definition.rows
-            .flatMap { it.keys }
-            .mapNotNull { key ->
-                key.action.value?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
-            }.map { it.lowercase()[0] }
-            .filterTo(HashSet()) { it in ALPHABET || it in '2'..'9' }
 
     /**
      * The fold a keyboard on [layout] drawing the layout [board] types with: the bundled fold for
@@ -95,25 +131,62 @@ object LayoutFold {
         return if (fold.isBuiltin) keyboard.layout.wire else keyboard.layout.wire + ":" + fold.id
     }
 
-    /** [fold]'s targets of the 26 letters in a-z order, the form the deploy request carries. */
-    fun targets(fold: CompactFold): String = ALPHABET.map { fold.map.getValue(it) }.joinToString("")
+    /** [fold]'s mapping as the deploy request carries it: the codes, a newline, what each one's key sends. */
+    fun encode(fold: CompactFold): String {
+        val codes = fold.map.keys.sorted()
+        return codes.joinToString("") + "\n" + codes.map { fold.map.getValue(it) }.joinToString("")
+    }
+
+    /** The mapping [encode] wrote; null for anything else. */
+    fun decode(text: String): Map<Char, Char>? {
+        val parts = text.split('\n')
+        if (parts.size != 2 || parts[0].length != parts[1].length || parts[0].isEmpty()) return null
+        return parts[0].zip(parts[1]).toMap()
+    }
 
     /**
-     * Whether [definition]'s titles write its grouping: every key that sends one letter or a digit
-     * 2-9 has letters on its title. A layout with a key titled otherwise (a 9-key 5 titled 我的) only
-     * changes what the keys show.
+     * [definition] with every key's current codes written on it ([LayoutKey.codes]), so a change to
+     * one key's codes never drops the bundled grouping of the others. A layout that writes codes
+     * already is returned as it is.
      */
-    fun titlesWriteGroups(definition: LayoutDefinition): Boolean =
-        definition.rows.flatMap { it.keys }.all { key ->
-            val code =
-                key.action.value
-                    ?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
-                    ?.lowercase()
-                    ?.first()
-            code == null || (code !in ALPHABET && code !in '2'..'9') || lettersOf(key.label).isNotEmpty()
-        }
+    fun writtenOut(
+        definition: LayoutDefinition,
+        kind: KeyboardLayoutKind,
+    ): LayoutDefinition {
+        if (writesGroups(definition)) return definition
+        return definition.copy(
+            rows =
+                definition.rows.map { row ->
+                    LayoutRow(
+                        row.keys.map { key ->
+                            val current = codesOn(definition, kind, key)
+                            if (current.isEmpty()) key else key.copy(codes = current.joinToString(""))
+                        },
+                    )
+                },
+        )
+    }
 
-    /** What keeps [definition] from folding, for the editor to show before it is saved. */
+    /**
+     * [key] covering [codes]. A key that sends a code no longer among its own sends the first of
+     * them; a key sending a digit keeps it.
+     */
+    fun keyCovering(
+        key: LayoutKey,
+        codes: String,
+    ): LayoutKey {
+        val normalized = codesOf(codes)
+        val sends = sentCode(key)
+        val action =
+            if (sends != null && sends !in '0'..'9' && sends !in normalized && normalized.isNotEmpty()) {
+                LayoutAction.code(normalized.first().toString())
+            } else {
+                key.action
+            }
+        return key.copy(codes = normalized.joinToString(""), action = action)
+    }
+
+    /** What keeps a written grouping from folding, for the editor to name before it is saved. */
     data class Problems(
         val missing: List<Char>,
         val repeated: List<Char>,
@@ -121,11 +194,33 @@ object LayoutFold {
         val isEmpty: Boolean get() = missing.isEmpty() && repeated.isEmpty()
     }
 
-    fun problems(definition: LayoutDefinition): Problems {
-        val counts = groups(definition).flatMap { it.letters }.groupingBy { it }.eachCount()
+    /**
+     * The codes [definition] writes on two keys, and, when every code it writes is a latin letter,
+     * the letters it leaves out. Codes of any other kind (strokes, marks) are checked against the
+     * input method when its keyboard is prepared, which knows what it spells with.
+     */
+    fun problems(
+        definition: LayoutDefinition,
+        kind: KeyboardLayoutKind,
+    ): Problems {
+        if (!writesGroups(definition)) return Problems(emptyList(), emptyList())
+        val counts = groups(definition, kind).flatMap { it.codes }.groupingBy { it }.eachCount()
+        val letters = counts.keys.all { it in LETTERS }
         return Problems(
-            missing = ALPHABET.filter { it !in counts }.toList(),
-            repeated = ALPHABET.filter { (counts[it] ?: 0) > 1 }.toList(),
+            missing = if (letters) LETTERS.filter { it !in counts }.toList() else emptyList(),
+            repeated = counts.filterValues { it > 1 }.keys.sorted(),
         )
     }
+
+    private fun sentCode(key: LayoutKey): Char? =
+        key.action.value
+            ?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
+            ?.first()
+
+    /** The letters and digits 2-9 the layout's one-character code keys send. */
+    private fun sentCharacters(definition: LayoutDefinition): Set<Char> =
+        definition.rows
+            .flatMap { it.keys }
+            .mapNotNull { sentCode(it)?.lowercaseChar() }
+            .filterTo(HashSet()) { it in LETTERS || it in '2'..'9' }
 }

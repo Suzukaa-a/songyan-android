@@ -1,5 +1,6 @@
 package app.songyan.ime.settings.ui
 
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.KeyboardPageCategory
@@ -10,6 +11,7 @@ import app.songyan.ime.layout.KeyboardSymbolPresentation
 import app.songyan.ime.layout.LayoutAuxiliaryArea
 import app.songyan.ime.layout.LayoutBottomRow
 import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutResourceBudget
 import app.songyan.ime.layout.LayoutRow
@@ -134,6 +136,19 @@ data class LayoutDraft(
         if (at.index in railKeys(at.position).indices) copy(rail = at, selection = null, bottom = null) else this
 
     fun rename(name: String): LayoutDraft = copy(layout = layout.renamed(name))
+
+    /**
+     * The selected key covering [codes] on a merged layout: the other keys' codes are written out
+     * first, so their grouping stays as it was.
+     */
+    fun withSelectedKeyCodes(
+        kind: KeyboardLayoutKind,
+        codes: String,
+    ): LayoutDraft {
+        val written = copy(layout = LayoutFold.writtenOut(layout, kind))
+        val key = written.selectedKey ?: return this
+        return written.replaceSelectedKey(LayoutFold.keyCovering(key, codes))
+    }
 
     fun replaceSelectedKey(key: LayoutKey): LayoutDraft {
         rail?.let { return copy(layout = RailEditing.replace(layout, it, key)) }

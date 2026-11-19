@@ -438,6 +438,12 @@ data class LayoutKey(
     val action: LayoutAction,
     val longPress: List<LayoutOption>? = null,
     val titleMode: LayoutKeyTitleMode? = null,
+    /**
+     * On a merged layout, the codes this key covers (`qw`, `abc`, strokes such as `hs`), any of
+     * which the input method may mean when the key is tapped; the key sends [action]'s code. The
+     * title only says what the key shows. Null on every key keeps the bundled grouping of the layout.
+     */
+    val codes: String? = null,
 ) {
     val widthWeight: Double get() = width ?: 1.0
 

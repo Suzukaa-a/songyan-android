@@ -337,17 +337,18 @@ data class ShuangpinHintSnapshot(
 }
 
 /**
- * The hint for each letter on [key], in label order (one for a 26-key letter, several for a merged
- * key); empty when the key is not a letter key. A key's own corner label wins on a layout the user
+ * The hint for each letter of [key]'s [group] (one for a 26-key letter, several for a merged key);
+ * empty when the key is not a letter key. A key's own corner label wins on a layout the user
  * authored or imported, so hints never cover what its author wrote.
  */
 object ShuangpinHintOverlay {
     fun hints(
         key: LayoutKey,
+        group: List<Char>?,
         labels: Map<Char, String>,
         preservingSecondaryLabel: Boolean,
     ): List<String?> {
-        val group = LetterGroupLayout.groupOf(key) ?: return emptyList()
+        if (group.isNullOrEmpty() || group.any { it !in LetterGroupLayout.ALPHABET }) return emptyList()
         if (preservingSecondaryLabel && !key.secondaryLabel.isNullOrEmpty()) return group.map { null }
         return group.map { letter -> labels[letter]?.takeIf { it.isNotBlank() } }
     }

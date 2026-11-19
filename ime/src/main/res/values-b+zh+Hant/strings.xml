@@ -23,6 +23,10 @@
     <string name="ime_language_to_japanese">英文，輕觸切換為日文</string>
     <string name="ime_language_japanese_to_english_symbols">日文標點，輕觸切換為英文標點</string>
     <string name="ime_language_to_japanese_symbols">英文標點，輕觸切換為日文標點</string>
+    <string name="ime_language_scheme_to_english">輸入方式的語言，輕觸切換為英文</string>
+    <string name="ime_language_to_scheme">英文，輕觸切換回輸入方式的語言</string>
+    <string name="ime_language_scheme_to_english_symbols">輸入方式的標點，輕觸切換為英文標點</string>
+    <string name="ime_language_to_scheme_symbols">英文標點，輕觸切換回輸入方式的標點</string>
     <string name="ime_open_symbols_page">開啟符號頁</string>
     <string name="ime_open_numbers_page">開啟數字符號頁</string>
     <string name="ime_open_more_symbols">開啟更多符號</string>

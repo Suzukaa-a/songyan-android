@@ -54,6 +54,12 @@
     <string name="input_symbol_key_hant" translatable="false">符</string>
     <string name="input_symbol_key_ja" translatable="false">記号</string>
     <string name="input_language_key_ja" translatable="false">あ/A</string>
+    <string name="input_language_key_ko" translatable="false">한/A</string>
+    <string name="input_language_key_other" translatable="false">文/A</string>
+    <string name="ime_language_scheme_to_english">Input method\'s language. Tap to switch to English</string>
+    <string name="ime_language_to_scheme">English. Tap to switch back to the input method\'s language</string>
+    <string name="ime_language_scheme_to_english_symbols">Input method\'s punctuation. Tap to switch to English</string>
+    <string name="ime_language_to_scheme_symbols">English punctuation. Tap to switch back to the input method\'s punctuation</string>
     <string name="input_back_ja" translatable="false">戻る</string>
     <string name="input_more_chinese" translatable="false">更多</string>
     <string name="input_more_ja" translatable="false">その他</string>

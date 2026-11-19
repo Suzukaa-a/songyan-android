@@ -63,7 +63,10 @@ internal class KeyNames(
     fun languageKeyDrawn(language: InputLanguage): String? =
         when (language) {
             InputLanguage.JA -> chinese.getString(R.string.input_language_key_ja)
-            else -> null
+            InputLanguage.KO -> chinese.getString(R.string.input_language_key_ko)
+            // A language the keyboard has no name for, or none it could tell: 文 for the scheme's own text.
+            InputLanguage.UNSPECIFIED -> chinese.getString(R.string.input_language_key_other)
+            InputLanguage.ZH_HANS, InputLanguage.ZH_HANT -> null
         }
 
     fun symbolPageDrawn(language: InputLanguage): String =
@@ -156,7 +159,14 @@ internal class KeyNames(
             symbols: Boolean,
             targetChinese: Boolean,
         ): Int =
-            if (language == InputLanguage.JA) {
+            if (language == InputLanguage.KO || language == InputLanguage.UNSPECIFIED) {
+                when {
+                    symbols && targetChinese -> R.string.ime_language_to_scheme_symbols
+                    symbols -> R.string.ime_language_scheme_to_english_symbols
+                    targetChinese -> R.string.ime_language_to_scheme
+                    else -> R.string.ime_language_scheme_to_english
+                }
+            } else if (language == InputLanguage.JA) {
                 when {
                     symbols && targetChinese -> R.string.ime_language_to_japanese_symbols
                     symbols -> R.string.ime_language_japanese_to_english_symbols

@@ -16,7 +16,7 @@
 
 ### 新增
 
-- 支持用蓝牙等实体键盘打中文：打字时显示候选栏，空格和数字键选词，Shift 切换中英。
+- 支持蓝牙等实体键盘：按键交给正在使用的输入方案，打字时显示候选栏；选词、翻页和中英切换按输入方案自己的按键设置。
 - 「输入选项」新增「左滑删除键选择文字」（默认关闭）：按住删除键向左滑选中文字，松手删除。
 - 「我的键盘」：每个输入方案可以加入多个键盘布局，长按中英键在键盘菜单里切换；装好输入方案后可以直接选要用的键盘。
 - 键盘菜单里可以切换输入方案自带的开关。
@@ -41,7 +41,7 @@
 
 ### New
 
-- Type Chinese on a Bluetooth or other hardware keyboard: the candidate bar shows while you type, Space and the number keys pick a candidate, and Shift switches between Chinese and English.
+- Bluetooth and other hardware keyboards type through the input scheme in use, with the candidate bar showing while you type; picking candidates, paging and switching to English follow the input scheme's own key settings.
 - "Swipe left on Delete to select" in Input Options (off by default): hold Delete and slide left to select text, lift to delete it.
 - My Keyboards: add several keyboard layouts to each input scheme and switch between them from the keyboard menu (press and hold the 中/英 key); after installing an input scheme you can pick the keyboards to use right away.
 - The keyboard menu can switch the options an input scheme provides.

@@ -186,7 +186,7 @@ data class KeyboardResourceSet(
         val engineSchemaID: String get() = schemaID
 
         companion object {
-            private val GENERATED_ID = Regex("^keyboard_[0-9a-f]{20}_[0-9]+$")
+            private val GENERATED_ID = Regex("^keyboard_[0-9a-f]{20}_[0-9]+(u[0-9a-f]{8})?$")
 
             /**
              * True for the schema ids minted for generated compact companions

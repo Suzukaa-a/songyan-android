@@ -86,7 +86,11 @@ enum class KeyboardLayoutKind(
  * (or digit) its key sends. Adapter generation, identifiers and binding checks read this one value.
  */
 class CompactFold(
-    /** Identifier suffix of generated adapters (`_14`, `_18`, `_9`), also the user-facing key count. */
+    /**
+     * Identifier suffix of generated adapters: the key count for the built-in folds (`14`, `18`,
+     * `9`), and the key count plus `u` and a hash of the mapping for a layout's own grouping
+     * (`14u1a2b3c4d`), so two groupings never share a companion.
+     */
     val id: String,
     /** The folded letters, in a fixed order. */
     private val source: String,
@@ -120,8 +124,53 @@ class CompactFold(
 
     val map: Map<Char, Char> get() = source.zip(target).toMap()
 
+    /** The key count this fold is offered as: `14` for `14` and for `14u1a2b3c4d`. */
+    val keyCount: String get() = id.substringBefore('u')
+
+    /** One of the three bundled folds, whose companions are named by the key count alone. */
+    val isBuiltin: Boolean get() = id.all { it.isDigit() }
+
+    override fun equals(other: Any?): Boolean = other is CompactFold && other.id == id && other.map == map
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String = "CompactFold($id)"
+
     companion object {
         private const val EXACT_TOKEN_POOL = "!#%*+<>@^_|~"
+        private const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+
+        /**
+         * The fold of a layout that sends [map] (each of the 26 letters to the letter or digit its
+         * key sends) on a [kind] layout: the bundled fold when the mapping is the bundled one, so
+         * existing companions keep their names, otherwise a fold of its own. Null when the mapping
+         * does not cover the 26 letters, or sends what that kind of layout cannot (letter groups
+         * whose key sends a letter outside the group, or a 9-key letter on anything but 2-9).
+         */
+        fun of(
+            kind: KeyboardLayoutKind,
+            map: Map<Char, Char>,
+        ): CompactFold? {
+            val builtin = kind.compactFold ?: return null
+            if (ALPHABET.any { it !in map } || map.keys.any { it !in ALPHABET }) return null
+            val valid =
+                if (builtin.isPhoneDigits) {
+                    map.values.all { it in '2'..'9' }
+                } else {
+                    // A key sends its group's first letter, which is in the group.
+                    map.values.all { sent -> sent in ALPHABET && map[sent] == sent }
+                }
+            if (!valid) return null
+            if (map == builtin.map) return builtin
+            val source = ALPHABET
+            val target = source.map { map.getValue(it) }.joinToString("")
+            val hash =
+                java.util.zip
+                    .CRC32()
+                    .apply { update(target.toByteArray(Charsets.US_ASCII)) }
+                    .value
+            return CompactFold(builtin.id + "u" + "%08x".format(hash), source, target)
+        }
 
         val MERGED14 =
             CompactFold(

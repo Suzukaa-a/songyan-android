@@ -622,7 +622,7 @@ object CompactSchemaAdapter {
         val target = identifier(sourceID, compactFold)
         schema["schema_id"] = target
         // The generated name suffix is data written into the companion file, not UI text.
-        schema["name"] = "${schema["name"] as? String ?: sourceID} · ${compactFold.id}键适配"
+        schema["name"] = "${schema["name"] as? String ?: sourceID} · ${compactFold.keyCount}键适配"
         root["schema"] = schema
         // The dictionary's default user_dict is the dictionary name, NOT the new schema id.
         if (translator["user_dict"] == null) translator["user_dict"] = dictionary
@@ -773,7 +773,7 @@ object CompactSchemaAdapter {
         if (dictionary.isNullOrEmpty()) invalid(failure)
         val target = identifier(sourceID, compactFold)
         schema["schema_id"] = target
-        schema["name"] = "${schema["name"] as? String ?: sourceID} · ${compactFold.id}键适配"
+        schema["name"] = "${schema["name"] as? String ?: sourceID} · ${compactFold.keyCount}键适配"
         root["schema"] = schema
         if (translator["user_dict"] == null) translator["user_dict"] = dictionary
         translator["prism"] = target

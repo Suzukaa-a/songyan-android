@@ -18,7 +18,7 @@
 
 - 支持蓝牙等实体键盘：按键交给正在使用的输入方案，打字时显示候选栏；选词、翻页和切换到英文都按输入方案自己的按键设置。
 - 「输入选项」新增「左滑删除键选择文字」（默认关闭）：按住删除键向左滑选中文字，松手删除。
-- 「我的键盘」：每个输入方案可以加入多个键盘布局，长按「中/英」键在键盘菜单里切换；装好输入方案后可以直接选要用的键盘。
+- 「我的键盘」：每个输入方案可以加入多个键盘布局，长按语言切换键在键盘菜单里切换；装好输入方案后可以直接选要用的键盘。
 - 键盘菜单里可以切换输入方案自带的开关。
 - 「字体」：导入字体，分别设置候选栏和按键的字体。
 - 候选栏可以关闭「显示注释」。
@@ -43,7 +43,7 @@
 
 - Bluetooth and other hardware keyboards type through the input scheme in use, with the candidate bar showing while you type; picking candidates, paging and switching to English follow the input scheme's own key settings.
 - "Swipe left on Delete to select" in Input Options (off by default): hold Delete and slide left to select text, lift to delete it.
-- My Keyboards: add several keyboard layouts to each input scheme and switch between them from the keyboard menu (press and hold the 中/英 key); after installing an input scheme you can pick the keyboards to use right away.
+- My Keyboards: add several keyboard layouts to each input scheme and switch between them from the keyboard menu (press and hold the language switch key); after installing an input scheme you can pick the keyboards to use right away.
 - The keyboard menu can switch the options an input scheme provides.
 - Fonts: import fonts and choose one for the candidate bar and one for the keys.
 - "Show notes" can be turned off for the candidate bar.

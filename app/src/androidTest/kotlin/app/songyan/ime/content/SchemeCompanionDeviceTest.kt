@@ -5,13 +5,20 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.songyan.ime.TestZips
+import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.LayoutAction
+import app.songyan.ime.layout.LayoutActionKind
+import app.songyan.ime.layout.LayoutFold
+import app.songyan.ime.layout.LayoutRow
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.prefs.KeyboardPreferences
 import app.songyan.ime.rime.RimeEngine
 import app.songyan.ime.rime.RimeEngineBackend
 import app.songyan.ime.rime.RimeKey
+import app.songyan.ime.settings.state.LayoutLibraryHolder
 import app.songyan.ime.settings.state.SchemeImportHolder
 import app.songyan.ime.settings.state.SchemeImportResult
 import app.songyan.ime.settings.state.StoredSourcesHolder
@@ -55,6 +62,7 @@ class SchemeCompanionDeviceTest {
 
     @After
     fun tearDown() {
+        runCatching { runBlocking { LayoutLibraryHolder.current.edit { it.remove(OWN_LAYOUT) } } }
         scheme?.let { id -> runCatching { runBlocking { StoredSourcesHolder.current.delete(id) } } }
         savedKeyboards?.let { runBlocking { preferences.setMyKeyboards(it) } }
         settings.close()
@@ -127,11 +135,105 @@ class SchemeCompanionDeviceTest {
             assertEquals(mapOf(SCHEMA to all, SECOND to all), layouts)
         }
 
+    /**
+     * A 14-key layout that moves y from the TY key to the UI key (T | YUI, YUI sending y) is a
+     * grouping of its own: picking it builds a companion for that grouping, which types the word with
+     * the keys this layout sends, while the bundled 14-key companion keeps typing it the bundled way.
+     */
+    @Test
+    fun aFourteenKeyLayoutGroupedItsOwnWayTypesOnItsOwnCompanion() =
+        runBlocking {
+            val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage()))
+            assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
+            scheme = requireNotNull(publisher.readActive()).sourceId
+            val base = BuiltinLayouts.merged14.copyWithId(OWN_LAYOUT, "自分组 14 键")
+            val own =
+                base.copy(
+                    rows =
+                        base.rows.map { row ->
+                            LayoutRow(
+                                row.keys.map { key ->
+                                    when (key.label.lowercase()) {
+                                        "ty" -> key.copy(label = "T", action = LayoutAction.code("t"))
+                                        "ui" -> key.copy(label = "YUI", action = LayoutAction.code("y"))
+                                        else -> key
+                                    }
+                                },
+                            )
+                        },
+                )
+            val fold = requireNotNull(LayoutFold.of(own, KeyboardLayoutKind.MERGED14))
+            assertFalse(fold.isBuiltin)
+            LayoutLibraryHolder.current.edit { it.install(own.encoded(), replaceExisting = true) }
+
+            val picked =
+                pick(
+                    listOf(
+                        PublishedKeyboard(SCHEMA, KeyboardLayoutKind.MERGED14, OWN_LAYOUT),
+                        PublishedKeyboard(SCHEMA, KeyboardLayoutKind.MERGED14),
+                    ),
+                    listOf(SCHEMA),
+                )
+            val companions = companionsOf(picked)
+            val ownCompanion = companions.single { it.layout == KeyboardLayoutKind.MERGED14 && it.fold == fold.id }
+            val bundled = companions.single { it.layout == KeyboardLayoutKind.MERGED14 && it.fold == null }
+            assertTrue(candidates(picked, ownCompanion.schemaID, "yabagy").contains(WORD))
+            assertTrue(candidates(picked, bundled.schemaID, "tabagu").contains(WORD))
+        }
+
+    /** The same for 9 keys: y moved from 9 (WXYZ) to 8 (TUVY) types the word as 826744 on its own companion. */
+    @Test
+    fun aNineKeyLayoutGroupedItsOwnWayTypesOnItsOwnCompanion() =
+        runBlocking {
+            val imported = SchemeImportHolder.current.importFromUri(Uri.fromFile(schemePackage()))
+            assertTrue("scheme import failed: $imported", imported is SchemeImportResult.Success)
+            scheme = requireNotNull(publisher.readActive()).sourceId
+            val base = BuiltinLayouts.phone9.copyWithId(OWN_LAYOUT, "自分组 9 键")
+            val own =
+                base.copy(
+                    rows =
+                        base.rows.map { row ->
+                            LayoutRow(
+                                row.keys.map { key ->
+                                    when (key.action.value.takeIf { key.action.type == LayoutActionKind.CODE }) {
+                                        "8" -> key.copy(label = "TUVY")
+                                        "9" -> key.copy(label = "WXZ")
+                                        else -> key
+                                    }
+                                },
+                            )
+                        },
+                )
+            val fold = requireNotNull(LayoutFold.of(own, KeyboardLayoutKind.PHONE9))
+            assertEquals('8', fold.map['y'])
+            LayoutLibraryHolder.current.edit { it.install(own.encoded(), replaceExisting = true) }
+
+            val picked =
+                pick(
+                    listOf(
+                        PublishedKeyboard(SCHEMA, KeyboardLayoutKind.PHONE9, OWN_LAYOUT),
+                        PublishedKeyboard(SCHEMA, KeyboardLayoutKind.PHONE9),
+                    ),
+                    listOf(SCHEMA),
+                )
+            val companions = companionsOf(picked)
+            val ownCompanion = companions.single { it.layout == KeyboardLayoutKind.PHONE9 && it.fold == fold.id }
+            val bundled = companions.single { it.layout == KeyboardLayoutKind.PHONE9 && it.fold == null }
+            assertTrue(candidates(picked, ownCompanion.schemaID, "826744").contains(WORD))
+            assertTrue(candidates(picked, bundled.schemaID, "926744").contains(WORD))
+        }
+
     /** Stores every shape as the keyboards of [schemas], as the install picker does, and waits for the build. */
-    private suspend fun pickEveryKeyboard(vararg schemas: String): PublicationRecord {
+    private suspend fun pickEveryKeyboard(vararg schemas: String): PublicationRecord =
+        pick(schemas.flatMap { id -> KeyboardLayoutKind.entries.map { PublishedKeyboard(id, it) } }, schemas.toList())
+
+    /** Stores [picked] as the keyboards of [schemas] and waits for the build. */
+    private suspend fun pick(
+        picked: List<PublishedKeyboard>,
+        schemas: List<String>,
+    ): PublicationRecord {
         val before = requireNotNull(publisher.readActive()).sequence
         val stored = preferences.myKeyboards.first()
-        val picked = schemas.flatMap { id -> KeyboardLayoutKind.entries.map { PublishedKeyboard(id, it) } }
         preferences.setMyKeyboards(
             UserKeyboards.Stored(
                 stored.keyboards.filter { it.schemaID !in schemas } + picked,
@@ -176,7 +278,11 @@ class SchemeCompanionDeviceTest {
     }
 
     /** The companions the keyboard's backend reads from the published build, by layout. */
-    private suspend fun adaptersOf(record: PublicationRecord): Map<KeyboardLayoutKind, String> {
+    private suspend fun adaptersOf(record: PublicationRecord): Map<KeyboardLayoutKind, String> =
+        companionsOf(record).associate { it.layout to it.schemaID }
+
+    /** Every companion the keyboard's backend reads from the published build. */
+    private suspend fun companionsOf(record: PublicationRecord): List<KeyboardResourceSet.EncodingAdapter> {
         val generation = storage.generationDir(record.generation)
         val user = File(context.cacheDir, "companion-test-user").also { it.deleteRecursively() }
         val backend =
@@ -193,7 +299,7 @@ class SchemeCompanionDeviceTest {
                 assertEquals(SCHEMA, adapter.sourceSchemaID)
                 backend.validateSchema(adapter.schemaID)
             }
-            return backend.encodingAdapters.associate { it.layout to it.schemaID }
+            return backend.encodingAdapters
         } finally {
             backend.shutdown()
             user.deleteRecursively()
@@ -252,5 +358,6 @@ class SchemeCompanionDeviceTest {
         const val SCHEMA = "demo_companion"
         const val SECOND = "demo_companion_two"
         const val WORD = "演示"
+        const val OWN_LAYOUT = "companion-test-own14"
     }
 }

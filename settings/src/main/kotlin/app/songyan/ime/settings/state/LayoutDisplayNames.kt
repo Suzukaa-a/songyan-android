@@ -31,6 +31,10 @@ sealed interface LayoutDisplayName {
     ) : LayoutDisplayName
 }
 
+/** The names earlier versions saved on a generated 26-key board, in every language the app is written in. */
+private val FORMER_KEYS26_NAMES =
+    setOf("26 键＋编码键", "26 鍵＋編碼鍵", "26 keys + code keys", "26キー＋コードキー")
+
 /** The name of the generated 26-key board that adds [codes] to the standard one. */
 fun generatedKeys26Name(codes: List<String>): LayoutDisplayName =
     LayoutDisplayName.Worded(R.string.layout_name_keys26, listOf(codes.joinToString(" ")))
@@ -68,8 +72,12 @@ fun layoutDisplayName(
     shape: KeyboardLayoutOption,
 ): LayoutDisplayName {
     if (layout == null) return LayoutDisplayName.Worded(shape.nameRes)
-    // A generated board is worded by resources, whatever name it was saved with.
-    if (GeneratedLayouts.isGeneratedId(layout.id) && layout.id.endsWith(GeneratedLayouts.KEYS26_SUFFIX)) {
+    // A generated board saved under a name this app once gave it is worded by resources; a name the
+    // user chose stays.
+    if (GeneratedLayouts.isGeneratedId(layout.id) &&
+        layout.id.endsWith(GeneratedLayouts.KEYS26_SUFFIX) &&
+        layout.name in FORMER_KEYS26_NAMES
+    ) {
         val added = GeneratedLayouts.addedCodes(layout)
         if (added.isNotEmpty()) return generatedKeys26Name(added)
     }

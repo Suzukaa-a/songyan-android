@@ -205,10 +205,17 @@ class LayoutDisplayNamesTest {
         val expected = LayoutDisplayName.Worded(R.string.layout_name_keys26, listOf("` '"))
         assertEquals(expected, layoutDisplayName(saved, qwerty))
         assertEquals(expected, generatedKeys26Name(missing))
-        // A layout of the user's own keeps its name.
+        for (former in listOf("26 鍵＋編碼鍵", "26 keys + code keys", "26キー＋コードキー")) {
+            assertEquals(expected, layoutDisplayName(GeneratedLayouts.keys26("rime_ice", former, profile), qwerty))
+        }
+        // A layout of the user's own keeps its name, a renamed generated board too.
         assertEquals(
             LayoutDisplayName.Authored("我的键盘"),
             layoutDisplayName(saved.copyWithId("mine", "我的键盘"), qwerty),
+        )
+        assertEquals(
+            LayoutDisplayName.Authored("我的拼音键盘"),
+            layoutDisplayName(GeneratedLayouts.keys26("rime_ice", "我的拼音键盘", profile), qwerty),
         )
     }
 }

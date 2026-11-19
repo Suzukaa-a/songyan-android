@@ -22,7 +22,10 @@ class SchemaKeyProfileTest {
             assertEquals(
                 name,
                 expected,
-                SchemaKeyProfiles.compute(resource("$name.schema.yaml")).copy(optionalCodes = null),
+                SchemaKeyProfiles
+                    .compute(
+                        resource("$name.schema.yaml"),
+                    ).copy(optionalCodes = null, optionalRevision = null),
             )
         }
     }
@@ -43,6 +46,64 @@ class SchemaKeyProfileTest {
         assertEquals(false, "," in bopomofo.optionalCodes.orEmpty())
         assertEquals(true, "'" in bopomofo.optionalCodes.orEmpty())
         assertEquals(true, bopomofo.optionalCodes.orEmpty().all { it in bopomofo.codes })
+    }
+
+    private fun spellerSchema(
+        alphabet: String,
+        algebra: List<String>,
+    ) = """
+        engine:
+          processors:
+            - speller
+          translators:
+            - script_translator
+        speller:
+          alphabet: "$alphabet"
+          initials: "abcdefghijklmnopqrstuvwxyz"
+          delimiter: " '"
+          algebra:
+        ${algebra.joinToString("\n") { "    - \"$it\"" }}
+        translator:
+          dictionary: d
+        """.trimIndent()
+
+    @Test
+    fun aSymbolTheSpellingRulesNeverUseIsOptional() {
+        val ice =
+            SchemaKeyProfiles.compute(
+                spellerSchema("abcdefghijklmnopqrstuvwxyz`", listOf("abbrev/^([a-z]).+\$/\$1/")),
+            )
+        assertEquals(listOf("`", "'"), ice.optionalCodes)
+        assertEquals(SchemaKeyProfile.Kind.SYLLABIC, ice.kind)
+    }
+
+    @Test
+    fun aSymbolTheSpellingRulesUseStaysRequired() {
+        val microsoft =
+            SchemaKeyProfiles.compute(
+                spellerSchema("abcdefghijklmnopqrstuvwxyz;", listOf("xform/^o;\$/ong/")),
+            )
+        assertEquals(listOf("'"), microsoft.optionalCodes)
+    }
+
+    @Test
+    fun aProfileWrittenUnderAnOlderRuleIsComputedAgain() {
+        val dir = File.createTempFile("profiles", "").also { it.delete() }.also { it.mkdirs() }
+        try {
+            File(dir, "ice.schema.yaml")
+                .writeText(spellerSchema("abcdefghijklmnopqrstuvwxyz`", listOf("abbrev/^([a-z]).+\$/\$1/")))
+            val old =
+                SchemaKeyProfile(
+                    Kind.SYLLABIC,
+                    ('a'..'z').map { it.toString() } + listOf("`", "'"),
+                    optionalCodes = listOf("'"),
+                )
+            File(dir, SchemaKeyProfile.FILE_NAME).writeText(SchemaKeyProfile.encode(mapOf("ice" to old)))
+            assertEquals(listOf("`", "'"), SchemaKeyProfiles.read(dir, listOf("ice")).getValue("ice").optionalCodes)
+        } finally {
+            dir.listFiles()?.forEach { it.delete() }
+            dir.delete()
+        }
     }
 
     @Test

@@ -15,6 +15,9 @@ object SchemaKeyProfiles {
     private const val DEFAULT_DELIMITER = " '"
     private const val MAX_STROKES = 5
 
+    /** Bumped whenever the rule that sorts codes into required and optional changes. */
+    private const val OPTIONAL_REVISION = 2
+
     /** Never throws: a schema that cannot be read has an unknown profile. */
     fun compute(compiledSchema: String): SchemaKeyProfile {
         val root = YamsYaml.loadMap(compiledSchema) ?: return UNKNOWN
@@ -33,7 +36,11 @@ object SchemaKeyProfiles {
         }
         add(alphabet)
         add(speller["initials"] as? String)
-        val required = codes.toSet()
+        // A symbol the spelling rules never mention is no part of the spelling (rime-ice's backtick only
+        // opens the auxiliary filter), so a board may go without it. With no rules to read, none is known.
+        val algebra = speller["algebra"].asStringList().orEmpty().joinToString("\n")
+        val required =
+            if (algebra.isEmpty()) codes.toSet() else codes.filter { it[0].isLetter() || it in algebra }.toSet()
         add((speller["delimiter"] as? String) ?: DEFAULT_DELIMITER)
 
         val namespaces = namespacesOf(translators)
@@ -63,16 +70,32 @@ object SchemaKeyProfiles {
         }
 
         if (primary.klass == CompactSchemaAdapter.ProducerClass.SCRIPT) {
-            return SchemaKeyProfile(Kind.SYLLABIC, codes.toList(), optionalCodes = codes.filter { it !in required })
+            return SchemaKeyProfile(
+                Kind.SYLLABIC,
+                codes.toList(),
+                optionalCodes = codes.filter { it !in required },
+                optionalRevision = OPTIONAL_REVISION,
+            )
         }
         val strokes = strokeCaptions(root[primary.namespace].asStringMap(), alphabet)
         if (strokes.isEmpty()) {
-            return SchemaKeyProfile(Kind.SHAPE_CODE, codes.toList(), optionalCodes = codes.filter { it !in required })
+            return SchemaKeyProfile(
+                Kind.SHAPE_CODE,
+                codes.toList(),
+                optionalCodes = codes.filter { it !in required },
+                optionalRevision = OPTIONAL_REVISION,
+            )
         }
         val strokeCodes = strokes.map { it.code }
         val rest = codes.filter { it !in strokeCodes && !it[0].isLetter() }
         val all = strokeCodes + rest
-        return SchemaKeyProfile(Kind.STROKES, all, strokes, optionalCodes = all.filter { it !in required })
+        return SchemaKeyProfile(
+            Kind.STROKES,
+            all,
+            strokes,
+            optionalCodes = all.filter { it !in required },
+            optionalRevision = OPTIONAL_REVISION,
+        )
     }
 
     /** The profiles of every `<id>.schema.yaml` in [buildDir] that [ids] names; unreadable ones are unknown. */
@@ -109,11 +132,12 @@ object SchemaKeyProfiles {
             } else {
                 emptyMap()
             }
-        // A profile written before the optional codes were told apart is read again from the schema.
+        // A profile written before the optional codes were told apart, or by an older rule for telling
+        // them apart, is read again from the schema.
         val current =
             written.filter { (id, profile) ->
                 id in ids &&
-                    (profile.optionalCodes != null || profile.kind == Kind.UNKNOWN)
+                    (profile.optionalRevision == OPTIONAL_REVISION || profile.kind == Kind.UNKNOWN)
             }
         val computed =
             computeAll(buildDir, ids.filter { it !in current }).mapValues { (id, profile) ->

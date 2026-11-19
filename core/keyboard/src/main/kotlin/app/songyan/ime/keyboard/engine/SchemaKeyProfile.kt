@@ -36,6 +36,8 @@ data class SchemaKeyProfile(
      * must send to type the scheme at all. Null when the profile predates the split.
      */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val optionalCodes: List<String>? = null,
+    /** The version of the rule that produced [optionalCodes]; a file written under an older one is recomputed. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val optionalRevision: Int? = null,
 ) {
     @Serializable(with = KindSerializer::class)
     enum class Kind(

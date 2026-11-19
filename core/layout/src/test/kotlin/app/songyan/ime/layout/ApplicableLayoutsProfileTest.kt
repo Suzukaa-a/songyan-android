@@ -93,6 +93,20 @@ class ApplicableLayoutsProfileTest {
     }
 
     @Test
+    fun anAuxiliaryKeyTheSpellingNeverUsesDoesNotHidePlainTwentySix() {
+        val ice = SchemaKeyProfile(Kind.SYLLABIC, letters + listOf("`", "'"), optionalCodes = listOf("`", "'"))
+        val list = entries("rime_ice", ice).filter { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }
+        assertEquals(listOf("qwerty26#qwerty26", "qwerty26#auto.rime_ice.keys26"), boards(list))
+    }
+
+    @Test
+    fun aSymbolTheSpellingUsesHidesPlainTwentySix() {
+        val microsoft = SchemaKeyProfile(Kind.SYLLABIC, letters + listOf(";", "'"), optionalCodes = listOf("'"))
+        val list = entries("microsoft", microsoft).filter { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }
+        assertEquals(listOf("qwerty26#auto.microsoft.keys26"), boards(list))
+    }
+
+    @Test
     fun anUnknownProfileOffersPlainTwentySixOnly() {
         assertEquals(listOf("qwerty26#qwerty26"), boards(entries("lua_only", SchemaKeyProfile(Kind.UNKNOWN))))
     }

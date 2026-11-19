@@ -2,33 +2,11 @@
 
 ## 未发布
 
-### 改进
-
-- 「添加键盘」也列出已经添加的键盘，显示为灰色，标明「已添加」。
-- 语言切换键按输入方案的语言显示：韩文显示「한/A」，认不出语言的显示「文/A」，不再一律显示「中/英」。
-- 设置里的说明改称「语言切换键」，不再用「中/英」称呼这个键。
-- 9 键键盘空格右边的键改为「符」，与 iOS 一致：点按打开符号，长按输入 0。
-
-### 修复
-
-- 实体键盘按 F4 打开方案选单后，数字、空格和回车会直接打进输入框；现在会在选单里选择，按 Esc 关闭后接着打原来的内容。
-
-### Improved
-
-- "Add keyboard" also lists the keyboards already added, greyed out and marked "Added".
-- The language switch key follows the input scheme's language: 한/A for Korean and 文/A when the language is unknown, instead of always 中/英.
-- Settings call it the language switch key instead of naming it by its 中/英 face.
-- On the 9-key keyboard, the key right of the space bar is now 符, as on iOS: tap it for symbols, press and hold it to type 0.
-
-### Fixed
-
-- On a hardware keyboard, digits, Space and Return pressed in the scheme menu (opened with F4) were typed into the field; they now choose in the menu, and Esc closes it with what you were typing still there.
-
 ## 0.2.0 (2026-11-20)
 
 ### 新增
 
-- 支持蓝牙等实体键盘：按键交给正在使用的输入方案，打字时显示候选栏；选词、翻页和切换到英文都按输入方案自己的按键设置。
+- 支持蓝牙等实体键盘：按键交给正在使用的输入方案，打字时显示候选栏；选词、翻页、标点、切换到英文和方案选单（F4）都按输入方案自己的设置。
 - 「输入选项」新增「左滑删除键选择文字」（默认关闭）：按住删除键向左滑选中文字，松手删除。
 - 「我的键盘」：每个输入方案可以加入多个键盘布局，长按语言切换键在键盘菜单里切换；装好输入方案后可以直接选要用的键盘。
 - 键盘菜单里可以切换输入方案自带的开关。
@@ -40,10 +18,14 @@
 
 ### 改进
 
-- 「加入键盘」只列出当前输入方案用得上的布局；缺少必需的键时写明缺哪个键。
+- 「添加键盘」只列出当前输入方案用得上的布局；缺少必需的键时写明缺哪个键。
 - 每个输入方案的 Rime 配置分开保存。
 - 键盘布局编辑器的预览与实际键盘一致。
 - 脚本出错时显示说明文字，不再显示原始报错。
+- 「添加键盘」也列出已经添加的键盘，显示为灰色，标明「已添加」。
+- 语言切换键按输入方案的语言显示：韩文显示「한/A」，认不出语言的显示「文/A」，不再一律显示「中/英」。
+- 设置里的说明改称「语言切换键」，不再用「中/英」称呼这个键。
+- 9 键键盘空格右边的键改为「符」，与 iOS 一致：点按打开符号，长按输入 0。
 
 ### 修复
 
@@ -53,7 +35,7 @@
 
 ### New
 
-- Bluetooth and other hardware keyboards type through the input scheme in use, with the candidate bar showing while you type; picking candidates, paging and switching to English follow the input scheme's own key settings.
+- Bluetooth and other hardware keyboards type through the input scheme in use, with the candidate bar showing while you type; picking candidates, paging, punctuation, switching to English and the scheme menu (F4) follow the input scheme's own settings.
 - "Swipe left on Delete to select" in Input Options (off by default): hold Delete and slide left to select text, lift to delete it.
 - My Keyboards: add several keyboard layouts to each input scheme and switch between them from the keyboard menu (press and hold the language switch key); after installing an input scheme you can pick the keyboards to use right away.
 - The keyboard menu can switch the options an input scheme provides.
@@ -69,6 +51,10 @@
 - Each input scheme keeps its own Rime configuration.
 - The keyboard layout editor previews exactly what the keyboard shows.
 - Script errors are explained in words instead of raw error text.
+- "Add keyboard" also lists the keyboards already added, greyed out and marked "Added".
+- The language switch key follows the input scheme's language: 한/A for Korean and 文/A when the language is unknown, instead of always 中/英.
+- Settings call it the language switch key instead of naming it by its 中/英 face.
+- On the 9-key keyboard, the key right of the space bar is now 符, as on iOS: tap it for symbols, press and hold it to type 0.
 
 ### Fixed
 

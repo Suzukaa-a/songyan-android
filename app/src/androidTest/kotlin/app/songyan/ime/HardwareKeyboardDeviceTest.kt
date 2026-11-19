@@ -189,6 +189,23 @@ class HardwareKeyboardDeviceTest {
         assertNotNull("the bar is back", imeWindow())
     }
 
+    @Test
+    fun withTheOnScreenKeyboardOnBackThenAKeyBringsTheKeyboardBack() {
+        SongyanInputMethodService.systemSoftKeysForTest = true
+        openTryOutField()
+        awaitKey("q")
+
+        device.pressBack()
+        awaitNoImeWindow()
+
+        // Composing with nothing on screen would let Space commit a candidate the user never saw.
+        press(KeyEvent.KEYCODE_N)
+        press(KeyEvent.KEYCODE_I)
+        awaitField("ni")
+        awaitFirstCandidate()
+        assertNotNull("the keyboard is back", imeWindow())
+    }
+
     // ---- helpers ------------------------------------------------------------------------------
 
     private fun press(keyCode: Int) {

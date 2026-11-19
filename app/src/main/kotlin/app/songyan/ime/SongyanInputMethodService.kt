@@ -942,8 +942,10 @@ class SongyanInputMethodService : InputMethodService() {
         }
         val pad = ensureKeyboard() ?: return false
         val taken = pad.hardwareKey(event)
-        if (taken && event.action == KeyEvent.ACTION_DOWN && pad.isTypingKey(event) && !softKeys && !hardwareBar) {
-            hardwareBar = true
+        // Whatever hid the window (Back, or the system keeping the keys off), a composition must not
+        // run unseen: Space would commit a candidate the user never saw.
+        if (taken && event.action == KeyEvent.ACTION_DOWN && pad.isTypingKey(event) && !isInputViewShown) {
+            if (!softKeys) hardwareBar = true
             updateInputViewShown()
             requestShowSelf(0)
             showWindow(true)

@@ -374,8 +374,10 @@ internal fun enterKeyLabelRes(action: Int): Int =
  * inline suggestions come or go, without a full render.
  */
 internal fun KeyboardController.syncBand() {
-    val chip = if (bandIdle) copiedChipSource?.current() else null
-    val content = BandContent.of(bandIdle, inlineSuggestions.hasSuggestions, chip != null)
+    val chip = if (bandIdle && !barOnly) copiedChipSource?.current() else null
+    val wanted = BandContent.of(bandIdle, inlineSuggestions.hasSuggestions, chip != null)
+    // The bar stands alone: idle it is the empty candidate bar, not the toolbar (no menu to open).
+    val content = if (barOnly && wanted == BandContent.TOOLBAR) BandContent.CANDIDATES else wanted
     toolbar.chip = if (content == BandContent.CHIP) chip else null
     toolbar.visibility =
         if (content == BandContent.TOOLBAR || content == BandContent.CHIP) View.VISIBLE else View.GONE

@@ -227,7 +227,7 @@ internal fun KeyboardController.wireViews() {
     candidates.onRetype = { enqueueKey(LayoutAction(LayoutActionKind.CLEAR_INPUT)) }
     wireCandidateChoices(candidates)
     candidates.onExpanded = {
-        keyboard.visibility = if (it) View.GONE else View.VISIBLE
+        if (!barOnly) keyboard.visibility = if (it) View.GONE else View.VISIBLE
         syncBackOwnership()
     }
     menu.onSchema = { id -> enqueue { chooseSchema(id) } }

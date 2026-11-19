@@ -318,6 +318,61 @@ class RealEngineHardwareKeysTest : RealEngineEditorTestBase() {
         assertNotEquals(-1, incognito.first)
     }
 
+    @Test
+    fun barOnlyShowsTheBarAndNoKeys() =
+        withHost { host ->
+            host.start()
+            host.main { host.controller.setBarOnly(true) }
+            host.typeHardware("ni")
+            host.awaitField("ni")
+            assertEquals(null, host.findOrNullOnMain(KeyboardView::class.java))
+            assertTrue(host.findOrNullOnMain(CandidateBarView::class.java) != null)
+            assertTrue("the bar lists candidates: ${host.barLabels()}", host.barLabels().isNotEmpty())
+            val band = host.bandHeight()
+            host.relayout()
+            var height = 0
+            host.main { height = host.controller.view.measuredHeight }
+            assertEquals("the window is as tall as the bar", band, height)
+        }
+
+    @Test
+    fun barOnlyCandidatesCanBeTapped() =
+        withHost { host ->
+            host.start()
+            host.main { host.controller.setBarOnly(true) }
+            host.typeHardware("shi")
+            host.awaitField("shi")
+            val label = host.barLabels()[1]
+            host.tap(label, bar = true)
+            host.awaitField(label.substringBefore(' '))
+            assertFalse(host.editor.composing)
+        }
+
+    @Test
+    fun barOnlyIdleShowsAnEmptyBarNotTheToolbar() =
+        withHost { host ->
+            host.start()
+            host.main { host.controller.setBarOnly(true) }
+            host.awaitIdle()
+            assertTrue(host.toolbarLabelsNow().isEmpty())
+            assertTrue(host.findOrNullOnMain(CandidateBarView::class.java) != null)
+            assertTrue(host.barLabels().isEmpty())
+        }
+
+    @Test
+    fun leavingBarOnlyBringsTheKeysBack() =
+        withHost { host ->
+            host.start()
+            host.main { host.controller.setBarOnly(true) }
+            host.awaitIdle()
+            host.main { host.controller.setBarOnly(false) }
+            host.awaitIdle()
+            assertTrue(host.findOrNullOnMain(KeyboardView::class.java) != null)
+            assertTrue(host.toolbarLabelsNow().isNotEmpty())
+            host.tap("n")
+            host.awaitField("n")
+        }
+
     /** Picks the third `shi` candidate with a digit key, retypes `shi` in an ordinary field; its rank before and after. */
     private fun hardwarePickAndRetype(
         host: Host,

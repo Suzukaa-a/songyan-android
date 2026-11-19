@@ -774,9 +774,20 @@ class CandidateBarView(
         parent?.requestSendAccessibilityEvent(this, event)
     }
 
+    /** False when there is no key area to give the expanded list its room (the bar stands alone). */
+    var expandable = true
+        set(value) {
+            if (field == value) return
+            field = value
+            if (!value) setExpanded(false)
+            rebuild()
+            invalidate()
+        }
+
     internal fun setExpanded(value: Boolean) {
         // The side column is the expanded list for good; an empty list does not fold it.
         if (sideMode) return
+        if (value && !expandable) return
         if (expanded != value) cancelPress()
         expanded = value
         if (value) expandedHeightPx = expandedHeight()

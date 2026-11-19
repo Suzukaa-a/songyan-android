@@ -14,7 +14,7 @@ internal fun CandidateBarView.controlList(): List<Control> =
     when {
         sideMode -> emptyList()
         expanded -> listOf(Control.BACK, Control.BACKSPACE, Control.RETYPE)
-        else -> listOf(Control.EXPAND)
+        else -> if (expandable) listOf(Control.EXPAND) else emptyList()
     }
 
 /**

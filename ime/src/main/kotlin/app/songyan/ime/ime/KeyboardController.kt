@@ -880,6 +880,26 @@ class KeyboardController(
         return true
     }
 
+    /**
+     * Only the candidate bar shows: the system keeps the on-screen keyboard off while a hardware
+     * keyboard is attached, and the bar is all a hardware typist needs from this keyboard.
+     */
+    internal var barOnly = false
+        private set
+
+    fun setBarOnly(value: Boolean) {
+        if (barOnly == value) return
+        barOnly = value
+        candidates.expandable = !value
+        if (value) {
+            closeAll()
+            sideCandidatesShown = false
+        }
+        keyboard.visibility = if (value) View.GONE else View.VISIBLE
+        syncSideViews()
+        render()
+    }
+
     /** A hardware keyboard went away: the session goes back to the user's own layout. */
     fun setHardwareKeyboardAttached(attached: Boolean) {
         if (attached || !hardwareTyping) return
@@ -1451,7 +1471,7 @@ class KeyboardController(
         if (!menuOpen) return false
         menuOpen = false
         menu.visibility = View.GONE
-        keyboard.visibility = View.VISIBLE
+        keyboard.visibility = if (barOnly) View.GONE else View.VISIBLE
         barRow.visibility = if (dialPadShown) View.GONE else View.VISIBLE
         callbacks.panelsChanged(false)
         return true

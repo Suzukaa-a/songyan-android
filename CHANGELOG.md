@@ -1,4 +1,4 @@
-# 更新日志
+# 更新日志 · Changelog
 
 ## 未发布
 
@@ -28,3 +28,28 @@
 - 刚打开松烟时，首页短暂误报「下载输入方式」「输入方案尚未就绪」。
 - 部署出错的输入方案会被反复重试。
 - 发布版读不出脚本的名称和说明。
+
+### New
+
+- Type Chinese on a Bluetooth or other hardware keyboard: the candidate bar shows while you type, Space and the number keys pick a candidate, and Shift switches between Chinese and English.
+- "Swipe left on Delete to select" in Input Options (off by default): hold Delete and slide left to select text, lift to delete it.
+- My Keyboards: add several keyboard layouts to each input scheme and switch between them from the keyboard menu (press and hold the 中/英 key); after installing an input scheme you can pick the keyboards to use right away.
+- The keyboard menu can switch the options an input scheme provides.
+- Fonts: import fonts and choose one for the candidate bar and one for the keys.
+- "Show notes" can be turned off for the candidate bar.
+- Input Schemes lists dependency packages separately and says which input scheme uses each one.
+- Import a Rime folder as you would on desktop Rime.
+- A new app icon, the same as on iOS.
+
+### Improved
+
+- "Add keyboard" lists only layouts the current input scheme can use, and names any key it needs that a layout lacks.
+- Each input scheme keeps its own Rime configuration.
+- The keyboard layout editor previews exactly what the keyboard shows.
+- Script errors are explained in words instead of raw error text.
+
+### Fixed
+
+- Right after opening Songyan, the home page briefly said "Download an input method" and "Input schemes are not ready yet."
+- An input scheme whose setup failed was retried over and over.
+- Release builds could not read a script's name and description.

@@ -249,6 +249,7 @@ class SettingsViewModel(
         collectPreference(preferences.doubleSpacePeriod) {
             copy(keyboardFeel = keyboardFeel.copy(doubleSpacePeriod = it))
         }
+        collectPreference(preferences.deleteSwipe) { copy(keyboardFeel = keyboardFeel.copy(deleteSwipe = it)) }
         collectPreference(preferences.keyPreview) { copy(keyboardFeel = keyboardFeel.copy(keyPreview = it)) }
         collectPreference(preferences.hideIdleToolbar) {
             copy(keyboardFeel = keyboardFeel.copy(hideIdleToolbar = it))
@@ -504,6 +505,10 @@ class SettingsViewModel(
 
     fun setKeyFlickDirection(value: String) {
         viewModelScope.launch { preferences.setKeyFlickDirection(value) }
+    }
+
+    fun setDeleteSwipe(value: Boolean) {
+        viewModelScope.launch { preferences.setDeleteSwipe(value) }
     }
 
     fun setDoubleSpacePeriod(value: Boolean) {

@@ -409,6 +409,9 @@ class KeyboardView(
     /** How many characters a swipe can select at most, so the count stops where the text does. */
     var deleteSwipeReach: () -> Int = { Int.MAX_VALUE }
 
+    /** The setting: without it a slide on Delete does nothing beyond the ordinary press. */
+    var deleteSwipeEnabled = false
+
     /** A Delete swipe began; it selects nothing yet. */
     var onDeleteSwipeBegin: () -> Unit = {}
 

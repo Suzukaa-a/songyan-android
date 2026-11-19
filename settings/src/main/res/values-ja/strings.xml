@@ -156,6 +156,8 @@
     <string name="options_key_flick_down">下フリック</string>
     <string name="options_double_space_title">スペース 2 回でピリオド</string>
     <string name="options_double_space_body">英単語のあとでスペースを 2 回タップすると、ピリオドとスペースを入力します。</string>
+    <string name="options_delete_swipe_title">削除キーを左へスライドして選択</string>
+    <string name="options_delete_swipe_body">削除キーを押したまま左へスライドすると、消す文字を選択できます。指を離すと削除します。</string>
     <string name="options_cursor_swipe_title">スライドでカーソルを移動</string>
     <string name="options_cursor_swipe_body">入力していないとき、キーボード上を左右にドラッグしてカーソルを移動します。</string>
     <string name="options_key_preview_title">キーのプレビュー</string>

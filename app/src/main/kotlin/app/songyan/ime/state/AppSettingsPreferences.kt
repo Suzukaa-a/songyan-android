@@ -31,6 +31,7 @@ class AppSettingsPreferences(
     override val keyPreview: Flow<Boolean> = preferences.keyPreview
     override val keyFlickDirection: Flow<String> = preferences.keyFlickDirection
     override val doubleSpacePeriod: Flow<Boolean> = preferences.doubleSpacePeriod
+    override val deleteSwipe: Flow<Boolean> = preferences.deleteSwipe
     override val hideIdleToolbar: Flow<Boolean> = preferences.hideIdleToolbar
     override val toolbarLayout: Flow<String> = preferences.toolbarLayout
     override val releaseHaptic: Flow<Boolean> = preferences.releaseHaptic
@@ -98,6 +99,8 @@ class AppSettingsPreferences(
     override suspend fun setKeyFlickDirection(value: String) = preferences.setKeyFlickDirection(value)
 
     override suspend fun setDoubleSpacePeriod(value: Boolean) = preferences.setDoubleSpacePeriod(value)
+
+    override suspend fun setDeleteSwipe(value: Boolean) = preferences.setDeleteSwipe(value)
 
     override suspend fun setHideIdleToolbar(value: Boolean) = preferences.setHideIdleToolbar(value)
 

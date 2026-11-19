@@ -130,7 +130,13 @@ abstract class RealEngineEditorTestBase {
      */
     protected class DeleteFinger(
         private val host: Host,
+        enabled: Boolean = true,
     ) {
+        init {
+            // The preference source defaults to off; a test of the default passes enabled = false.
+            if (enabled) host.main { host.controller.keyboard.deleteSwipeEnabled = true }
+        }
+
         private val origin = host.keyCenterDelete()
         private var downTime = 0L
         private var clock = 0L

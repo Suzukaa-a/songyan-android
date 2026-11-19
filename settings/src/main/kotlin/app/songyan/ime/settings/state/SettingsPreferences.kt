@@ -63,6 +63,11 @@ interface SettingsPreferences {
 
     suspend fun setDoubleSpacePeriod(value: Boolean)
 
+    /** Swipe left on Delete selects text before the caret and deletes it on release (off by default). */
+    val deleteSwipe: Flow<Boolean>
+
+    suspend fun setDeleteSwipe(value: Boolean)
+
     /** Magnified preview above a pressed key. */
     val keyPreview: Flow<Boolean>
 
@@ -297,6 +302,7 @@ class InMemorySettingsPreferences(
     private val preview = MutableStateFlow(true)
     private val flick = MutableStateFlow(SettingsPreferences.DEFAULT_FLICK_DIRECTION)
     private val doubleSpace = MutableStateFlow(true)
+    private val deleteSwipeState = MutableStateFlow(false)
     private val hideToolbar = MutableStateFlow(false)
     private val release = MutableStateFlow(false)
     private val bottomGap = MutableStateFlow(0)
@@ -397,6 +403,12 @@ class InMemorySettingsPreferences(
 
     override suspend fun setDoubleSpacePeriod(value: Boolean) {
         doubleSpace.value = value
+    }
+
+    override val deleteSwipe: Flow<Boolean> = deleteSwipeState.asStateFlow()
+
+    override suspend fun setDeleteSwipe(value: Boolean) {
+        deleteSwipeState.value = value
     }
 
     override val hideIdleToolbar: Flow<Boolean> = hideToolbar.asStateFlow()

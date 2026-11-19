@@ -157,6 +157,8 @@
     <string name="options_key_flick_down">Swipe down</string>
     <string name="options_double_space_title">Double-space period</string>
     <string name="options_double_space_body">After an English word, tap space twice to type a period and a space.</string>
+    <string name="options_delete_swipe_title">Swipe left on Delete to select</string>
+    <string name="options_delete_swipe_body">Hold Delete and slide left to select the text to remove, then lift to delete it.</string>
     <string name="options_cursor_swipe_title">Slide to move the cursor</string>
     <string name="options_cursor_swipe_body">When you aren\'t typing, drag left or right on the keyboard to move the cursor.</string>
     <string name="options_key_preview_title">Key preview</string>

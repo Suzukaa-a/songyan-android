@@ -43,6 +43,9 @@ interface KeyboardPreferencesSource {
     /** Two quick spaces after an English word type a period and a space. */
     val doubleSpacePeriod: Flow<Boolean> get() = flowOf(true)
 
+    /** Swipe left on Delete selects text before the caret; off unless the user turns it on. */
+    val deleteSwipe: Flow<Boolean> get() = flowOf(false)
+
     /** Magnified preview of the pressed key. */
     val keyPreview: Flow<Boolean> get() = flowOf(true)
 

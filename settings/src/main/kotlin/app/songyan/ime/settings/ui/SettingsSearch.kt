@@ -75,6 +75,7 @@ object SettingsSearch {
             ),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_key_flick_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_double_space_title, R.string.row_options_title),
+            SearchEntry(SettingsRoutes.OPTIONS, R.string.options_delete_swipe_title, R.string.row_options_title),
             SearchEntry(SettingsRoutes.OPTIONS, R.string.options_long_press_title, R.string.row_options_title),
             SearchEntry(
                 SettingsRoutes.LAYOUTS,

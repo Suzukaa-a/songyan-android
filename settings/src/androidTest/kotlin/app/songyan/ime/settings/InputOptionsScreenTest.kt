@@ -39,6 +39,7 @@ class InputOptionsScreenTest {
     private var engineOptions = EngineOptionsUiState()
     private val engineChanges = mutableListOf<Pair<String, Boolean>>()
     private var doubleSpace: Boolean? = null
+    private var deleteSwipe: Boolean? = null
 
     private fun show(
         stored: KeyFeedbackSettings = KeyFeedbackSettings(),
@@ -64,6 +65,7 @@ class InputOptionsScreenTest {
                     engineOptions = engineOptions,
                     onEngineOptionChanged = { name, on -> engineChanges += name to on },
                     onDoubleSpacePeriodChanged = { doubleSpace = it },
+                    onDeleteSwipeChanged = { deleteSwipe = it },
                     system = system,
                 )
             }
@@ -145,6 +147,13 @@ class InputOptionsScreenTest {
         show()
         compose.onNodeWithText(str(R.string.options_double_space_title)).performScrollTo().performClick()
         assertEquals(false, doubleSpace)
+    }
+
+    @Test
+    fun theDeleteSwipeIsASwitchThatIsOffByDefault() {
+        show()
+        compose.onNodeWithText(str(R.string.options_delete_swipe_title)).performScrollTo().performClick()
+        assertEquals(true, deleteSwipe)
     }
 
     @Test

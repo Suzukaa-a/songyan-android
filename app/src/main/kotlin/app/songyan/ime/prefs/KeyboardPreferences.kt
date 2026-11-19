@@ -436,6 +436,13 @@ class KeyboardPreferences(
             .map { it[KEY_DOUBLE_SPACE_PERIOD] ?: true }
             .distinctUntilChanged()
 
+    /** Swipe left on Delete selects text before the caret and deletes it on release; off by default. */
+    val deleteSwipe: Flow<Boolean> =
+        appContext.keyboardDataStore.data
+            .orDefaultsOnIoError()
+            .map { it[KEY_DELETE_SWIPE] ?: false }
+            .distinctUntilChanged()
+
     /** Whether the idle candidate row hides its toolbar; off by default, the toolbar shows. */
     val hideIdleToolbar: Flow<Boolean> =
         appContext.keyboardDataStore.data
@@ -595,6 +602,10 @@ class KeyboardPreferences(
             it[KEY_FLICK_DIRECTION] = value
             it.remove(KEY_FLICK)
         }
+    }
+
+    suspend fun setDeleteSwipe(value: Boolean) {
+        appContext.keyboardDataStore.edit { it[KEY_DELETE_SWIPE] = value }
     }
 
     suspend fun setDoubleSpacePeriod(value: Boolean) {
@@ -859,6 +870,7 @@ class KeyboardPreferences(
         private val KEY_FLICK = booleanPreferencesKey("key_flick")
         private val KEY_FLICK_DIRECTION = stringPreferencesKey("key_flick_direction")
         private val KEY_DOUBLE_SPACE_PERIOD = booleanPreferencesKey("double_space_period")
+        private val KEY_DELETE_SWIPE = booleanPreferencesKey("delete_swipe")
         private val KEY_PREVIEW = booleanPreferencesKey("key_preview")
         private val KEY_HIDE_IDLE_TOOLBAR = booleanPreferencesKey("hide_idle_toolbar")
         private val KEY_RELEASE_HAPTIC = booleanPreferencesKey("release_haptic")

@@ -120,6 +120,7 @@ internal fun KeyboardController.observePreferences() {
     scope.launch { source.colorMode.collect { colorMode = ColorMode.resolve(it) } }
     scope.launch { source.keyFlickDirection.collect { keyboard.flickDirection = FlickDirection.resolve(it) } }
     scope.launch { source.doubleSpacePeriod.collect { doubleSpacePeriodEnabled = it } }
+    scope.launch { source.deleteSwipe.collect { keyboard.deleteSwipeEnabled = it } }
     scope.launch { source.keyPreview.collect { keyboard.keyPreviewEnabled = it } }
     scope.launch { source.cursorSwipeAnywhere.collect { keyboard.cursorSwipeAnywhere = it } }
     scope.launch { source.keyGapScaling.collect { keyboard.keyGapScaling = it } }
@@ -266,6 +267,7 @@ internal suspend fun KeyboardController.readPreferences() {
         keyboard.flickDirection = FlickDirection.resolve(it)
     }
     runCatching { source.doubleSpacePeriod.first() }.getOrNull()?.let { doubleSpacePeriodEnabled = it }
+    runCatching { source.deleteSwipe.first() }.getOrNull()?.let { keyboard.deleteSwipeEnabled = it }
     runCatching { source.keyPreview.first() }.getOrNull()?.let { keyboard.keyPreviewEnabled = it }
     runCatching { source.cursorSwipeAnywhere.first() }.getOrNull()?.let { keyboard.cursorSwipeAnywhere = it }
     runCatching { source.keyGapScaling.first() }.getOrNull()?.let { keyboard.keyGapScaling = it }

@@ -157,6 +157,8 @@
     <string name="options_key_flick_down">下滑</string>
     <string name="options_double_space_title">双击空格输入句号</string>
     <string name="options_double_space_body">输入英文单词后，连按两次空格会变成句号加空格。</string>
+    <string name="options_delete_swipe_title">左滑删除键选择文字</string>
+    <string name="options_delete_swipe_body">按住删除键向左滑，选中要删的文字，松手删除。</string>
     <string name="options_cursor_swipe_title">横滑移动光标</string>
     <string name="options_cursor_swipe_body">没在打字时，在键盘上左右拖动来移动光标。</string>
     <string name="options_key_preview_title">按键预览</string>

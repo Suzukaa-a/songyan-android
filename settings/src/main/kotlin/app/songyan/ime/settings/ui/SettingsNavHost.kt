@@ -641,6 +641,7 @@ private fun NavGraphBuilder.settingsGraph(
                 onKeyPreviewChanged = viewModel::setKeyPreview,
                 onKeyFlickDirection = viewModel::setKeyFlickDirection,
                 onDoubleSpacePeriodChanged = viewModel::setDoubleSpacePeriod,
+                onDeleteSwipeChanged = viewModel::setDeleteSwipe,
                 onReleaseHapticChanged = viewModel::setReleaseHaptic,
                 onWidePositionChanged = viewModel::setWidePosition,
                 onWidePositionCustomChanged = viewModel::setWidePositionCustom,

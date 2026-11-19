@@ -952,6 +952,22 @@ class RealEngineTouchTest : RealEngineEditorTestBase() {
         }
 
     @Test
+    fun aLeftSwipeOnDeleteDoesNothingNewWhenTheSettingIsOff() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            val finger = DeleteFinger(host, enabled = false)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals("no selection, only the press deleted", "abcdef", host.text())
+            assertEquals(6 to 6, host.selectionRange())
+            finger.up()
+            host.awaitIdle()
+            assertEquals("abcdef", host.text())
+            assertEquals(6 to 6, host.selectionRange())
+        }
+
+    @Test
     fun aSwipeInAKeyEventEditorSelectsNothing() =
         withHost { host ->
             host.start(inputType = android.text.InputType.TYPE_NULL)

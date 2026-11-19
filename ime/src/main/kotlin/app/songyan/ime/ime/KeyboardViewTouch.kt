@@ -470,7 +470,8 @@ internal fun KeyboardView.startsDeleteSwipe(
     x: Float,
     y: Float,
 ): Boolean =
-    press.snapshot.isBackspace &&
+    deleteSwipeEnabled &&
+        press.snapshot.isBackspace &&
         !press.deleteSwipe &&
         !press.startedComposing &&
         !typing() &&

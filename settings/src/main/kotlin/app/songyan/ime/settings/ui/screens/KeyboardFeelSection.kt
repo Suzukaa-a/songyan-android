@@ -40,6 +40,7 @@ data class KeyboardFeelState(
     val keyPreview: Boolean = true,
     val keyFlickDirection: String = SettingsPreferences.DEFAULT_FLICK_DIRECTION,
     val doubleSpacePeriod: Boolean = true,
+    val deleteSwipe: Boolean = false,
     val hideIdleToolbar: Boolean = false,
     val releaseHaptic: Boolean = false,
     val oneHand: String = "off",
@@ -72,6 +73,7 @@ fun KeyboardFeelSection(
     onKeyPreview: (Boolean) -> Unit,
     onKeyFlickDirection: (String) -> Unit = {},
     onDoubleSpacePeriod: (Boolean) -> Unit = {},
+    onDeleteSwipe: (Boolean) -> Unit = {},
     onReleaseHaptic: (Boolean) -> Unit,
     onWidePosition: (String) -> Unit = {},
     onWidePositionCustom: (Int) -> Unit = {},
@@ -379,6 +381,12 @@ fun KeyboardFeelSection(
             subtitle = stringResource(R.string.options_double_space_body),
             checked = state.doubleSpacePeriod,
             onCheckedChange = onDoubleSpacePeriod,
+        )
+        SwitchRow(
+            title = stringResource(R.string.options_delete_swipe_title),
+            subtitle = stringResource(R.string.options_delete_swipe_body),
+            checked = state.deleteSwipe,
+            onCheckedChange = onDeleteSwipe,
         )
         SwitchRow(
             title = stringResource(R.string.options_cursor_swipe_title),

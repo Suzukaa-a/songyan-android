@@ -1123,9 +1123,9 @@ class KeyboardView(
         return when {
             key.action.type == LayoutActionKind.LANGUAGE_SWITCH -> LongAction.LANGUAGE_MENU
             key.action.type == LayoutActionKind.GLOBE -> LongAction.PICK_INPUT_METHOD
+            !key.longPress.isNullOrEmpty() -> LongAction.ALTERNATES
             key.action.type == LayoutActionKind.PAGE_SWITCH &&
                 key.action.pageSwitchTarget == LayoutPageTarget.SYMBOLS -> LongAction.SYMBOL_PANEL
-            !key.longPress.isNullOrEmpty() -> LongAction.ALTERNATES
             key.action.type == LayoutActionKind.BACKSPACE -> LongAction.BACKSPACE_REPEAT
             key.action.type == LayoutActionKind.SPACE -> LongAction.CURSOR_MODE
             else -> null

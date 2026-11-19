@@ -70,10 +70,15 @@ internal data class KeyPressSnapshot(
 
     val isSpace: Boolean get() = action.type == LayoutActionKind.SPACE
 
+    /**
+     * A long press opens the symbol panel, unless the key has long-press options: the nine-key 符
+     * types 0 on a long press, as on iOS.
+     */
     val isSymbolPanelKey: Boolean
         get() =
             action.type == LayoutActionKind.PAGE_SWITCH &&
-                action.pageSwitchTarget == LayoutPageTarget.SYMBOLS
+                action.pageSwitchTarget == LayoutPageTarget.SYMBOLS &&
+                longPress.isEmpty()
 }
 
 /** Which vertical flick types the hint drawn on a key; the stored values are the settings' own. */

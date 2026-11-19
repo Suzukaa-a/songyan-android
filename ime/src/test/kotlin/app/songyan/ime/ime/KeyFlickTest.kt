@@ -3,6 +3,7 @@ package app.songyan.ime.ime
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutActionKind
 import app.songyan.ime.layout.LayoutOption
+import app.songyan.ime.layout.LayoutPageTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -135,5 +136,19 @@ class KeyFlickTest {
         morph.clear()
         assertEquals(-1, morph.key)
         assertFalse(morph.animating(20L, 1f))
+    }
+
+    @Test
+    fun aSymbolsKeyWithLongPressOptionsShowsThemInsteadOfTheSymbolPanel() {
+        fun symbols(options: List<LayoutOption>) =
+            KeyPressSnapshot(
+                identity = "symbols",
+                action = LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS),
+                railLabel = null,
+                longPress = options,
+                swipeCodes = null,
+            )
+        assertTrue(symbols(emptyList()).isSymbolPanelKey)
+        assertFalse(symbols(listOf(LayoutOption("0", LayoutAction.literal("0")))).isSymbolPanelKey)
     }
 }

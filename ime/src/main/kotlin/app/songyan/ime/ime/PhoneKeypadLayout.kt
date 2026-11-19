@@ -495,7 +495,7 @@ object PhoneKeypadLayout {
 
     /**
      * The bottom row of the bundled shell, left of the action key: the page key under the leading
-     * rail, then 中/英, the space bar and 0 under the grid. The space bar takes most of the grid's
+     * rail, then 中/英, the space bar and 符 (long press: 0) under the grid. The space bar takes most of the grid's
      * width (side : space : side = 1 : 2.4 : 1, as iFlytek's and Sogou's nine-key do) and sits on
      * the grid's centre line, which is the keyboard's. With no 中/英 the space bar takes its share.
      */
@@ -533,8 +533,16 @@ object PhoneKeypadLayout {
         val spaceWidth = span - sides * side
         keys += bottomKey(space, x, top, x + spaceWidth, bottom)
         x += spaceWidth + gap
-        val zero = LayoutKey(config.labels.zero, action = LayoutAction.literal(config.labels.zero))
-        keys += bottomKey(zero, x, top, gridRight, bottom)
+        // As on iOS: 符 opens the symbol page, and a long press types 0, which the letter page has no other key for.
+        val zero = config.labels.zero
+        val symbols =
+            LayoutKey(
+                config.labels.symbols,
+                secondaryLabel = zero,
+                action = LayoutAction.pageSwitch(LayoutPageTarget.SYMBOLS),
+                longPress = listOf(LayoutOption(zero, LayoutAction.literal(zero))),
+            )
+        keys += bottomKey(symbols, x, top, gridRight, bottom)
         return keys
     }
 

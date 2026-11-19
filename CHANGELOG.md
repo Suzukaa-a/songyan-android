@@ -2,6 +2,16 @@
 
 ## 未发布
 
+### 改进
+
+- 「添加键盘」也列出已经添加的键盘，显示为灰色，标明「已添加」。
+- 9 键键盘空格右边的键改为「符」，与 iOS 一致：点按打开符号，长按输入 0。
+
+### Improved
+
+- "Add keyboard" also lists the keyboards already added, greyed out and marked "Added".
+- On the 9-key keyboard, the key right of the space bar is now 符, as on iOS: tap it for symbols, press and hold it to type 0.
+
 ## 0.2.0 (2026-11-20)
 
 ### 新增

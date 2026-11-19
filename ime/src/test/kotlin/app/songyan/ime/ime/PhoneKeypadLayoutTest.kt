@@ -90,7 +90,11 @@ class PhoneKeypadLayoutTest {
             val space = shell.space()
             val bottom = shell.region(PhoneKeypadLayout.Region.BOTTOM)
             val zero = bottom.last()
-            assertEquals("0", zero.key.label)
+            // As on iOS, the key after the space bar opens the symbols, shows 0 and types it on a long press.
+            assertEquals("符号", zero.key.label)
+            assertEquals("0", zero.key.secondaryLabel)
+            assertEquals(LayoutPageTarget.SYMBOLS, zero.key.action.pageSwitchTarget)
+            assertEquals(listOf("0"), zero.key.longPress?.map { it.action.literalValue(false) })
             if (languageSwitch) {
                 assertEquals(shell.metrics.contentWidth / 2, ((space.left + space.right) / 2).toDouble(), 0.5)
                 // side : space : side = 1 : 2.4 : 1
@@ -207,7 +211,7 @@ class PhoneKeypadLayoutTest {
                 LayoutActionKind.PAGE_SWITCH,
                 LayoutActionKind.LANGUAGE_SWITCH,
                 LayoutActionKind.SPACE,
-                LayoutActionKind.LITERAL,
+                LayoutActionKind.PAGE_SWITCH,
             ),
             full.region(PhoneKeypadLayout.Region.BOTTOM).map { it.key.action.type },
         )

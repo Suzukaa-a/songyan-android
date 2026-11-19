@@ -906,22 +906,17 @@ class SongyanInputMethodService : InputMethodService() {
      * bar alone is shown once a hardware key asked for it, because there is no other place for it.
      */
     override fun onEvaluateInputViewShown(): Boolean {
-        val system = evaluateSoftKeys()
-        controller?.setBarOnly(!system)
-        return system || hardwareBar
-    }
-
-    private fun evaluateSoftKeys(): Boolean {
-        // Always asked, even when the test value decides: the platform treats this call as a hook.
+        // The platform's answer is always asked, even when the test value decides.
         val system = super.onEvaluateInputViewShown()
         softKeys = systemSoftKeysForTest ?: system
-        return softKeys
+        controller?.setBarOnly(!softKeys)
+        return softKeys || hardwareBar
     }
 
     /** The keyboard exists as soon as a hardware key needs it, before any show of the input view. */
     private fun ensureKeyboard(): KeyboardController? {
         if (controller == null) {
-            evaluateSoftKeys()
+            onEvaluateInputViewShown()
             setInputView(onCreateInputView())
         }
         startControllerInput()

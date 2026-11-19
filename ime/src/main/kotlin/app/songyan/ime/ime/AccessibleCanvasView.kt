@@ -62,6 +62,12 @@ abstract class AccessibleCanvasView(
     private var focused = -1
     private var hovered = -1
     private val manager = context.getSystemService(AccessibilityManager::class.java)
+
+    /** TalkBack's touch exploration is on: touches arrive as hovers, not as a continuous drag. */
+    internal val touchExploring: Boolean get() = touchExplorationOverride ?: manager.isTouchExplorationEnabled
+
+    /** Lets a test stand in for the system setting, which an app cannot switch on. */
+    internal var touchExplorationOverride: Boolean? = null
     private val provider =
         object : AccessibilityNodeProvider() {
             override fun createAccessibilityNodeInfo(id: Int): AccessibilityNodeInfo? {

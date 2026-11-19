@@ -63,6 +63,9 @@ class EditorConnection(
     internal var swipeBefore = ""
     internal var swipeUnits = 0
 
+    /** How many characters the swipe can select at most; unbounded until a swipe has read its text. */
+    internal var swipeReach = Int.MAX_VALUE
+
     /** What a swipe that just ended did, so the editor's late reports of it are not taken for the user. */
     internal var swipeEchoAnchor = -1
     internal var swipeEchoReach = 0
@@ -834,6 +837,7 @@ fun EditorConnection.keyboardCallbacks(
         switchSource = switchSource,
         swipeSelectAvailable = { swipeSelectAvailable() },
         swipeSelectBegin = { swipeSelectBegin() },
+        swipeSelectReach = { swipeReach },
         swipeSelectTo = { swipeSelectTo(it) },
         swipeSelectEnd = { swipeSelectEnd(it) },
     )

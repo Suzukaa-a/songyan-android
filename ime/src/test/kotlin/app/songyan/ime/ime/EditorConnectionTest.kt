@@ -180,6 +180,18 @@ class EditorSwipeSelectTest {
     }
 
     @Test
+    fun swipeSelectReportsHowManyCharactersItCanReach() {
+        val fake = FakeEditor("a${family}b")
+        val editor = EditorConnection { fake.connection }
+        assertEquals(Int.MAX_VALUE, editor.swipeReach)
+        editor.selection.reset(fake.start, fake.end)
+        assertTrue(editor.swipeSelectBegin())
+        assertEquals(3, editor.swipeReach)
+        editor.swipeSelectEnd(delete = false)
+        assertEquals(Int.MAX_VALUE, editor.swipeReach)
+    }
+
+    @Test
     fun swipeSelectEndDeletesExactlyTheSelection() {
         val fake = FakeEditor("abcdef")
         val editor = begun(fake)

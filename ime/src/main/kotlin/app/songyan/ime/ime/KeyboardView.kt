@@ -403,6 +403,21 @@ class KeyboardView(
     internal var t9FirstKeyIndex = -1
     var onCursor: (Int) -> Unit = {}
 
+    /** Whether a Delete swipe may select now (a bare caret in a text editor, nothing composed). */
+    var deleteSwipeAvailable: () -> Boolean = { false }
+
+    /** How many characters a swipe can select at most, so the count stops where the text does. */
+    var deleteSwipeReach: () -> Int = { Int.MAX_VALUE }
+
+    /** A Delete swipe began; it selects nothing yet. */
+    var onDeleteSwipeBegin: () -> Unit = {}
+
+    /** The swipe now selects [count] characters before the caret. */
+    var onDeleteSwipe: (count: Int) -> Unit = {}
+
+    /** The swipe ended: [delete] on release, otherwise the selection is given back. */
+    var onDeleteSwipeEnd: (delete: Boolean) -> Unit = {}
+
     /** What a key event feels like: [FeedbackKind] says which tick, the action picks the sound. */
     var onFeedback: (LayoutAction, FeedbackKind) -> Unit = { _, _ -> }
 
@@ -527,6 +542,10 @@ class KeyboardView(
         var startedComposing: Boolean = false,
         /** The flick direction a kana press currently resolves to, for the cross preview. */
         var kanaDirection: Kana12Direction = Kana12Direction.Center,
+        /** A left swipe on Delete took the press over: the release deletes the characters it selected. */
+        var deleteSwipe: Boolean = false,
+        var deleteSwipeCount: Int = 0,
+        var deleteSwipeAnchorX: Float = 0f,
     ) {
         /** Re-points the pressed visual after a rebuild that only relabelled the same keys. */
         fun rebase(index: Int) {

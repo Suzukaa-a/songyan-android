@@ -140,6 +140,8 @@ class KeyboardController(
         val swipeSelectAvailable: () -> Boolean = { false },
         /** Starts a swipe at the caret; false when there is nothing to select. */
         val swipeSelectBegin: () -> Boolean = { false },
+        /** How many characters the running swipe can select at most; unbounded before it has read the text. */
+        val swipeSelectReach: () -> Int = { Int.MAX_VALUE },
         /** The swipe now selects this many characters before the caret (clamped to the text). */
         val swipeSelectTo: (Int) -> Unit = {},
         /** Ends the swipe: delete the selection, or give the caret back. */
@@ -759,6 +761,9 @@ class KeyboardController(
         wireViews()
     }
 
+    /** The character count the Delete swipe last asked for; queued steps for an older count are dropped. */
+    internal var swipeSelectLatest = 0
+
     internal fun enqueue(action: suspend () -> Unit) {
         if (!retired) operations.trySend(generation to action)
     }
@@ -898,6 +903,7 @@ class KeyboardController(
     }
 
     fun unbind() {
+        callbacks.swipeSelectEnd(false)
         generation++
         ready = false
         pendingBackend = null
@@ -1058,12 +1064,14 @@ class KeyboardController(
      * field and the engine) instead of lingering as marked text nobody can see being edited.
      */
     fun hideInput() {
+        callbacks.swipeSelectEnd(false)
         closeAll()
         heldKeys.clear()
         discardComposition()
     }
 
     fun finishInput() {
+        callbacks.swipeSelectEnd(false)
         inlineSuggestions.clear()
         generation++
         keyEpoch++

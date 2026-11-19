@@ -1,6 +1,7 @@
 package app.songyan.ime.ime
 
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -787,5 +788,183 @@ class RealEngineTouchTest : RealEngineEditorTestBase() {
             host.tap("】")
             host.awaitField("【】")
             assertEquals(0, host.keyCount { it.action.type == LayoutActionKind.SYMBOL_LOCK })
+        }
+
+    @Test
+    fun aLeftSwipeOnDeleteSelectsThenDeletesOnRelease() =
+        withHost { host ->
+            host.start(initial = "abcdefgh")
+            val finger = DeleteFinger(host)
+            finger.down()
+            // 14 dp to start, then three 24 dp steps; the press itself deleted the h.
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals("abcdefg", host.text())
+            assertEquals(4 to 7, host.selectionRange())
+            finger.up()
+            host.awaitField("abcd")
+            assertEquals(4 to 4, host.selectionRange())
+        }
+
+    @Test
+    fun slidingBackShrinksTheSelection() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals(3, host.selectionRange().let { it.second - it.first })
+            finger.moveTo(14f + 24f * 1)
+            host.awaitIdle()
+            assertEquals(2, host.selectionRange().let { it.second - it.first })
+            finger.up()
+            host.awaitField("abcd")
+        }
+
+    @Test
+    fun releasingBackAtTheStartDeletesNothingMore() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals(3, host.selectionRange().let { it.second - it.first })
+            finger.moveTo(4f)
+            host.awaitIdle()
+            assertEquals("the selection is given back", 6 to 6, host.selectionRange())
+            finger.up()
+            host.awaitIdle()
+            assertEquals("only the press deleted", "abcdef", host.text())
+            assertEquals(6 to 6, host.selectionRange())
+        }
+
+    @Test
+    fun aSwipeStopsTheRepeat() =
+        withHost { host ->
+            host.start(initial = "abcdefghij".repeat(30))
+            val finger = DeleteFinger(host)
+            finger.down()
+            SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + 300L)
+            // No waiting for idle here: a held Delete keeps deleting until the field is empty.
+            val repeated = host.text().length
+            assertTrue("the hold was repeating: $repeated", repeated < 298)
+            finger.moveTo(14f + 24f * 2)
+            host.awaitIdle()
+            val atSwipe = host.text().length
+            SystemClock.sleep(500)
+            host.awaitIdle()
+            assertEquals("no repeat after the swipe began", atSwipe, host.text().length)
+            assertEquals(2, host.selectionRange().let { it.second - it.first })
+            finger.up()
+            host.awaitIdle()
+            assertEquals(atSwipe - 2, host.text().length)
+        }
+
+    @Test
+    fun aSwipeWhileComposingKeepsDeletingFromTheComposition() =
+        withHost { host ->
+            host.start(initial = "xyz")
+            for (key in "nihao") host.tap(key.toString())
+            host.awaitComposing()
+            val finger = DeleteFinger(host)
+            finger.down()
+            host.awaitIdle()
+            val afterPress = host.text()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals("nothing is selected", host.selectionRange().let { it.first == it.second }, true)
+            assertEquals("the swipe leaves the composition alone", afterPress, host.text())
+            finger.up()
+            host.awaitIdle()
+            assertEquals("the release deletes nothing", afterPress, host.text())
+            assertTrue("still composing", host.editor.composing)
+        }
+
+    @Test
+    fun aSecondFingerCancelsTheSwipe() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals(3, host.selectionRange().let { it.second - it.first })
+            finger.secondFinger(host.keyCenter("n"))
+            host.awaitIdle()
+            assertEquals("nothing deleted", "abcdef", host.text())
+            assertEquals("the caret is back", 6 to 6, host.selectionRange())
+        }
+
+    @Test
+    fun aCancelRestoresTheCaret() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals(3, host.selectionRange().let { it.second - it.first })
+            finger.cancel()
+            host.awaitIdle()
+            assertEquals("abcdef", host.text())
+            assertEquals(6 to 6, host.selectionRange())
+        }
+
+    @Test
+    fun aSwipeNeverSplitsAnEmoji() =
+        withHost { host ->
+            val family = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67"
+            host.start(initial = "a$family$family")
+            val finger = DeleteFinger(host)
+            finger.down()
+            host.awaitField("a$family")
+            finger.moveTo(30f)
+            host.awaitIdle()
+            assertEquals(
+                "one step selects the whole family",
+                family.length,
+                host.selectionRange().let {
+                    it.second -
+                        it.first
+                },
+            )
+            finger.moveTo(14f + 24f * 2)
+            host.awaitIdle()
+            assertEquals(family.length + 1, host.selectionRange().let { it.second - it.first })
+            finger.up()
+            host.awaitField("")
+        }
+
+    @Test
+    fun deleteSwipeIsOffUnderTouchExploration() =
+        withHost { host ->
+            host.start(initial = "abcdefg")
+            host.main { host.find(KeyboardView::class.java).touchExplorationOverride = true }
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            assertEquals("nothing is selected", 6 to 6, host.selectionRange())
+            finger.up()
+            host.awaitField("abcdef")
+        }
+
+    @Test
+    fun aSwipeInAKeyEventEditorSelectsNothing() =
+        withHost { host ->
+            host.start(inputType = android.text.InputType.TYPE_NULL)
+            val finger = DeleteFinger(host)
+            finger.down()
+            finger.moveTo(14f + 24f * 3)
+            host.awaitIdle()
+            finger.up()
+            host.awaitIdle()
+            assertEquals(
+                "only the press's own Delete reached the editor: ${host.keyEvents}",
+                listOf(KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_DEL),
+                host.keyEvents.map { it.keyCode },
+            )
         }
 }

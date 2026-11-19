@@ -1,5 +1,7 @@
 package app.songyan.ime.ime
 
+import java.text.BreakIterator
+
 // The editor side of a Delete swipe: the text before the caret is selected one user-perceived
 // character at a time, and the release deletes exactly that selection in one edit. The selection is
 // the user's preview of what will go, so it is shown by the host's own highlight.
@@ -27,6 +29,7 @@ internal fun EditorConnection.swipeSelectBegin(): Boolean {
     val before = ic.getTextBeforeCursor(SWIPE_WINDOW, 0)?.toString()
     if (before.isNullOrEmpty()) return false
     swipeBefore = before
+    swipeReach = clusters(before)
     swipeAnchor = selection.start
     swipeUnits = 0
     selectionAnchor = -1
@@ -92,6 +95,15 @@ internal fun EditorConnection.swipeSelectAbandon(keepEcho: Boolean = false) {
     swipeAnchor = -1
     swipeBefore = ""
     swipeUnits = 0
+    swipeReach = Int.MAX_VALUE
+}
+
+private fun clusters(text: String): Int {
+    val boundary = BreakIterator.getCharacterInstance()
+    boundary.setText(text)
+    var count = 0
+    while (boundary.next() != BreakIterator.DONE) count++
+    return count
 }
 
 /**

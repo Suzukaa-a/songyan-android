@@ -127,6 +127,27 @@ internal fun KeyboardController.wireViews() {
             resetEnglishWord()
         }
     }
+    // Swipe left on Delete selects before the caret and deletes on release. Every step goes through
+    // the queue so it runs behind the press's own delete; a step is dropped when a later count has
+    // replaced it, since only the latest selection matters.
+    keyboard.deleteSwipeAvailable = { callbacks.swipeSelectAvailable() }
+    keyboard.deleteSwipeReach = { callbacks.swipeSelectReach() }
+    keyboard.onDeleteSwipeBegin = {
+        swipeSelectLatest = 0
+        enqueue { if (fieldStillCurrent()) callbacks.swipeSelectBegin() }
+    }
+    keyboard.onDeleteSwipe = { count ->
+        swipeSelectLatest = count
+        enqueue { if (fieldStillCurrent() && count == swipeSelectLatest) callbacks.swipeSelectTo(count) }
+    }
+    keyboard.onDeleteSwipeEnd = { delete ->
+        enqueue {
+            if (fieldStillCurrent()) {
+                callbacks.swipeSelectEnd(delete)
+                if (delete) resetEnglishWord()
+            }
+        }
+    }
     keyboard.onLanguageMenu = { openKeyboardMenu() }
     keyboard.onPickInputMethod = { callbacks.inputMethods.pick() }
     keyboard.onSymbolPanel = { openSymbolPanel() }

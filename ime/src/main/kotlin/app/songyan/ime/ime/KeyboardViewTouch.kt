@@ -187,6 +187,15 @@ internal fun KeyboardView.fromLayer(bounds: KeyBounds): KeyBounds =
 internal fun KeyboardView.rollOver() {
     for (i in pointers.size() - 1 downTo 0) {
         val press = pointers.valueAt(i)
+        if (press.deleteSwipe) {
+            // A second finger ends the swipe without deleting: the selection is given back.
+            BackspaceTrace.record(BackspaceTrace.Event.TOUCH_SWIPE_CANCELLED)
+            onDeleteSwipeEnd(false)
+            fadeOut(press, SystemClock.uptimeMillis())
+            pointers.removeAt(i)
+            invalidateKey(press.key)
+            continue
+        }
         if (press.held || press.moved || press.tracker?.choice != null) continue
         if (popupKey >= 0 && popupOwner == press.pointerId) continue
         press.task?.let { timers.removeCallbacks(it) }
@@ -318,7 +327,7 @@ internal fun KeyboardView.beginLongPress(press: Press) {
 internal fun KeyboardView.repeatStep(press: Press) {
     val startedComposing = press.startedComposing
     onRepeatAction(press.snapshot.action) {
-        pointers.get(press.pointerId) === press && !(startedComposing && !composing())
+        pointers.get(press.pointerId) === press && !press.deleteSwipe && !(startedComposing && !composing())
     }
 }
 
@@ -330,7 +339,7 @@ internal fun KeyboardView.scheduleRepeat(
     val repeat =
         object : Runnable {
             override fun run() {
-                if (pointers.get(press.pointerId) !== press) return
+                if (pointers.get(press.pointerId) !== press || press.deleteSwipe) return
                 if (startedComposing && !composing()) {
                     BackspaceTrace.record(BackspaceTrace.Event.TOUCH_HOLD_STOPPED_COMPOSITION_GONE)
                     return
@@ -420,6 +429,7 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                     popupLayer?.select(next)
                 }
             }
+            press.deleteSwipe || startsDeleteSwipe(press, x, y) -> dragDeleteSwipe(press, x, event.eventTime)
             press.snapshot.isSpace -> dragCursor(press, x, y, event.eventTime)
             press.cursorEntered -> {
                 if (!press.cursorDragBlocked) dragCursor(press, x, y, event.eventTime)
@@ -447,6 +457,79 @@ internal fun KeyboardView.handleMove(event: MotionEvent) {
                 }
             }
         }
+    }
+}
+
+/**
+ * A held or pressed Delete slid left far enough: the swipe selects instead of repeating. Not while
+ * anything is composed or was at the press (the engine owns that text), not when another gesture owns
+ * the press, and not under touch exploration, which delivers hovers instead of a continuous drag.
+ */
+internal fun KeyboardView.startsDeleteSwipe(
+    press: Press,
+    x: Float,
+    y: Float,
+): Boolean =
+    press.snapshot.isBackspace &&
+        !press.deleteSwipe &&
+        !press.startedComposing &&
+        !typing() &&
+        !press.flickArmed &&
+        !press.flickVoid &&
+        popupKey < 0 &&
+        !touchExploring &&
+        DeleteSwipe.starts((x - press.startX) / density, (y - press.startY) / density) &&
+        deleteSwipeAvailable()
+
+/**
+ * One move of a Delete swipe: the first takes the press over (no repeat, no key release), then the
+ * finger's travel in [CursorDrag] steps sets how many characters are selected; every changed step
+ * ticks, at most once per 30 ms.
+ */
+internal fun KeyboardView.dragDeleteSwipe(
+    press: Press,
+    x: Float,
+    eventTime: Long,
+) {
+    if (!press.deleteSwipe) {
+        press.deleteSwipe = true
+        press.moved = true
+        press.lastX = press.startX
+        press.deleteSwipeAnchorX = press.startX
+        press.task?.let { timers.removeCallbacks(it) }
+        popupLayer?.hidePreview(0)
+        endFlick(press.key)
+        BackspaceTrace.record(BackspaceTrace.Event.TOUCH_SWIPE_SELECT)
+        feedback(press.snapshot, FeedbackKind.HOLD)
+        onDeleteSwipeBegin()
+    }
+    // Speed comes from the events' own times, as in the space bar's caret drag.
+    if (press.cursorSampleAt == 0L) {
+        press.cursorSampleX = press.lastX
+        press.cursorSampleAt = eventTime
+    }
+    press.cursorFast =
+        CursorDrag.fast(press.cursorFast, abs(x - press.cursorSampleX) / density, eventTime - press.cursorSampleAt)
+    press.cursorSampleX = x
+    press.cursorSampleAt = eventTime
+    val stepPx = (if (press.cursorFast) CursorDrag.FAST_STEP_DP else CursorDrag.STEP_DP) * density
+    val next =
+        DeleteSwipe.move(
+            DeleteSwipe.State(press.deleteSwipeCount, press.deleteSwipeAnchorX),
+            x,
+            press.startX,
+            CURSOR_START_DP * density,
+            stepPx,
+            deleteSwipeReach(),
+        )
+    press.deleteSwipeAnchorX = next.anchorX
+    if (next.count == press.deleteSwipeCount) return
+    press.deleteSwipeCount = next.count
+    onDeleteSwipe(next.count)
+    val now = SystemClock.uptimeMillis()
+    if (CursorDrag.tickDue(now, lastTick)) {
+        lastTick = now
+        feedback(press.snapshot, FeedbackKind.TICK)
     }
 }
 
@@ -727,6 +810,8 @@ internal fun KeyboardView.handleUp(
         val y = event.getY(pointerIndex)
         val now = SystemClock.uptimeMillis()
         when {
+            // The selection the swipe made goes in one edit; the key itself adds nothing.
+            press.deleteSwipe -> onDeleteSwipeEnd(true)
             // An overlay appearing after takeover must not turn the consumed release into a key or alternate.
             press.cursorEntered && !press.snapshot.isSpace -> Unit
             popupKey >= 0 && popupOwner == pointerId -> finishPopup(press, x, y)
@@ -843,7 +928,12 @@ internal fun KeyboardView.cancelTouches() {
         val press = pointers.valueAt(i)
         press.task?.let { timers.removeCallbacks(it) }
         fadeOut(press, now)
-        if (press.snapshot.isBackspace) BackspaceTrace.record(BackspaceTrace.Event.TOUCH_CANCELLED)
+        if (press.deleteSwipe) {
+            BackspaceTrace.record(BackspaceTrace.Event.TOUCH_SWIPE_CANCELLED)
+            onDeleteSwipeEnd(false)
+        } else if (press.snapshot.isBackspace) {
+            BackspaceTrace.record(BackspaceTrace.Event.TOUCH_CANCELLED)
+        }
     }
     pointers.clear()
     railPressedItem = -1

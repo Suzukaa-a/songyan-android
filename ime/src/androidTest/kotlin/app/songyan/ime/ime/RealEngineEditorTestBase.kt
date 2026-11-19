@@ -121,6 +121,81 @@ abstract class RealEngineEditorTestBase {
         host.awaitIdle()
     }
 
+    /**
+     * One finger on Delete that can slide left, with event times of its own (so the drag reads as
+     * slow unless a test says otherwise) and the finger kept down between calls, so a test can look at
+     * the editor mid-swipe.
+     */
+    protected class DeleteFinger(
+        private val host: Host,
+    ) {
+        private val origin = host.keyCenterDelete()
+        private var downTime = 0L
+        private var clock = 0L
+        private var offsetDp = 0f
+
+        private fun next(): Long {
+            clock = maxOf(clock + STEP_MS, SystemClock.uptimeMillis())
+            return clock
+        }
+
+        private fun at(dp: Float) = origin.first - dp * host.density to origin.second
+
+        fun down() {
+            downTime = SystemClock.uptimeMillis()
+            clock = downTime
+            host.main { host.touch(downTime, MotionEvent.ACTION_DOWN, at(0f)) }
+        }
+
+        /** Slides to [dp] left of the press point in small, slow steps. */
+        fun moveTo(dp: Float) {
+            val from = offsetDp
+            val steps =
+                kotlin.math
+                    .ceil(kotlin.math.abs(dp - from) / MAX_STEP_DP)
+                    .toInt()
+                    .coerceAtLeast(1)
+            for (step in 1..steps) {
+                val target = from + (dp - from) * step / steps
+                host.main { host.touch(next(), MotionEvent.ACTION_MOVE, at(target), downTime = downTime) }
+            }
+            offsetDp = dp
+        }
+
+        fun up() {
+            host.main { host.touch(next(), MotionEvent.ACTION_UP, at(offsetDp), downTime = downTime) }
+        }
+
+        fun cancel() {
+            host.main { host.touch(next(), MotionEvent.ACTION_CANCEL, at(offsetDp), downTime = downTime) }
+        }
+
+        /** A second finger lands on [key]; the first stays where it is. */
+        fun secondFinger(key: Pair<Float, Float>) {
+            host.main {
+                host.touch(
+                    next(),
+                    MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                    at(offsetDp),
+                    key,
+                    downTime = downTime,
+                )
+            }
+        }
+
+        private companion object {
+            const val STEP_MS = 50L
+            const val MAX_STEP_DP = 10f
+        }
+    }
+
+    /** The field's selection as (start, end), read on the main thread. */
+    protected fun Host.selectionRange(): Pair<Int, Int> {
+        var range = 0 to 0
+        main { range = field.selectionStart to field.selectionEnd }
+        return range
+    }
+
     /** A slow sideways slide of 72 dp to the left from the centre of the key labelled [label]. */
     protected fun slideLeftOnKey(
         host: Host,

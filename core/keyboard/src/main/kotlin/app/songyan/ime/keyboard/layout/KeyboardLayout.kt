@@ -165,7 +165,8 @@ class CompactFold(
                     .CRC32()
                     .apply { update((source + "\u0000" + target).toByteArray(Charsets.UTF_8)) }
                     .value
-            return CompactFold(builtin.id + "u" + "%08x".format(hash), source, target)
+            // More merged keys than exact tokens cannot be picked letter by letter: such a layout does not fold.
+            return runCatching { CompactFold(builtin.id + "u" + "%08x".format(hash), source, target) }.getOrNull()
         }
 
         val MERGED14 =

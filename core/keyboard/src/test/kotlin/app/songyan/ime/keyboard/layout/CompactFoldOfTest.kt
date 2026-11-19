@@ -76,4 +76,17 @@ class CompactFoldOfTest {
         assertEquals('h', fold.map['s'])
         assertEquals(setOf('h', 'p', 'z'), fold.keysSent)
     }
+
+    @Test
+    fun moreMergedKeysThanExactTokensDoNotFold() {
+        // Every one of 26 letters paired with a mark on its own key: 26 merged keys.
+        val marks = "!#%*+<>@^_|~&=$`,.;:?/-'()"
+        val crowded =
+            ('a'..'z')
+                .zip(marks.toList())
+                .flatMap { (letter, mark) ->
+                    listOf(letter to letter, mark to letter)
+                }.toMap()
+        assertNull(CompactFold.of(KeyboardLayoutKind.MERGED14, crowded))
+    }
 }

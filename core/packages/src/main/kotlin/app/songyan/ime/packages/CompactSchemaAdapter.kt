@@ -503,10 +503,19 @@ object CompactSchemaAdapter {
         if (present.isEmpty()) return null
         val passThrough = HashSet<Char>(FOLDABLE_PUNCTUATION.toList())
         if (nineKey) passThrough.addAll("23456789".toList())
+        // Codes other than letters a layout puts on a key of their own grouping (`;` beside `l`): they
+        // fold onto that key like a letter instead of being typed as themselves.
+        val foldedOthers =
+            sourceAlphabet.toList().distinct().filter { character ->
+                character !in FOLDABLE_LETTERS &&
+                    character !in uppercaseLetters &&
+                    compactFold.map[character].let { it != null && it != character }
+            }
         val ignored =
             sourceAlphabet.filter { character ->
                 when {
                     character in present -> false
+                    character in foldedOthers -> false
                     character in passThrough -> false
                     character !in uppercaseLetters -> true
                     else -> character.lowercaseChar() !in source
@@ -528,6 +537,7 @@ object CompactSchemaAdapter {
             val uppercase = letter.uppercaseChar()
             if (uppercase in source) rules.add("derive/$uppercase/$folded/")
         }
+        for (code in foldedOthers) rules.add(deriveRule(code, foldMap.getValue(code)))
         val declaredUppercase = source.filter { it in uppercaseLetters && it !in ignored }
         val typeable =
             (
@@ -550,6 +560,21 @@ object CompactSchemaAdapter {
             ignoredCharacters = ignored.toSet().sorted().joinToString(""),
         )
     }
+
+    /**
+     * `derive` of one code onto the key that types it, for a code that is not a letter: regex
+     * characters are escaped, and a `/` code uses another separator.
+     */
+    internal fun deriveRule(
+        code: Char,
+        folded: Char,
+    ): String {
+        val pattern = if (code in REGEX_SPECIAL) "\\$code" else code.toString()
+        val separator = if (code == '/' || folded == '/') '|' else '/'
+        return "derive$separator$pattern$separator$folded$separator"
+    }
+
+    private const val REGEX_SPECIAL = ".^$|()[]{}*+?\\/"
 
     /** Runs before the source's own preedit rules, which then see the letters a tap would send. */
     private fun addExactTokenPreedit(

@@ -172,7 +172,7 @@ class UserKeyboardsTest {
             return base.copy(rows = listOf(LayoutRow(keys)) + base.rows.drop(1))
         }
         val mine = regrouped("mine", "Q", "WER")
-        val broken = regrouped("broken", "QWE", "ER")
+        val broken = regrouped("broken", "QWE", "RE")
         val registry = LayoutRegistry.create().install(mine.encoded()).install(broken.encoded())
         val fold = requireNotNull(LayoutFold.of(mine, KeyboardLayoutKind.MERGED14))
         val all = listOf(k("rime_ice:merged14#mine"), k("rime_ice:merged14#broken"), k("rime_ice:merged14#merged14"))

@@ -35,10 +35,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.KeyboardNumericMarks
 import app.songyan.ime.layout.LayoutAction
 import app.songyan.ime.layout.LayoutAuxiliaryArea
+import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutKey
 import app.songyan.ime.layout.LayoutResourceBudget
 import app.songyan.ime.layout.LayoutRow
@@ -99,6 +102,7 @@ fun LayoutEditorScreen(
         onSave = viewModel::save,
         onSaveAsCopy = { viewModel.saveAsCopy(current.layout.name + copySuffix) },
         onUse = { onUse(current.layout.id) },
+        blocked = mergedLetterProblems(current.layout),
     ) {
         val inSplit = current.splitView && !current.isNineKey
         val liveFirst = BuiltinLayouts.usesT9QuickFirstKey(current.layout)
@@ -463,6 +467,8 @@ private fun EditorFrame(
     onSave: () -> Unit,
     onSaveAsCopy: () -> Unit,
     onUse: () -> Unit,
+    /** Why the draft cannot be saved yet, shown under the name; null when it can. */
+    blocked: String? = null,
     content: @Composable () -> Unit,
 ) {
     val hostGuard = LocalEditorNavigationGuard.current
@@ -508,7 +514,7 @@ private fun EditorFrame(
             onBack = back,
             snackbarHost = { SnackbarHost(snackbar, Modifier.testTag("editor_snackbar")) },
             actions = {
-                TextButton(onClick = onSave, enabled = hasChanges && !saving) {
+                TextButton(onClick = onSave, enabled = hasChanges && !saving && blocked == null) {
                     Text(stringResource(if (saving) R.string.features_saving else R.string.layout_editor_save))
                 }
             },
@@ -529,6 +535,14 @@ private fun EditorFrame(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+                if (blocked != null) {
+                    Text(
+                        blocked,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
                 content()
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                     OutlinedButton(
@@ -842,4 +856,30 @@ private fun BottomRowEditor(
             }
         }
     }
+}
+
+/**
+ * On a merged layout (14, 18 or 9 keys) whose titles write its grouping, or that folds no way at all,
+ * the letters its keys leave out or repeat: it is not saved until each letter is on exactly one key.
+ * Titles that only change what the keys show stay saveable.
+ */
+@Composable
+private fun mergedLetterProblems(layout: LayoutDefinition): String? {
+    val kind = layout.input.builtinLayout?.let { KeyboardLayoutKind.fromWire(it.wire) } ?: return null
+    if (kind.compactFold == null) return null
+    if (LayoutFold.of(layout, kind) != null && !LayoutFold.titlesWriteGroups(layout)) return null
+    val problems = LayoutFold.problems(layout)
+    if (problems.isEmpty) return null
+
+    fun letters(chars: List<Char>) = chars.joinToString(" ") { it.uppercase() }
+    return listOfNotNull(
+        problems.missing
+            .takeIf {
+                it.isNotEmpty()
+            }?.let { stringResource(R.string.layout_editor_letters_missing, letters(it)) },
+        problems.repeated
+            .takeIf {
+                it.isNotEmpty()
+            }?.let { stringResource(R.string.layout_editor_letters_repeated, letters(it)) },
+    ).joinToString("\n")
 }

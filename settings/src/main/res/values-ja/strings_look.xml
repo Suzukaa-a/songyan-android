@@ -126,6 +126,8 @@
     <string name="page_editor_preview">プレビュー</string>
     <string name="page_editor_title">ページを編集</string>
     <string name="layout_editor_name">名前</string>
+    <string name="layout_editor_letters_missing">足りない文字：%1$s</string>
+    <string name="layout_editor_letters_repeated">重複している文字：%1$s</string>
     <string name="layout_editor_keys_section">キー</string>
     <string name="layout_editor_key_description">%1$d 行目の %2$d 番目のキー：%3$s</string>
     <string name="layout_editor_move_left">キーを左へ移動</string>

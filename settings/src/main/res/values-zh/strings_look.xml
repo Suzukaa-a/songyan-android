@@ -127,6 +127,8 @@
     <string name="page_editor_preview">预览</string>
     <string name="page_editor_title">编辑页面</string>
     <string name="layout_editor_name">名称</string>
+    <string name="layout_editor_letters_missing">缺少字母：%1$s</string>
+    <string name="layout_editor_letters_repeated">重复的字母：%1$s</string>
     <string name="layout_editor_keys_section">按键</string>
     <string name="layout_editor_key_description">第 %1$d 行第 %2$d 个键：%3$s</string>
     <string name="layout_editor_move_left">把按键左移</string>

@@ -71,16 +71,41 @@ class LayoutFoldTest {
     }
 
     @Test
-    fun aLetterOnTwoKeysOrOnNoneIsNamedAndDoesNotFold() {
-        val firstKey =
-            BuiltinLayouts.merged14.rows[0]
-                .keys[0]
-                .label
-        val repeated = BuiltinLayouts.merged14.relabel(firstKey to ("QWE" to "q"))
+    fun aLetterOnTwoKeysThatChangedWhatTheyTypeIsNamedAndDoesNotFold() {
+        val keys = BuiltinLayouts.merged14.rows[0].keys
+        // QWE still sends q, and the ER key now sends r: e is on two keys and the keys send other letters.
+        val repeated = BuiltinLayouts.merged14.relabel(keys[0].label to ("QWE" to "q"), keys[1].label to ("RE" to "r"))
         assertNull(LayoutFold.of(repeated, KeyboardLayoutKind.MERGED14))
         assertEquals(listOf('e'), LayoutFold.problems(repeated).repeated)
-        val missing = BuiltinLayouts.merged14.relabel(firstKey to ("Q" to "q"))
-        assertNull(LayoutFold.of(missing, KeyboardLayoutKind.MERGED14))
-        assertEquals(listOf('w'), LayoutFold.problems(missing).missing)
+    }
+
+    @Test
+    fun titlesThatOnlyChangeWhatTheKeysShowKeepTheBundledGrouping() {
+        // The keys still send what the bundled ones send; only the titles changed.
+        val keys = BuiltinLayouts.merged14.rows[0].keys
+        val shown = BuiltinLayouts.merged14.relabel(keys[0].label to ("Q" to "q"))
+        assertSame(CompactFold.MERGED14, LayoutFold.of(shown, KeyboardLayoutKind.MERGED14))
+        assertEquals(listOf('w'), LayoutFold.problems(shown).missing)
+        val five =
+            BuiltinLayouts.phone9.rows
+                .flatMap { it.keys }
+                .first { it.action.value == "5" }
+                .label
+        assertSame(
+            CompactFold.PHONE9,
+            LayoutFold.of(BuiltinLayouts.phone9.relabel(five to ("我的" to "5")), KeyboardLayoutKind.PHONE9),
+        )
+    }
+
+    @Test
+    fun titlesWriteTheGroupingOnlyWhenEveryKeyHasLetters() {
+        assertTrue(LayoutFold.titlesWriteGroups(BuiltinLayouts.merged14))
+        assertTrue(LayoutFold.titlesWriteGroups(BuiltinLayouts.phone9))
+        val five =
+            BuiltinLayouts.phone9.rows
+                .flatMap { it.keys }
+                .first { it.action.value == "5" }
+                .label
+        assertFalse(LayoutFold.titlesWriteGroups(BuiltinLayouts.phone9.relabel(five to ("我的" to "5"))))
     }
 }

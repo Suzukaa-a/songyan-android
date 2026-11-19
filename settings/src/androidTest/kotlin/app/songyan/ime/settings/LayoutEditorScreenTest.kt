@@ -3,6 +3,8 @@ package app.songyan.ime.settings
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -84,6 +86,47 @@ class LayoutEditorScreenTest {
         // keyboard draws, `123 中/英 ， 空格 。 回车`.
         keyNode(4, 4, "空格").assertIsDisplayed()
         compose.onAllNodesWithText(str(R.string.layout_editor_bottom_section)).assertCountEquals(0)
+    }
+
+    @Test
+    fun aMergedLayoutNamesTheLettersItMissesAndKeepsEachKeySendingItsOwnLetter() {
+        show("merged14")
+        keyNode(1, 2, "ER").performClick()
+        compose
+            .onAllNodes(
+                hasSetTextAction() and
+                    androidx.compose.ui.test
+                        .hasText("ER"),
+            ).onFirst()
+            .performTextReplacement("WR")
+        // e is on no key and w on two: the layout says which and is not saved.
+        val missing = str(R.string.layout_editor_letters_missing, "E")
+        compose.waitUntil(
+            5_000,
+        ) { compose.onAllNodesWithText(missing, substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(str(R.string.layout_editor_save)).assertIsNotEnabled()
+
+        keyNode(1, 1, "QW").performClick()
+        compose
+            .onAllNodes(
+                hasSetTextAction() and
+                    androidx.compose.ui.test
+                        .hasText("QW"),
+            ).onFirst()
+            .performTextReplacement("QE")
+        compose.waitUntil(
+            5_000,
+        ) { compose.onAllNodesWithText(missing, substring = true).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText(str(R.string.layout_editor_save)).assertIsEnabled().performClick()
+        compose.waitForIdle()
+        val keys =
+            source.registry.value!!
+                .layout("merged14")!!
+                .rows[0]
+                .keys
+        // QE still sends q; ER became WR, whose letters no longer hold e, so it sends w, its first.
+        assertEquals("q", keys[0].action.value)
+        assertEquals("w", keys[1].action.value)
     }
 
     @Test

@@ -2,6 +2,14 @@
 
 ## 未发布
 
+### 新增
+
+- 「键盘布局」里可以自己决定 14 键、18 键和 9 键哪几个字母合用一个键：改按键的标题即可，导入的布局也一样。缺少或重复的字母会标出来，改好之前不能保存。
+
+### New
+
+- In Keyboard layouts you can choose which letters share a key on 14-, 18- and 9-key layouts: edit the key titles, or import a layout written that way. Missing or repeated letters are named, and the layout can't be saved until they're fixed.
+
 ## 0.2.0 (2026-11-20)
 
 ### 新增

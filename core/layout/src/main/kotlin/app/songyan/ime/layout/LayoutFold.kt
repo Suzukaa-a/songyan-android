@@ -35,21 +35,39 @@ object LayoutFold {
             .distinct()
 
     /**
-     * What [definition] folds into on a [kind] layout, or null when it is not a clean merge: a letter
-     * missing or on two keys, or keys sending something the fold rule refuses (see [CompactFold.of]).
+     * What [definition] folds into on a [kind] layout. Labels whose letters cover the 26 letters once
+     * make the layout's own grouping. Labels that do not, on keys that still send exactly what the
+     * bundled layout's keys send, are only what the keys show (a 9-key JKL key titled 我的 still
+     * types 5): the bundled grouping applies, as it always did. Anything else does not fold: null.
      */
     fun of(
         definition: LayoutDefinition,
         kind: KeyboardLayoutKind,
     ): CompactFold? {
+        val builtin = kind.compactFold ?: return null
+        labelled(definition)?.let { map -> CompactFold.of(kind, map)?.let { return it } }
+        return builtin.takeIf { sentCharacters(definition) == builtin.keysSent }
+    }
+
+    /** The letter-to-key mapping the labels describe; null when a letter is on two keys. */
+    private fun labelled(definition: LayoutDefinition): Map<Char, Char>? {
         val map = HashMap<Char, Char>()
         for (group in groups(definition)) {
             for (letter in group.letters) {
                 if (map.put(letter, group.sends) != null) return null
             }
         }
-        return CompactFold.of(kind, map)
+        return map
     }
+
+    /** The letters and digits 2-9 the layout's one-character code keys send. */
+    private fun sentCharacters(definition: LayoutDefinition): Set<Char> =
+        definition.rows
+            .flatMap { it.keys }
+            .mapNotNull { key ->
+                key.action.value?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
+            }.map { it.lowercase()[0] }
+            .filterTo(HashSet()) { it in ALPHABET || it in '2'..'9' }
 
     /**
      * The fold a keyboard on [layout] drawing the layout [board] types with: the bundled fold for
@@ -79,6 +97,21 @@ object LayoutFold {
 
     /** [fold]'s targets of the 26 letters in a-z order, the form the deploy request carries. */
     fun targets(fold: CompactFold): String = ALPHABET.map { fold.map.getValue(it) }.joinToString("")
+
+    /**
+     * Whether [definition]'s titles write its grouping: every key that sends one letter or a digit
+     * 2-9 has letters on its title. A layout with a key titled otherwise (a 9-key 5 titled 我的) only
+     * changes what the keys show.
+     */
+    fun titlesWriteGroups(definition: LayoutDefinition): Boolean =
+        definition.rows.flatMap { it.keys }.all { key ->
+            val code =
+                key.action.value
+                    ?.takeIf { key.action.type == LayoutActionKind.CODE && it.length == 1 }
+                    ?.lowercase()
+                    ?.first()
+            code == null || (code !in ALPHABET && code !in '2'..'9') || lettersOf(key.label).isNotEmpty()
+        }
 
     /** What keeps [definition] from folding, for the editor to show before it is saved. */
     data class Problems(

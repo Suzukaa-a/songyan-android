@@ -266,6 +266,98 @@ class RealEngineHardwareKeysTest : RealEngineEditorTestBase() {
         }
 
     @Test
+    fun theSchemeMenuKeepsItsKeysAndEscapeBringsTheCompositionBack() =
+        withSchemeMenu { host ->
+            host.start()
+            host.typeHardware("ni")
+            host.awaitField("ni")
+            val f4 = host.hardware(KeyEvent.KEYCODE_F4)
+            assertTrue("the hotkey and its release are the keyboard's", f4.down && f4.up)
+            val menu = host.backend.currentSnapshot()
+            assertTrue("the menu is open: $menu", menu.isComposing)
+            assertFalse("the menu is not a prediction", menu.isPrediction)
+            assertEquals("the scheme in use is still the one typed in", PREDICTION_SCHEMA, menu.schemaID)
+            assertTrue("the menu lists the schemes: $menu", menu.candidates.any { it.text == MENU_SCHEMA_NAME })
+            host.hardware(KeyEvent.KEYCODE_ESCAPE)
+            host.awaitField("ni")
+            assertEquals("ni", host.backend.currentSnapshot().rawInput)
+            assertTrue("nothing reached the app: ${host.keyEvents}", host.keyEvents.isEmpty())
+        }
+
+    @Test
+    fun aDigitInTheSchemeMenuSwitchesTheSchemeWithoutTypingIt() =
+        withSchemeMenu { host ->
+            host.start()
+            host.typeHardware("ni")
+            host.awaitField("ni")
+            host.hardware(KeyEvent.KEYCODE_F4)
+            val menu = host.backend.currentSnapshot()
+            val index = menu.candidates.indexOfFirst { it.text == MENU_SCHEMA_NAME }
+            assertTrue("the menu lists the second scheme: $menu", index in 0..8)
+            host.hardware(KeyEvent.KEYCODE_1 + index)
+            assertEquals(MENU_SCHEMA, host.backend.currentSnapshot().schemaID)
+            assertFalse("the digit was not typed: ${host.text()}", host.text().contains('1' + index))
+            assertTrue("nothing reached the app: ${host.keyEvents}", host.keyEvents.isEmpty())
+        }
+
+    @Test
+    fun theHotkeyAgainMovesToTheNextSchemeAndSpaceChoosesIt() =
+        withSchemeMenu { host ->
+            host.start()
+            host.hardware(KeyEvent.KEYCODE_F4)
+            assertTrue(host.backend.currentSnapshot().isComposing)
+            val first = host.backend.currentSnapshot().highlightedIndex
+            host.hardware(KeyEvent.KEYCODE_F4)
+            val moved = host.backend.currentSnapshot()
+            assertNotEquals("F4 moved the highlight: $moved", first, moved.highlightedIndex)
+            assertEquals(MENU_SCHEMA_NAME, moved.candidates[moved.highlightedIndex].text)
+            host.hardware(KeyEvent.KEYCODE_SPACE)
+            val after = host.backend.currentSnapshot()
+            assertEquals(MENU_SCHEMA, after.schemaID)
+            assertFalse(after.isComposing)
+            assertEquals("", host.text())
+            assertTrue("nothing reached the app: ${host.keyEvents}", host.keyEvents.isEmpty())
+        }
+
+    @Test
+    fun theSchemeMenuTurnsAsciiModeOn() =
+        withSchemeMenu { host ->
+            host.start()
+            assertFalse(host.backend.currentSnapshot().isAsciiMode)
+            host.hardware(KeyEvent.KEYCODE_F4)
+            val menu = host.backend.currentSnapshot()
+            val index = menu.candidates.indexOfFirst { it.text.contains("中文") }
+            assertTrue("the menu offers the ASCII switch: $menu", index in 0..8)
+            host.hardware(KeyEvent.KEYCODE_1 + index)
+            val after = host.backend.currentSnapshot()
+            assertTrue("ASCII mode is on: $after", after.isAsciiMode)
+            assertFalse(after.isComposing)
+            assertEquals("", host.text())
+            assertTrue("nothing reached the app: ${host.keyEvents}", host.keyEvents.isEmpty())
+        }
+
+    /**
+     * The prediction fixture plus librime's scheme menu: desktop Rime's `switcher/hotkeys` and a
+     * second scheme to switch to. Written here because the synced fixture has neither.
+     */
+    private fun <T> withSchemeMenu(block: (Host) -> T): T =
+        withHost(
+            schema = PREDICTION_SCHEMA,
+            fixtureAssetRoot = PREDICTION_FIXTURE,
+            fixtureEdit = { dir ->
+                val default = java.io.File(dir, "default.yaml")
+                default.writeText(
+                    default.readText().replace(
+                        "  - schema: $PREDICTION_SCHEMA\n",
+                        "  - schema: $PREDICTION_SCHEMA\n  - schema: $MENU_SCHEMA\n",
+                    ) + SWITCHER_CONFIG,
+                )
+                java.io.File(dir, "$MENU_SCHEMA.schema.yaml").writeText(MENU_SCHEMA_YAML)
+            },
+            block = block,
+        )
+
+    @Test
     fun withoutAnEngineEveryKeyIsLeftToTheSystem() =
         withHost { host ->
             host.start()
@@ -398,5 +490,41 @@ class RealEngineHardwareKeysTest : RealEngineEditorTestBase() {
                 .candidates
                 .indexOfFirst { it.text == picked }
         return 2 to (if (after < 0) Int.MAX_VALUE else after)
+    }
+
+    private companion object {
+        const val MENU_SCHEMA = "menu_probe"
+        const val MENU_SCHEMA_NAME = "方案选单测试"
+
+        const val SWITCHER_CONFIG = """
+switcher:
+  caption: 〔方案選單〕
+  hotkeys:
+    - Control+grave
+    - Control+Shift+grave
+    - F4
+"""
+
+        const val MENU_SCHEMA_YAML = """
+schema:
+  schema_id: menu_probe
+  name: 方案选单测试
+  version: "0.1.0"
+engine:
+  processors:
+    - speller
+    - selector
+    - express_editor
+  segmentors:
+    - abc_segmentor
+    - fallback_segmentor
+  translators:
+    - script_translator
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+translator:
+  dictionary: prediction_probe
+  prism: menu_probe
+"""
     }
 }

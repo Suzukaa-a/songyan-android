@@ -9,12 +9,20 @@
 - 设置里的说明改称「语言切换键」，不再用「中/英」称呼这个键。
 - 9 键键盘空格右边的键改为「符」，与 iOS 一致：点按打开符号，长按输入 0。
 
+### 修复
+
+- 实体键盘按 F4 打开方案选单后，数字、空格和回车会直接打进输入框；现在会在选单里选择，按 Esc 关闭后接着打原来的内容。
+
 ### Improved
 
 - "Add keyboard" also lists the keyboards already added, greyed out and marked "Added".
 - The language switch key follows the input scheme's language: 한/A for Korean and 文/A when the language is unknown, instead of always 中/英.
 - Settings call it the language switch key instead of naming it by its 中/英 face.
 - On the 9-key keyboard, the key right of the space bar is now 符, as on iOS: tap it for symbols, press and hold it to type 0.
+
+### Fixed
+
+- On a hardware keyboard, digits, Space and Return pressed in the scheme menu (opened with F4) were typed into the field; they now choose in the menu, and Esc closes it with what you were typing still there.
 
 ## 0.2.0 (2026-11-20)
 

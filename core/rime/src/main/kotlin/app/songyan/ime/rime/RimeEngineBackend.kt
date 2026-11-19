@@ -703,7 +703,8 @@ class RimeEngineBackend(
         var capability: SchemaDisplayCapability? = null
         var capabilityPresent = false
         var declaredMode = CompositionDisplayMode.NATIVE
-        val composing = isComposing && !hasPredictionComposition
+        // The scheme menu has no spelling to display.
+        val composing = isComposing && !hasPredictionComposition && !isSchemeMenu
         val demanded = composing && spellingDemand?.invoke() == true
         if (composing) {
             val context = displayContext(schemaId)
@@ -754,16 +755,24 @@ class RimeEngineBackend(
         return verifiedReading(engine, current)
     }
 
-    // librime represents post-commit suggestions as a zero-length placeholder composition.
+    // librime represents post-commit suggestions as a zero-length placeholder composition. The
+    // scheme menu (librime's switcher, opened by `switcher/hotkeys`) is empty-input too, but it is
+    // a menu of its own engine, whose schema is librime's unnamed `.default`: it is a composition
+    // that takes keys, never a prediction to dismiss.
     private val RimeSnapshot.hasPredictionComposition: Boolean
-        get() = isComposing && input.isEmpty()
+        get() = isComposing && input.isEmpty() && !isSchemeMenu
+
+    private val RimeSnapshot.isSchemeMenu: Boolean
+        get() = schemaId == SCHEME_MENU_SCHEMA_ID
 
     private fun RimeSnapshot.mapped(
         spelling: String,
         hidesNumericTransportCode: Boolean,
     ): EngineSnapshot =
         EngineSnapshot(
-            schemaID = schemaId,
+            // The menu's own `.default` is not a scheme the keyboard could select: the scheme in
+            // use stays the one the menu was opened over until the menu switches it.
+            schemaID = if (isSchemeMenu) mutableSnapshot.value.schemaID else schemaId,
             // The bridge exposes the consumed commit text, not librime's pending commit
             // preview, so the preview stays empty instead of duplicating `committed`
             // under a second name.
@@ -831,6 +840,9 @@ class RimeEngineBackend(
     }
 
     companion object {
+        /** The schema id librime's switcher reports while its menu is open (rime/schema.cc). */
+        private const val SCHEME_MENU_SCHEMA_ID = ".default"
+
         /** Convenience factory used by the app's published-engine factory. */
         suspend fun create(
             sharedDataDir: java.io.File,

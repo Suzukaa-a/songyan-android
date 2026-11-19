@@ -308,6 +308,8 @@ abstract class RealEngineEditorTestBase {
         smallestWidthDp: Int? = null,
         /** An asset tree under engine-fixtures/ deployed and opened instead of the builtin scheme. */
         fixtureAssetRoot: String? = null,
+        /** Edits the copied fixture tree before it is deployed (config the synced fixture lacks). */
+        fixtureEdit: (File) -> Unit = {},
         /** Wraps the real backend so a prediction dismissal can be held before the engine answers. */
         pauseDismiss: Boolean = false,
         /** False hides the engine's learning suppression, as an engine without it would. */
@@ -321,6 +323,7 @@ abstract class RealEngineEditorTestBase {
             if (fixtureAssetRoot != null) {
                 val fixtureDir = File(root, "fixture-" + SystemClock.uptimeMillis())
                 AssetTrees.copy(instrumentation.context.assets, fixtureAssetRoot, fixtureDir)
+                fixtureEdit(fixtureDir)
                 val deployment = runBlocking { RimeDeployment.deploy(fixtureDir, user, appVersion = "test") }
                 check(deployment.success) { "fixture deployment failed: " + deployment.lastError }
                 fixture = fixtureDir

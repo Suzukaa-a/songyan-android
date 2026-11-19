@@ -56,7 +56,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.computeWindowSizeClass
-import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
@@ -815,7 +814,6 @@ private fun NavGraphBuilder.settingsGraph(
         val openFailed = stringResource(R.string.settings_open_failed)
         TryOutScreen(
             ime = state.value.ime,
-            japanese = state.value.inUseScheme?.family == InputSchemeFamily.JAPANESE,
             onTyped = viewModel::onTypedInTryOut,
             onEnableIme = {
                 if (openInputMethodSettings(context) == SystemAction.FAILED) {

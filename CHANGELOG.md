@@ -6,12 +6,14 @@
 
 - 「添加键盘」也列出已经添加的键盘，显示为灰色，标明「已添加」。
 - 语言切换键按输入方案的语言显示：韩文显示「한/A」，认不出语言的显示「文/A」，不再一律显示「中/英」。
+- 设置里的说明改称「语言切换键」，不再用「中/英」称呼这个键。
 - 9 键键盘空格右边的键改为「符」，与 iOS 一致：点按打开符号，长按输入 0。
 
 ### Improved
 
 - "Add keyboard" also lists the keyboards already added, greyed out and marked "Added".
 - The language switch key follows the input scheme's language: 한/A for Korean and 文/A when the language is unknown, instead of always 中/英.
+- Settings call it the language switch key instead of naming it by its 中/英 face.
 - On the 9-key keyboard, the key right of the space bar is now 符, as on iOS: tap it for symbols, press and hold it to type 0.
 
 ## 0.2.0 (2026-11-20)

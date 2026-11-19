@@ -26,15 +26,11 @@ class TryOutScreenTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun show(
-        restoration: StateRestorationTester? = null,
-        japanese: Boolean = false,
-    ) {
+    private fun show(restoration: StateRestorationTester? = null) {
         val content: @androidx.compose.runtime.Composable () -> Unit = {
             SongyanTheme(dynamicColor = false) {
                 TryOutScreen(
                     ime = ImeStatus(enabled = true, selected = true),
-                    japanese = japanese,
                     onTyped = {},
                     onEnableIme = {},
                     onBack = null,
@@ -73,15 +69,6 @@ class TryOutScreenTest {
     fun theNoteNamesTheLanguageKeyTheKeyboardInUseShows() {
         show()
         compose.onNodeWithText(str(R.string.tryout_note)).performScrollTo().assertExists()
-    }
-
-    @Test
-    fun aJapaneseInputMethodGetsTheKanaKeyInTheNote() {
-        // A Japanese keyboard shows あ/A, not 中/英; the note must not send the user looking for a
-        // key that is not there.
-        show(japanese = true)
-        compose.onNodeWithText(str(R.string.tryout_note_japanese)).performScrollTo().assertExists()
-        compose.onNodeWithText(str(R.string.tryout_note)).assertDoesNotExist()
     }
 
     @Test

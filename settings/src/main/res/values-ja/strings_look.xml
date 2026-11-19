@@ -8,7 +8,7 @@
     <string name="candidate_bar_show_comments_body">オフにすると、候補欄を展開しても注釈は表示されません。</string>
     <string name="candidate_bar_row_comments_title">1行表示でも注釈を表示</string>
     <string name="candidate_bar_row_comments_body">オフにすると、注釈は候補欄を展開したときだけ表示されます。</string>
-    <string name="candidate_bar_hide_toolbar_body">入力していないとき、候補バーにはアイコンが表示されません。クリップボード、絵文字、編集、片手モード、キーボードの設定は「中/英」を長押しすると開けます。</string>
+    <string name="candidate_bar_hide_toolbar_body">入力していないとき、候補バーにはアイコンが表示されません。クリップボード、絵文字、編集、片手モード、キーボードの設定は言語切り替えキーを長押しすると開けます。</string>
     <string name="candidate_bar_row_height">行の高さ</string>
     <string name="candidate_bar_cell_padding">候補の内側の余白</string>
     <string name="candidate_bar_cell_spacing">候補どうしの間隔</string>
@@ -179,7 +179,7 @@
     <string name="layout_action_backspace">削除</string>
     <string name="layout_action_enter">改行</string>
     <string name="layout_action_shift">Shift</string>
-    <string name="layout_action_language">中/英</string>
+    <string name="layout_action_language">言語切り替え</string>
     <string name="layout_action_page">ページを開く</string>
     <string name="layout_action_jump">移動…</string>
     <string name="layout_action_symbol_lock">記号をロック</string>
@@ -203,7 +203,7 @@
     <string name="layout_error_mode_switch">キー配列を切り替えるキーは、次のキー配列にだけ切り替えられます。</string>
     <string name="layout_error_page_switch">ページを開くキーには、123、記号、文字のいずれかのページを選んでください。</string>
     <string name="layout_error_layout_page_switch">移動キーには、キー配列の 123 ページか記号ページを選んでください。</string>
-    <string name="layout_error_language_switch">中/英キーの動作がキーボードで扱えないものです。選び直してください。</string>
+    <string name="layout_error_language_switch">言語切り替えキーの動作がキーボードで扱えないものです。選び直してください。</string>
     <string name="layout_error_no_value">この種類のキーには値を入力しません。</string>
     <string name="layout_error_long_press_delay">長押しの時間は 0 より大きくしてください。</string>
     <string name="layout_error_name_required">名前を入力してください。</string>
@@ -273,7 +273,7 @@
     <string name="page_editor_category_recent">最近使った記号</string>
     <string name="page_editor_category_recent_body">最近入力した記号がここに並びます。</string>
     <!-- キーボードメニュー -->
-    <string name="keyboards_body">「中/英」を長押しするとキーボードメニューが開き、これらのキーボードを切り替えられます。</string>
+    <string name="keyboards_body">言語切り替えキーを長押しするとキーボードメニューが開き、これらのキーボードを切り替えられます。</string>
     <string name="keyboards_add">キーボードを追加</string>
     <string name="keyboards_add_title">「%1$s」にキーボードを追加</string>
     <string name="keyboards_remove">「%1$s」を削除</string>

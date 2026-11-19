@@ -9,7 +9,7 @@
     <string name="candidate_bar_show_comments_body">關閉後，候選列不顯示註釋，展開後也不顯示。</string>
     <string name="candidate_bar_row_comments_title">單行顯示註釋</string>
     <string name="candidate_bar_row_comments_body">關閉後，註釋只在展開候選列時顯示。</string>
-    <string name="candidate_bar_hide_toolbar_body">沒在打字時，候選列不顯示圖示。剪貼簿、表情符號、編輯、單手模式和鍵盤設定可以長按「中/英」找到。</string>
+    <string name="candidate_bar_hide_toolbar_body">沒在打字時，候選列不顯示圖示。剪貼簿、表情符號、編輯、單手模式和鍵盤設定可以長按語言切換鍵找到。</string>
     <string name="candidate_bar_row_height">行高</string>
     <string name="candidate_bar_cell_padding">候選項內邊距</string>
     <string name="candidate_bar_cell_spacing">候選項間距</string>
@@ -180,7 +180,7 @@
     <string name="layout_action_backspace">刪除</string>
     <string name="layout_action_enter">回車</string>
     <string name="layout_action_shift">Shift</string>
-    <string name="layout_action_language">中/英</string>
+    <string name="layout_action_language">語言切換</string>
     <string name="layout_action_page">開啟頁面</string>
     <string name="layout_action_jump">跳轉到…</string>
     <string name="layout_action_symbol_lock">鎖定符號</string>
@@ -204,7 +204,7 @@
     <string name="layout_error_mode_switch">切換佈局的按鍵只能切到下一個佈局。</string>
     <string name="layout_error_page_switch">開啟頁面的按鍵要選一個頁面：123、符號或字母頁。</string>
     <string name="layout_error_layout_page_switch">跳轉鍵要選一個鍵盤配置的 123 或符號頁。</string>
-    <string name="layout_error_language_switch">中/英鍵的行為鍵盤不認識，請重新選擇。</string>
+    <string name="layout_error_language_switch">語言切換鍵的行為鍵盤不認識，請重新選擇。</string>
     <string name="layout_error_no_value">這種按鍵不需要填內容。</string>
     <string name="layout_error_long_press_delay">長按時間要大於 0。</string>
     <string name="layout_error_name_required">請先起個名字。</string>
@@ -274,7 +274,7 @@
     <string name="page_editor_category_recent">最近使用的符號</string>
     <string name="page_editor_category_recent_body">鍵盤在這裡列出你最近輸入過的符號。</string>
     <!-- 鍵盤選單 -->
-    <string name="keyboards_body">長按「中/英」開啟鍵盤選單，在這些鍵盤之間切換。</string>
+    <string name="keyboards_body">長按語言切換鍵開啟鍵盤選單，在這些鍵盤之間切換。</string>
     <string name="keyboards_add">新增鍵盤</string>
     <string name="keyboards_add_title">給「%1$s」新增鍵盤</string>
     <string name="keyboards_remove">移除「%1$s」</string>

@@ -9,7 +9,7 @@
     <string name="candidate_bar_show_comments_body">关闭后，候选栏不显示注释，展开后也不显示。</string>
     <string name="candidate_bar_row_comments_title">单行显示注释</string>
     <string name="candidate_bar_row_comments_body">关闭后，注释只在展开候选栏时显示。</string>
-    <string name="candidate_bar_hide_toolbar_body">没在打字时，候选栏不显示图标。剪贴板、表情、编辑、单手模式和键盘设置可以长按「中/英」找到。</string>
+    <string name="candidate_bar_hide_toolbar_body">没在打字时，候选栏不显示图标。剪贴板、表情、编辑、单手模式和键盘设置可以长按语言切换键找到。</string>
     <string name="candidate_bar_row_height">行高</string>
     <string name="candidate_bar_cell_padding">候选项内边距</string>
     <string name="candidate_bar_cell_spacing">候选项间距</string>
@@ -180,7 +180,7 @@
     <string name="layout_action_backspace">删除</string>
     <string name="layout_action_enter">回车</string>
     <string name="layout_action_shift">Shift</string>
-    <string name="layout_action_language">中/英</string>
+    <string name="layout_action_language">语言切换</string>
     <string name="layout_action_page">打开页面</string>
     <string name="layout_action_jump">跳转到…</string>
     <string name="layout_action_symbol_lock">锁定符号</string>
@@ -204,7 +204,7 @@
     <string name="layout_error_mode_switch">切换布局的按键只能切到下一个布局。</string>
     <string name="layout_error_page_switch">打开页面的按键要选一个页面：123、符号或字母页。</string>
     <string name="layout_error_layout_page_switch">跳转键要选一个键盘布局的 123 或符号页。</string>
-    <string name="layout_error_language_switch">中/英键的行为键盘不认识，请重新选择。</string>
+    <string name="layout_error_language_switch">语言切换键的行为键盘不认识，请重新选择。</string>
     <string name="layout_error_no_value">这种按键不需要填内容。</string>
     <string name="layout_error_long_press_delay">长按时间要大于 0。</string>
     <string name="layout_error_name_required">请先起个名字。</string>
@@ -274,7 +274,7 @@
     <string name="page_editor_category_recent">最近使用的符号</string>
     <string name="page_editor_category_recent_body">键盘在这里列出你最近输入过的符号。</string>
     <!-- 键盘菜单 -->
-    <string name="keyboards_body">长按「中/英」打开键盘菜单，在这些键盘之间切换。</string>
+    <string name="keyboards_body">长按语言切换键打开键盘菜单，在这些键盘之间切换。</string>
     <string name="keyboards_add">添加键盘</string>
     <string name="keyboards_add_title">给「%1$s」添加键盘</string>
     <string name="keyboards_remove">移除「%1$s」</string>

@@ -46,7 +46,7 @@ class ToolbarScreenTest {
         compose.onNodeWithTag("toolbar-limit").assertTextEquals(str(R.string.toolbar_limit, 7))
         for (item in ToolbarItem.entries) {
             val switch = compose.onNodeWithTag(toolbarSwitchTag(item)).performScrollTo()
-            // The keyboard menu is one long press on 中/英 away, so its button starts off.
+            // The keyboard menu is one long press on the language switch key away, so its button starts off.
             if (item == ToolbarItem.INPUT_METHODS) switch.assertIsOff() else switch.assertIsOn()
         }
         compose.onNodeWithTag(TOOLBAR_RESET_TAG).performScrollTo().assertIsNotEnabled()

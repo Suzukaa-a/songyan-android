@@ -74,8 +74,7 @@
     <string name="tryout_kind_phone">電話</string>
     <string name="tryout_kind_password">密碼</string>
     <string name="tryout_hint">在這裡輸入…</string>
-    <string name="tryout_note">輕觸「中/英」切換中文和英文，長按開啟鍵盤選單，可換輸入方式和鍵盤配置。其他輸入法在系統導航欄切換。</string>
-    <string name="tryout_note_japanese">輕觸「あ/A」切換日文和英文，長按開啟鍵盤選單，可換輸入方式和鍵盤配置。其他輸入法在系統導航欄切換。</string>
+    <string name="tryout_note">輕觸語言切換鍵切換到英文或切回來，長按開啟鍵盤選單，可換輸入方式和鍵盤配置。其他輸入法在系統導航欄切換。</string>
     <string name="tryout_needs_enable">松煙鍵盤尚未啟用，請先開啟。</string>
     <string name="tryout_needs_select">松煙還不是預設鍵盤，請先切換為松煙。</string>
     <string name="tryout_action">開啟系統設定</string>

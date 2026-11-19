@@ -143,7 +143,7 @@
     <string name="layout_editor_key_width_hint">標準のキーに対する比率です。空欄にすると標準の幅になります。</string>
     <string name="layout_editor_key_width_invalid">0 より大きい数値を入力するか、空欄にしてください。</string>
     <string name="layout_editor_key_action">タップしたとき</string>
-    <string name="layout_editor_action_code">入力メソッドに送る文字や記号</string>
+    <string name="layout_editor_action_code">このキーで入力する文字や記号</string>
     <string name="layout_editor_action_text">入力する文字</string>
     <string name="layout_editor_action_ascii">半角のときに使う文字</string>
     <string name="layout_editor_action_ascii_hint">キーボードが半角の記号を使うときに、この文字を入力します。空欄にすると、上の文字を常に入力します。</string>
@@ -227,7 +227,7 @@
     <string name="layout_error_too_large">内容が多すぎます。キー、キー配列、ページをいくつか削除してからやり直してください。</string>
     <string name="layout_error_malformed">このファイルはキー配列ではありません。</string>
     <string name="layout_error_unreadable">このファイルを読み取れませんでした。</string>
-    <string name="layout_error_page_code">ページのキーはテキストの入力かコマンドの実行だけができ、入力メソッドに文字を送ることはできません。</string>
+    <string name="layout_error_page_code">ページのキーはテキストの入力かコマンドの実行だけができ、文字キーとしては使えません。</string>
     <string name="layout_error_page_unknown">このページが見つかりません。削除された可能性があります。</string>
     <string name="layout_error_page_in_use">このページを使用中のキーボードがあります。「ページの組み合わせ」で別のページに変えてください。</string>
     <string name="layout_error_page_preset">内蔵のページは、先にコピーを作成してから変更してください。</string>
@@ -279,7 +279,7 @@
     <string name="keyboards_remove">「%1$s」を削除</string>
     <string name="keyboards_none_for_method">キーボードがまだないため、この入力方式はキーボードメニューに表示されません。</string>
     <string name="keyboards_missing_codes">%1$s キーがないため、入力できないものがあります</string>
-    <string name="keyboards_unknown_codes">キーボードにないコードがあります。キーボードレイアウトで追加できます。</string>
+    <string name="keyboards_unknown_codes">この入力方式はキーボードにないキーを使う場合があります。キー配列で追加できます。</string>
     <string name="keyboards_preparing">準備しています…</string>
     <string name="keyboards_unavailable">この入力方式ではこのキーボードを使えません</string>
     <string name="install_picker_title">キーボードを選ぶ</string>

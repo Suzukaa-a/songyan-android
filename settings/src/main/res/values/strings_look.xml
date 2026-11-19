@@ -144,7 +144,7 @@
     <string name="layout_editor_key_width_hint">Relative to a standard key. Leave empty for the standard width.</string>
     <string name="layout_editor_key_width_invalid">Enter a number greater than 0, or leave it empty.</string>
     <string name="layout_editor_key_action">When tapped</string>
-    <string name="layout_editor_action_code">Letter or symbol sent to the input method</string>
+    <string name="layout_editor_action_code">Letter or symbol this key enters</string>
     <string name="layout_editor_action_text">Text to type</string>
     <string name="layout_editor_action_ascii">Text in half-width mode</string>
     <string name="layout_editor_action_ascii_hint">Typed instead when the keyboard uses half-width marks. Leave empty to always type the text above.</string>
@@ -228,7 +228,7 @@
     <string name="layout_error_too_large">There is too much here. Remove some keys, layouts or pages and try again.</string>
     <string name="layout_error_malformed">This file is not a keyboard layout.</string>
     <string name="layout_error_unreadable">Could not read this file.</string>
-    <string name="layout_error_page_code">Keys on a page can only type text or run a command, not send a letter to the input method.</string>
+    <string name="layout_error_page_code">Keys on a page can only type text or run a command. They can’t work as letter keys.</string>
     <string name="layout_error_page_unknown">This page cannot be found. It may have been deleted.</string>
     <string name="layout_error_page_in_use">A keyboard uses this page. Pick another page in the page pairing first.</string>
     <string name="layout_error_page_preset">Make a copy of a built-in page before changing it.</string>
@@ -280,7 +280,7 @@
     <string name="keyboards_remove">Remove %1$s</string>
     <string name="keyboards_none_for_method">No keyboards yet, so the keyboard menu leaves this input method out.</string>
     <string name="keyboards_missing_codes">This keyboard has no %1$s key, so some things can\'t be typed</string>
-    <string name="keyboards_unknown_codes">Some codes are not on the keyboard. You can add them in Keyboard layouts.</string>
+    <string name="keyboards_unknown_codes">This input method may need keys that aren’t on the keyboard. You can add them in Keyboard layouts.</string>
     <string name="keyboards_preparing">Preparing…</string>
     <string name="keyboards_unavailable">This input method can’t use this keyboard</string>
     <string name="install_picker_title">Choose keyboards</string>

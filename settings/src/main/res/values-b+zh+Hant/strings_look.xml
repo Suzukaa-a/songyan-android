@@ -144,7 +144,7 @@
     <string name="layout_editor_key_width_hint">相對標準按鍵的比例，留空為標準寬度。</string>
     <string name="layout_editor_key_width_invalid">請填大於 0 的數字，或者留空。</string>
     <string name="layout_editor_key_action">輕觸時</string>
-    <string name="layout_editor_action_code">送入輸入法的字母或符號</string>
+    <string name="layout_editor_action_code">這個鍵輸入的字母或符號</string>
     <string name="layout_editor_action_text">要輸入的文字</string>
     <string name="layout_editor_action_ascii">半形狀態下輸入的文字</string>
     <string name="layout_editor_action_ascii_hint">鍵盤使用半形標點時改為輸入這個，留空則始終輸入上面的文字。</string>
@@ -228,7 +228,7 @@
     <string name="layout_error_too_large">內容太多了，請刪掉一些按鍵、佈局或頁面後再試。</string>
     <string name="layout_error_malformed">這個檔案不是鍵盤配置。</string>
     <string name="layout_error_unreadable">無法讀取這個檔案。</string>
-    <string name="layout_error_page_code">頁面裡的按鍵只能輸入文字或執行命令，不能向輸入法送字母。</string>
+    <string name="layout_error_page_code">頁面裡的按鍵只能輸入文字或執行命令，不能當作字母鍵使用。</string>
     <string name="layout_error_page_unknown">找不到這個頁面，它可能已經被刪除。</string>
     <string name="layout_error_page_in_use">有鍵盤正在使用這個頁面，請先在「頁面搭配」裡換成別的頁面。</string>
     <string name="layout_error_page_preset">內建頁面請先複製，再修改副本。</string>
@@ -280,7 +280,7 @@
     <string name="keyboards_remove">移除「%1$s」</string>
     <string name="keyboards_none_for_method">還沒有鍵盤，鍵盤選單裡不顯示這個輸入方式。</string>
     <string name="keyboards_missing_codes">鍵盤上沒有 %1$s 鍵，有些內容打不出來</string>
-    <string name="keyboards_unknown_codes">有些編碼鍵盤上沒有，可在鍵盤配置裡補上</string>
+    <string name="keyboards_unknown_codes">這個輸入方案可能要用到鍵盤上沒有的鍵，可在「鍵盤配置」裡加上。</string>
     <string name="keyboards_preparing">正在準備…</string>
     <string name="keyboards_unavailable">這個輸入方式用不了這種鍵盤</string>
     <string name="install_picker_title">選擇鍵盤</string>

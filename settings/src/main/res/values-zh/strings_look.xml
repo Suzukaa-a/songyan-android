@@ -144,7 +144,7 @@
     <string name="layout_editor_key_width_hint">相对标准按键的比例，留空为标准宽度。</string>
     <string name="layout_editor_key_width_invalid">请填大于 0 的数字，或者留空。</string>
     <string name="layout_editor_key_action">点按时</string>
-    <string name="layout_editor_action_code">送入输入法的字母或符号</string>
+    <string name="layout_editor_action_code">这个键输入的字母或符号</string>
     <string name="layout_editor_action_text">要输入的文字</string>
     <string name="layout_editor_action_ascii">半角状态下输入的文字</string>
     <string name="layout_editor_action_ascii_hint">键盘使用半角标点时改为输入这个，留空则始终输入上面的文字。</string>
@@ -228,7 +228,7 @@
     <string name="layout_error_too_large">内容太多了，请删掉一些按键、布局或页面后再试。</string>
     <string name="layout_error_malformed">这个文件不是键盘布局。</string>
     <string name="layout_error_unreadable">无法读取这个文件。</string>
-    <string name="layout_error_page_code">页面里的按键只能输入文字或执行命令，不能向输入法送字母。</string>
+    <string name="layout_error_page_code">页面里的按键只能输入文字或执行命令，不能当作字母键使用。</string>
     <string name="layout_error_page_unknown">找不到这个页面，它可能已经被删除。</string>
     <string name="layout_error_page_in_use">有键盘正在使用这个页面，请先在「页面搭配」里换成别的页面。</string>
     <string name="layout_error_page_preset">内置页面请先复制，再修改副本。</string>
@@ -280,7 +280,7 @@
     <string name="keyboards_remove">移除「%1$s」</string>
     <string name="keyboards_none_for_method">还没有键盘，键盘菜单里不显示这个输入方式。</string>
     <string name="keyboards_missing_codes">键盘上没有 %1$s 键，有些内容打不出来</string>
-    <string name="keyboards_unknown_codes">有些编码键盘上没有，可在键盘布局里补上</string>
+    <string name="keyboards_unknown_codes">这个输入方案可能要用到键盘上没有的键，可在「键盘布局」里加上。</string>
     <string name="keyboards_preparing">正在准备…</string>
     <string name="keyboards_unavailable">这个输入方式用不了这种键盘</string>
     <string name="install_picker_title">选择键盘</string>

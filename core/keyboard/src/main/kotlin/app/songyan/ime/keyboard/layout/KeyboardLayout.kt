@@ -141,11 +141,11 @@ class CompactFold(
         private const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 
         /**
-         * The fold of a layout that sends [map] (each of the 26 letters to the letter or digit its
-         * key sends) on a [kind] layout: the bundled fold when the mapping is the bundled one, so
-         * existing companions keep their names, otherwise a fold of its own. Null when the mapping
-         * does not cover the 26 letters, or sends what that kind of layout cannot (letter groups
-         * whose key sends a letter outside the group, or a 9-key letter on anything but 2-9).
+         * The fold of a layout that sends [map] (each of the 26 letters to the character its key
+         * sends) on a [kind] layout. Every merged layout follows one rule, 9-key included: a key
+         * sends either a letter of its own group or a digit 2-9, and all keys send the same sort.
+         * The bundled mapping gives the bundled fold, so existing companions keep their names;
+         * any other gives a fold of its own. Null when the mapping breaks the rule.
          */
         fun of(
             kind: KeyboardLayoutKind,
@@ -153,14 +153,10 @@ class CompactFold(
         ): CompactFold? {
             val builtin = kind.compactFold ?: return null
             if (ALPHABET.any { it !in map } || map.keys.any { it !in ALPHABET }) return null
-            val valid =
-                if (builtin.isPhoneDigits) {
-                    map.values.all { it in '2'..'9' }
-                } else {
-                    // A key sends its group's first letter, which is in the group.
-                    map.values.all { sent -> sent in ALPHABET && map[sent] == sent }
-                }
-            if (!valid) return null
+            val sent = map.values.toSet()
+            val digits = sent.all { it in '2'..'9' }
+            val letters = sent.all { it in ALPHABET && map[it] == it }
+            if (!digits && !letters) return null
             if (map == builtin.map) return builtin
             val source = ALPHABET
             val target = source.map { map.getValue(it) }.joinToString("")

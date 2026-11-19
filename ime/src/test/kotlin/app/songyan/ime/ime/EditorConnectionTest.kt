@@ -275,6 +275,59 @@ class EditorSwipeSelectTest {
     }
 
     @Test
+    fun aReportAtTheOldAnchorAfterTheFinalOneIsExternal() {
+        val fake = FakeEditor("abcdef")
+        val editor = begun(fake)
+        editor.swipeSelectTo(2)
+        editor.swipeSelectEnd(delete = true)
+        // The host reports the swipe's final caret, then the user taps back where the swipe began.
+        editor.onUpdateSelection(6, 6, 4, 4, -1, -1)
+        assertFalse(editor.selectionMovedExternally)
+        editor.onUpdateSelection(4, 4, 6, 6, -1, -1)
+        assertTrue(editor.selectionMovedExternally)
+        assertEquals(6, editor.selection.start)
+    }
+
+    @Test
+    fun aKeyboardEditEndsTheEchoWindow() {
+        val fake = FakeEditor("abcdef")
+        val editor = begun(fake)
+        editor.swipeSelectTo(2)
+        editor.swipeSelectEnd(delete = true)
+        editor.deleteBeforeCursor(1)
+        editor.onUpdateSelection(4, 4, 6, 6, -1, -1)
+        assertTrue(editor.selectionMovedExternally)
+    }
+
+    @Test
+    fun aZeroUnitReleaseDoesNotReuseTheLastSwipesFinalCaret() {
+        val fake = FakeEditor("abcdef")
+        val editor = begun(fake)
+        editor.swipeSelectTo(2)
+        editor.swipeSelectEnd(delete = true)
+        // The caret is elsewhere when the next swipe begins and is released without selecting.
+        fake.start = 3
+        fake.end = 3
+        editor.selection.reset(3, 3)
+        assertTrue(editor.swipeSelectBegin())
+        editor.swipeSelectEnd(delete = true)
+        editor.onUpdateSelection(3, 3, 4, 4, -1, -1)
+        assertTrue("4 was the previous swipe's final caret, not this one's", editor.selectionMovedExternally)
+    }
+
+    @Test
+    fun differentTextOfTheSameLengthIsNotDeleted() {
+        val fake = FakeEditor("abcdef")
+        val editor = begun(fake)
+        editor.swipeSelectTo(2)
+        fake.text = "abcdXY"
+        editor.swipeSelectEnd(delete = true)
+        assertEquals("abcdXY", fake.text)
+        assertEquals(6, fake.start)
+        assertEquals(6, fake.end)
+    }
+
+    @Test
     fun aChangedSelectionIsNotDeletedOnRelease() {
         val fake = FakeEditor("abcdef")
         val editor = begun(fake)

@@ -53,7 +53,11 @@ class EditorConnection(
         private set
 
     /** Where the editor's selection should be after the keyboard's own edits. */
-    val selection = EditorSelection()
+    val selection =
+        EditorSelection().also {
+            // The keyboard's own next edit means the swipe's late reports are over, whatever the host sends.
+            it.onKeyboardEdit = { swipeEchoUntil = 0L }
+        }
 
     /** Where an extended selection of the edit panel is anchored; -1 when no extension is under way. */
     internal var selectionAnchor = -1
@@ -355,6 +359,7 @@ class EditorConnection(
     ): Boolean {
         val expected = selection.isExpected(oldStart, oldEnd, newStart, newEnd) || isSwipeEcho(newStart, newEnd)
         selectionMovedExternally = !expected
+        swipeEchoSettled(newStart, newEnd)
         // Whoever moved the cursor may also have changed the text before it.
         if (!expected) {
             forgetText()

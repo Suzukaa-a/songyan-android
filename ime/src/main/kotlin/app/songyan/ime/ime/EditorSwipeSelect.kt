@@ -57,6 +57,8 @@ internal fun EditorConnection.swipeSelectEnd(delete: Boolean) {
     if (swipeAnchor < 0) return
     val anchor = swipeAnchor
     val units = swipeUnits
+    // Read before the abandon clears it: the deletion is guarded by exactly this text.
+    val expected = swipeBefore.takeLast(units)
     swipeSelectAbandon(keepEcho = true)
     val ic = connection() ?: return
     if (units == 0) return
@@ -66,7 +68,8 @@ internal fun EditorConnection.swipeSelectEnd(delete: Boolean) {
         var removed = false
         ic.beginBatchEdit()
         try {
-            if (ic.getSelectedText(0)?.length == units) removed = ic.commitText("", 1)
+            // Same length is not enough: the host may have swapped the selection for other text.
+            if (ic.getSelectedText(0)?.toString() == expected) removed = ic.commitText("", 1)
         } finally {
             ic.endBatchEdit()
         }
@@ -77,6 +80,7 @@ internal fun EditorConnection.swipeSelectEnd(delete: Boolean) {
             return
         }
     }
+    swipeEchoFinal = anchor
     if (ic.setSelection(anchor, anchor)) {
         selection.moved(anchor, anchor)
         forgetText()
@@ -92,6 +96,7 @@ internal fun EditorConnection.swipeSelectAbandon(keepEcho: Boolean = false) {
     } else {
         swipeEchoUntil = 0L
     }
+    swipeEchoFinal = -1
     swipeAnchor = -1
     swipeBefore = ""
     swipeUnits = 0
@@ -104,6 +109,17 @@ private fun clusters(text: String): Int {
     var count = 0
     while (boundary.next() != BreakIterator.DONE) count++
     return count
+}
+
+/**
+ * Closes the echo window once the host has reported the selection the swipe ended on. Reports arrive
+ * in order, so everything after that one is the user's or the host's own move, not a late echo.
+ */
+internal fun EditorConnection.swipeEchoSettled(
+    newStart: Int,
+    newEnd: Int,
+) {
+    if (swipeAnchor < 0 && newStart == newEnd && newEnd == swipeEchoFinal) swipeEchoUntil = 0L
 }
 
 /**

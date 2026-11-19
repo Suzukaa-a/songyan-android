@@ -21,6 +21,9 @@ class EditorSelection {
     var composingLength = 0
         private set
 
+    /** Called when the keyboard commits, composes or deletes, i.e. edits the field itself. */
+    var onKeyboardEdit: () -> Unit = {}
+
     val composingEnd: Int get() = if (composingStart < 0) UNKNOWN else composingStart + composingLength
 
     val known: Boolean get() = start >= 0 && end >= 0
@@ -49,6 +52,7 @@ class EditorSelection {
         wasComposing: Boolean,
     ) {
         if (commits.isEmpty() && preedit.isEmpty() && !wasComposing) return
+        onKeyboardEdit()
         var cursor =
             when {
                 wasComposing && composingStart >= 0 -> composingStart
@@ -92,6 +96,7 @@ class EditorSelection {
 
     /** A collapsed cursor moved by [delta] UTF-16 units; unknown stays unknown. */
     fun shifted(delta: Int) {
+        onKeyboardEdit()
         if (!known) return
         val cursor = (minOf(start, end) + delta).coerceAtLeast(0)
         start = cursor

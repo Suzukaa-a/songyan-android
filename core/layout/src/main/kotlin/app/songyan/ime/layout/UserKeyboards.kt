@@ -340,12 +340,12 @@ object ApplicableLayouts {
     ): Entry {
         val layout = keyboard.board?.let(registry::resolvedLayout)
         val missing =
-            if (profile == null || layout == null || kind != KeyboardLayoutKind.QWERTY26) {
+            if (profile == null || layout == null) {
                 emptyList()
             } else {
                 // Only keys the scheme cannot go without are worth a warning; a missing delimiter or
                 // auxiliary key is normal on a plain board.
-                LayoutCodeCoverage.missingToReport(layout, profile)
+                LayoutCodeCoverage.missingToReport(layout, kind, profile)
             }
         val generated =
             when (keyboard.board) {

@@ -186,10 +186,9 @@ fun keyboardList(
             entry?.missingCodes
                 ?: if (layout != null &&
                     profile != null &&
-                    keyboard.layout == KeyboardLayoutKind.QWERTY26 &&
                     generatedOf(keyboard) == null
                 ) {
-                    LayoutCodeCoverage.missingToReport(layout, profile)
+                    LayoutCodeCoverage.missingToReport(layout, keyboard.layout, profile)
                 } else {
                     emptyList()
                 }

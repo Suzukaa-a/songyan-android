@@ -96,7 +96,7 @@ class LayoutEditorScreenTest {
             .onNode(hasSetTextAction() and hasText(str(R.string.layout_editor_key_codes)))
             .performTextReplacement("wr")
         // e is on no key and w on two: the layout says which and is not saved.
-        val missing = str(R.string.layout_editor_letters_missing, "E")
+        val missing = str(R.string.layout_editor_codes_missing, "E")
         compose.waitUntil(
             5_000,
         ) { compose.onAllNodesWithText(missing, substring = true).fetchSemanticsNodes().isNotEmpty() }
@@ -109,6 +109,13 @@ class LayoutEditorScreenTest {
         compose.waitUntil(
             5_000,
         ) { compose.onAllNodesWithText(missing, substring = true).fetchSemanticsNodes().isEmpty() }
+        // librime takes printable ASCII only: a stroke drawn as 一 is named and keeps the layout unsaved.
+        val codes = compose.onNode(hasSetTextAction() and hasText(str(R.string.layout_editor_key_codes)))
+        codes.performTextReplacement("qe一")
+        val unusable = str(R.string.layout_editor_codes_unusable, "一")
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(unusable).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(str(R.string.layout_editor_save)).assertIsNotEnabled()
+        codes.performTextReplacement("qe")
         val save = str(R.string.layout_editor_save)
         compose.waitUntil(5_000) {
             compose

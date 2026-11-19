@@ -108,7 +108,8 @@ class LayoutFoldTest {
         assertEquals('q', fold.map['q'])
         // ER kept sending e, which is still among its codes.
         assertEquals("e", moved.firstRowKey(1).action.value)
-        assertTrue(LayoutFold.problems(moved, merged14).isEmpty)
+        assertTrue(LayoutFold.repeated(moved).isEmpty())
+        assertEquals(LayoutFold.coverage(BuiltinLayouts.merged14), LayoutFold.coverage(moved))
     }
 
     @Test
@@ -155,9 +156,9 @@ class LayoutFoldTest {
         val er = BuiltinLayouts.merged14.firstRowKey(1)
         val repeated = BuiltinLayouts.merged14.withCodes(merged14, qw to "qwe")
         assertNull(LayoutFold.of(repeated, merged14))
-        assertEquals(listOf('e'), LayoutFold.problems(repeated, merged14).repeated)
+        assertEquals(listOf('e'), LayoutFold.repeated(repeated))
         val missing = BuiltinLayouts.merged14.withCodes(merged14, er to "r")
-        assertEquals(listOf('e'), LayoutFold.problems(missing, merged14).missing)
+        assertEquals(setOf('e'), LayoutFold.coverage(BuiltinLayouts.merged14) - LayoutFold.coverage(missing))
     }
 
     @Test
@@ -165,8 +166,35 @@ class LayoutFoldTest {
         // Codes that are not latin letters are not checked against a-z.
         val qw = BuiltinLayouts.merged14.firstRowKey(0)
         val withStroke = BuiltinLayouts.merged14.withCodes(merged14, qw to "qw;")
-        assertTrue(LayoutFold.problems(withStroke, merged14).missing.isEmpty())
+        assertTrue(';' in LayoutFold.coverage(withStroke))
+        assertTrue(LayoutFold.unusable(withStroke).isEmpty())
         assertEquals('q', LayoutFold.of(withStroke, merged14)!!.map[';'])
+    }
+
+    @Test
+    fun onlyPrintableAsciiCanBeACode() {
+        // librime reads a key as one printable ASCII character; a stroke drawn as 一 never reaches it.
+        val qw = BuiltinLayouts.merged14.firstRowKey(0)
+        val drawn = BuiltinLayouts.merged14.withCodes(merged14, qw to "qw一")
+        assertEquals(listOf('一'), LayoutFold.unusable(drawn))
+        val sentFullWidth =
+            BuiltinLayouts.qwerty26.copy(
+                rows =
+                    listOf(
+                        LayoutRow(listOf(BuiltinLayouts.qwerty26.firstRowKey(0).copy(action = LayoutAction.code("ｑ")))),
+                    ) +
+                        BuiltinLayouts.qwerty26.rows.drop(1),
+            )
+        assertEquals(listOf('ｑ'), LayoutFold.unusable(sentFullWidth))
+        for (layout in BuiltinLayouts.all) assertTrue(layout.id, LayoutFold.unusable(layout).isEmpty())
+    }
+
+    @Test
+    fun coverageCountsWhatEveryKeySendsAndWhatMergedKeysCover() {
+        val letters = ('a'..'z').toSet()
+        assertTrue(LayoutFold.coverage(BuiltinLayouts.qwerty26).containsAll(letters))
+        assertTrue(LayoutFold.coverage(BuiltinLayouts.merged14).containsAll(letters))
+        assertTrue(LayoutFold.coverage(BuiltinLayouts.phone9).containsAll(letters))
     }
 
     @Test
@@ -174,5 +202,23 @@ class LayoutFoldTest {
         val unnamed = BuiltinLayouts.merged14.copy(input = BuiltinLayouts.merged14.input.copy(builtinLayout = null))
         assertEquals(merged14, LayoutFold.kindOf(unnamed))
         assertSame(CompactFold.MERGED14, LayoutFold.of(unnamed, merged14))
+    }
+
+    @Test
+    fun aMergedKeyboardReportsOnlyTheCodesItCoversLessThanTheBundledOne() {
+        val pinyin =
+            app.songyan.ime.keyboard.engine.SchemaKeyProfile(
+                app.songyan.ime.keyboard.engine.SchemaKeyProfile.Kind.SYLLABIC,
+                ('a'..'z').map { it.toString() } + listOf("'", ";"),
+                optionalCodes = listOf("'"),
+            )
+        // The bundled 14 keys never send ';' and that is how the scheme is typed on them.
+        assertTrue(LayoutCodeCoverage.missingToReport(BuiltinLayouts.merged14, merged14, pinyin).isEmpty())
+        val er = BuiltinLayouts.merged14.firstRowKey(1)
+        val dropped = BuiltinLayouts.merged14.withCodes(merged14, er to "r")
+        assertEquals(listOf("e"), LayoutCodeCoverage.missingToReport(dropped, merged14, pinyin))
+        assertTrue(
+            LayoutCodeCoverage.missingToReport(BuiltinLayouts.phone9, KeyboardLayoutKind.PHONE9, pinyin).isEmpty(),
+        )
     }
 }

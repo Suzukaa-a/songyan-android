@@ -127,8 +127,9 @@
     <string name="page_editor_preview">预览</string>
     <string name="page_editor_title">编辑页面</string>
     <string name="layout_editor_name">名称</string>
-    <string name="layout_editor_letters_missing">缺少字母：%1$s</string>
+    <string name="layout_editor_codes_missing">少了编码：%1$s</string>
     <string name="layout_editor_letters_repeated">重复的编码：%1$s</string>
+    <string name="layout_editor_codes_unusable">编码只能是英文字母、数字或半角符号：%1$s</string>
     <string name="layout_editor_codes_unsent">有的键输入的字符不在它的编码里。</string>
     <string name="layout_editor_keys_section">按键</string>
     <string name="layout_editor_key_description">第 %1$d 行第 %2$d 个键：%3$s</string>

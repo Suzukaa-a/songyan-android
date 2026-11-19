@@ -104,7 +104,8 @@ fun LayoutEditorScreen(
         onSave = viewModel::save,
         onSaveAsCopy = { viewModel.saveAsCopy(current.layout.name + copySuffix) },
         onUse = { onUse(current.layout.id) },
-        blocked = mergedLetterProblems(current.layout),
+        blocked = codeProblems(current.layout),
+        notice = droppedCodes(current.original, current.layout),
     ) {
         val inSplit = current.splitView && !current.isNineKey
         val liveFirst = BuiltinLayouts.usesT9QuickFirstKey(current.layout)
@@ -475,6 +476,8 @@ private fun EditorFrame(
     onUse: () -> Unit,
     /** Why the draft cannot be saved yet, shown under the name; null when it can. */
     blocked: String? = null,
+    /** Something worth knowing about the draft that does not keep it from being saved. */
+    notice: String? = null,
     content: @Composable () -> Unit,
 ) {
     val hostGuard = LocalEditorNavigationGuard.current
@@ -545,6 +548,14 @@ private fun EditorFrame(
                     Text(
                         blocked,
                         color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+                if (notice != null) {
+                    Text(
+                        notice,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
@@ -879,29 +890,49 @@ private fun selectedKeyCodes(
     return KeyCodesField(LayoutFold.codesOn(draft.layout, kind, key).joinToString("")) { onChange(kind, it) }
 }
 
+/** How a code is named to the user: a letter as its key cap shows it, anything else as it is. */
+private fun codeList(chars: Collection<Char>): String = chars.joinToString(" ") { it.uppercase() }
+
 /**
- * On a merged layout (14, 18 or 9 keys) that writes its own codes, or that folds no way at all, the
- * codes its keys repeat and the letters they leave out: it is not saved until each is on one key.
+ * What keeps [layout] from being saved: codes the input method cannot take (librime reads a key as
+ * one printable ASCII character), and on a merged layout (14, 18 or 9 keys) codes on two keys or a
+ * grouping that does not fold.
  */
 @Composable
-private fun mergedLetterProblems(layout: LayoutDefinition): String? {
-    val kind = LayoutFold.kindOf(layout) ?: return null
-    if (LayoutFold.of(layout, kind) != null && !LayoutFold.writesGroups(layout)) return null
-    val problems = LayoutFold.problems(layout, kind)
-    if (problems.isEmpty) {
-        // Every code is on one key, yet the layout does not fold: a key types something outside its codes.
-        return if (LayoutFold.of(layout, kind) == null) stringResource(R.string.layout_editor_codes_unsent) else null
-    }
-
-    fun letters(chars: List<Char>) = chars.joinToString(" ") { it.uppercase() }
+private fun codeProblems(layout: LayoutDefinition): String? {
+    val unusable = LayoutFold.unusable(layout)
+    val repeated = LayoutFold.repeated(layout)
+    val kind = LayoutFold.kindOf(layout)
+    val unfolded =
+        kind != null && repeated.isEmpty() && LayoutFold.writesGroups(layout) && LayoutFold.of(layout, kind) == null
     return listOfNotNull(
-        problems.missing
-            .takeIf {
-                it.isNotEmpty()
-            }?.let { stringResource(R.string.layout_editor_letters_missing, letters(it)) },
-        problems.repeated
-            .takeIf {
-                it.isNotEmpty()
-            }?.let { stringResource(R.string.layout_editor_letters_repeated, letters(it)) },
-    ).joinToString("\n")
+        unusable.takeIf { it.isNotEmpty() }?.let {
+            stringResource(R.string.layout_editor_codes_unusable, it.joinToString(" "))
+        },
+        repeated.takeIf { it.isNotEmpty() }?.let {
+            stringResource(
+                R.string.layout_editor_letters_repeated,
+                codeList(it),
+            )
+        },
+        if (unfolded) stringResource(R.string.layout_editor_codes_unsent) else null,
+    ).joinToString("\n").ifEmpty { null }
+}
+
+/**
+ * The codes [original]'s keys put in that [layout]'s no longer do. Saving is still allowed: a
+ * keyboard may leave codes out on purpose, and the keyboards list names what a scheme then misses.
+ */
+@Composable
+private fun droppedCodes(
+    original: LayoutDefinition,
+    layout: LayoutDefinition,
+): String? {
+    val dropped = (LayoutFold.coverage(original) - LayoutFold.coverage(layout)).sorted()
+    return dropped.takeIf { it.isNotEmpty() }?.let {
+        stringResource(
+            R.string.layout_editor_codes_missing,
+            codeList(it),
+        )
+    }
 }

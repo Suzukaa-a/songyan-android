@@ -186,31 +186,50 @@ object LayoutFold {
         return key.copy(codes = normalized.joinToString(""), action = action)
     }
 
-    /** What keeps a written grouping from folding, for the editor to name before it is saved. */
-    data class Problems(
-        val missing: List<Char>,
-        val repeated: List<Char>,
-    ) {
-        val isEmpty: Boolean get() = missing.isEmpty() && repeated.isEmpty()
+    /**
+     * The codes [definition] writes on two keys of a merged layout; empty for a layout that writes
+     * none or is not merged. Such a layout does not fold until each code is on one key.
+     */
+    fun repeated(definition: LayoutDefinition): List<Char> {
+        val kind = kindOf(definition) ?: return emptyList()
+        if (!writesGroups(definition)) return emptyList()
+        val counts = groups(definition, kind).flatMap { it.codes }.groupingBy { it }.eachCount()
+        return counts.filterValues { it > 1 }.keys.sorted()
     }
 
     /**
-     * The codes [definition] writes on two keys, and, when every code it writes is a latin letter,
-     * the letters it leaves out. Codes of any other kind (strokes, marks) are checked against the
-     * input method when its keyboard is prepared, which knows what it spells with.
+     * Every code [definition]'s keys put into the input method: what each key and each long-press
+     * choice sends, and on a merged layout the codes its keys cover. librime takes one printable
+     * ASCII character per key (`speller.cc`), so a code is one character.
      */
-    fun problems(
-        definition: LayoutDefinition,
-        kind: KeyboardLayoutKind,
-    ): Problems {
-        if (!writesGroups(definition)) return Problems(emptyList(), emptyList())
-        val counts = groups(definition, kind).flatMap { it.codes }.groupingBy { it }.eachCount()
-        val letters = counts.keys.all { it in LETTERS }
-        return Problems(
-            missing = if (letters) LETTERS.filter { it !in counts }.toList() else emptyList(),
-            repeated = counts.filterValues { it > 1 }.keys.sorted(),
-        )
+    fun coverage(definition: LayoutDefinition): Set<Char> {
+        val keys = definition.rows.flatMap { it.keys }
+        val sent =
+            keys
+                .flatMap { key -> listOf(key.action) + key.longPress.orEmpty().map { it.action } }
+                .filter { it.type == LayoutActionKind.CODE }
+                .flatMap { it.value.orEmpty().toList() }
+        val written = keys.flatMap { codesOf(it.codes) }
+        val merged = kindOf(definition)?.let { kind -> groups(definition, kind).flatMap { it.codes } }.orEmpty()
+        return (sent + written + merged).toSet()
     }
+
+    /**
+     * The codes on [definition]'s keys the input method can never take: librime reads a key as one
+     * printable ASCII character other than space (`speller.cc` refuses anything below 0x20 or from
+     * 0x7f), so a stroke drawn as 一 or a full-width mark cannot be a code.
+     */
+    fun unusable(definition: LayoutDefinition): List<Char> =
+        definition.rows
+            .flatMap { it.keys }
+            .flatMap { key ->
+                val sent =
+                    (listOf(key.action) + key.longPress.orEmpty().map { it.action })
+                        .filter { it.type == LayoutActionKind.CODE }
+                        .flatMap { it.value.orEmpty().toList() }
+                sent + codesOf(key.codes)
+            }.filter { it.code < 0x21 || it.code > 0x7e }
+            .distinct()
 
     private fun sentCode(key: LayoutKey): Char? =
         key.action.value

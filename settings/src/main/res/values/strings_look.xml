@@ -127,8 +127,9 @@
     <string name="page_editor_preview">Preview</string>
     <string name="page_editor_title">Edit page</string>
     <string name="layout_editor_name">Name</string>
-    <string name="layout_editor_letters_missing">Missing letters: %1$s</string>
+    <string name="layout_editor_codes_missing">Missing codes: %1$s</string>
     <string name="layout_editor_letters_repeated">Codes on more than one key: %1$s</string>
+    <string name="layout_editor_codes_unusable">Codes can only be letters, digits or half-width marks: %1$s</string>
     <string name="layout_editor_codes_unsent">Some keys type a character outside their codes.</string>
     <string name="layout_editor_keys_section">Keys</string>
     <string name="layout_editor_key_description">Row %1$d, key %2$d: %3$s</string>

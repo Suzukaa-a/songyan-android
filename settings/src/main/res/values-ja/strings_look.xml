@@ -126,8 +126,9 @@
     <string name="page_editor_preview">プレビュー</string>
     <string name="page_editor_title">ページを編集</string>
     <string name="layout_editor_name">名前</string>
-    <string name="layout_editor_letters_missing">足りない文字：%1$s</string>
+    <string name="layout_editor_codes_missing">なくなったコード：%1$s</string>
     <string name="layout_editor_letters_repeated">複数のキーにあるコード：%1$s</string>
+    <string name="layout_editor_codes_unusable">コードに使えるのは英字、数字、半角記号だけです：%1$s</string>
     <string name="layout_editor_codes_unsent">コードにない文字を入力するキーがあります。</string>
     <string name="layout_editor_keys_section">キー</string>
     <string name="layout_editor_key_description">%1$d 行目の %2$d 番目のキー：%3$s</string>

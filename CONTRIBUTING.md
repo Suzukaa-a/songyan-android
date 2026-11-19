@@ -94,6 +94,8 @@ If you cannot run a check, say so in the pull request and list what remains unve
 
 Write a short imperative subject that says what changed, for example `Centre candidates on the ink of a Han character`, and explain why in the body when it is not obvious. In the pull request, describe the change and name the checks you ran and the ones you did not.
 
+A change users can notice adds one line under `## 未发布` in [CHANGELOG.md](CHANGELOG.md), in the same commit: grouped under 新增, 改进 or 修复, one plain sentence each, using the names shown in the app. That section becomes the notes of the next release. Changes to tests, CI, refactoring or docs need no entry.
+
 ## Security
 
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), not in a public issue.

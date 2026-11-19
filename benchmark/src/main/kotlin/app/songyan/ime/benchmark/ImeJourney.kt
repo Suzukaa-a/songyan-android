@@ -70,8 +70,12 @@ object ImeJourney {
             // An ANR dialog that appeared before the setting took effect.
             device.findObject(By.text("Wait"))?.click()
             startActivityAndWait()
+            awaitEngineReady()
             device.wait(Until.findObject(By.text("试打")), UI_TIMEOUT_MS)?.click()
-            if (device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MS) != null) return
+            // The settings home has a search field of its own; only the 试打 screen has the 输入类型 chips.
+            if (device.wait(Until.hasObject(By.text("输入类型")), UI_TIMEOUT_MS)) {
+                device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MS)?.let { return }
+            }
             device.pressBack()
         }
         val hierarchy =
@@ -83,12 +87,21 @@ object ImeJourney {
     }
 
     /**
+     * A fresh install prepares the built-in input scheme in the background and shows a progress row
+     * on the settings home; the rows below it move when it disappears, which would swallow a tap.
+     */
+    private fun MacrobenchmarkScope.awaitEngineReady() {
+        device.wait(Until.gone(By.text("正在准备输入方案…")), KEYBOARD_TIMEOUT_MS)
+    }
+
+    /**
      * Picks the keyboard shape on the settings 我的键盘 screen; the choice is stored, so every
      * journey sets the one it measures.
      */
     fun MacrobenchmarkScope.useLayout(name: String) {
         repeat(OPEN_TRIES) {
             startActivityAndWait()
+            awaitEngineReady()
             // A first launch opens on the setup guide; Back leads to the settings home.
             val row = device.wait(Until.findObject(By.text("我的键盘")), UI_TIMEOUT_MS / 3)
             if (row == null) {
@@ -96,11 +109,14 @@ object ImeJourney {
                 return@repeat
             }
             row.click()
+            // Every input scheme lists the same shapes; the first row is the built-in 全拼.
             checkNotNull(device.wait(Until.findObject(By.text(name)), UI_TIMEOUT_MS)) { "no $name row" }.click()
             device.waitForIdle()
             device.pressBack()
+            // The settings home names the keyboard in use, which confirms the choice was stored.
+            if (device.wait(Until.hasObject(By.text("正在使用：内置全拼 · $name")), UI_TIMEOUT_MS / 3)) return
             device.waitForIdle()
-            return
+            return@repeat
         }
         error("the 我的键盘 row did not appear")
     }
@@ -174,6 +190,7 @@ object ImeJourney {
             if (candidates.size > before) return parsePoint(candidates.last())
             SystemClock.sleep(50)
         }
+        saveScreenshot("no-candidates")
         error("no candidates after typing " + letters.joinToString(""))
     }
 
@@ -207,7 +224,9 @@ object ImeJourney {
                 trail +=
                     "#$attempts text=$text cand=${candidateLines().size} ${probe[0]}=${keyboard.keys[probe[0]]} lang=${keyboard.languageSwitch}"
             }
-            repeat(3) { device.pressKeyCode(android.view.KeyEvent.KEYCODE_DEL) }
+            // On-screen taps, not hardware key events: those make the app treat a hardware keyboard as
+            // the active one.
+            currentKeys(keyboard)[BACKSPACE]?.let { backspace -> repeat(3) { tap(backspace) } }
             if (ok) return
             val switch = checkNotNull(currentKeys(keyboard)[LANGUAGE_SWITCH]) { "no language key to switch to pinyin" }
             tap(switch)
@@ -259,6 +278,7 @@ object ImeJourney {
     )
 
     private const val LANGUAGE_SWITCH = "\u0000language"
+    private const val BACKSPACE = "\u0000backspace"
 
     /** The test process outlives the app process, so a later show can reuse the boxes it logged. */
     private var lastKeys: Map<String, Point>? = null
@@ -296,6 +316,7 @@ object ImeJourney {
             val value = field(line, "value")
             val point = parsePoint(line)
             if (kind == "LANGUAGE_SWITCH") keys[LANGUAGE_SWITCH] = point
+            if (kind == "BACKSPACE") keys[BACKSPACE] = point
             if (!value.isNullOrEmpty()) keys[value] = point
         }
         return keys

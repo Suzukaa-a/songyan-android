@@ -89,6 +89,10 @@ class KeyboardBenchmarks {
             prepareDevice()
             useLayout(layout)
             openTryout()
+            // The first show after a layout change still draws the previous layout; the second one
+            // draws the chosen one and logs its key boxes.
+            showKeyboard()
+            hideKeyboard()
             ensureChinese(showKeyboard(), keys.take(2))
             hideKeyboard()
         },

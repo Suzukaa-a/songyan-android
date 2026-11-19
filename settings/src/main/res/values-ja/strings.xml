@@ -73,7 +73,7 @@
     <string name="tryout_kind_phone">電話</string>
     <string name="tryout_kind_password">パスワード</string>
     <string name="tryout_hint">ここに入力…</string>
-    <string name="tryout_note">言語切り替えキーをタップすると英語との間で切り替えられます。長押しするとキーボードのメニューが開き、入力方式やキー配列を変更できます。ほかの入力メソッドはシステムのナビゲーションバーから切り替えられます。</string>
+    <string name="tryout_note">言語切り替えキーをタップすると英語に切り替わり、長押しするとキーボードのメニューが開きます。ほかの入力メソッドはシステムのナビゲーションバーから切り替えられます。</string>
     <string name="tryout_needs_enable">松煙キーボードがまだ有効になっていません。先に有効にしてください。</string>
     <string name="tryout_needs_select">松煙がデフォルト キーボードになっていません。先に松煙に切り替えてください。</string>
     <string name="tryout_action">システム設定を開く</string>

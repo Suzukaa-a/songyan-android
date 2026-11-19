@@ -51,7 +51,7 @@
     <string name="scheme_import_error_too_many_files">壓縮包裡的檔案太多，最多支援 2000 個。</string>
     <string name="scheme_import_error_unsafe_files">壓縮包裡有不安全的檔案路徑，請換一個檔案。</string>
     <string name="scheme_import_error_user_data">壓縮包裡帶有學習資料（.userdb），請去掉後再試。</string>
-    <string name="scheme_import_error_missing_scheme">這個檔案裡沒有輸入方案，也沒有詞庫等 Rime 資料檔案（如 .dict.yaml、essay.txt）。</string>
+    <string name="scheme_import_error_missing_scheme">這個檔案裡沒有輸入方案，也沒有 Rime 資料檔案。</string>
     <string name="scheme_import_error_invalid_scheme">輸入方案裡的配置檔案有誤，請檢查檔案內容。</string>
     <string name="scheme_import_error_encoding">輸入方案裡有檔案不是 UTF-8 文字。</string>
     <string name="scheme_import_error_missing_dependency">輸入方案缺少這些檔案：%s。</string>

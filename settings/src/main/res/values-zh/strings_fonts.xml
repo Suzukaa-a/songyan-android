@@ -5,7 +5,6 @@
     <string name="fonts_candidates_section">候选栏字体</string>
     <string name="fonts_keys_section">按键字体</string>
     <string name="fonts_system">系统字体</string>
-    <string name="fonts_fallback_body">所选字体里没有的字，依次用其他已导入的字体显示，最后用系统字体。</string>
     <string name="fonts_imported_section">已导入的字体</string>
     <string name="fonts_import_title">导入字体</string>
     <string name="fonts_import_body">选择 TTF、OTF 或 TTC 文件，可一次选多个。</string>

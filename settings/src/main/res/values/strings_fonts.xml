@@ -5,7 +5,6 @@
     <string name="fonts_candidates_section">Candidate font</string>
     <string name="fonts_keys_section">Key font</string>
     <string name="fonts_system">System font</string>
-    <string name="fonts_fallback_body">Characters the chosen font doesn\'t have are drawn with your other imported fonts, then the system font.</string>
     <string name="fonts_imported_section">Imported fonts</string>
     <string name="fonts_import_title">Import fonts</string>
     <string name="fonts_import_body">Pick TTF, OTF or TTC files. You can pick several.</string>

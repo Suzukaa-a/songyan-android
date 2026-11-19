@@ -74,7 +74,7 @@
     <string name="tryout_kind_phone">电话</string>
     <string name="tryout_kind_password">密码</string>
     <string name="tryout_hint">在这里输入…</string>
-    <string name="tryout_note">点按语言切换键切换到英文或切回来，长按打开键盘菜单，可换输入方式和键盘布局。其他输入法在系统导航栏切换。</string>
+    <string name="tryout_note">点按语言切换键切换到英文，长按打开键盘菜单。其他输入法在系统导航栏切换。</string>
     <string name="tryout_needs_enable">松烟键盘尚未启用，请先开启。</string>
     <string name="tryout_needs_select">松烟还不是默认键盘，请先切换为松烟。</string>
     <string name="tryout_action">打开系统设置</string>

@@ -101,12 +101,6 @@ fun FontsScreen(
             FontChoice(state.fonts, state.keys, state.rowTypefaces, "key") {
                 viewModel.choose(FontRole.KEYS, it)
             }
-            Text(
-                stringResource(R.string.fonts_fallback_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
 
             SectionHeader(stringResource(R.string.fonts_imported_section))
             state.fonts.forEach { font ->

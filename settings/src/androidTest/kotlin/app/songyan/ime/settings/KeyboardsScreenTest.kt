@@ -177,15 +177,18 @@ class KeyboardsScreenTest {
     }
 
     @Test
-    fun anInputMethodWithoutKeyboardsSaysSoAndCanGetOneBack() {
+    fun anInputMethodWithoutKeyboardsCanGetOneBack() {
         stored = UserKeyboards.Stored(schemes = setOf("bopomofo_tw"))
         show(listOf(pinyin, zhuyin), k("quanpin:qwerty26"))
-        compose.onNodeWithText(str(R.string.keyboards_none_for_method)).performScrollTo().assertExists()
-        compose.onNodeWithText(str(R.string.keyboards_none_for_method)).performClick()
+        // The input method without keyboards is the last group: its row is the last 添加键盘.
+        compose
+            .onAllNodesWithText(str(R.string.keyboards_add))
+            .onLast()
+            .performScrollTo()
+            .performClick()
         compose.onNodeWithText(str(R.string.layout_name_zhuyin41)).performClick()
         compose.waitForIdle()
         assertEquals(listOf("bopomofo_tw:qwerty26#zhuyin41"), stored.keyboards.map { it.id })
-        assertEquals(0, compose.onAllNodesWithText(str(R.string.keyboards_none_for_method)).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -234,13 +237,6 @@ class KeyboardsScreenTest {
         compose.onNodeWithText(str(R.string.layout_name_14)).assertDoesNotExist()
         compose.onNodeWithText(str(R.string.keyboards_add)).performScrollTo().performClick()
         compose.onNodeWithText(str(R.string.layout_name_keys26, "; '")).assertExists()
-    }
-
-    @Test
-    fun aSchemeWhoseSpellerIsUnknownCarriesTheNotice() {
-        val lua = InstalledScheme("lua_only", "Lua", profile = SchemaKeyProfile(SchemaKeyProfile.Kind.UNKNOWN))
-        show(listOf(lua), k("lua_only:qwerty26"))
-        compose.onNodeWithText(str(R.string.keyboards_unknown_codes)).assertExists()
     }
 
     @Test

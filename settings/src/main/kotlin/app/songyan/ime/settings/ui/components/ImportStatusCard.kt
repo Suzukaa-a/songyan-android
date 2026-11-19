@@ -209,9 +209,6 @@ private fun InstallPickerContent(
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            if (group.unknownCodes) {
-                Text(stringResource(R.string.keyboards_unknown_codes), style = MaterialTheme.typography.bodySmall)
-            }
             for (row in group.keyboards) {
                 val checked = row.keyboard.id in picker.checked
                 Row(

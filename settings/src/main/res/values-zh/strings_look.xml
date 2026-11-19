@@ -6,10 +6,9 @@
     <string name="candidate_bar_row_section">单行</string>
     <string name="candidate_bar_hide_toolbar_title">空闲时隐藏工具栏</string>
     <string name="candidate_bar_show_comments_title">显示注释</string>
-    <string name="candidate_bar_show_comments_body">关闭后，候选栏不显示注释，展开后也不显示。</string>
     <string name="candidate_bar_row_comments_title">单行显示注释</string>
     <string name="candidate_bar_row_comments_body">关闭后，注释只在展开候选栏时显示。</string>
-    <string name="candidate_bar_hide_toolbar_body">没在打字时，候选栏不显示图标。剪贴板、表情、编辑、单手模式和键盘设置可以长按语言切换键找到。</string>
+    <string name="candidate_bar_hide_toolbar_body">剪贴板、表情、编辑、单手模式和键盘设置可以长按语言切换键找到。</string>
     <string name="candidate_bar_row_height">行高</string>
     <string name="candidate_bar_cell_padding">候选项内边距</string>
     <string name="candidate_bar_cell_spacing">候选项间距</string>
@@ -278,10 +277,8 @@
     <string name="keyboards_add">添加键盘</string>
     <string name="keyboards_add_title">给「%1$s」添加键盘</string>
     <string name="keyboards_remove">移除「%1$s」</string>
-    <string name="keyboards_none_for_method">还没有键盘，键盘菜单里不显示这个输入方式。</string>
     <string name="keyboards_missing_codes">键盘上没有 %1$s 键，有些内容打不出来</string>
     <string name="keyboards_already_added">已添加</string>
-    <string name="keyboards_unknown_codes">这个输入方案可能要用到键盘上没有的键，可在「键盘布局」里加上。</string>
     <string name="keyboards_preparing">正在准备…</string>
     <string name="keyboards_unavailable">这个输入方式用不了这种键盘</string>
     <string name="install_picker_title">选择键盘</string>

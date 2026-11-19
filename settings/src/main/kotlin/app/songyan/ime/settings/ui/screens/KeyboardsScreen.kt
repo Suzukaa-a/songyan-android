@@ -93,14 +93,6 @@ fun KeyboardsScreen(
             )
             for (group in list.groups) {
                 SectionHeader(group.schemeName.ifEmpty { group.schemeId })
-                if (group.unknownCodes) {
-                    Text(
-                        text = stringResource(R.string.keyboards_unknown_codes),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
                 Column(modifier = Modifier.selectableGroup()) {
                     for (row in group.keyboards) {
                         val name = row.layoutName.text()
@@ -148,8 +140,7 @@ fun KeyboardsScreen(
                 if (group.addable.isNotEmpty()) {
                     SettingsRow(
                         title = stringResource(R.string.keyboards_add),
-                        subtitle =
-                            if (group.keyboards.isEmpty()) stringResource(R.string.keyboards_none_for_method) else null,
+                        subtitle = null,
                         icon = Icons.Outlined.Add,
                         onClick = { addingTo = group.schemeId },
                     )

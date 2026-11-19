@@ -51,7 +51,7 @@
     <string name="scheme_import_error_too_many_files">アーカイブ内のファイルが多すぎます。上限は 2000 個です。</string>
     <string name="scheme_import_error_unsafe_files">アーカイブに安全でないファイルパスが含まれています。別のファイルを使ってください。</string>
     <string name="scheme_import_error_user_data">アーカイブに学習データ（.userdb）が含まれています。取り除いてからやり直してください。</string>
-    <string name="scheme_import_error_missing_scheme">このファイルには入力パックも、辞書などの Rime データファイル（.dict.yaml、essay.txt など）もありません。</string>
+    <string name="scheme_import_error_missing_scheme">このファイルには入力パックも、Rime データファイルもありません。</string>
     <string name="scheme_import_error_invalid_scheme">入力パックの設定ファイルに誤りがあります。内容を確認してください。</string>
     <string name="scheme_import_error_encoding">入力パックに UTF-8 でないファイルがあります。</string>
     <string name="scheme_import_error_missing_dependency">入力パックに次のファイルがありません：%s。</string>

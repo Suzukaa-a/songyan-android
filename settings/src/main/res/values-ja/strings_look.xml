@@ -5,10 +5,9 @@
     <string name="candidate_bar_row_section">候補の行</string>
     <string name="candidate_bar_hide_toolbar_title">未入力のときはツールバーを隠す</string>
     <string name="candidate_bar_show_comments_title">注釈を表示</string>
-    <string name="candidate_bar_show_comments_body">オフにすると、候補欄を展開しても注釈は表示されません。</string>
     <string name="candidate_bar_row_comments_title">1行表示でも注釈を表示</string>
     <string name="candidate_bar_row_comments_body">オフにすると、注釈は候補欄を展開したときだけ表示されます。</string>
-    <string name="candidate_bar_hide_toolbar_body">入力していないとき、候補バーにはアイコンが表示されません。クリップボード、絵文字、編集、片手モード、キーボードの設定は言語切り替えキーを長押しすると開けます。</string>
+    <string name="candidate_bar_hide_toolbar_body">クリップボード、絵文字、編集、片手モード、キーボードの設定は言語切り替えキーを長押しすると開けます。</string>
     <string name="candidate_bar_row_height">行の高さ</string>
     <string name="candidate_bar_cell_padding">候補の内側の余白</string>
     <string name="candidate_bar_cell_spacing">候補どうしの間隔</string>
@@ -277,10 +276,8 @@
     <string name="keyboards_add">キーボードを追加</string>
     <string name="keyboards_add_title">「%1$s」にキーボードを追加</string>
     <string name="keyboards_remove">「%1$s」を削除</string>
-    <string name="keyboards_none_for_method">キーボードがまだないため、この入力方式はキーボードメニューに表示されません。</string>
     <string name="keyboards_missing_codes">%1$s キーがないため、入力できないものがあります</string>
     <string name="keyboards_already_added">追加済み</string>
-    <string name="keyboards_unknown_codes">この入力方式はキーボードにないキーを使う場合があります。キー配列で追加できます。</string>
     <string name="keyboards_preparing">準備しています…</string>
     <string name="keyboards_unavailable">この入力方式ではこのキーボードを使えません</string>
     <string name="install_picker_title">キーボードを選ぶ</string>

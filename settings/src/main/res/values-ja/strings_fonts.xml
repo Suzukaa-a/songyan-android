@@ -5,7 +5,6 @@
     <string name="fonts_candidates_section">候補バーのフォント</string>
     <string name="fonts_keys_section">キーのフォント</string>
     <string name="fonts_system">システムフォント</string>
-    <string name="fonts_fallback_body">選んだフォントにない文字は、読み込んだ他のフォントの順に、最後にシステムフォントで表示します。</string>
     <string name="fonts_imported_section">インポートしたフォント</string>
     <string name="fonts_import_title">フォントをインポート</string>
     <string name="fonts_import_body">TTF、OTF、TTC ファイルを選びます。複数選べます。</string>

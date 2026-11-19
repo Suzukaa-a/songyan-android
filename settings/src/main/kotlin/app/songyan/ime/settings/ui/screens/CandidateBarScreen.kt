@@ -147,7 +147,7 @@ fun CandidateBarScreen(
             if (showComments != null) {
                 SwitchRow(
                     title = stringResource(R.string.candidate_bar_show_comments_title),
-                    subtitle = stringResource(R.string.candidate_bar_show_comments_body),
+                    subtitle = null,
                     checked = showComments,
                     onCheckedChange = onShowCommentsChanged,
                 )

@@ -74,7 +74,7 @@
     <string name="tryout_kind_phone">Phone</string>
     <string name="tryout_kind_password">Password</string>
     <string name="tryout_hint">Type here…</string>
-    <string name="tryout_note">Tap the language switch key to switch to English and back. Press and hold it for the keyboard menu to change the input method or keyboard layout. Switch to other keyboards from the system navigation bar.</string>
+    <string name="tryout_note">Tap the language switch key to switch to English; press and hold it for the keyboard menu. Switch to other keyboards from the system navigation bar.</string>
     <string name="tryout_needs_enable">Songyan keyboard is not enabled yet. Please enable it first.</string>
     <string name="tryout_needs_select">Songyan is not the default keyboard. Please switch to it first.</string>
     <string name="tryout_action">Open system settings</string>

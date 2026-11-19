@@ -279,6 +279,7 @@
     <string name="keyboards_remove">「%1$s」を削除</string>
     <string name="keyboards_none_for_method">キーボードがまだないため、この入力方式はキーボードメニューに表示されません。</string>
     <string name="keyboards_missing_codes">%1$s キーがないため、入力できないものがあります</string>
+    <string name="keyboards_already_added">追加済み</string>
     <string name="keyboards_unknown_codes">この入力方式はキーボードにないキーを使う場合があります。キー配列で追加できます。</string>
     <string name="keyboards_preparing">準備しています…</string>
     <string name="keyboards_unavailable">この入力方式ではこのキーボードを使えません</string>

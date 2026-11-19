@@ -213,7 +213,7 @@ fun KeyboardsScreen(
     }
 }
 
-/** The layouts an input method can still be given a keyboard on; picking one adds it. */
+/** Every layout an input method can have a keyboard on; picking one adds it, the ones it has are greyed out. */
 @Composable
 internal fun AddKeyboardDialog(
     group: KeyboardGroup,
@@ -225,15 +225,19 @@ internal fun AddKeyboardDialog(
         title = { Text(stringResource(R.string.keyboards_add_title, group.schemeName.ifEmpty { group.schemeId })) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                for (row in group.addable) {
+                for (row in group.offered) {
                     val title = row.layoutName.text()
                     SettingsRow(
                         title = title,
                         subtitle =
-                            row.missingCodes.takeIf { it.isNotEmpty() }?.let {
-                                stringResource(R.string.keyboards_missing_codes, it.joinToString(" "))
+                            when {
+                                row.added -> stringResource(R.string.keyboards_already_added)
+                                row.missingCodes.isNotEmpty() ->
+                                    stringResource(R.string.keyboards_missing_codes, row.missingCodes.joinToString(" "))
+                                else -> null
                             },
                         onClick = { onAdd(row.keyboard, group.generatedLayout(row, title)) },
+                        enabled = !row.added,
                     )
                 }
             }

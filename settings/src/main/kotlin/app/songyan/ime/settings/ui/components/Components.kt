@@ -164,21 +164,32 @@ fun SettingsRow(
     trailing: @Composable (() -> Unit)? = null,
     /** The row whose page is open beside the list in the two-pane layout. */
     selected: Boolean = false,
+    /** A disabled row is greyed out and ignores taps. */
+    enabled: Boolean = true,
 ) {
+    val dimmed = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = subtitle?.let { { Text(it) } },
         leadingContent = icon?.let { { Icon(imageVector = it, contentDescription = null) } },
         trailingContent = trailing,
         colors =
-            if (selected) {
-                ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            } else {
-                ListItemDefaults.colors()
+            when {
+                !enabled ->
+                    ListItemDefaults.colors(
+                        headlineColor = dimmed,
+                        supportingColor = dimmed,
+                        leadingIconColor = dimmed,
+                    )
+                selected -> ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                else -> ListItemDefaults.colors()
             },
-        modifier = modifier.selectable(selected = selected, onClick = onClick),
+        modifier = modifier.selectable(selected = selected, enabled = enabled, onClick = onClick),
     )
 }
+
+/** Material's opacity for disabled content. */
+private const val DISABLED_ALPHA = 0.38f
 
 /**
  * A row that selects one value out of a list. The row is the only tap target and owns the radio

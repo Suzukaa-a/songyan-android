@@ -280,6 +280,7 @@
     <string name="keyboards_remove">移除「%1$s」</string>
     <string name="keyboards_none_for_method">還沒有鍵盤，鍵盤選單裡不顯示這個輸入方式。</string>
     <string name="keyboards_missing_codes">鍵盤上沒有 %1$s 鍵，有些內容打不出來</string>
+    <string name="keyboards_already_added">已新增</string>
     <string name="keyboards_unknown_codes">這個輸入方案可能要用到鍵盤上沒有的鍵，可在「鍵盤配置」裡加上。</string>
     <string name="keyboards_preparing">正在準備…</string>
     <string name="keyboards_unavailable">這個輸入方式用不了這種鍵盤</string>

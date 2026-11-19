@@ -4,9 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -124,6 +127,19 @@ class KeyboardsScreenTest {
             compose.onNodeWithText(str(shape)).assertDoesNotExist()
         }
         compose.onNodeWithText(str(R.string.layout_name_26)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theAddDialogGreysOutTheKeyboardsAlreadyAdded() {
+        show(listOf(pinyin), k("quanpin:qwerty26"))
+        val before = stored.keyboards
+        compose.onNodeWithText(str(R.string.keyboards_add)).performScrollTo().performClick()
+        compose.onAllNodesWithText(str(R.string.keyboards_already_added)).onFirst().assertIsNotEnabled()
+        compose.onAllNodesWithText(str(R.string.keyboards_already_added)).onFirst().performClick()
+        compose.waitForIdle()
+        assertEquals(before, stored.keyboards)
+        compose.onNodeWithText(str(R.string.keyboards_add_title, "全拼")).assertExists()
+        compose.onNodeWithText("我的布局").assertIsEnabled()
     }
 
     @Test

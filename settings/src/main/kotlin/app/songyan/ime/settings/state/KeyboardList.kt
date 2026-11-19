@@ -27,6 +27,8 @@ data class KeyboardRow(
     /** Set while the layout is yet to be made from the key profile; adding the keyboard installs it. */
     val generated: ApplicableLayouts.Generated? = null,
     val status: KeyboardStatus = KeyboardStatus.READY,
+    /** In [KeyboardGroup.offered]: the input method already has this keyboard. */
+    val added: Boolean = false,
 )
 
 /** Whether a keyboard in the list can be used now. */
@@ -46,6 +48,11 @@ data class KeyboardGroup(
     val schemeName: String,
     val keyboards: List<KeyboardRow>,
     val addable: List<KeyboardRow>,
+    /**
+     * Every layout the input method can have a keyboard on, in catalog order, the ones it has marked
+     * [KeyboardRow.added]: the add dialog lists them all so a layout never seems unsupported.
+     */
+    val offered: List<KeyboardRow> = addable,
     /** True when the input method's speller could not be read: which codes it needs is unknown. */
     val unknownCodes: Boolean = false,
     val profile: SchemaKeyProfile? = null,
@@ -212,6 +219,7 @@ fun keyboardList(
             val ids = shown.mapTo(HashSet()) { it.id }
             val entries = ApplicableLayouts.entries(allowed, registry, families)
             val byId = entries.associateBy { it.keyboard.id }
+            val offered = entries.map { row(it.keyboard, it, scheme.profile).copy(added = it.keyboard.id in ids) }
             KeyboardGroup(
                 schemeId = scheme.id,
                 schemeName = scheme.name,
@@ -225,7 +233,8 @@ fun keyboardList(
                             }
                         row(it, byId[it.id], scheme.profile, state)
                     },
-                addable = entries.filter { it.keyboard.id !in ids }.map { row(it.keyboard, it, scheme.profile) },
+                addable = offered.filterNot { it.added },
+                offered = offered,
                 unknownCodes = scheme.profile?.kind == SchemaKeyProfile.Kind.UNKNOWN,
                 profile = scheme.profile,
             )

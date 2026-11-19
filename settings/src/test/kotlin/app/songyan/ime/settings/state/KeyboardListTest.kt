@@ -65,6 +65,20 @@ class KeyboardListTest {
     }
 
     @Test
+    fun theAddDialogListsKeyboardsAlreadyAddedAsAdded() {
+        val stored =
+            UserKeyboards.Stored(
+                listOf(PublishedKeyboard("rime_ice", KeyboardLayoutKind.PHONE9, "phone9")),
+                setOf("rime_ice"),
+            )
+        val offered = list(stored).groups[0].offered
+        assertTrue(offered.single { it.keyboard.layout == KeyboardLayoutKind.PHONE9 }.added)
+        assertTrue(offered.single { it.keyboard.layout == KeyboardLayoutKind.QWERTY26 }.added)
+        assertTrue(offered.any { it.keyboard.layout == KeyboardLayoutKind.MERGED14 && !it.added })
+        assertEquals(offered.filterNot { it.added }, list(stored).groups[0].addable)
+    }
+
+    @Test
     fun aLayoutTheUserCopiedCanBeAddedAsItsOwnKeyboard() {
         val copy = BuiltinLayouts.qwerty26.copyWithId("copy", "副本")
         val list = list(registry = registry.install(copy.encoded()))

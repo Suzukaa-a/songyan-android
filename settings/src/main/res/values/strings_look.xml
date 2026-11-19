@@ -280,6 +280,7 @@
     <string name="keyboards_remove">Remove %1$s</string>
     <string name="keyboards_none_for_method">No keyboards yet, so the keyboard menu leaves this input method out.</string>
     <string name="keyboards_missing_codes">This keyboard has no %1$s key, so some things can\'t be typed</string>
+    <string name="keyboards_already_added">Added</string>
     <string name="keyboards_unknown_codes">This input method may need keys that aren’t on the keyboard. You can add them in Keyboard layouts.</string>
     <string name="keyboards_preparing">Preparing…</string>
     <string name="keyboards_unavailable">This input method can’t use this keyboard</string>

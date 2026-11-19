@@ -9,6 +9,8 @@ import android.graphics.Rect
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.text.InputType
+import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -302,6 +304,8 @@ abstract class RealEngineEditorTestBase {
         fixtureAssetRoot: String? = null,
         /** Wraps the real backend so a prediction dismissal can be held before the engine answers. */
         pauseDismiss: Boolean = false,
+        /** False hides the engine's learning suppression, as an engine without it would. */
+        learningSuppression: Boolean = true,
         block: (Host) -> T,
     ): T {
         val user = File(root, "user-" + SystemClock.uptimeMillis())
@@ -326,9 +330,10 @@ abstract class RealEngineEditorTestBase {
             runBlocking {
                 RimeEngineBackend.create(engineSource, user, engineCompiled, RimeEngine.DEFAULT_APP_NAME, "test")
             }
+        val tested = if (pauseDismiss) PausedDismissBackend(backend) else backend
         val host =
             Host(
-                if (pauseDismiss) PausedDismissBackend(backend) else backend,
+                if (learningSuppression) tested else WithoutLearningSuppression(tested),
                 layout,
                 fontScale,
                 schema,
@@ -383,6 +388,13 @@ abstract class RealEngineEditorTestBase {
             gate = null
             return inner.dismissPrediction()
         }
+    }
+
+    /** The same backend claiming no way to stop learning. */
+    protected class WithoutLearningSuppression(
+        inner: EngineBackend,
+    ) : EngineBackend by inner {
+        override val supportsLearningSuppression: Boolean = false
     }
 
     protected class Host(
@@ -1399,6 +1411,66 @@ abstract class RealEngineEditorTestBase {
         }
 
         fun main(block: () -> Unit) = instrumentation.runOnMainSync(block)
+
+        /** Every hardware event given to the controller, in order. */
+        val sentHardware = mutableListOf<KeyEvent>()
+
+        /** What the keyboard answered to one hardware key: whether it took the press and the release. */
+        data class HardwareTaken(
+            val down: Boolean,
+            val up: Boolean,
+        )
+
+        /** One hardware key event for the controller, built as a Bluetooth keyboard's event is. */
+        fun hardwareEvent(
+            action: Int,
+            keyCode: Int,
+            meta: Int = 0,
+        ): Boolean {
+            var taken = false
+            val now = SystemClock.uptimeMillis()
+            val event =
+                KeyEvent(
+                    now,
+                    now,
+                    action,
+                    keyCode,
+                    0,
+                    meta,
+                    KeyCharacterMap.VIRTUAL_KEYBOARD,
+                    0,
+                    0,
+                    InputDevice.SOURCE_KEYBOARD,
+                )
+            sentHardware += event
+            main { taken = controller.hardwareKey(event) }
+            return taken
+        }
+
+        /** A key pressed and released; waits for the engine to answer both. */
+        fun hardware(
+            keyCode: Int,
+            meta: Int = 0,
+        ): HardwareTaken {
+            val down = hardwareEvent(KeyEvent.ACTION_DOWN, keyCode, meta)
+            val up = hardwareEvent(KeyEvent.ACTION_UP, keyCode, meta)
+            awaitIdle()
+            return HardwareTaken(down, up)
+        }
+
+        /** Types lowercase letters and digits as hardware keys. */
+        fun typeHardware(text: String) {
+            for (char in text) {
+                val code =
+                    when (char) {
+                        in 'a'..'z' -> KeyEvent.KEYCODE_A + (char - 'a')
+                        in '0'..'9' -> KeyEvent.KEYCODE_0 + (char - '0')
+                        ' ' -> KeyEvent.KEYCODE_SPACE
+                        else -> error("no hardware key for '$char'")
+                    }
+                hardware(code)
+            }
+        }
 
         fun close() =
             main {

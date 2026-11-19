@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
@@ -146,6 +147,8 @@ class KeyboardController(
         val swipeSelectTo: (Int) -> Unit = {},
         /** Ends the swipe: delete the selection, or give the caret back. */
         val swipeSelectEnd: (delete: Boolean) -> Unit = {},
+        /** Hands a hardware key event the engine left alone back to the app, unchanged. */
+        val forwardKey: (KeyEvent) -> Unit = {},
     )
 
     /**
@@ -830,6 +833,60 @@ class KeyboardController(
         operations.trySend(ANY_GENERATION to stepOp)
     }
 
+    /** Hardware key downs whose composing or engine-consumed press was swallowed; their release is too. */
+    internal val swallowedHardwareDowns = HashSet<Int>()
+
+    /** Hardware keys queued but not yet run; a later key must not overtake them. */
+    internal var pendingHardwareKeys = 0
+
+    /** A hardware key has typed since the keyboard attached: the session runs the full keyboard. */
+    internal var hardwareTyping = false
+
+    /**
+     * Keys the engine must not see: no engine, a notice, a switch in flight, a forced-ASCII, numeric
+     * or private-direct editor, or no session at all. The app gets those keys from the platform.
+     */
+    internal val hardwareBypass: Boolean
+        get() =
+            retired ||
+                engineNotice != null ||
+                announceWhenReady ||
+                policy.ascii ||
+                policy.numeric ||
+                privateDirectInput ||
+                (session == null && pendingBackend == null)
+
+    /**
+     * One hardware key event, on the main thread. True when the keyboard took it: the platform must
+     * not handle it, and whatever the engine leaves is sent to the app again from the queue. False
+     * leaves the event to the platform, with no queue hop.
+     */
+    fun hardwareKey(event: KeyEvent): Boolean {
+        val up = event.action == KeyEvent.ACTION_UP
+        val owed = up && event.keyCode in swallowedHardwareDowns
+        // enqueuePress would drop these.
+        if (retired || engineNotice != null || announceWhenReady) return false
+        val stroke = HardwareKeyMap.of(event)
+        if (!owed && pendingHardwareKeys == 0 && (stroke == null || hardwareBypass)) return false
+        ImePerf.keyDown()
+        pendingHardwareKeys++
+        enqueuePress {
+            try {
+                runHardwareKey(event, stroke)
+            } finally {
+                pendingHardwareKeys--
+            }
+        }
+        return true
+    }
+
+    /** A hardware keyboard went away: the session goes back to the user's own layout. */
+    fun setHardwareKeyboardAttached(attached: Boolean) {
+        if (attached || !hardwareTyping) return
+        hardwareTyping = false
+        enqueue { session.takeIf { ready }?.let { applyPreferences(it) } }
+    }
+
     /** Engine replies cannot authorize writes after the owning input generation ends. */
     internal fun fieldStillCurrent(): Boolean = dispatchGeneration == generation && !retired && !preparing
 
@@ -908,6 +965,8 @@ class KeyboardController(
         ready = false
         pendingBackend = null
         heldKeys.clear()
+        pendingHardwareKeys = 0
+        swallowedHardwareDowns.clear()
         enqueue { kana12Reset() }
         session?.engine?.releaseWordCompletions()
         englishQueryJob?.cancel()
@@ -1076,6 +1135,8 @@ class KeyboardController(
         generation++
         keyEpoch++
         heldKeys.clear()
+        pendingHardwareKeys = 0
+        swallowedHardwareDowns.clear()
         candidates.abandonLoad()
         ready = false
         resetEnglishWord()

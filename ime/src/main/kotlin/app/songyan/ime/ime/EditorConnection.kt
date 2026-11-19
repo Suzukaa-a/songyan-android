@@ -625,6 +625,18 @@ class EditorConnection(
         textBeforeComplete = false
     }
 
+    /**
+     * Sends a hardware key event the engine did not take on to the editor, unchanged. The framework
+     * delivers it after the input method stage, so it cannot come back here.
+     */
+    fun forwardKey(event: KeyEvent) {
+        val ic = connection() ?: return
+        ic.sendKeyEvent(event)
+        // The app is about to change text and selection on its own.
+        selection.forget()
+        forgetText()
+    }
+
     /** Bounded text before the selection: the nine-key symbol cycle checks its last write. */
     fun contextBeforeCursor(limit: Int): String? {
         val ic = connection() ?: return null
@@ -840,4 +852,5 @@ fun EditorConnection.keyboardCallbacks(
         swipeSelectReach = { swipeReach },
         swipeSelectTo = { swipeSelectTo(it) },
         swipeSelectEnd = { swipeSelectEnd(it) },
+        forwardKey = { forwardKey(it) },
     )

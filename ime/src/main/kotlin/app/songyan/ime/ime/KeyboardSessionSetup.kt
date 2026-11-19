@@ -78,7 +78,14 @@ internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean 
 internal suspend fun KeyboardController.applyEditorMode(active: InputSession) {
     val protection = active.setLearningEnabled(!policy.suppressesLearning)
     privateDirectInput = policy.directInputRequired(protection == InputSession.LearningProtection.ENFORCED)
-    active.setMode(policy.modeFor(privateDirectInput))
+    val mode = policy.modeFor(privateDirectInput)
+    if (hardwareTyping && mode == InputMode.ENGLISH && !policy.ascii && !privateDirectInput) {
+        // The front-end English mode has no hardware switch key; Rime's own ASCII mode does.
+        active.setMode(InputMode.CHINESE)
+        active.setOption("ascii_mode", true)
+    } else {
+        active.setMode(mode)
+    }
 }
 
 /**

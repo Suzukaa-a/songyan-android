@@ -300,8 +300,9 @@ internal suspend fun KeyboardController.readPreferences() {
 }
 
 internal suspend fun KeyboardController.applyPreferences(active: InputSession) {
-    visitingLayout = false
-    val layout = preferredLayout
+    // Hardware typing keeps the full keyboard, so a new field does not bounce back to a folded
+    // companion and select again on its first key.
+    val layout = if (hardwareTyping) KeyboardLayoutKind.QWERTY26 else preferredLayout
     val schema = preferredSchema
     if (active.layout == layout && active.selectedSchemaID == schema) {
         // A stored layout the new scheme's family cannot use is repaired here as well: the pair can
@@ -311,6 +312,7 @@ internal suspend fun KeyboardController.applyPreferences(active: InputSession) {
         active.selectLayout(layout, schema)
     }
     syncSelection(active)
+    visitingLayout = hardwareTyping && preferredLayout != KeyboardLayoutKind.QWERTY26
     persistSelection(active)
 }
 

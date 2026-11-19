@@ -115,6 +115,15 @@ internal object HardwareKeyMap {
         return Stroke(keysym, mask, printable = false)
     }
 
+    /** [stroke] for a live event. */
+    fun of(event: KeyEvent): Stroke? =
+        stroke(
+            event.keyCode,
+            event.metaState,
+            event.getUnicodeChar(event.metaState and CHARACTER_META),
+            event.action == KeyEvent.ACTION_UP,
+        )
+
     /** The character a key produces for [stroke]: Shift, Caps Lock and Num Lock only. */
     const val CHARACTER_META: Int =
         KeyEvent.META_SHIFT_MASK or KeyEvent.META_CAPS_LOCK_ON or KeyEvent.META_NUM_LOCK_ON

@@ -350,17 +350,8 @@ fun KeyFields(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        if (codes != null) {
-            OutlinedTextField(
-                value = codes.value,
-                onValueChange = codes.onChange,
-                label = { Text(stringResource(R.string.layout_editor_key_codes)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
         WidthField(key.width, span) { onChange(key.copy(width = it)) }
-        if (editPrimaryAction) ActionFields(key, allowCode, literalOnly, allowJump, onChange)
+        if (editPrimaryAction) ActionFields(key, allowCode, literalOnly, allowJump, onChange, codes)
         LongPressFields(key, onChange)
     }
 }
@@ -421,6 +412,7 @@ private fun ActionFields(
     literalOnly: Boolean,
     allowJump: Boolean,
     onChange: (LayoutKey) -> Unit,
+    codes: KeyCodesField?,
 ) {
     val choices = if (literalOnly) listOf(KeyActionChoice.LITERAL) else KeyActionChoice.allowed(allowCode, allowJump)
     val current = KeyActionChoice.of(key.action)
@@ -443,6 +435,15 @@ private fun ActionFields(
         },
     )
     when (current) {
+        // A merged key types the codes it covers; what it sends follows from them.
+        KeyActionChoice.CODE if codes != null ->
+            OutlinedTextField(
+                value = codes.value,
+                onValueChange = codes.onChange,
+                label = { Text(stringResource(R.string.layout_editor_key_codes)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
         KeyActionChoice.CODE ->
             OutlinedTextField(
                 value = key.action.value.orEmpty(),

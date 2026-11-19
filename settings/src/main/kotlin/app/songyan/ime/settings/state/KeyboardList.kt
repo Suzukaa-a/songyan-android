@@ -161,7 +161,18 @@ fun keyboardList(
             ?.takeIf { id -> shape != null && listed.any { it.id == id } }
             ?.let { PublishedKeyboard(it, requireNotNull(shape), layoutDefinitionId) }
     val current = selected?.let { UserKeyboards.named(it, registry, families) }
-    val legacy = LegacyKeyboards.of(keyboardSchemes, hiddenSchemas, hiddenLayouts, registry, families, selected)
+    // An input method never edited lists every keyboard it can have, built or not: after an install
+    // only the one in use has its folds built at first, and the rest follow in the background.
+    val legacy =
+        LegacyKeyboards.of(
+            // A build without speller profiles cannot say which folds it will make: only what it has.
+            listed.map { if (it.profile != null) possible.getValue(it.id) else it.keyboardScheme() },
+            hiddenSchemas,
+            hiddenLayouts,
+            registry,
+            families,
+            selected,
+        )
     val effective = UserKeyboards.effective(stored, listed.map { it.id }, legacy)
     val runnable =
         UserKeyboards

@@ -122,4 +122,29 @@ class KeyboardListTest {
                 .map { it.keyboard.layout },
         )
     }
+
+    @Test
+    fun anInputMethodNotInUseListsItsFoldsWhileTheyAreStillBuilt() {
+        // Right after an install only the input method in use has its folds built.
+        val pinyin = SchemaKeyProfile(SchemaKeyProfile.Kind.SYLLABIC, listOf("a"))
+        val inUse = InstalledScheme("rime_ice", "冰雪", all, profile = pinyin)
+        val other = InstalledScheme("double_pinyin", "双拼", setOf("qwerty26"), profile = pinyin)
+        val list =
+            keyboardList(
+                listOf(inUse, other),
+                "rime_ice",
+                "qwerty26",
+                null,
+                UserKeyboards.Stored(),
+                emptySet(),
+                emptySet(),
+                registry,
+            )
+        val rows = list.groups[1].keyboards
+        assertEquals(KeyboardLayoutKind.entries.toList(), rows.map { it.keyboard.layout })
+        assertEquals(
+            listOf(KeyboardStatus.READY) + List(rows.size - 1) { KeyboardStatus.PREPARING },
+            rows.map { it.status },
+        )
+    }
 }

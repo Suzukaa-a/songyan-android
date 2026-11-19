@@ -4,11 +4,19 @@
 
 ### 新增
 
-- 「键盘布局」里可以自己决定 14 键、18 键和 9 键哪几个编码合用一个键：在按键的「编码」里填写，标题只管显示；导入的布局也一样。编码只能是英文字母、数字或半角符号；不合规的编码和重复的编码会标出来，改好之前不能保存；比原来少了的编码会提示，「我的键盘」也会写明输入方案缺哪个键。
+- 「键盘布局」里可以自己决定 14 键、18 键和 9 键哪几个编码合用一个键：在按键「点按时」的「编码」里填写，标题只管显示；导入的布局也一样。编码只能是英文字母、数字或半角符号；不合规的编码和重复的编码会标出来，改好之前不能保存；比原来少了的编码会提示，「我的键盘」也会写明输入方案缺哪个键。
+
+### 修复
+
+- 「我的键盘」里没在使用的输入方案也会列出 14 键、18 键和 9 键，还没准备好的显示「正在准备…」，不再只显示 26 键。
 
 ### New
 
-- In Keyboard layouts you can choose which codes share a key on 14-, 18- and 9-key layouts: fill in a key's Codes, while its title only sets what it shows; imported layouts work the same way. Codes must be letters, digits or half-width marks; invalid or repeated codes are named and block saving until fixed, codes dropped from the original are pointed out, and My Keyboards says which keys an input scheme is missing.
+- In Keyboard layouts you can choose which codes share a key on 14-, 18- and 9-key layouts: fill in Codes under a key's tap action, while its title only sets what it shows; imported layouts work the same way. Codes must be letters, digits or half-width marks; invalid or repeated codes are named and block saving until fixed, codes dropped from the original are pointed out, and My Keyboards says which keys an input scheme is missing.
+
+### Fixed
+
+- My Keyboards now lists 14-, 18- and 9-key keyboards for input schemes not in use, showing "Preparing…" until they are ready, instead of only 26 keys.
 
 ## 0.2.0 (2026-11-20)
 

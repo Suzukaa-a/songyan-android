@@ -12,6 +12,7 @@ import app.songyan.ime.layout.GeneratedLayouts
 import app.songyan.ime.layout.KeyboardScheme
 import app.songyan.ime.layout.LayoutCodeCoverage
 import app.songyan.ime.layout.LayoutDefinition
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.layout.LegacyKeyboards
 import app.songyan.ime.layout.UserKeyboards
@@ -123,11 +124,17 @@ fun InstalledScheme.possibleScheme(families: LayoutFamilyContext): KeyboardSchem
                 )
         },
         profile,
+        builtFolds,
     )
 
 /** The shapes the app state says [this] input method's engine data can run. */
 fun InstalledScheme.keyboardScheme(): KeyboardScheme =
-    KeyboardScheme(id, supportedLayouts.mapNotNullTo(LinkedHashSet()) { KeyboardLayoutKind.fromWire(it) }, profile)
+    KeyboardScheme(
+        id,
+        supportedLayouts.mapNotNullTo(LinkedHashSet()) { KeyboardLayoutKind.fromWire(it) },
+        profile,
+        builtFolds,
+    )
 
 /**
  * Builds 我的键盘 from the same values the keyboard menu reads: the stored list, the two hidden sets
@@ -200,8 +207,10 @@ fun keyboardList(
                         it.schemaID == scheme.id &&
                             it.id !in ready &&
                             UserKeyboards.drawsItsLayout(it, registry, families)
-                    }.filter { it.layout in allowed.shapes || it.layout.wire in scheme.unavailableLayouts }
-                    .map { UserKeyboards.named(it, registry, families) }
+                    }.filter {
+                        it.layout in allowed.shapes ||
+                            LayoutFold.shapeWire(registry, it) in scheme.unavailableLayouts
+                    }.map { UserKeyboards.named(it, registry, families) }
             val rank = effective.filter { it.schemaID == scheme.id }.map { it.id }
             val shownOwn =
                 (own + waiting)
@@ -228,7 +237,11 @@ fun keyboardList(
                         val state =
                             when {
                                 it.id in ready || it.id == current?.id -> KeyboardStatus.READY
-                                it.layout.wire in scheme.unavailableLayouts -> KeyboardStatus.UNAVAILABLE
+                                LayoutFold.of(registry, it.layout, it.board) == null ||
+                                    LayoutFold.shapeWire(
+                                        registry,
+                                        it,
+                                    ) in scheme.unavailableLayouts -> KeyboardStatus.UNAVAILABLE
                                 else -> KeyboardStatus.PREPARING
                             }
                         row(it, byId[it.id], scheme.profile, state)

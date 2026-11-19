@@ -17,6 +17,7 @@ import app.songyan.ime.keyboard.engine.ReadingCandidate
 import app.songyan.ime.keyboard.engine.ReadingRailRead
 import app.songyan.ime.keyboard.engine.ReadingRailRequest
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyAction
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.support.ShiftState
@@ -138,7 +139,8 @@ class InputSession(
     var confirmationTarget: (() -> Int?)? = null
 
     /** Layout->schema mapping of the current resource set; null = the built-in template pairing. */
-    val resourceSet: KeyboardResourceSet?
+    var resourceSet: KeyboardResourceSet?
+        private set
 
     /** Called on state changes (candidates/preedit/composition state). */
     var onUpdate: (() -> Unit)? = null
@@ -337,6 +339,26 @@ class InputSession(
         shiftIsManual = shiftState.isActive
         onUpdate?.invoke()
     }
+
+    /**
+     * Runs the drawn layouts on [folds] (see [KeyboardResourceSet.folds]). When the running layout's
+     * companion changes with them, the engine moves to the new one, keeping the input method; a
+     * grouping without a companion leaves the layout unusable, reported like any missing layout.
+     */
+    suspend fun useFolds(folds: Map<KeyboardLayoutKind, CompactFold?>) {
+        val set = resourceSet ?: return
+        if (set.folds == folds) return
+        resourceSet = set.copy(folds = folds)
+        if (retired || !currentLayout.requiresSpellingDisplay) return
+        revalidateCurrentSchemaImpl()
+    }
+
+    /** The fold the running layout types with: the drawn layout's own grouping, else the bundled one. */
+    val layoutFold: CompactFold?
+        get() {
+            val set = resourceSet ?: return currentLayout.compactFold
+            return set.foldFor(currentLayout)
+        }
 
     // MARK: Schema / layout selection
 

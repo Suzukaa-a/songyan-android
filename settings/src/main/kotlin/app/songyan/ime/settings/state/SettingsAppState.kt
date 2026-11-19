@@ -22,6 +22,8 @@ data class InstalledScheme(
     val profile: SchemaKeyProfile? = null,
     /** Folded layouts the generator refused for this input method: asked for, never built, never retried. */
     val unavailableLayouts: Set<String> = emptySet(),
+    /** The layouts' own groupings whose companions this build holds for it; see [KeyboardScheme.builtFolds]. */
+    val builtFolds: Set<String> = emptySet(),
 )
 
 /** The families the app state already resolved, for choosing a keyboard's physical layout. */

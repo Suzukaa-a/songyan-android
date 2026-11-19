@@ -154,4 +154,45 @@ class UserKeyboardsTest {
         assertEquals(result.keyboards, none.keyboards)
         assertEquals(setOf("a", "b", "new"), none.schemes)
     }
+
+    @Test
+    fun aKeyboardOnALayoutOfItsOwnIsRunnableOnceItsGroupingIsBuilt() {
+        fun regrouped(
+            id: String,
+            first: String,
+            second: String,
+        ): LayoutDefinition {
+            val base = BuiltinLayouts.merged14.copyWithId(id, id)
+            val row = base.rows[0]
+            val keys =
+                row.keys.toMutableList().also {
+                    it[0] = it[0].copy(label = first, action = LayoutAction.code(first.take(1).lowercase()))
+                    it[1] = it[1].copy(label = second, action = LayoutAction.code(second.take(1).lowercase()))
+                }
+            return base.copy(rows = listOf(LayoutRow(keys)) + base.rows.drop(1))
+        }
+        val mine = regrouped("mine", "Q", "WER")
+        val broken = regrouped("broken", "QWE", "ER")
+        val registry = LayoutRegistry.create().install(mine.encoded()).install(broken.encoded())
+        val fold = requireNotNull(LayoutFold.of(mine, KeyboardLayoutKind.MERGED14))
+        val all = listOf(k("rime_ice:merged14#mine"), k("rime_ice:merged14#broken"), k("rime_ice:merged14#merged14"))
+        val shapes = setOf(KeyboardLayoutKind.MERGED14)
+        assertEquals(
+            listOf("rime_ice:merged14#merged14"),
+            UserKeyboards.runnable(all, listOf(KeyboardScheme("rime_ice", shapes)), registry, families).map { it.id },
+        )
+        assertEquals(
+            listOf("rime_ice:merged14#mine", "rime_ice:merged14#merged14"),
+            UserKeyboards
+                .runnable(
+                    all,
+                    listOf(KeyboardScheme("rime_ice", shapes, builtFolds = setOf(fold.id))),
+                    registry,
+                    families,
+                ).map { it.id },
+        )
+        assertEquals("merged14:" + fold.id, LayoutFold.shapeWire(registry, k("rime_ice:merged14#mine")))
+        assertEquals("merged14", LayoutFold.shapeWire(registry, k("rime_ice:merged14#merged14")))
+        assertNull(LayoutFold.shapeWire(registry, k("rime_ice:merged14#broken")))
+    }
 }

@@ -1,6 +1,7 @@
 package app.songyan.ime.keyboard.engine
 
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -162,5 +163,39 @@ class KeyboardResourceSetTest {
                 ).title,
         )
         assertNotNull(display.keyboard)
+    }
+
+    @Test
+    fun aLayoutOfItsOwnRunsOnlyOnItsOwnGroupingsCompanion() {
+        val quanpin = BuiltinTemplateSchemas.QUANPIN
+        val bundled = builtin().logicalSchemaID(quanpin, KeyboardLayoutKind.MERGED14)
+        val custom =
+            requireNotNull(
+                CompactFold.of(KeyboardLayoutKind.MERGED14, CompactFold.MERGED14.map + ('w' to 'e')),
+            )
+        val own =
+            KeyboardResourceSet.EncodingAdapter(
+                quanpin,
+                "keyboard_own",
+                KeyboardLayoutKind.MERGED14,
+                fold = custom.id,
+            )
+        // Not built yet: the layout runs on nothing, never on the bundled companion.
+        val waiting = builtin().copy(folds = mapOf(KeyboardLayoutKind.MERGED14 to custom))
+        assertNull(waiting.logicalSchemaID(quanpin, KeyboardLayoutKind.MERGED14))
+        assertEquals(custom, waiting.foldFor(KeyboardLayoutKind.MERGED14))
+        // Built: it runs on its own companion; the other shapes keep the bundled ones.
+        val built = waiting.copy(encodingAdapters = waiting.encodingAdapters + own)
+        assertEquals("keyboard_own", built.logicalSchemaID(quanpin, KeyboardLayoutKind.MERGED14))
+        assertEquals(
+            builtin().logicalSchemaID(quanpin, KeyboardLayoutKind.PHONE9),
+            built.logicalSchemaID(quanpin, KeyboardLayoutKind.PHONE9),
+        )
+        // A drawn layout whose letters do not fold runs on nothing.
+        val broken = built.copy(folds = mapOf(KeyboardLayoutKind.MERGED14 to null))
+        assertNull(broken.logicalSchemaID(quanpin, KeyboardLayoutKind.MERGED14))
+        assertNull(broken.foldFor(KeyboardLayoutKind.MERGED14))
+        // Without a layout of its own the bundled pairing is unchanged.
+        assertEquals(bundled, built.copy(folds = emptyMap()).logicalSchemaID(quanpin, KeyboardLayoutKind.MERGED14))
     }
 }

@@ -164,7 +164,27 @@ data class KeyboardResourceSet(
     val publishedKeyboards: List<PublishedKeyboard>? = null,
     val englishCandidateRoutes: List<EnglishCandidateRoute> = emptyList(),
     val encodingAdapters: List<EncodingAdapter> = emptyList(),
+    /**
+     * The folds of the layouts the keyboard draws, by layout, where the drawn layout is not the
+     * bundled one. Such a layout runs only on the companion generated for its own grouping, never on
+     * the bundled one, whose keys would mean other letters; a null fold is a drawn layout whose
+     * letters do not fold cleanly, which runs on no companion at all.
+     */
+    val folds: Map<KeyboardLayoutKind, CompactFold?> = emptyMap(),
 ) {
+    /** The fold [layout] types with here: its drawn layout's own, else the bundled one. */
+    fun foldFor(layout: KeyboardLayoutKind): CompactFold? = if (layout in folds) folds[layout] else layout.compactFold
+
+    /** The companion that runs [source] on [layout] with the fold the keyboard draws. */
+    fun adapterFor(
+        source: String,
+        layout: KeyboardLayoutKind,
+    ): EncodingAdapter? {
+        if (layout in folds && folds[layout] == null) return null
+        val own = folds[layout]?.takeUnless { it.isBuiltin }?.id
+        return encodingAdapters.firstOrNull { it.sourceSchemaID == source && it.layout == layout && it.fold == own }
+    }
+
     /** One runnable pair in this resource source. */
     data class Combination(
         /** The user-visible enabled schema. */
@@ -247,7 +267,7 @@ data class KeyboardResourceSet(
                         result += Combination(source, engine, layout, sourceName)
                         continue
                     }
-                    val adapter = encodingAdapters.firstOrNull { it.sourceSchemaID == source && it.layout == layout }
+                    val adapter = adapterFor(source, layout)
                     if (adapter != null) {
                         result +=
                             Combination(
@@ -282,7 +302,7 @@ data class KeyboardResourceSet(
         layout: KeyboardLayoutKind,
     ): String? {
         if (!InputLayoutPolicy.allows(layout, familyOf(source))) return null
-        encodingAdapters.firstOrNull { it.sourceSchemaID == source && it.layout == layout }?.let { return it.schemaID }
+        adapterFor(source, layout)?.let { return it.schemaID }
         if (layoutEntries.any { it.schemaID == source && it.layout == layout }) return source
         if (!layout.requiresSpellingDisplay) return source
         return null

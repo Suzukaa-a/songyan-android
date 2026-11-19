@@ -337,6 +337,7 @@ internal suspend fun KeyboardController.persistSelection(active: InputSession) {
 internal suspend fun KeyboardController.applyPreferenceChange() {
     val active = session ?: return
     if (!ready) return
+    followDrawnFold(active)
     applyPreferences(active)
     updateSwipe(active)
     syncMenu()
@@ -471,6 +472,13 @@ internal fun KeyboardController.menuKeyboards(listed: List<String>? = null): Key
                     it[id].orEmpty().toSet()
                 } ?: KeyboardLayoutKind.entries.toSet(),
                 set?.keyProfiles?.get(id),
+                set
+                    ?.encodingAdapters
+                    ?.filter { it.sourceSchemaID == id }
+                    ?.mapNotNullTo(
+                        HashSet(),
+                    ) { it.fold }
+                    .orEmpty(),
             )
         }
     val current =

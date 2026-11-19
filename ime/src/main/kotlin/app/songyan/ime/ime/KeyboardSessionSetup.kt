@@ -6,9 +6,11 @@ import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.session.InputMode
 import app.songyan.ime.keyboard.session.InputSession
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.UserKeyboards
 
 internal suspend fun KeyboardController.prepareSession(keepComposition: Boolean = false) {
@@ -116,7 +118,42 @@ internal suspend fun KeyboardController.reapplyEditorMode() {
  * gate before selectSchema would refuse a schema the engine is already able to run.
  */
 internal fun KeyboardController.resourceSet(backend: EngineBackend): KeyboardResourceSet? =
-    KeyboardResourceSets.forEngineSchemas(backend.availableSchemas, backend.encodingAdapters, backend.keyProfiles)
+    KeyboardResourceSets.forEngineSchemas(
+        backend.availableSchemas,
+        backend.encodingAdapters,
+        backend.keyProfiles,
+        drawnFolds(),
+    )
+
+/**
+ * The fold of the layout the keyboard draws on its preferred shape, when that layout is not the
+ * bundled one: the engine must run that grouping's companion (see [KeyboardResourceSet.folds]).
+ * Other shapes draw their bundled layout, as the renderer does.
+ */
+internal fun KeyboardController.drawnFolds(): Map<KeyboardLayoutKind, CompactFold?> =
+    drawnFolds(preferredLayout, preferredLayoutDefinitionId)
+
+/** [drawnFolds] for a keyboard drawing [board] on [layout]. */
+internal fun drawnFolds(
+    layout: KeyboardLayoutKind,
+    board: String?,
+): Map<KeyboardLayoutKind, CompactFold?> {
+    if (board == null || layout.compactFold == null) return emptyMap()
+    val registry = KeyboardLayoutCatalog.snapshot.value.registry
+    return mapOf(layout to LayoutFold.of(registry, layout, board))
+}
+
+/**
+ * Keeps the running session on the fold of the layout now drawn: a keyboard switch or a layout edit
+ * can change the grouping under the same shape, and the engine must follow it.
+ */
+internal suspend fun KeyboardController.followDrawnFold(active: InputSession) {
+    val set = active.resourceSet ?: return
+    val folds = drawnFolds()
+    if (set.folds == folds) return
+    active.useFolds(folds)
+    updateSwipe(active)
+}
 
 /**
  * Switches to one of the user's keyboards: the engine moves to its input method and shape, and the
@@ -129,6 +166,8 @@ internal suspend fun KeyboardController.chooseKeyboard(keyboard: PublishedKeyboa
     val active = session
     val accepted =
         if (active != null && ready) {
+            // The engine runs the companion of the grouping this keyboard draws, chosen before the switch.
+            active.useFolds(drawnFolds(keyboard.layout, keyboard.board))
             active.selectLayout(keyboard.layout, keyboard.schemaID)
             syncSelection(active)
             updateSwipe(active)
@@ -306,7 +345,7 @@ internal fun KeyboardController.applyLayoutCapabilities(active: InputSession) {
 }
 
 internal suspend fun KeyboardController.updateSwipe(active: InputSession) {
-    val fold = active.layout.compactFold
+    val fold = active.layoutFold
     if (fold == null || active.mode != InputMode.CHINESE) {
         mergedSwipe = null
         return

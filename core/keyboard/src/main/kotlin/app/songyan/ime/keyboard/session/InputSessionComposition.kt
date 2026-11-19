@@ -79,7 +79,7 @@ internal fun InputSession.confirmedTextAndRawTail(): Pair<String, String>? {
  * generated adapter) and the engine is reading Chinese input.
  */
 internal suspend fun InputSession.exactTokenLetters(): Map<Char, Char> {
-    val fold = currentLayout.compactFold
+    val fold = layoutFold
     if (mode != InputMode.CHINESE || snapshot.isAsciiMode || fold == null || fold.exactTokens.isEmpty()) {
         return emptyMap()
     }

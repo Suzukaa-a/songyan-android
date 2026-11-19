@@ -1,5 +1,6 @@
 package app.songyan.ime.layout
 
+import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 
@@ -62,6 +63,18 @@ object LayoutFold {
     ): CompactFold? {
         val definition = board?.let(registry::resolvedLayout) ?: return layout.compactFold
         return of(definition, layout)
+    }
+
+    /**
+     * The deploy status name of what [keyboard] folds into: its layout's wire for the bundled
+     * grouping (`phone9`), `merged14:14u1a2b3c4d` for a layout's own, null when it does not fold.
+     */
+    fun shapeWire(
+        registry: LayoutRegistry,
+        keyboard: PublishedKeyboard,
+    ): String? {
+        val fold = of(registry, keyboard.layout, keyboard.board) ?: return null
+        return if (fold.isBuiltin) keyboard.layout.wire else keyboard.layout.wire + ":" + fold.id
     }
 
     /** [fold]'s targets of the 26 letters in a-z order, the form the deploy request carries. */

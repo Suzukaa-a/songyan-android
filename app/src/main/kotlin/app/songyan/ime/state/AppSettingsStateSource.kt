@@ -219,6 +219,7 @@ class AppSettingsStateSource(
             scheme.copy(
                 profile = profiles[scheme.id],
                 unavailableLayouts = unavailable[scheme.id].orEmpty().toSet(),
+                builtFolds = adapters.filter { it.sourceSchemaID == scheme.id }.mapNotNullTo(HashSet()) { it.fold },
                 supportedLayouts =
                     KeyboardLayoutKind.entries
                         .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }

@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.engine.SchemaKeyProfile
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -15,6 +16,8 @@ data class KeyboardScheme(
     val shapes: Set<KeyboardLayoutKind>,
     /** What its speller needs; null while unknown (a build published before profiles). */
     val profile: SchemaKeyProfile? = null,
+    /** The layouts' own groupings ([CompactFold.id]) whose companions are built for it. */
+    val builtFolds: Set<String> = emptySet(),
 )
 
 /** The pairing key of a keyboard: its input method, its shape and the layout it names, if any. */
@@ -184,8 +187,26 @@ object UserKeyboards {
         registry: LayoutRegistry,
         families: LayoutFamilyContext,
     ): List<PublishedKeyboard> {
-        val shapes = schemes.associate { it.id to it.shapes }
-        return all.filter { it.layout in shapes[it.schemaID].orEmpty() && drawsItsLayout(it, registry, families) }
+        val byId = schemes.associateBy { it.id }
+        return all.filter {
+            val scheme = byId[it.schemaID] ?: return@filter false
+            it.layout in scheme.shapes && drawsItsLayout(it, registry, families) && hasItsFold(it, scheme, registry)
+        }
+    }
+
+    /**
+     * Whether [keyboard]'s layout folds into a grouping [scheme] has a companion for: a bundled
+     * grouping always (the shape check covers it), a layout's own only once its companion is built,
+     * and a layout whose letters do not fold cleanly never.
+     */
+    fun hasItsFold(
+        keyboard: PublishedKeyboard,
+        scheme: KeyboardScheme,
+        registry: LayoutRegistry,
+    ): Boolean {
+        if (keyboard.layout.compactFold == null) return true
+        val fold = LayoutFold.of(registry, keyboard.layout, keyboard.board) ?: return false
+        return fold.isBuiltin || fold.id in scheme.builtFolds
     }
 
     /**

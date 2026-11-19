@@ -399,9 +399,9 @@ class CompactSpellingLayoutTest {
     @Test
     fun mislabelledOrIncompleteGroupsAreRejected() {
         var rows = merged14Rows(trailingControls = false)
-        // QW sending w: the key would not send its group's first letter.
+        // QW sending e: the key would send a letter outside its group.
         rows =
-            listOf(LayoutRow(listOf(LayoutKey("QW", action = LayoutAction.code("w"))) + rows[0].keys.drop(1))) +
+            listOf(LayoutRow(listOf(LayoutKey("QW", action = LayoutAction.code("e"))) + rows[0].keys.drop(1))) +
             rows.drop(1)
         assertFalse(CompactSpellingLayout.matches(definition(id = "wrongSent", rows = rows)))
 

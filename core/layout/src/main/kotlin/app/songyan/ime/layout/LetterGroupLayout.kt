@@ -2,7 +2,7 @@ package app.songyan.ime.layout
 
 /**
  * Letter keys read from their labels: each encoding key covers the letters on its cap (QW covers q
- * and w) and sends the first of them. This is the one place that decides whether a definition letter
+ * and w) and sends one of them. This is the one place that decides whether a definition letter
  * keys split a-z cleanly, for compact-spelling eligibility and for per-letter hints alike.
  */
 object LetterGroupLayout {
@@ -10,7 +10,7 @@ object LetterGroupLayout {
 
     /**
      * One group per encoding key, in row order; null unless the main rows are all letter keys whose
-     * labels cover a-z exactly once and each key sends its group first letter. A 26-key layout
+     * labels cover a-z exactly once and each key sends a letter of its group. A 26-key layout
      * yields 26 single-letter groups.
      */
     fun groups(definition: LayoutDefinition?): List<List<Char>>? {
@@ -28,17 +28,17 @@ object LetterGroupLayout {
         return if (seen == ALPHABET) result else null
     }
 
-    /** The letters on one key, first letter first; null when the key does not send its first letter. */
+    /**
+     * The letters on one key, the letter it sends first; null when it sends no letter of its own
+     * group. Read with [LayoutFold]'s rule, the one every merged layout follows.
+     */
     fun groupOf(key: LayoutKey): List<Char>? {
         if (key.action.type != LayoutActionKind.CODE) return null
         val value = key.action.value ?: return null
         if (value.length != 1) return null
         val sent = value.lowercase()[0]
-        if (sent !in ALPHABET) return null
-        val letters = mutableListOf<Char>()
-        for (character in key.label.lowercase()) {
-            if (character in ALPHABET && character !in letters) letters.add(character)
-        }
-        return if (letters.firstOrNull() == sent) letters else null
+        val letters = LayoutFold.lettersOf(key.label)
+        if (sent !in letters) return null
+        return listOf(sent) + (letters - sent)
     }
 }

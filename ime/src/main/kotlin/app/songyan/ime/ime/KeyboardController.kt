@@ -900,6 +900,9 @@ class KeyboardController(
         render()
     }
 
+    /** Whether [event] types a visible character on its own: the first one asks for the bar. */
+    fun isTypingKey(event: KeyEvent): Boolean = HardwareKeyMap.of(event)?.printable == true
+
     /** A hardware keyboard went away: the session goes back to the user's own layout. */
     fun setHardwareKeyboardAttached(attached: Boolean) {
         if (attached || !hardwareTyping) return

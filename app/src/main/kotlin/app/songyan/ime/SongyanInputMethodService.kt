@@ -23,6 +23,7 @@ import android.widget.Toast
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import app.songyan.ime.addons.AddonEditorAccess
 import app.songyan.ime.addons.AddonMenu
@@ -252,6 +253,12 @@ class SongyanInputMethodService : InputMethodService() {
         }
 
     private var controller: KeyboardController? = null
+
+    /** A hardware key asked for the bar in this input view; it stays until the field ends or Back. */
+    private var hardwareBar = false
+
+    /** The system wants the on-screen keyboard (it is off while a hardware keyboard is attached). */
+    private var softKeys = true
 
     /** The extension panel currently hosting a SurfaceView in this keyboard window. */
     private var addonPanel: AddonPanelController? = null
@@ -858,6 +865,7 @@ class SongyanInputMethodService : InputMethodService() {
         // A view rebuilt for a configuration change continues the composition the editor still shows.
         backend?.let { pad.bind(it, keepComposition = editor.composing) }
         pad.configure(policy)
+        pad.setBarOnly(!softKeys)
         if (Build.VERSION.SDK_INT >= 30) {
             window?.window?.setDecorFitsSystemWindows(false)
         }
@@ -887,8 +895,65 @@ class SongyanInputMethodService : InputMethodService() {
         return container
     }
 
+    // No extract editor for a bar that stands alone.
     override fun onEvaluateFullscreenMode(): Boolean =
-        KeyboardGeometry.fullscreenEditor(super.onEvaluateFullscreenMode(), resources.configuration.screenHeightDp)
+        softKeys &&
+            KeyboardGeometry.fullscreenEditor(super.onEvaluateFullscreenMode(), resources.configuration.screenHeightDp)
+
+    /**
+     * The system keeps the on-screen keyboard off while a hardware keyboard is attached, unless the
+     * user turned "show on-screen keyboard" on. That decision is honoured for the keys; the candidate
+     * bar alone is shown once a hardware key asked for it, because there is no other place for it.
+     */
+    override fun onEvaluateInputViewShown(): Boolean {
+        val system = evaluateSoftKeys()
+        controller?.setBarOnly(!system)
+        return system || hardwareBar
+    }
+
+    private fun evaluateSoftKeys(): Boolean {
+        // Always asked, even when the test value decides: the platform treats this call as a hook.
+        val system = super.onEvaluateInputViewShown()
+        softKeys = systemSoftKeysForTest ?: system
+        return softKeys
+    }
+
+    /** The keyboard exists as soon as a hardware key needs it, before any show of the input view. */
+    private fun ensureKeyboard(): KeyboardController? {
+        if (controller == null) {
+            evaluateSoftKeys()
+            setInputView(onCreateInputView())
+        }
+        startControllerInput()
+        return controller
+    }
+
+    /**
+     * Hardware keys go to the engine through the keyboard's queue; what it leaves is sent to the
+     * app again. System keys, a missing engine or connection, and key-event editors stay with the
+     * platform.
+     */
+    private fun routeHardwareKey(event: KeyEvent): Boolean {
+        if (event.isSystem ||
+            KeyEvent.isGamepadButton(event.keyCode) ||
+            event.flags and KeyEvent.FLAG_SOFT_KEYBOARD != 0 ||
+            currentInputConnection == null ||
+            backend == null ||
+            runtimeState != EngineRuntimeState.READY ||
+            editor.keyEventEditor
+        ) {
+            return false
+        }
+        val pad = ensureKeyboard() ?: return false
+        val taken = pad.hardwareKey(event)
+        if (taken && event.action == KeyEvent.ACTION_DOWN && pad.isTypingKey(event) && !softKeys && !hardwareBar) {
+            hardwareBar = true
+            updateInputViewShown()
+            requestShowSelf(0)
+            showWindow(true)
+        }
+        return taken
+    }
 
     /**
      * The window is wrap-content, so the keyboard's top is the window's top; the insets still come from
@@ -947,6 +1012,12 @@ class SongyanInputMethodService : InputMethodService() {
         controller?.refreshAppearance()
         applyWindowAppearance()
         addonPanel?.updatePanelContext()
+        val attached =
+            newConfig.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS &&
+                newConfig.hardKeyboardHidden != android.content.res.Configuration.HARDKEYBOARDHIDDEN_YES
+        controller?.setHardwareKeyboardAttached(attached)
+        if (!attached) hardwareBar = false
+        updateInputViewShown()
     }
 
     /** The application hands over its single prebuilt engine after asynchronous preparation. */
@@ -1055,6 +1126,7 @@ class SongyanInputMethodService : InputMethodService() {
     }
 
     override fun onFinishInput() {
+        hardwareBar = false
         clipboardRecorder.setCaptureAllowed(false)
         controller?.onWindowHidden()
         editor.finishInput(currentInputEditorInfo)
@@ -1064,6 +1136,8 @@ class SongyanInputMethodService : InputMethodService() {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        // Back or a finished input took the bar down; the next printable key brings it back.
+        hardwareBar = false
         clipboardRecorder.setCaptureAllowed(false)
         addonPanel?.close()
         controller?.onWindowHidden()
@@ -1162,8 +1236,14 @@ class SongyanInputMethodService : InputMethodService() {
             if (addonPanel?.close() == true) return true
             if (controller?.closePanels() == true) return true
         }
+        if (routeHardwareKey(event)) return true
         return super.onKeyDown(keyCode, event)
     }
+
+    override fun onKeyUp(
+        keyCode: Int,
+        event: KeyEvent,
+    ): Boolean = routeHardwareKey(event) || super.onKeyUp(keyCode, event)
 
     override fun onDestroy() {
         mainHandler.removeCallbacks(showSettingsAction)
@@ -1179,5 +1259,15 @@ class SongyanInputMethodService : InputMethodService() {
         scope.cancel()
         super.onDestroy()
         viewOwners.destroy()
+    }
+
+    companion object {
+        /**
+         * The emulators report no hardware keyboard configuration, so the end-to-end test decides
+         * what the system says about the on-screen keyboard. Null follows the platform.
+         */
+        @VisibleForTesting
+        @Volatile
+        var systemSoftKeysForTest: Boolean? = null
     }
 }

@@ -1,10 +1,13 @@
 package app.songyan.ime.settings.state
 
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.GeneratedLayouts
 import app.songyan.ime.layout.KeyboardComposition
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPagePresets
+import app.songyan.ime.layout.LayoutCodeCoverage
 import app.songyan.ime.layout.LayoutInput
 import app.songyan.ime.layout.LayoutRegistry
 import app.songyan.ime.settings.R
@@ -184,5 +187,28 @@ class LayoutDisplayNamesTest {
         assertNull(currentMainLayout(null, "qwerty26", null, LayoutRegistry.create()))
         assertNull(currentMainLayout("bopomofo_tw", "qwerty26", InputSchemeFamily.ZHUYIN, null))
         assertNull(currentMainLayout("bopomofo_tw", "not-a-shape", null, LayoutRegistry.create()))
+    }
+
+    @Test
+    fun `a generated 26-key board is named by the keys it adds, whatever name it was saved with`() {
+        val letters = ('a'..'z').map { it.toString() } + ('A'..'Z').map { it.toString() }
+        // The apostrophe is optional for the scheme, yet the generated board still carries it.
+        val profile =
+            SchemaKeyProfile(
+                SchemaKeyProfile.Kind.SYLLABIC,
+                letters + listOf("`", "'"),
+                optionalCodes = listOf("'"),
+            )
+        val missing = LayoutCodeCoverage.missing(BuiltinLayouts.qwerty26, profile)
+        assertEquals(listOf("`", "'"), missing)
+        val saved = GeneratedLayouts.keys26("rime_ice", "26 键＋编码键", profile)
+        val expected = LayoutDisplayName.Worded(R.string.layout_name_keys26, listOf("` '"))
+        assertEquals(expected, layoutDisplayName(saved, qwerty))
+        assertEquals(expected, generatedKeys26Name(missing))
+        // A layout of the user's own keeps its name.
+        assertEquals(
+            LayoutDisplayName.Authored("我的键盘"),
+            layoutDisplayName(saved.copyWithId("mine", "我的键盘"), qwerty),
+        )
     }
 }

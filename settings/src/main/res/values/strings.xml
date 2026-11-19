@@ -93,7 +93,7 @@
     <string name="layout_name_18">18-key</string>
     <string name="layout_name_9">9-key</string>
     <string name="layout_name_zhuyin41">Zhuyin 41 keys</string>
-    <string name="layout_name_keys26">26 keys + code keys</string>
+    <string name="layout_name_keys26">26-key with %1$s</string>
     <string name="layout_name_strokes">Stroke pad</string>
     <string name="layout_name_cangjie26">Cangjie 26 keys</string>
     <string name="layout_name_romaji26">Romaji 26 keys</string>

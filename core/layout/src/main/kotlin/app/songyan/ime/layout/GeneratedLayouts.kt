@@ -10,7 +10,15 @@ object GeneratedLayouts {
     /** Id prefix every generated layout carries, so the app can tell it needs installing. */
     const val ID_PREFIX = "auto."
 
-    fun keys26Id(schemaId: String): String = "$ID_PREFIX$schemaId.keys26"
+    const val KEYS26_SUFFIX = ".keys26"
+
+    fun keys26Id(schemaId: String): String = "$ID_PREFIX$schemaId$KEYS26_SUFFIX"
+
+    /** The codes a generated 26-key [layout] sends beyond the standard 26-key board, in key order. */
+    fun addedCodes(layout: LayoutDefinition): List<String> {
+        val standard = LayoutCodeCoverage.declared(BuiltinLayouts.qwerty26)
+        return LayoutCodeCoverage.declared(layout).filter { it !in standard }
+    }
 
     fun strokesId(schemaId: String): String = "$ID_PREFIX$schemaId.strokes"
 

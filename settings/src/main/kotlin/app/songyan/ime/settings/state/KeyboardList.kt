@@ -7,6 +7,7 @@ import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.ApplicableLayouts
+import app.songyan.ime.layout.BuiltinLayouts
 import app.songyan.ime.layout.GeneratedLayouts
 import app.songyan.ime.layout.KeyboardScheme
 import app.songyan.ime.layout.LayoutCodeCoverage
@@ -88,10 +89,14 @@ private fun generatedOf(keyboard: PublishedKeyboard): ApplicableLayouts.Generate
         else -> null
     }
 
-private fun generatedNameRes(kind: ApplicableLayouts.Generated): Int =
+private fun generatedName(
+    kind: ApplicableLayouts.Generated,
+    profile: SchemaKeyProfile?,
+): LayoutDisplayName =
     when (kind) {
-        ApplicableLayouts.Generated.KEYS26 -> R.string.layout_name_keys26
-        ApplicableLayouts.Generated.STROKES -> R.string.layout_name_strokes
+        ApplicableLayouts.Generated.KEYS26 ->
+            generatedKeys26Name(profile?.let { LayoutCodeCoverage.missing(BuiltinLayouts.qwerty26, it) }.orEmpty())
+        ApplicableLayouts.Generated.STROKES -> LayoutDisplayName.Worded(R.string.layout_name_strokes)
     }
 
 /**
@@ -160,7 +165,7 @@ fun keyboardList(
         val generated = entry?.generated
         val name =
             when {
-                layout == null && generated != null -> LayoutDisplayName.Worded(generatedNameRes(generated))
+                layout == null && generated != null -> generatedName(generated, profile)
                 else -> layoutDisplayName(layout, KeyboardLayoutOption.fromId(keyboard.layout.wire))
             }
         val missing =
@@ -267,7 +272,7 @@ fun installPicker(
                         val name =
                             when {
                                 layout == null && entry.generated != null ->
-                                    LayoutDisplayName.Worded(generatedNameRes(entry.generated!!))
+                                    generatedName(entry.generated!!, scheme.profile)
                                 else ->
                                     layoutDisplayName(
                                         layout,

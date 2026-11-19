@@ -10,7 +10,7 @@ import app.songyan.ime.settings.state.LayoutDisplayName
 @Composable
 fun LayoutDisplayName.text(): String =
     when (this) {
-        is LayoutDisplayName.Worded -> stringResource(resource)
+        is LayoutDisplayName.Worded -> stringResource(resource, *args.toTypedArray())
         is LayoutDisplayName.Authored -> name
     }
 

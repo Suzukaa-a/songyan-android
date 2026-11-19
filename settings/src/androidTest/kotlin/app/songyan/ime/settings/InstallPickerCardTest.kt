@@ -36,7 +36,7 @@ class InstallPickerCardTest {
             profile = SchemaKeyProfile(SchemaKeyProfile.Kind.SHAPE_CODE, letters + listOf(";", "'")),
         )
     private val toggled = mutableListOf<String>()
-    private var names: ((ApplicableLayouts.Generated) -> String)? = null
+    private var names: ((ApplicableLayouts.Generated, List<String>) -> String)? = null
 
     private fun show(checked: Set<String>?) {
         val picker = installPicker(listOf(wubi), listOf("wubi86"), LayoutRegistry.create(), checked)
@@ -61,7 +61,7 @@ class InstallPickerCardTest {
         show(null)
         compose.onNodeWithText(str(R.string.install_picker_title)).assertIsDisplayed()
         compose.onNodeWithText("五笔").assertIsDisplayed()
-        compose.onNodeWithText(str(R.string.layout_name_keys26)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.layout_name_keys26, "; '")).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.layout_name_26)).assertIsDisplayed()
         compose.onNodeWithText(str(R.string.keyboards_missing_codes, "; '"), substring = true).assertIsDisplayed()
 
@@ -69,7 +69,10 @@ class InstallPickerCardTest {
         assertEquals(listOf("wubi86:qwerty26#qwerty26"), toggled)
 
         compose.onNodeWithText(str(R.string.install_picker_start)).assertIsEnabled().performClick()
-        assertEquals("keys", names?.invoke(ApplicableLayouts.Generated.KEYS26)?.let { "keys" })
+        assertEquals(
+            str(R.string.layout_name_keys26, "; '"),
+            names?.invoke(ApplicableLayouts.Generated.KEYS26, listOf(";", "'")),
+        )
     }
 
     @Test

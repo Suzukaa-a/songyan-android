@@ -4,6 +4,7 @@ import app.songyan.ime.keyboard.engine.InputLayoutPolicy
 import app.songyan.ime.keyboard.engine.InputSchemeFamily
 import app.songyan.ime.keyboard.engine.LayoutFamilyContext
 import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.GeneratedLayouts
 import app.songyan.ime.layout.KeyboardCompositionKey
 import app.songyan.ime.layout.KeyboardPageDefinition
 import app.songyan.ime.layout.KeyboardPagePresets
@@ -20,6 +21,8 @@ sealed interface LayoutDisplayName {
     /** A bundled board or shipped shape; [resource] words it in the user's language. */
     data class Worded(
         val resource: Int,
+        /** Format arguments of [resource], such as the keys a generated 26-key board adds. */
+        val args: List<String> = emptyList(),
     ) : LayoutDisplayName
 
     /** The user's own layout; its saved name is never replaced by a generated one. */
@@ -27,6 +30,10 @@ sealed interface LayoutDisplayName {
         val name: String,
     ) : LayoutDisplayName
 }
+
+/** The name of the generated 26-key board that adds [codes] to the standard one. */
+fun generatedKeys26Name(codes: List<String>): LayoutDisplayName =
+    LayoutDisplayName.Worded(R.string.layout_name_keys26, listOf(codes.joinToString(" ")))
 
 /** The main layout the keyboard in use draws, resolved against the catalog the keyboard reads. */
 data class CurrentMainLayout(
@@ -61,6 +68,11 @@ fun layoutDisplayName(
     shape: KeyboardLayoutOption,
 ): LayoutDisplayName {
     if (layout == null) return LayoutDisplayName.Worded(shape.nameRes)
+    // A generated board is worded by resources, whatever name it was saved with.
+    if (GeneratedLayouts.isGeneratedId(layout.id) && layout.id.endsWith(GeneratedLayouts.KEYS26_SUFFIX)) {
+        val added = GeneratedLayouts.addedCodes(layout)
+        if (added.isNotEmpty()) return generatedKeys26Name(added)
+    }
     if (layout.name != BuiltinLayouts.byId(layout.id)?.name) return LayoutDisplayName.Authored(layout.name)
     bundledLayoutNameRes(layout.id)?.let { return LayoutDisplayName.Worded(it) }
     return LayoutDisplayName.Worded(shape.nameRes)

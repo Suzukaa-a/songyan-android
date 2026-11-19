@@ -146,7 +146,15 @@ class InstallPickerViewModelTest {
             viewModel.togglePickedKeyboard("pinyin:qwerty26#qwerty26")
             advanceUntilIdle()
 
-            viewModel.confirmInstalledKeyboards { if (it == ApplicableLayouts.Generated.KEYS26) "26+" else "笔画" }
+            viewModel.confirmInstalledKeyboards { kind, _ ->
+                if (kind ==
+                    ApplicableLayouts.Generated.KEYS26
+                ) {
+                    "26+"
+                } else {
+                    "笔画"
+                }
+            }
             advanceUntilIdle()
 
             val stored = preferences.myKeyboards.first()

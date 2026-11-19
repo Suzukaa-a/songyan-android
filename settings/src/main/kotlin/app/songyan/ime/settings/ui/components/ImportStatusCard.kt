@@ -63,7 +63,7 @@ data class ImportCard(
 class InstallPickerUi(
     val picker: InstallPicker?,
     val onToggle: (String) -> Unit,
-    val onConfirm: ((ApplicableLayouts.Generated) -> String) -> Unit,
+    val onConfirm: ((ApplicableLayouts.Generated, List<String>) -> String) -> Unit,
 )
 
 val LocalInstallPicker = staticCompositionLocalOf<InstallPickerUi?> { null }
@@ -169,14 +169,15 @@ fun ImportStatusContent(
 
                 ImportPhase.SUCCEEDED ->
                     if (pickerUi?.picker != null) {
-                        val keys = stringResource(R.string.layout_name_keys26)
+                        val resources = LocalContext.current.resources
                         val strokes = stringResource(R.string.layout_name_strokes)
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
                         TextButton(
                             onClick = {
-                                pickerUi.onConfirm {
-                                    when (it) {
-                                        ApplicableLayouts.Generated.KEYS26 -> keys
+                                pickerUi.onConfirm { kind, missing ->
+                                    when (kind) {
+                                        ApplicableLayouts.Generated.KEYS26 ->
+                                            resources.getString(R.string.layout_name_keys26, missing.joinToString(" "))
                                         ApplicableLayouts.Generated.STROKES -> strokes
                                     }
                                 }

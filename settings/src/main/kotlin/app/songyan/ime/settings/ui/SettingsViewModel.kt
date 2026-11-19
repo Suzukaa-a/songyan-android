@@ -8,9 +8,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.engine.SchemaKeyProfile
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
 import app.songyan.ime.layout.ApplicableLayouts
+import app.songyan.ime.layout.BuiltinLayouts
+import app.songyan.ime.layout.LayoutCodeCoverage
 import app.songyan.ime.layout.LayoutDefinition
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.layout.WideMiddleGap
@@ -603,12 +606,15 @@ class SettingsViewModel(
         schemeImport.value = current.copy(checked = next)
     }
 
+    private fun SchemaKeyProfile?.missingKeys26(): List<String> =
+        this?.let { LayoutCodeCoverage.missing(BuiltinLayouts.qwerty26, it) }.orEmpty()
+
     /**
      * 开始使用: the ticked keyboards become the package's keyboards, the layouts made for them are
      * installed, and the keyboard switches to the first one ticked. Folded keyboards are built by the
      * deployment the new list asks for; [generatedName] words the layouts made from the key profile.
      */
-    fun confirmInstalledKeyboards(generatedName: (ApplicableLayouts.Generated) -> String) {
+    fun confirmInstalledKeyboards(generatedName: (ApplicableLayouts.Generated, List<String>) -> String) {
         val current = schemeImport.value as? SchemeImportUiState.Succeeded ?: return
         val picker = uiState.value.installPicker ?: return
         val chosen = picker.chosen
@@ -616,7 +622,14 @@ class SettingsViewModel(
         viewModelScope.launch {
             for (group in picker.groups) {
                 for (row in group.keyboards.filter { it.keyboard.id in picker.checked }) {
-                    val layout = row.generated?.let { group.generatedLayout(row, generatedName(it)) } ?: continue
+                    val layout =
+                        row.generated?.let {
+                            group.generatedLayout(
+                                row,
+                                generatedName(it, group.profile.missingKeys26()),
+                            )
+                        }
+                            ?: continue
                     if (layoutLibrary.registry.value?.layout(layout.id) == null) {
                         layoutLibrary.edit { it.install(layout.encoded()) }
                     }

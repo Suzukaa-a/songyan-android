@@ -217,7 +217,7 @@ class KeyboardsScreenTest {
         compose.onNodeWithText(str(R.string.keyboards_missing_codes, "; '"), substring = true).assertExists()
         compose.onNodeWithText(str(R.string.layout_name_14)).assertDoesNotExist()
         compose.onNodeWithText(str(R.string.keyboards_add)).performScrollTo().performClick()
-        compose.onNodeWithText(str(R.string.layout_name_keys26)).assertExists()
+        compose.onNodeWithText(str(R.string.layout_name_keys26, "; '")).assertExists()
     }
 
     @Test

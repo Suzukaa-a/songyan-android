@@ -2,6 +2,7 @@ package app.songyan.ime.deploy
 
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.UserKeyboards
 import org.junit.Assert.assertEquals
@@ -70,7 +71,10 @@ class CompanionRequestsTest {
         assertEquals(setOf(KeyboardLayoutKind.PHONE9), requests.kinds("a"))
         assertTrue(requests.kinds("c").isEmpty())
         assertEquals(folds, requests.kinds("b"))
-        assertEquals(mapOf("a" to setOf(KeyboardLayoutKind.PHONE9)), requests.requested(listOf("a", "c")))
+        assertEquals(
+            mapOf("a" to setOf(CompanionShape.builtin(KeyboardLayoutKind.PHONE9))),
+            requests.requested(listOf("a", "c")),
+        )
     }
 
     @Test
@@ -87,19 +91,48 @@ class CompanionRequestsTest {
 
     @Test
     fun missingIsWhatIsAskedForAndNeitherBuiltNorRefused() {
-        val asked = mapOf("a" to folds)
+        val asked = mapOf("a" to folds.mapTo(LinkedHashSet()) { requireNotNull(CompanionShape.builtin(it)) })
         val built = listOf(KeyboardResourceSet.EncodingAdapter("a", "x14", KeyboardLayoutKind.MERGED14))
-        val refused = mapOf("a" to setOf(KeyboardLayoutKind.PHONE9))
-        assertEquals(mapOf("a" to setOf(KeyboardLayoutKind.MERGED18)), CompanionStatus.missing(asked, built, refused))
-        assertTrue(
-            CompanionStatus
-                .missing(
-                    asked,
-                    built,
-                    mapOf(
-                        "a" to setOf(KeyboardLayoutKind.PHONE9, KeyboardLayoutKind.MERGED18),
-                    ),
-                ).isEmpty(),
+        val refused = mapOf("a" to setOf("phone9"))
+        assertEquals(
+            mapOf("a" to setOf(CompanionShape.builtin(KeyboardLayoutKind.MERGED18))),
+            CompanionStatus.missing(asked, built, refused),
         )
+        assertTrue(CompanionStatus.missing(asked, built, mapOf("a" to setOf("phone9", "merged18"))).isEmpty())
+    }
+
+    @Test
+    fun aKeyboardOnALayoutOfItsOwnAsksForItsOwnFold() {
+        val custom =
+            CompactFold.MERGED14.map
+                .toMutableMap()
+                .apply { put('w', 'e') }
+        val fold = requireNotNull(CompactFold.of(KeyboardLayoutKind.MERGED14, custom))
+        val targets = CompanionShape.ALPHABET.map { custom.getValue(it) }.joinToString("")
+        val keyboard = k("a:merged14#mine")
+        val requests =
+            CompanionRequests(
+                UserKeyboards.Stored(listOf(keyboard, k("a:merged18#merged18")), setOf("a")),
+                folds = mapOf(keyboard.id to targets),
+            )
+        val shapes = requests.shapes("a")
+        assertEquals(
+            setOf(
+                CompanionShape(KeyboardLayoutKind.MERGED14, fold),
+                CompanionShape.builtin(KeyboardLayoutKind.MERGED18),
+            ),
+            shapes,
+        )
+        assertEquals("merged14:" + fold.id, shapes.first().wire)
+        // The request survives the mirror, and only that fold's companion counts as built.
+        assertEquals(requests, CompanionRequests.decode(requests.encode()))
+        val bundled = KeyboardResourceSet.EncodingAdapter("a", "x14", KeyboardLayoutKind.MERGED14)
+        val own = bundled.copy(schemaID = "x14own", fold = fold.id)
+        assertEquals(
+            setOf(shapes.first()),
+            CompanionStatus.missing(mapOf("a" to shapes), listOf(bundled), emptyMap())["a"]!! -
+                CompanionShape.builtin(KeyboardLayoutKind.MERGED18),
+        )
+        assertTrue(CompanionStatus.missing(mapOf("a" to setOf(shapes.first())), listOf(own), emptyMap()).isEmpty())
     }
 }

@@ -44,7 +44,7 @@ object EncodingAdapterRegistry {
         val file = File(compiledDir, FILE_NAME)
         if (!file.isFile || file.length() > MAX_BYTES) return emptyList()
         val entries = decode(file.readText(Charsets.UTF_8)) ?: return emptyList()
-        val seen = HashSet<Pair<String, KeyboardLayoutKind>>()
+        val seen = HashSet<Triple<String, KeyboardLayoutKind, String?>>()
         return entries.filter { entry ->
             entry.layout != KeyboardLayoutKind.QWERTY26 &&
                 entry.sourceSchemaID in sources &&
@@ -53,7 +53,7 @@ object EncodingAdapterRegistry {
                     entry.schemaID == entry.sourceSchemaID ||
                         (entry.schemaID !in sources && File(compiledDir, entry.schemaID + ".schema.yaml").isFile)
                 ) &&
-                seen.add(entry.sourceSchemaID to entry.layout)
+                seen.add(Triple(entry.sourceSchemaID, entry.layout, entry.fold))
         }
     }
 }

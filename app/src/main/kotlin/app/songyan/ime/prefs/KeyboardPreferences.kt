@@ -19,9 +19,11 @@ import app.songyan.ime.candidate.KeyboardOneHandLayoutPolicy
 import app.songyan.ime.candidate.NineKeyCandidateSide
 import app.songyan.ime.deploy.CompanionRequests
 import app.songyan.ime.deploy.DeploymentStarter
+import app.songyan.ime.ime.KeyboardLayoutCatalog
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
 import app.songyan.ime.keyboard.support.CandidateTextSize
 import app.songyan.ime.keyboard.support.KeyFeedbackSettings
+import app.songyan.ime.layout.LayoutFold
 import app.songyan.ime.layout.ShuangpinHintSnapshot
 import app.songyan.ime.layout.T9QuickSymbolStore
 import app.songyan.ime.layout.UserKeyboards
@@ -247,14 +249,13 @@ class KeyboardPreferences(
      */
     private suspend fun mirrorCompanionRequests() {
         val data = appContext.keyboardDataStore.data.first()
+        val keyboards = UserKeyboards.decode(data[KEY_MY_KEYBOARDS])
         val requests =
             CompanionRequests(
-                UserKeyboards.Stored(
-                    UserKeyboards.decode(data[KEY_MY_KEYBOARDS]),
-                    data[KEY_MY_KEYBOARD_SCHEMES].orEmpty(),
-                ),
+                UserKeyboards.Stored(keyboards, data[KEY_MY_KEYBOARD_SCHEMES].orEmpty()),
                 data[KEY_MENU_HIDDEN_SCHEMAS].orEmpty(),
                 data[KEY_MENU_HIDDEN_LAYOUTS].orEmpty(),
+                ownFolds(keyboards),
             )
         withContext(Dispatchers.IO) {
             runCatching { CompanionRequests.mirror(AppStorage(appContext.filesDir).keyboardCompanionsFile, requests) }
@@ -262,6 +263,24 @@ class KeyboardPreferences(
         }
         DeploymentStarter.completeCompanionsIfPending(appContext)
     }
+
+    /**
+     * The keyboards whose layout groups its letters its own way, with that grouping: the deploy
+     * process builds their companions from it. Read from the catalog the keyboard reads.
+     */
+    private fun ownFolds(keyboards: List<PublishedKeyboard>): Map<String, String> {
+        val registry = KeyboardLayoutCatalog.snapshot.value.registry
+        return keyboards
+            .mapNotNull { keyboard ->
+                LayoutFold
+                    .of(registry, keyboard.layout, keyboard.board)
+                    ?.takeUnless { it.isBuiltin }
+                    ?.let { keyboard.id to LayoutFold.targets(it) }
+            }.toMap()
+    }
+
+    /** Rewrites the deploy request after the layouts changed: an edited grouping needs its companion. */
+    suspend fun refreshCompanionRequests() = mirrorCompanionRequests()
 
     /** The shuangpin hint settings document (the iOS hints.json format); null until the user changes them. */
     val shuangpinHintDocument: Flow<String?> =

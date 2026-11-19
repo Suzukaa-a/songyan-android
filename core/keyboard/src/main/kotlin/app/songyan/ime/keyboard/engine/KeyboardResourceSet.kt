@@ -1,6 +1,7 @@
 package app.songyan.ime.keyboard.engine
 
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.keyboard.support.UserTerminology
 import kotlinx.serialization.SerialName
@@ -182,6 +183,8 @@ data class KeyboardResourceSet(
         @SerialName("schemaID") val schemaID: String,
         @SerialName("layout") val layout: KeyboardLayoutKind,
         @SerialName("schemaName") val schemaName: String? = null,
+        /** The [CompactFold.id] of a layout's own grouping; null for the bundled fold of [layout]. */
+        @SerialName("fold") val fold: String? = null,
     ) {
         val engineSchemaID: String get() = schemaID
 

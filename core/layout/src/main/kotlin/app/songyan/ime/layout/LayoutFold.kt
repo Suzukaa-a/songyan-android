@@ -50,6 +50,23 @@ object LayoutFold {
         return CompactFold.of(kind, map)
     }
 
+    /**
+     * The fold a keyboard on [layout] drawing the layout [board] types with: the bundled fold for
+     * no board or one [registry] does not hold, the board's own fold otherwise (null when that
+     * board does not fold cleanly, so the keyboard is never run on a fold it does not have).
+     */
+    fun of(
+        registry: LayoutRegistry,
+        layout: KeyboardLayoutKind,
+        board: String?,
+    ): CompactFold? {
+        val definition = board?.let(registry::resolvedLayout) ?: return layout.compactFold
+        return of(definition, layout)
+    }
+
+    /** [fold]'s targets of the 26 letters in a-z order, the form the deploy request carries. */
+    fun targets(fold: CompactFold): String = ALPHABET.map { fold.map.getValue(it) }.joinToString("")
+
     /** What keeps [definition] from folding, for the editor to show before it is saved. */
     data class Problems(
         val missing: List<Char>,

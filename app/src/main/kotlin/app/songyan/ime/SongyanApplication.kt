@@ -48,6 +48,7 @@ import app.songyan.ime.userconfig.RimeConfigGatewayImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class SongyanApplication : Application() {
@@ -163,6 +164,12 @@ class SongyanApplication : Application() {
             // the keyboard itself applies the same choice and redraws when it changes.
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 fontStore.displayFonts.collect { DisplayFonts.configure(it) }
+            }
+            // A layout edit can regroup a keyboard's letters; the deploy request follows the catalog.
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                app.songyan.ime.ime.KeyboardLayoutCatalog.snapshot
+                    .drop(1)
+                    .collect { keyboardPreferences.refreshCompanionRequests() }
             }
             // Imports and source switches are settings actions only; the work itself (including any
             // download) runs in the :deploy process.

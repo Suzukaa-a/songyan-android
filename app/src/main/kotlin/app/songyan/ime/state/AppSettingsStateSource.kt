@@ -218,7 +218,7 @@ class AppSettingsStateSource(
         return schemesNamed(manifest, ids).map { scheme ->
             scheme.copy(
                 profile = profiles[scheme.id],
-                unavailableLayouts = unavailable[scheme.id].orEmpty().mapTo(HashSet()) { it.wire },
+                unavailableLayouts = unavailable[scheme.id].orEmpty().toSet(),
                 supportedLayouts =
                     KeyboardLayoutKind.entries
                         .filter { resources != null && resources.incompatibilityReason(it, scheme.id) == null }

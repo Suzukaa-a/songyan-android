@@ -79,6 +79,8 @@ class KeyboardCompanionsTest {
         return Triple(sourceDir, workDir, FakeEngine(build))
     }
 
+    private fun shape(layout: KeyboardLayoutKind) = requireNotNull(CompanionShape.builtin(layout))
+
     @Test
     fun familiesWithoutCompactKeyboardsDoNotPublishCompanions() =
         runBlocking {
@@ -114,7 +116,7 @@ class KeyboardCompanionsTest {
                 sourceDir,
                 workDir,
                 listOf(source),
-                requested = mapOf(source to setOf(KeyboardLayoutKind.MERGED18)),
+                requested = mapOf(source to setOf(shape(KeyboardLayoutKind.MERGED18))),
             ).generate(engine)
 
             assertEquals(
@@ -130,12 +132,12 @@ class KeyboardCompanionsTest {
         runBlocking {
             val (sourceDir, workDir, engine) = setUp()
             engine.projectionBytes = null
-            val asked = mapOf(source to setOf(KeyboardLayoutKind.MERGED14, KeyboardLayoutKind.PHONE9))
+            val asked = mapOf(source to setOf(shape(KeyboardLayoutKind.MERGED14), shape(KeyboardLayoutKind.PHONE9)))
 
             KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
 
             val unavailable = CompanionStatus.readUnavailable(engine.compiledDir)
-            assertEquals(asked, unavailable)
+            assertEquals(mapOf(source to setOf("merged14", "phone9")), unavailable)
             val adapters = EncodingAdapterRegistry.read(engine.compiledDir, setOf(source))
             assertTrue(CompanionStatus.missing(asked, adapters, unavailable).isEmpty())
         }
@@ -144,11 +146,11 @@ class KeyboardCompanionsTest {
     fun aRequestedFoldOfANonSyllabicSchemeIsRefused() =
         runBlocking {
             val (sourceDir, workDir, engine) = setUp(compiled = schemaText.replace("- speller", "- lua_processor"))
-            val asked = mapOf(source to setOf(KeyboardLayoutKind.PHONE9))
+            val asked = mapOf(source to setOf(shape(KeyboardLayoutKind.PHONE9)))
 
             KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
 
-            assertEquals(asked, CompanionStatus.readUnavailable(engine.compiledDir))
+            assertEquals(mapOf(source to setOf("phone9")), CompanionStatus.readUnavailable(engine.compiledDir))
             assertTrue(engine.deployed.isEmpty())
         }
 
@@ -156,7 +158,7 @@ class KeyboardCompanionsTest {
     fun aSourceKeptFromTheFirstPhaseKeepsItsCompanionsAndRefusals() =
         runBlocking {
             val (sourceDir, workDir, engine) = setUp()
-            val asked = mapOf(source to setOf(KeyboardLayoutKind.MERGED14))
+            val asked = mapOf(source to setOf(shape(KeyboardLayoutKind.MERGED14)))
             KeyboardCompanions(sourceDir, workDir, listOf(source), requested = asked).generate(engine)
             val before = engine.deployed.size
 

@@ -5,7 +5,6 @@ import android.os.SystemClock
 import android.util.Log
 import app.songyan.ime.ServiceLocale
 import app.songyan.ime.keyboard.layout.BuiltinTemplateSchemas
-import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.packages.CompactSchemaAdapter
 import app.songyan.ime.packages.EngineFeatureSettings
 import app.songyan.ime.packages.SchemaKeyProfiles
@@ -828,7 +827,7 @@ class DeploymentCoordinator(
         val companionSchemas: List<String>,
         val timer: DeployTimer,
         /** The folded shapes asked for per input method; null for a source that ships its own. */
-        val requested: Map<String, Set<KeyboardLayoutKind>>?,
+        val requested: Map<String, Set<CompanionShape>>?,
     )
 
     /** The feature settings of one deployment and the feature files linked into its work directory. */

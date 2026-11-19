@@ -55,7 +55,7 @@ internal class KeyboardCompanions(
      * as the bundled input methods do. What is asked for and cannot be built is recorded as
      * unavailable and never tried again for this build.
      */
-    private val requested: Map<String, Set<KeyboardLayoutKind>>? = null,
+    private val requested: Map<String, Set<CompanionShape>>? = null,
 ) {
     suspend fun generate(engine: DeployedEngine) {
         val registry = File(engine.compiledDir, EncodingAdapterRegistry.FILE_NAME)
@@ -69,12 +69,12 @@ internal class KeyboardCompanions(
                     .orEmpty()
             }
         val earlier = if (reuse.isEmpty()) emptyMap() else CompanionStatus.readUnavailable(engine.compiledDir)
-        val unavailable = LinkedHashMap<String, Set<KeyboardLayoutKind>>()
+        val unavailable = LinkedHashMap<String, Set<String>>()
         val adapters = ArrayList<KeyboardResourceSet.EncodingAdapter>()
         for (source in schemaIds.distinct()) {
             if (cancelled()) throw InterruptedException("companion generation cancelled")
-            val kinds = COMPACT_LAYOUTS.filter { requested == null || it in requested[source].orEmpty() }
-            if (kinds.isEmpty()) continue
+            val shapes = requested?.get(source)?.toList() ?: BUILTIN_SHAPES
+            if (shapes.isEmpty()) continue
             if (source in reuse) {
                 adapters += existing.filter { it.sourceSchemaID == source }
                 earlier[source]?.let { unavailable[source] = it }
@@ -85,14 +85,20 @@ internal class KeyboardCompanions(
             // Only a scheme spelled syllable by syllable folds: a shape code or a stroke code would
             // fold into keys that mean nothing to its speller.
             val built =
-                if (kinds.none { InputLayoutPolicy.allows(it, family) } || !profileOf(source, engine).allowsFolding) {
+                if (shapes.none { InputLayoutPolicy.allows(it.layout, family) } ||
+                    !profileOf(source, engine).allowsFolding
+                ) {
                     emptyList()
                 } else {
-                    companionsOf(source, engine, kinds)
+                    companionsOf(source, engine, shapes)
                 }
             adapters += built
-            val refused = kinds.filter { kind -> built.none { it.layout == kind } }
-            if (requested != null && refused.isNotEmpty()) unavailable[source] = refused.toSet()
+            val refused = shapes.filter { shape -> built.none { shape.isBuiltBy(it) } }
+            if (requested != null &&
+                refused.isNotEmpty()
+            ) {
+                unavailable[source] = refused.mapTo(LinkedHashSet()) { it.wire }
+            }
         }
         registry.writeText(EncodingAdapterRegistry.encode(adapters), Charsets.UTF_8)
         if (requested != null) CompanionStatus.writeUnavailable(engine.compiledDir, unavailable)
@@ -115,7 +121,7 @@ internal class KeyboardCompanions(
     private suspend fun companionsOf(
         source: String,
         engine: DeployedEngine,
-        kinds: List<KeyboardLayoutKind>,
+        shapes: List<CompanionShape>,
     ): List<KeyboardResourceSet.EncodingAdapter> {
         val compiledFile = File(engine.compiledDir, "$source.schema.yaml")
         if (!compiledFile.isFile) return emptyList()
@@ -150,8 +156,10 @@ internal class KeyboardCompanions(
             CompactSchemaAdapter.tokenAliasDomain(projection) != null &&
                 CompactSchemaAdapter.isNumericCodeSource(projection) &&
                 !CompactSchemaAdapter.declaresLetterClassPrefixSource(projection)
-        if (nativeDigits && KeyboardLayoutKind.PHONE9 in kinds) {
-            result += adapter(source, source, KeyboardLayoutKind.PHONE9, engine)
+        // Only the bundled telephone grouping is the one such a source already spells in.
+        val nativeShape = CompanionShape.builtin(KeyboardLayoutKind.PHONE9)
+        if (nativeDigits && nativeShape in shapes) {
+            result += adapter(source, source, KeyboardLayoutKind.PHONE9, engine, null)
         }
         val delimiter =
             engine.schemaValue(source, "translator/delimiter") ?: engine.schemaValue(source, "speller/delimiter")
@@ -161,10 +169,11 @@ internal class KeyboardCompanions(
             } catch (error: Exception) {
                 throw KeyboardCompanionException("cannot plan the companions of $source", error)
             }
-        for (layout in kinds) {
-            if (nativeDigits && layout == KeyboardLayoutKind.PHONE9) continue
+        for (shape in shapes) {
+            if (nativeDigits && shape == nativeShape) continue
             if (cancelled()) throw InterruptedException("companion generation cancelled")
-            val fold = layout.compactFold ?: continue
+            val layout = shape.layout
+            val fold = shape.fold
             val body =
                 try {
                     plan.companion(fold)
@@ -194,7 +203,7 @@ internal class KeyboardCompanions(
                 file.delete()
                 continue
             }
-            result += adapter(source, target, layout, engine)
+            result += adapter(source, target, layout, engine, fold.id.takeUnless { fold.isBuiltin })
         }
         return result
     }
@@ -209,15 +218,17 @@ internal class KeyboardCompanions(
         target: String,
         layout: KeyboardLayoutKind,
         engine: DeployedEngine,
+        fold: String?,
     ) = KeyboardResourceSet.EncodingAdapter(
         sourceSchemaID = source,
         schemaID = target,
         layout = layout,
         schemaName = engine.schemaValue(source, "schema/name"),
+        fold = fold,
     )
 
     private companion object {
         const val TAG = "KeyboardCompanions"
-        val COMPACT_LAYOUTS = KeyboardLayoutKind.entries.filter { it.compactFold != null }
+        val BUILTIN_SHAPES = KeyboardLayoutKind.entries.mapNotNull(CompanionShape::builtin)
     }
 }

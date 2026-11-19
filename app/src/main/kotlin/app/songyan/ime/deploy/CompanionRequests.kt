@@ -3,6 +3,7 @@ package app.songyan.ime.deploy
 import app.songyan.ime.keyboard.engine.EncodingAdapterRegistry
 import app.songyan.ime.keyboard.engine.KeyboardResourceSet
 import app.songyan.ime.keyboard.engine.PublishedKeyboard
+import app.songyan.ime.keyboard.layout.CompactFold
 import app.songyan.ime.keyboard.layout.KeyboardLayoutKind
 import app.songyan.ime.layout.UserKeyboards
 import app.songyan.ime.storage.AppStorage
@@ -32,18 +33,38 @@ internal data class CompanionRequests(
     val stored: UserKeyboards.Stored = UserKeyboards.Stored(),
     val hiddenSchemas: Set<String> = emptySet(),
     val hiddenLayouts: Set<String> = emptySet(),
+    /**
+     * The grouping of each listed keyboard whose layout folds its own way, by keyboard id: the 26
+     * letters' targets in a-z order (see [CompactFold.of]). A keyboard on a bundled grouping is not
+     * listed, so an older mirror reads the same.
+     */
+    val folds: Map<String, String> = emptyMap(),
 ) {
     /** The folded shapes asked for [schema]. */
-    fun kinds(schema: String): Set<KeyboardLayoutKind> =
+    fun shapes(schema: String): Set<CompanionShape> =
         when {
             schema in stored.schemes ->
-                stored.keyboards.filter { it.schemaID == schema }.mapTo(LinkedHashSet()) { it.layout }
+                stored.keyboards.filter { it.schemaID == schema }.mapNotNullTo(LinkedHashSet(), ::shapeOf)
             schema in hiddenSchemas -> emptySet()
-            else -> KeyboardLayoutKind.entries.filterTo(LinkedHashSet()) { it.wire !in hiddenLayouts }
-        }.filterTo(LinkedHashSet()) { it.compactFold != null }
+            else ->
+                KeyboardLayoutKind.entries
+                    .filter { it.wire !in hiddenLayouts }
+                    .mapNotNullTo(LinkedHashSet(), CompanionShape::builtin)
+        }
 
-    fun requested(schemas: Collection<String>): Map<String, Set<KeyboardLayoutKind>> =
-        schemas.associateWith { kinds(it) }.filterValues { it.isNotEmpty() }
+    /** The layouts of [shapes]. */
+    fun kinds(schema: String): Set<KeyboardLayoutKind> = shapes(schema).mapTo(LinkedHashSet()) { it.layout }
+
+    fun requested(schemas: Collection<String>): Map<String, Set<CompanionShape>> =
+        schemas.associateWith { shapes(it) }.filterValues { it.isNotEmpty() }
+
+    private fun shapeOf(keyboard: PublishedKeyboard): CompanionShape? {
+        val own =
+            folds[keyboard.id]?.takeIf { it.length == CompanionShape.ALPHABET.length }?.let { target ->
+                CompactFold.of(keyboard.layout, CompanionShape.ALPHABET.zip(target).toMap())
+            }
+        return if (own != null) CompanionShape(keyboard.layout, own) else CompanionShape.builtin(keyboard.layout)
+    }
 
     fun encode(): String =
         buildJsonObject {
@@ -51,6 +72,9 @@ internal data class CompanionRequests(
             put("schemes", JsonArray(stored.schemes.sorted().map(::JsonPrimitive)))
             put("hiddenSchemas", JsonArray(hiddenSchemas.sorted().map(::JsonPrimitive)))
             put("hiddenLayouts", JsonArray(hiddenLayouts.sorted().map(::JsonPrimitive)))
+            if (folds.isNotEmpty()) {
+                put("folds", buildJsonObject { folds.toSortedMap().forEach { (id, target) -> put(id, target) } })
+            }
         }.toString()
 
     companion object {
@@ -66,6 +90,7 @@ internal data class CompanionRequests(
                     ),
                     strings("hiddenSchemas").toSet(),
                     strings("hiddenLayouts").toSet(),
+                    root["folds"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }.orEmpty(),
                 )
             }.getOrNull()
 
@@ -119,46 +144,49 @@ internal data class CompanionRequests(
 internal object CompanionStatus {
     const val UNAVAILABLE_FILE = "keyboard-companions-unavailable.json"
 
-    /** The pairs the generator refused for this build: asked for, never built, never retried. */
-    fun readUnavailable(build: File): Map<String, Set<KeyboardLayoutKind>> =
+    /**
+     * The shapes the generator refused for this build, by [CompanionShape.wire]: asked for, never
+     * built, never retried. A bundled fold's wire is its layout's (`phone9`), as before shapes.
+     */
+    fun readUnavailable(build: File): Map<String, Set<String>> =
         runCatching {
             Json.parseToJsonElement(File(build, UNAVAILABLE_FILE).readText()).jsonObject.mapValues { (_, wires) ->
-                wires.jsonArray.mapNotNull { KeyboardLayoutKind.fromWire(it.jsonPrimitive.content) }.toSet()
+                wires.jsonArray.mapTo(LinkedHashSet()) { it.jsonPrimitive.content }
             }
         }.getOrDefault(emptyMap())
 
     fun writeUnavailable(
         build: File,
-        unavailable: Map<String, Set<KeyboardLayoutKind>>,
+        unavailable: Map<String, Set<String>>,
     ) {
         val json =
             buildJsonObject {
-                for ((schema, kinds) in unavailable.toSortedMap()) {
-                    if (kinds.isNotEmpty()) put(schema, JsonArray(kinds.map { JsonPrimitive(it.wire) }))
+                for ((schema, wires) in unavailable.toSortedMap()) {
+                    if (wires.isNotEmpty()) put(schema, JsonArray(wires.sorted().map(::JsonPrimitive)))
                 }
             }
         File(build, UNAVAILABLE_FILE).writeText(json.toString())
     }
 
-    /** The asked-for pairs the build neither holds a companion for nor refused. */
+    /** The asked-for shapes the build neither holds a companion for nor refused. */
     fun missing(
-        requested: Map<String, Set<KeyboardLayoutKind>>,
+        requested: Map<String, Set<CompanionShape>>,
         adapters: List<KeyboardResourceSet.EncodingAdapter>,
-        unavailable: Map<String, Set<KeyboardLayoutKind>>,
-    ): Map<String, Set<KeyboardLayoutKind>> =
+        unavailable: Map<String, Set<String>>,
+    ): Map<String, Set<CompanionShape>> =
         requested
-            .mapValues { (schema, kinds) ->
-                kinds.filterTo(LinkedHashSet()) { kind ->
-                    adapters.none { it.sourceSchemaID == schema && it.layout == kind } &&
-                        kind !in unavailable[schema].orEmpty()
+            .mapValues { (schema, shapes) ->
+                shapes.filterTo(LinkedHashSet()) { shape ->
+                    adapters.none { it.sourceSchemaID == schema && shape.isBuiltBy(it) } &&
+                        shape.wire !in unavailable[schema].orEmpty()
                 }
             }.filterValues { it.isNotEmpty() }
 
     /** [missing] for the build in [build], reading its registry and refusals. */
     fun missing(
-        requested: Map<String, Set<KeyboardLayoutKind>>,
+        requested: Map<String, Set<CompanionShape>>,
         build: File,
-    ): Map<String, Set<KeyboardLayoutKind>> {
+    ): Map<String, Set<CompanionShape>> {
         val adapters =
             runCatching { EncodingAdapterRegistry.decode(File(build, EncodingAdapterRegistry.FILE_NAME).readText()) }
                 .getOrNull()
@@ -191,5 +219,26 @@ internal object CompanionWork {
         if (record.companionsPending) return true
         val manifest = catalog.read(record.sourceId) ?: return false
         return manifest.kind == SourceKind.SCHEME && requestedMissing(storage, record, manifest)
+    }
+}
+
+/** One folded keyboard a companion is built for: a layout and the fold its keys make. */
+internal data class CompanionShape(
+    val layout: KeyboardLayoutKind,
+    val fold: CompactFold,
+) {
+    /** `phone9` for a bundled fold, `merged14:14u1a2b3c4d` for a layout's own grouping. */
+    val wire: String get() = if (fold.isBuiltin) layout.wire else layout.wire + ":" + fold.id
+
+    /** Whether [adapter] is the companion of this shape. */
+    fun isBuiltBy(adapter: KeyboardResourceSet.EncodingAdapter): Boolean =
+        adapter.layout == layout && adapter.fold == fold.id.takeUnless { fold.isBuiltin }
+
+    companion object {
+        const val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+
+        /** The bundled fold of [layout]; null for a layout that does not fold. */
+        fun builtin(layout: KeyboardLayoutKind): CompanionShape? =
+            layout.compactFold?.let { CompanionShape(layout, it) }
     }
 }
